@@ -3,7 +3,6 @@
 // burros. Lista os prompts de IA auxiliares (fora do pipeline de corte) do canal
 // ativo, mostra se cada um foi customizado e abre o editor com o guardrail do contrato.
 import { useState } from 'react';
-import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
@@ -16,6 +15,7 @@ import {
   useResetarPromptUtilitario,
 } from './usePromptsUtilitarios';
 import { mensagemErro } from '@/lib/mensagemErro';
+import { Icon } from '@/upgrade/Icon';
 
 
 /** True quando o canal difere do default (comparação sem espaços nas bordas). */
@@ -73,7 +73,7 @@ export function PromptsUtilitariosSection() {
 
       {promptsQuery.isLoading && (
         <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-          <Loader2 className="animate-spin" size={16} aria-hidden />
+          <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando prompts…
         </p>
       )}
@@ -81,7 +81,7 @@ export function PromptsUtilitariosSection() {
       {promptsQuery.isError && (
         <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklch,var(--error)_10%,var(--wb-bg-card))] p-4">
           <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-            <AlertTriangle size={16} aria-hidden className="text-error" />
+            <Icon name="triangle-alert" size={16} className="text-error" />
             {mensagemErro(promptsQuery.error, 'Não foi possível carregar os prompts.')}
           </p>
           <div>

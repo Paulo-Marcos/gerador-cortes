@@ -1,9 +1,9 @@
 // E-021: card "burro" de uma skill editorial na lista de gestão. Mostra a etapa,
 // a explicação funcional, o modelo em uso e se o canal customizou (vs. o padrão),
 // com o botão de editar. Sem I/O — o container decide o que fazer no clique.
-import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { EditorialSkill } from '@/features/channels/api/skillsEditoriais';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   skill: EditorialSkill;
@@ -31,7 +31,7 @@ export function EditorialSkillCard({ skill, customizada, onEditar }: Props) {
           <p className="mt-1 text-sm text-[var(--wb-text-mute)]">{skill.descricao}</p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onEditar} className="shrink-0">
-          <Pencil size={14} aria-hidden />
+          <Icon name="pencil" />
           Editar
         </Button>
       </div>

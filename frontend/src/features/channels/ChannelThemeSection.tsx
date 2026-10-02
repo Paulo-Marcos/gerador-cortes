@@ -2,11 +2,11 @@
 // COMPLETA das cenas Remotion (17 cores) + o preset tipográfico. É por-canal
 // (settings.db) e opt-in: sem escolha, o canal renderiza o default "atual".
 // Componente "burro" quanto a I/O — consome os hooks de useChannels.
-import { Check, Loader2, Palette } from 'lucide-react';
 import { useToast } from '@/components/ui/toaster';
 import type { Tema } from '@/features/channels/api/canais';
 import { useCanais, useSelecionarTema, useTemaDoCanal, useTemas } from './useChannels';
 import { mensagemErro } from '@/lib/mensagemErro';
+import { Icon } from '@/upgrade/Icon';
 
 // Cores representativas para o swatch de preview (subconjunto legível das 17).
 const CHAVES_PREVIEW = [
@@ -46,7 +46,7 @@ function TemaCard({
         <span className="font-semibold text-[var(--wb-text)]">{tema.nome}</span>
         {atual && (
           <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-accent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-            <Check size={11} aria-hidden />
+            <Icon name="check" />
             Selecionado
           </span>
         )}
@@ -100,7 +100,7 @@ export function ChannelThemeSection() {
   return (
     <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
       <div className="flex items-center gap-2">
-        <Palette size={18} aria-hidden className="text-[var(--wb-accent)]" />
+        <Icon name="palette" size={20} className="text-[var(--wb-accent)]" />
         <h2 className="text-lg font-semibold text-[var(--wb-text)]">Tema de aparência</h2>
       </div>
       <p className="text-sm text-[var(--wb-text-mute)]">
@@ -118,7 +118,7 @@ export function ChannelThemeSection() {
 
       {(canaisQuery.isLoading || temasQuery.isLoading) && (
         <p className="flex items-center gap-2 text-sm text-[var(--wb-text-mute)]">
-          <Loader2 className="animate-spin" size={16} aria-hidden />
+          <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando temas…
         </p>
       )}

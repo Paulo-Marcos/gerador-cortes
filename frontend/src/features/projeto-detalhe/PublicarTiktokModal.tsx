@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { Bot, Check, ExternalLink, ImageOff, Loader2, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +15,7 @@ import { shortsApi, type EnvioAssistido } from '@/features/shorts/shortsApi';
 import type { StatusExportCorte } from '@/types/models';
 import { pendentesNoTiktok } from './listasDePublicacao';
 import { LoteDoTiktokHorizontal } from './LoteDoTiktokHorizontal';
+import { Icon } from '@/upgrade/Icon';
 
 // D-510/D-516/D-517: o TikTok horizontal, no workspace do projeto.
 //
@@ -251,7 +251,7 @@ function LinhaDoCorte({
           className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[var(--wb-warn-ink)]"
           title="Sem thumbnail gerada: o TikTok vai congelar um frame qualquer do video."
         >
-          <ImageOff size={11} aria-hidden />
+          <Icon name="image-off" />
           sem capa
         </span>
       )}
@@ -265,14 +265,14 @@ function LinhaDoCorte({
           className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-text-dim)]"
           title="Já publicado no YouTube"
         >
-          <Youtube size={11} aria-hidden />
+          <Icon name="youtube" />
           no YouTube
         </span>
       )}
 
       {publicado ? (
         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--wb-ok-ink)]">
-          <Check size={11} aria-hidden />
+          <Icon name="check" />
           publicado no TikTok
         </span>
       ) : (
@@ -282,7 +282,7 @@ function LinhaDoCorte({
               className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-text-mute)]"
               title={copiada ? 'Legenda copiada' : 'A legenda está no pacote.txt'}
             >
-              <Check size={11} aria-hidden />
+              <Icon name="check" />
               pacote pronto
             </span>
           )}
@@ -296,7 +296,7 @@ function LinhaDoCorte({
             onClick={() => assistido.mutate()}
             title="Sobe o vídeo, escreve a legenda e põe a capa no navegador do robô. Só publica com “Publicar sozinho” ligado."
           >
-            {assistido.isPending ? <Loader2 className="animate-spin" /> : <Bot />}
+            {assistido.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="bot" />}
             {assistido.isPending ? 'subindo…' : 'Assistido'}
           </Button>
           <Button
@@ -306,7 +306,7 @@ function LinhaDoCorte({
             onClick={() => abrir.mutate()}
             title="Só monta o pacote, abre a pasta, copia a legenda e abre a aba. Você sobe à mão."
           >
-            {abrir.isPending ? <Loader2 className="animate-spin" /> : <Send />}
+            {abrir.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="send" />}
             {preparado ? 'abrir' : 'Só o pacote'}
           </Button>
           {/* D-546: continua aqui como retaguarda. A vigilia devolve "nao sei"
@@ -321,7 +321,7 @@ function LinhaDoCorte({
             onClick={() => confirmar.mutate()}
             title="Libera a limpeza automática deste MP4. Sem isto ele fica no disco."
           >
-            {confirmar.isPending ? <Loader2 className="animate-spin" /> : <Check />}
+            {confirmar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="check" />}
             publiquei
           </Button>
         </>
@@ -337,13 +337,13 @@ function LinhaDoCorte({
         <span className="inline-flex w-full flex-wrap items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
           {esperandoPublicar ? (
             <>
-              <Loader2 size={11} className="animate-spin" aria-hidden />
+              <Icon name="loader-2" className="animate-spin" />
               Pronto na aba. Revise e clique em <strong>Publicar</strong> — daqui eu vejo e marco
               sozinho.
             </>
           ) : (
             <>
-              <Check size={11} className="text-[var(--wb-ok-ink)]" aria-hidden />
+              <Icon name="check" className="text-[var(--wb-ok-ink)]" />
               Pronto para conferir: {assistido.data.resumo}.
             </>
           )}
@@ -371,7 +371,7 @@ function LinhaDoCorte({
       )}
       {abrir.isSuccess && !publicado && (
         <span className="inline-flex w-full items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
-          <ExternalLink size={11} aria-hidden />
+          <Icon name="external-link" />
           arraste o MP4 na aba que abriu e confirme em “publiquei”
         </span>
       )}

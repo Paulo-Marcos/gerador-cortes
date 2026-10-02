@@ -4,7 +4,6 @@
 // abrem cada seção; na aplicação, Aparência (tema+paleta) + settings globais.
 // Container: orquestra o I/O (hooks em useChannels) e delega às seções.
 import { useState } from 'react';
-import { ChevronLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
@@ -33,6 +32,7 @@ import {
   useYoutubeAuthStatus,
 } from './useChannels';
 import { mensagemErro } from '@/lib/mensagemErro';
+import { Icon } from '@/upgrade/Icon';
 
 type Dialogo = { tipo: 'criar' } | { tipo: 'editar'; canal: Canal } | null;
 type Aba = 'canal' | 'aplicacao';
@@ -218,7 +218,7 @@ export function ChannelsPage() {
         <div className="flex-1" />
         {aba === 'canal' && secao === null && (
           <Button type="button" size="sm" onClick={() => setDialogo({ tipo: 'criar' })}>
-            <Plus aria-hidden />
+            <Icon name="plus" />
             Novo canal
           </Button>
         )}
@@ -249,7 +249,7 @@ export function ChannelsPage() {
               onClick={() => setSecao(null)}
               className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
             >
-              <ChevronLeft size={14} aria-hidden />
+              <Icon name="chevron-left" />
               Canal ativo · {SECOES_CANAL[secao].titulo}
             </button>
             {secao === 'skills' && <EditorialSkillsSection />}

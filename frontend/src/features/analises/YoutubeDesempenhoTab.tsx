@@ -2,7 +2,6 @@
 // sincronizar e os levantamentos duração×retenção e título×desempenho. Nasce
 // vazia de forma elegante: sem vídeos, orienta a reautorizar o OAuth e
 // sincronizar. Nunca quebra se o backend pedir reautorização.
-import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import type { LevantamentoDuracao, LevantamentoTitulo } from './api';
@@ -13,6 +12,7 @@ import {
   useYoutubeStatsStatus,
 } from './useAnalises';
 import { formatarNumero, formatarPct, formatarSeg } from './analisesFormat';
+import { Icon } from '@/upgrade/Icon';
 
 const GRUPO_ROTULO: Record<string, string> = {
   comprimento: 'Comprimento do título',
@@ -140,7 +140,7 @@ export function YoutubeDesempenhoTab() {
         <div className="text-[13px] text-[var(--wb-text-mute)]">
           {status.isLoading ? (
             <span className="flex items-center gap-2">
-              <Loader2 className="animate-spin" size={14} aria-hidden />
+              <Icon name="loader-2" className="animate-spin" />
               Carregando status…
             </span>
           ) : status.data ? (
@@ -170,9 +170,9 @@ export function YoutubeDesempenhoTab() {
         </div>
         <Button type="button" onClick={handleSync} disabled={sync.isPending}>
           {sync.isPending ? (
-            <Loader2 className="animate-spin" size={16} aria-hidden />
+            <Icon name="loader-2" size={16} className="animate-spin" />
           ) : (
-            <RefreshCw size={16} aria-hidden />
+            <Icon name="refresh-cw" size={16} />
           )}
           Sincronizar
         </Button>
@@ -180,7 +180,7 @@ export function YoutubeDesempenhoTab() {
 
       {precisaReautorizar && (
         <div className="flex items-start gap-3 rounded-[var(--radius)] border border-wb-warn/40 bg-[var(--wb-bg-card)] p-4">
-          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" aria-hidden />
+          <Icon name="triangle-alert" size={20} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
           <div className="text-[14px] text-[var(--wb-text-mute)]">
             <p className="font-medium text-[var(--wb-text)]">Reautorização necessária</p>
             <p className="mt-1">

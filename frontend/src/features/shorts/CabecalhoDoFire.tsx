@@ -1,4 +1,3 @@
-import { CheckCheck, RotateCcw, Trash2 } from 'lucide-react';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { cn } from '@/lib/utils';
 import { BotaoDeCluster } from './BotaoDeCluster';
@@ -182,13 +181,13 @@ export function CabecalhoDoFire({
             items={[
               {
                 label: finalizado ? 'Reabrir (voltar para a fila)' : 'Marcar como finalizado',
-                icon: finalizado ? RotateCcw : CheckCheck,
+                icon: finalizado ? 'rotate-ccw' : 'check-check',
                 disabled: alternandoFinalizado,
                 onClick: onAlternarFinalizado,
               },
               {
                 label: rotuloDescarteBruto(fire.shorts, fire.bruto_mb),
-                icon: Trash2,
+                icon: 'trash-2',
                 danger: true,
                 disabled: descartando,
                 onClick: onDescartar,

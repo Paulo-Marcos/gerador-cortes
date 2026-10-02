@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
@@ -11,6 +10,7 @@ import {
   useRemoverFichaChatgpt,
   useSubirFichaChatgpt,
 } from './useCapaNoChatGPT';
+import { Icon } from '@/upgrade/Icon';
 
 // D-804: onde o robô gera as capas — o projeto do ChatGPT do canal e as fichas
 // do mascote que vão anexas em todo pedido. Por canal, porque cada canal tem o
@@ -61,7 +61,7 @@ function LinkDoProjeto({ salvo }: { salvo: string }) {
           onClick={aoSalvar}
           disabled={gravar.isPending || projeto.trim() === salvo}
         >
-          {gravar.isPending && <Loader2 className="animate-spin" />}
+          {gravar.isPending && <Icon name="loader-2" className="animate-spin" />}
           Salvar
         </Button>
       </div>
@@ -112,7 +112,7 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
           disabled={subir.isPending || cheio}
           onClick={() => seletor.current?.click()}
         >
-          {subir.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
+          {subir.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="image-plus" />}
           Adicionar fichas
         </Button>
       </div>
@@ -157,7 +157,7 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
                   onClick={() => aoRemover(nome)}
                   className="rounded p-1 text-[var(--wb-text-dim)] hover:text-error disabled:opacity-50"
                 >
-                  <Trash2 size={13} aria-hidden />
+                  <Icon name="trash-2" />
                 </button>
               </div>
             </li>

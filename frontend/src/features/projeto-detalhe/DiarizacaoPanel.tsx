@@ -4,7 +4,6 @@
 // diarização no prompt, (2) rodar a diarização sob demanda, e (3) rebatizar os
 // falantes (nome + quem é o canal) antes de gerar os cortes.
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Mic, Save, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { FalantesMap } from '@/features/diarizacao/api';
@@ -13,6 +12,7 @@ import {
   useDiarizarProjeto,
   useFalantes,
 } from '@/features/diarizacao/useDiarizacao';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   projetoId: string;
@@ -63,7 +63,7 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
         />
         <span className="flex-1">
           <span className="flex items-center gap-1.5 font-semibold text-text-100">
-            <Users size={14} className="text-accent-300" /> Usar diarização de falantes
+            <Icon name="users" className="text-accent-300" /> Usar diarização de falantes
           </span>
           <span className="mt-0.5 block text-[11px] text-text-300">
             Marca no prompt quem fala em cada trecho ({'['}CANAL{']'} vs. {'['}OUTRO{']'}) para a
@@ -89,9 +89,9 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
               className="shrink-0"
             >
               {diarizar.isPending ? (
-                <Loader2 size={14} className="animate-spin" />
+                <Icon name="loader-2" className="animate-spin" />
               ) : (
-                <Mic size={14} />
+                <Icon name="mic" />
               )}
               {temFalantes ? 'Re-diarizar' : 'Diarizar falantes'}
             </Button>
@@ -128,9 +128,9 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
                   disabled={!sujo || salvar.isPending}
                 >
                   {salvar.isPending ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Icon name="loader-2" className="animate-spin" />
                   ) : (
-                    <Save size={14} />
+                    <Icon name="save" />
                   )}
                   Salvar nomes
                 </Button>

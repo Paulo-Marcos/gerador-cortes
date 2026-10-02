@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, RotateCcw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BlocosArrastaveis } from '@/features/shorts/BlocosArrastaveis';
 import type { Retangulo } from '@/features/shorts/arrastarSlot';
 import { settingsApi } from '@/features/settings/api';
+import { Icon } from '@/upgrade/Icon';
 
 // D-532: onde cada componente da capa do TikTok fica.
 //
@@ -96,7 +96,7 @@ export function CapaTikTokLayoutEditor() {
   if (layoutQuery.isLoading || !layout || !blocos) {
     return (
       <p className="text-[12px] text-[var(--wb-text-mute)]">
-        <Loader2 className="mr-1 inline animate-spin" size={12} aria-hidden />
+        <Icon name="loader-2" className="mr-1 inline animate-spin" />
         carregando o layout da capa…
       </p>
     );
@@ -169,7 +169,7 @@ export function CapaTikTokLayoutEditor() {
               disabled={!sujo || salvar.isPending}
               onClick={() => salvar.mutate(blocos)}
             >
-              {salvar.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+              {salvar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
               Salvar layout
             </Button>
             <Button
@@ -184,7 +184,7 @@ export function CapaTikTokLayoutEditor() {
               }}
               title="Volta os três componentes para as posições de fábrica."
             >
-              <RotateCcw />
+              <Icon name="rotate-ccw" />
               Restaurar padrão
             </Button>
           </div>

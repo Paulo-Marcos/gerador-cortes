@@ -3,7 +3,6 @@
 // (card na lista, form no modal). Lista as 5 skills editoriais do canal ativo,
 // mostra se cada uma foi customizada e abre o editor com corpo/params/lentes.
 import { useState } from 'react';
-import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
@@ -20,6 +19,7 @@ import {
   useVersoesSkill,
 } from './useEditorialSkills';
 import { mensagemErro } from '@/lib/mensagemErro';
+import { Icon } from '@/upgrade/Icon';
 
 
 /** Igualdade rasa de params (modelos dos dois providers, thinking e timeout). */
@@ -102,7 +102,7 @@ export function EditorialSkillsSection() {
 
       {skillsQuery.isLoading && (
         <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-          <Loader2 className="animate-spin" size={16} aria-hidden />
+          <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando skills…
         </p>
       )}
@@ -110,7 +110,7 @@ export function EditorialSkillsSection() {
       {skillsQuery.isError && (
         <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklch,var(--error)_10%,var(--wb-bg-card))] p-4">
           <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-            <AlertTriangle size={16} aria-hidden className="text-error" />
+            <Icon name="triangle-alert" size={16} className="text-error" />
             {mensagemErro(skillsQuery.error, 'Não foi possível carregar as skills.')}
           </p>
           <div>

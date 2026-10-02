@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ImagePlus, Loader2, Sparkles, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { mensagemDoRobo, retratoUrl, type PessoaDaCapa, type ProporcaoDaCapa } from './api';
@@ -10,6 +9,7 @@ import {
   useGerarNoChatGPT,
   useSubirFotoDaPessoa,
 } from './useCapaNoChatGPT';
+import { Icon } from '@/upgrade/Icon';
 
 // D-804: o botão que troca o copiar-colar-no-ChatGPT por um clique.
 //
@@ -70,7 +70,7 @@ export function GerarNoChatGPT({
         onClick={() => gerar.mutate({ prompt: texto, pessoas: fotosQueVao(elenco.pessoas) })}
         title={motivo}
       >
-        {gerar.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
+        {gerar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="sparkles" />}
         {gerar.isPending ? 'Gerando no ChatGPT…' : 'Gerar no ChatGPT'}
       </Button>
       {gerar.isPending && (
@@ -178,7 +178,7 @@ function ElencoDaCapa({ elenco, ocupado }: { elenco: ElencoConferido; ocupado: b
               title="Acrescentar alguém: a foto vem do banco de retratos ou da Wikipédia"
               className="flex items-center gap-1 rounded-full border border-dashed border-[var(--wb-border-soft)] px-2 py-1 text-[11px] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
             >
-              <UserPlus className="size-3.5" />
+              <Icon name="user-plus" />
               pessoa
             </button>
           ) : (
@@ -232,7 +232,7 @@ function ChipDaPessoa({ pessoa, versao, desabilitado, onFoto, onTirar }: ChipPro
           />
         ) : (
           <span className="flex size-8 items-center justify-center rounded-full border border-dashed border-[var(--wb-warn-ink)] text-[var(--wb-warn-ink)]">
-            <ImagePlus className="size-4" />
+            <Icon name="image-plus" size={16} />
           </span>
         )}
         <input
@@ -257,7 +257,7 @@ function ChipDaPessoa({ pessoa, versao, desabilitado, onFoto, onTirar }: ChipPro
         title={`Tirar ${nome} da capa`}
         className="rounded-full p-0.5 text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
       >
-        <X className="size-3" />
+        <Icon name="x" />
       </button>
     </li>
   );

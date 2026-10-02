@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, CheckCircle2, Loader2, Rocket, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusExportCorte } from '@/types/models';
 import { publicacaoApi, type BulkYoutubeRequest } from '@/features/publicacao/api';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -117,7 +117,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       size="lg"
       title={
         <span className="flex items-center gap-2">
-          <Rocket size={18} className="text-accent-300" /> Publicar em massa
+          <Icon name="rocket" size={20} className="text-accent-300" /> Publicar em massa
         </span>
       }
       description={`Cada lançamento espaçado de ${SPACING_MIN} minutos a partir do horário inicial.`}
@@ -146,7 +146,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="inicio">
-                <Calendar size={12} className="mr-1 inline" /> Início
+                <Icon name="calendar" className="mr-1 inline" /> Início
               </Label>
               <Input
                 id="inicio"
@@ -181,12 +181,12 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
                       <span className="w-5 shrink-0">
                         {r?.status === 'enfileirado' && (
                           <span title={r.mensagem ?? 'enfileirado'}>
-                            <CheckCircle2 size={14} className="text-success" />
+                            <Icon name="circle-check" className="text-success" />
                           </span>
                         )}
                         {r?.status === 'erro' && (
                           <span title={r.mensagem ?? 'erro'}>
-                            <XCircle size={14} className="text-error" />
+                            <Icon name="x-circle" className="text-error" />
                           </span>
                         )}
                       </span>
@@ -210,7 +210,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
         </Button>
         {totalProntos > 0 && !loteEnviado && (
           <Button type="button" onClick={onPublicar} disabled={enviando || agenda.length === 0}>
-            {enviando ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
+            {enviando ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="rocket" size={16} />}
             Publicar {agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'}
           </Button>
         )}

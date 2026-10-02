@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Quote, X } from 'lucide-react';
 import type { EmbasamentoItem } from './api';
+import { Icon } from '@/upgrade/Icon';
 
 /**
  * Painel de embasamento de uma live no ranking (D-356).
@@ -108,7 +108,7 @@ export function RankingEmbasamentoPanel({
             aria-label="Fechar"
             className="-m-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
           >
-            <X size={16} aria-hidden />
+            <Icon name="x" size={16} />
           </button>
         </header>
 
@@ -170,7 +170,7 @@ export function RankingEmbasamentoPanel({
           {destaques.length > 0 && (
             <section className="mt-5">
               <h3 className="mb-2 flex items-center gap-1.5 font-code text-[10px] uppercase tracking-widest text-[var(--wb-text-dim)]">
-                <Quote size={12} aria-hidden />
+                <Icon name="quote" />
                 Comentários que justificam o tom
               </h3>
               <ul className="grid gap-2">

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bot, Loader2, Package, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
@@ -9,6 +8,7 @@ import { motivoDoErro, shortsApi, type EnvioAssistido } from '@/features/shorts/
 import { useCancelarLote, useCriarLote, useLoteAtual } from '@/features/shorts/useLotePublicacao';
 import type { StatusExportCorte } from '@/types/models';
 import { alvosDoLoteNoTiktok } from './listasDePublicacao';
+import { Icon } from '@/upgrade/Icon';
 
 // D-799: o "subir todos" dos cortes no TikTok.
 //
@@ -81,7 +81,7 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
           onClick={subirTodos}
           title="O robô sobe um por um no navegador dele, fora da tela, com legenda e capa. No fim a janela volta com as abas prontas."
         >
-          {subir.isPending || correndo ? <Loader2 className="animate-spin" /> : <Bot />}
+          {subir.isPending || correndo ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="bot" />}
           {correndo ? 'subindo…' : `Subir todos (${alvos.length})`}
         </Button>
         <Button
@@ -91,7 +91,7 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
           onClick={() => preparar.mutate()}
           title="Só monta as pastas, sem abrir nada. Caminho de reserva se o robô quebrar."
         >
-          {preparar.isPending ? <Loader2 className="animate-spin" /> : <Package />}
+          {preparar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="package" />}
           {preparar.isPending ? 'montando…' : 'Só preparar pacotes'}
         </Button>
         {correndo && (
@@ -101,7 +101,7 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
             disabled={cancelar.isPending}
             onClick={() => cancelar.mutate()}
           >
-            <XCircle />
+            <Icon name="x-circle" />
             Cancelar
           </Button>
         )}

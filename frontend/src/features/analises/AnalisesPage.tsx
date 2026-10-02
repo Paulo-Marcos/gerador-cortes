@@ -2,7 +2,6 @@
 // proposta×final (D-310) e o desempenho no YouTube (D-313). Cada aba nasce vazia
 // de forma elegante e nunca quebra na ausência de dados.
 import { useMemo, useState } from 'react';
-import { Cpu, Film, Link2, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PropostaFinalTab } from './PropostaFinalTab';
 import { YoutubeDesempenhoTab } from './YoutubeDesempenhoTab';
@@ -10,6 +9,7 @@ import { LlmCallsTab } from './LlmCallsTab';
 import { useYoutubeStatsStatus } from './useAnalises';
 import { useLlmCalls } from './useLlmCalls';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { Icon } from '@/upgrade/Icon';
 
 type AbaId = 'proposta-final' | 'youtube' | 'llm-calls';
 
@@ -57,25 +57,25 @@ function StatCards() {
   return (
     <div className="grid flex-none gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
       <StatCard
-        icon={<Film size={14} aria-hidden />}
+        icon={<Icon name="film" />}
         label="Publicados 30d"
         value={String(stats.publicados30d)}
         hint="Vídeos do canal publicados nos últimos 30 dias (sync YouTube)"
       />
       <StatCard
-        icon={<TrendingUp size={14} aria-hidden />}
+        icon={<Icon name="trending-up" />}
         label="Retenção média"
         value={stats.retencaoMedia != null ? `${stats.retencaoMedia.toFixed(1)}%` : '—'}
         hint="Média de average_view_percentage dos vídeos sincronizados"
       />
       <StatCard
-        icon={<Link2 size={14} aria-hidden />}
+        icon={<Icon name="link-2" />}
         label="Casados c/ corte"
         value={stats.total > 0 ? `${stats.comCorte}/${stats.total}` : '—'}
         hint="Vídeos do YouTube vinculados a um corte do app"
       />
       <StatCard
-        icon={<Cpu size={14} aria-hidden />}
+        icon={<Icon name="cpu" />}
         label="Custo LLM (últimas 100)"
         value={`$${stats.custoLlm.toFixed(2)}`}
         hint="Soma de custo_usd das chamadas de IA mais recentes"

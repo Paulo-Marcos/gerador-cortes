@@ -4,7 +4,6 @@
 // usado tanto no modal "Ajustes" quanto na página de Configurações, para que a
 // mesma config apareça e seja editável nos dois lugares sem duplicar lógica.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Loader2 } from 'lucide-react';
 import { settingsApi, type AtualizarSettingsBody } from '@/features/settings/api';
 import { filtrosApi, type FiltroExport } from '@/features/post-production/api/filtros';
 import type { LogLevel, RenderSettings } from '@/types/models';
@@ -22,6 +21,7 @@ import {
 } from './useContextoCorte';
 import { CapaTikTokLayoutEditor } from './CapaTikTokLayoutEditor';
 import { NavegadorDoRobo } from './NavegadorDoRobo';
+import { Icon } from '@/upgrade/Icon';
 
 export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: string }> = [
   {
@@ -309,7 +309,7 @@ export function AppSettingsControls() {
                 )}
                 aria-hidden
               >
-                <Check size={13} />
+                <Icon name="check" />
               </span>
             </button>
           );
@@ -404,7 +404,7 @@ export function AppSettingsControls() {
 
       {isBusy && (
         <p className="inline-flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">
-          <Loader2 size={14} className="animate-spin" aria-hidden />
+          <Icon name="loader-2" className="animate-spin" />
           Salvando ajuste...
         </p>
       )}

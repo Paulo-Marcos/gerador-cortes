@@ -1,20 +1,10 @@
-import {
-  Clapperboard,
-  Film,
-  Image,
-  Palette,
-  Scissors,
-  Sparkles,
-  Tags,
-  Youtube,
-  type LucideIcon,
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StatusExportCorte } from '@/types/models';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 interface PillSpec {
   emoji: string;
-  Icon: LucideIcon;
+  icone: IconName;
   label: string;
   done: boolean;
   hint: string;
@@ -28,14 +18,14 @@ export function buildStatusPills(corte: StatusExportCorte): PillSpec[] {
     {
       emoji: '🎞️',
       label: 'Bruto',
-      Icon: Scissors,
+      icone: 'scissors',
       done: corte.raw_pronto,
       hint: 'Recorte bruto exportado',
     },
     {
       emoji: '🎭',
       label: 'Cenas',
-      Icon: Clapperboard,
+      icone: 'clapperboard',
       done: Boolean(corte.cenas_validadas),
       hint: corte.cenas_validadas
         ? 'Cenas Remotion validadas pelo editor'
@@ -46,42 +36,42 @@ export function buildStatusPills(corte: StatusExportCorte): PillSpec[] {
     {
       emoji: '🎨',
       label: 'Graded',
-      Icon: Palette,
+      icone: 'palette',
       done: corte.grade_pronta,
       hint: 'Fase 1 do render final concluida (clip_graded.mp4)',
     },
     {
       emoji: '✨',
       label: 'Overlays',
-      Icon: Sparkles,
+      icone: 'sparkles',
       done: Boolean(corte.overlays_prontos),
       hint: 'Fase 2 do render final concluida (overlays Remotion)',
     },
     {
       emoji: '🎬',
       label: 'Final',
-      Icon: Film,
+      icone: 'film',
       done: corte.video_pronto,
       hint: 'Render final completo (upload_ready/video.mp4)',
     },
     {
       emoji: '🖼️',
       label: 'Thumb',
-      Icon: Image,
+      icone: 'image',
       done: corte.thumbnail_pronta,
       hint: 'Thumbnail gerada',
     },
     {
       emoji: '📝',
       label: 'Meta',
-      Icon: Tags,
+      icone: 'tags',
       done: corte.metadados_completos,
       hint: 'Metadados (titulo, descricao, tags) completos',
     },
     {
       emoji: '📺',
       label: 'YouTube',
-      Icon: Youtube,
+      icone: 'youtube',
       done: Boolean(corte.youtube_url_publicado),
       hint: corte.youtube_url_publicado
         ? 'Publicado no YouTube'
@@ -167,7 +157,6 @@ export function StatusPipStrip({
             : i === indiceProximo
               ? 'next'
               : 'off';
-        const Icon = p.Icon;
         return (
           <span
             key={p.label}
@@ -180,7 +169,7 @@ export function StatusPipStrip({
               CLASSE_BADGE[estado],
             )}
           >
-            <Icon size={11} strokeWidth={2.2} aria-hidden />
+            <Icon name={p.icone} />
           </span>
         );
       })}

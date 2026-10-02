@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // OverflowMenu (⋯) — princípio anti-poluição do redesign v3:
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 // ─────────────────────────────────────────────────────────────
 
 export interface OverflowMenuItem {
-  icon?: LucideIcon;
+  icon?: IconName;
   label: string;
   kbd?: string;
   /** Explicação no hover — usado quando o item está `disabled` e o motivo importa. */
@@ -89,7 +89,7 @@ export function OverflowMenu({
             : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
         )}
       >
-        <MoreHorizontal size={compact ? 13 : 14} aria-hidden />
+        <Icon name="more-horizontal" />
       </button>
 
       {open && (
@@ -101,13 +101,11 @@ export function OverflowMenu({
           )}
         >
           {items.map((item, idx) => {
-            const Icon = item.icon;
             const conteudo = (
               <>
-                {Icon && (
+                {item.icon && (
                   <Icon
-                    size={13}
-                    aria-hidden
+                    name={item.icon}
                     className={item.danger ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text-mute)]'}
                   />
                 )}
