@@ -44,7 +44,7 @@ import {
   temEdicao,
   type FiltroDeFire,
 } from './filtrosDosFires';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 const CHIPS: { chave: keyof ContagemShorts; um: string; varios: string; classe: string }[] = [
   { chave: 'sugerido', um: 'sugerido', varios: 'sugeridos', classe: 'text-[var(--wb-text-mute)]' },
@@ -188,7 +188,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
           to={`/shorts/${fire.corte_id}`}
           className="inline-flex h-7 flex-1 items-center justify-center gap-1.5 rounded-[7px] text-[12px] font-semibold text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
         >
-          <Icon name="pencil" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
           Editar
         </Link>
         <Link
@@ -317,7 +317,7 @@ function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
         {gerar.isPending ? (
           <Icon name="loader-2" className="animate-spin" />
         ) : (
-          <Icon name="sparkles" />
+          <Icon name={ICONE_DO_CONCEITO.iaGera} />
         )}
         {gerar.isPending
           ? 'a IA está propondo…'
@@ -383,7 +383,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
           className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] px-3 text-[12px] font-semibold text-[var(--wb-accent-strong,var(--wb-accent))] disabled:opacity-60"
           title="Um corte por vez: refaz o bruto que falta e a IA propõe os trechos. Nada do que já existe é apagado."
         >
-          {grupo.precisaBaixar ? <Icon name="download" /> : <Icon name="sparkles" />}
+          {grupo.precisaBaixar ? <Icon name="download" /> : <Icon name={ICONE_DO_CONCEITO.iaGera} />}
           {grupo.precisaBaixar
             ? `Baixar a live e gerar (${grupo.pendentes})`
             : grupo.pendentes === 1
@@ -398,9 +398,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
 function Vazio() {
   return (
     <div className="mx-auto max-w-md py-16 text-center">
-      <span aria-hidden className="text-[32px]">
-        🔥
-      </span>
+      <Icon name="flame" ilustracao={32} className="mx-auto text-[var(--wb-text-mute)]" />
       <p className="mt-3 text-[14px] font-semibold text-[var(--wb-text)]">
         Nenhum corte na fábrica de shorts
       </p>

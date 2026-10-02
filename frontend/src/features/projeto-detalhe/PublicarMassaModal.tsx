@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusExportCorte } from '@/types/models';
 import { publicacaoApi, type BulkYoutubeRequest } from '@/features/publicacao/api';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -117,7 +117,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       size="lg"
       title={
         <span className="flex items-center gap-2">
-          <Icon name="rocket" size={20} className="text-accent-300" /> Publicar em massa
+          <Icon name={ICONE_DO_CONCEITO.publicar} size={20} className="text-accent-300" /> Publicar em massa
         </span>
       }
       description={`Cada lançamento espaçado de ${SPACING_MIN} minutos a partir do horário inicial.`}
@@ -160,8 +160,8 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
 
           {/* Preview da agenda */}
           <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium text-text-300">
-              📅 Agenda ({agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'})
+            <p className="flex items-center gap-1 text-xs font-medium text-text-300">
+              <Icon name="calendar" />Agenda ({agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'})
             </p>
             <div className="max-h-56 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40">
               <ul className="divide-y divide-[var(--border)]">
@@ -210,7 +210,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
         </Button>
         {totalProntos > 0 && !loteEnviado && (
           <Button type="button" onClick={onPublicar} disabled={enviando || agenda.length === 0}>
-            {enviando ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="rocket" size={16} />}
+            {enviando ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.publicar} size={16} />}
             Publicar {agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'}
           </Button>
         )}

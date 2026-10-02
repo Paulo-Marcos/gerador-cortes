@@ -2,7 +2,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { useAuditoriaAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { AuditoriaCorteItem } from '@/features/projetos/analise';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -30,7 +30,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
       onClose={onClose}
       title={
         <span className="flex items-center gap-2">
-          <Icon name="clipboard-check" size={20} /> Auditoria da análise IA
+          <Icon name={ICONE_DO_CONCEITO.auditar} size={20} /> Auditoria da análise IA
         </span>
       }
       description="Por que cada corte virou corte (e o que foi descartado)."

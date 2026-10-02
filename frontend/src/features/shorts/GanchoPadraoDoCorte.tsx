@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useDefinirGanchoPadrao, useGanchoPadrao, useSeguirGanchoPadrao } from './useShortsDoCorte';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // D-594: o gancho que vale para TODOS os shorts deste corte.
 //
@@ -72,7 +72,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
           aria-label="Editar o gancho padrão"
           onClick={() => onEditar(escolhido)}
         >
-          <Icon name="pencil" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
           editar
         </Button>
         <Button size="sm" variant="ghost" onClick={() => onEditar(null)}>

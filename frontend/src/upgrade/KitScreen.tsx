@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon, type IconName } from './Icon';
+import { Icon, ICONE_DO_CONCEITO, type IconName } from './Icon';
 import {
   ModalFields,
   ModalItems,
@@ -96,11 +96,11 @@ type ModalKey =
 
 const BOTOES_MODAL: Array<{ n: IconName; t: string; k: ModalKey }> = [
   { n: 'plus', t: 'Nova live', k: 'novaLive' },
-  { n: 'send', t: 'Publicar em massa', k: 'publicar' },
+  { n: ICONE_DO_CONCEITO.publicar, t: 'Publicar em massa', k: 'publicar' },
   { n: 'rocket', t: 'Render', k: 'render' },
   { n: 'flame', t: 'Nota do corte', k: 'nota' },
-  { n: 'brain', t: 'Auditoria', k: 'auditoria' },
-  { n: 'sparkles', t: 'Gerar com IA', k: 'padroes' },
+  { n: ICONE_DO_CONCEITO.auditar, t: 'Auditoria', k: 'auditoria' },
+  { n: ICONE_DO_CONCEITO.iaGera, t: 'Gerar com IA', k: 'padroes' },
   { n: 'triangle-alert', t: 'Confirmação', k: 'confirmar' },
 ];
 
@@ -257,7 +257,7 @@ function ModalDemo({ aberto, fechar }: { aberto: ModalKey | null; fechar: () => 
       return (
         <UpgradeModal
           {...props}
-          icon="send"
+          icon={ICONE_DO_CONCEITO.publicar}
           title="Publicar em massa"
           subtitle="3 de 5 cortes selecionados · agendamento em intervalos de 2 h"
           width="560px"
@@ -324,14 +324,14 @@ function ModalDemo({ aberto, fechar }: { aberto: ModalKey | null; fechar: () => 
       return (
         <UpgradeModal
           {...props}
-          icon="brain"
+          icon={ICONE_DO_CONCEITO.auditar}
           title="Auditoria da análise"
           subtitle="o que a IA leu, o que propôs e quanto custou"
           width="560px"
           footerNote="última análise há 2 dias"
           secondaryLabel="Fechar"
           primaryLabel="Reanalisar live"
-          primaryIcon="rotate-ccw"
+          primaryIcon="brain"
           primaryStrong={false}
         >
           <ModalFields fields={CAMPOS_AUDITORIA} />
@@ -345,13 +345,13 @@ function ModalDemo({ aberto, fechar }: { aberto: ModalKey | null; fechar: () => 
       return (
         <UpgradeModal
           {...props}
-          icon="wand"
+          icon={ICONE_DO_CONCEITO.iaGera}
           title="Gerar com IA"
           subtitle="o que será escrito para este corte"
           width="500px"
           footerNote="custo estimado: US$ 0,04"
           primaryLabel="Gerar 3 itens"
-          primaryIcon="sparkles"
+          primaryIcon={ICONE_DO_CONCEITO.iaGera}
         >
           <ModalItems items={ITENS_PADROES} />
         </UpgradeModal>

@@ -25,7 +25,9 @@ export type ScreenAction = {
   forte?: boolean;
   onClick?: () => void;
   /** Ação de IA: o verbo é dito uma vez e o provedor vira a escolha final,
-   *  por ícone (D-609). Com isto, `icone` e `onClick` são ignorados. */
+   *  por ícone (D-609). Com isto, `onClick` é ignorado; o `icone` segue para
+   *  o AcaoDeIa (antes era ignorado, e "Analisar padrões" saía com o brilho
+   *  em vez do cérebro — D-858). */
   ia?: { emVoo: ProviderIA | null; onGerar: (provider: ProviderIA) => void };
 };
 
@@ -44,6 +46,7 @@ export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
           <AcaoDeIa
             key={a.texto}
             rotulo={a.texto}
+            icone={a.icone}
             tamanho="sm"
             // A altura do `.btn` do design (30 px): lado a lado, os dois têm de
             // parecer a mesma família de botão.

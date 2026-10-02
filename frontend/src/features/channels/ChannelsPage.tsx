@@ -32,7 +32,7 @@ import {
   useYoutubeAuthStatus,
 } from './useChannels';
 import { mensagemErro } from '@/lib/mensagemErro';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 type Dialogo = { tipo: 'criar' } | { tipo: 'editar'; canal: Canal } | null;
 type Aba = 'canal' | 'aplicacao';
@@ -52,12 +52,12 @@ function paraIdentidade(values: ChannelFormValues): IdentidadeCanal {
 
 /** Bloco-portal do protótipo: card clicável que abre uma área editorial. */
 function BlocoPortal({
-  emoji,
+  icone,
   titulo,
   descricao,
   onClick,
 }: {
-  emoji: string;
+  icone: IconName;
   titulo: string;
   descricao: string;
   onClick: () => void;
@@ -69,9 +69,7 @@ function BlocoPortal({
       className="rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-3.5 text-left shadow-[shadow:var(--wb-shadow)] transition-colors hover:border-[var(--wb-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
     >
       <div className="flex items-center gap-2">
-        <span className="text-[16px]" aria-hidden>
-          {emoji}
-        </span>
+        <Icon name={icone} size={16} />
         <span className="text-[12.5px] font-bold text-[var(--wb-text)]">{titulo}</span>
         <span className="ml-auto text-[var(--wb-text-dim)]" aria-hidden>
           →
@@ -294,25 +292,25 @@ export function ChannelsPage() {
             {/* Blocos-portal do design: cada área editorial abre em sub-view. */}
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
               <BlocoPortal
-                emoji="🧠"
+                icone="brain"
                 titulo="Skills editoriais"
                 descricao="Prompts por etapa (análise, títulos, cenas…) com histórico de versões e reset por campo."
                 onClick={() => setSecao('skills')}
               />
               <BlocoPortal
-                emoji="🧩"
+                icone="puzzle"
                 titulo="Scaffolds"
                 descricao="Contrato de saída de cada skill: placeholders validados e texto do invólucro."
                 onClick={() => setSecao('scaffolds')}
               />
               <BlocoPortal
-                emoji="🛠"
+                icone="wrench"
                 titulo="Prompts utilitários"
                 descricao="Prompts avulsos (desvios, thumbnail, sentimento…) editáveis com validação."
                 onClick={() => setSecao('prompts')}
               />
               <BlocoPortal
-                emoji="⚖"
+                icone="scale"
                 titulo="Pesos do ranking"
                 descricao="Pesos usados no score do ranking de lives do canal."
                 onClick={() => setSecao('pesos')}

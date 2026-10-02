@@ -210,11 +210,11 @@ export function PromptManualPanel({
               {!hideRetorno && (
                 <span
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[10px]',
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]',
                     ok ? 'bg-success/15 text-success' : 'bg-bg-800 text-text-400',
                   )}
                 >
-                  {ok ? '✓ resposta colada' : 'pendente'}
+                  {ok ? <><Icon name="check" />resposta colada</> : 'pendente'}
                 </span>
               )}
               <div className="ml-auto flex items-center gap-1.5">

@@ -210,7 +210,7 @@ export function LiveSearchPage() {
                 Desmarcar todos
               </Button>
               <Button type="button" onClick={processSelected} disabled={enqueueMutation.isPending}>
-                {enqueueMutation.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="play" />}
+                {enqueueMutation.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="download" />}
                 Baixar e processar
               </Button>
             </div>

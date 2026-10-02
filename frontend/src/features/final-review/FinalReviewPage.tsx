@@ -22,7 +22,7 @@ import {
   resolveCorteStagePath,
 } from '@/features/post-production/postProductionNavigation';
 import { settingsApi } from '@/features/settings/api';
-import { Icon, type IconName } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 
 // Atalhos Ctrl+J/K (F-041): mesmos limites usados na tela Bruta.
 const SPEED_MIN = 0.25;
@@ -398,7 +398,7 @@ export function FinalReviewPage() {
           },
           primario: {
             texto: 'Ir para publicar',
-            icone: 'send',
+            icone: ICONE_DO_CONCEITO.publicar,
             // Publicar é na live, com a conferência de canal, título e capa.
             onClick: () => navigate(`/projetos/${projetoId}`),
           },
@@ -612,7 +612,7 @@ function CapaCard({
         <div className="flex-1" />
         <Tooltip label="Editar capa (abre Metadados)" side="bottom">
           <Button type="button" variant="ghost" size="sm" onClick={onEditar}>
-            <Icon name="edit-3" />
+            <Icon name={ICONE_DO_CONCEITO.editar} />
             Editar
           </Button>
         </Tooltip>

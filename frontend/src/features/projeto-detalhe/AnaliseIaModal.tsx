@@ -15,7 +15,7 @@ import {
 import { useImportarAnalise, usePromptAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/features/diarizacao/useDiarizacao';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -159,7 +159,7 @@ function AnaliseIaModalDaLive({
               setModo('reanalisar');
               reset();
             }}
-            emoji="🔄"
+            icone="brain"
             title="Analisar a live inteira"
             hint="Roda a IA na transcrição completa e adiciona os cortes aos já existentes."
           />
@@ -169,7 +169,7 @@ function AnaliseIaModalDaLive({
               setModo('intervalo');
               reset();
             }}
-            emoji="🎯"
+            icone="target"
             title="Cortes em intervalo"
             hint="Gera cortes apenas dentro de uma faixa de tempo."
           />
@@ -270,7 +270,7 @@ function AnaliseIaModalDaLive({
               origem === 'ia' ? 'bg-bg-700 text-text-100' : 'text-text-300 hover:text-text-100',
             )}
           >
-            <Icon name="sparkles" />
+            <Icon name={ICONE_DO_CONCEITO.iaGera} />
             IA
           </button>
           <button
@@ -291,7 +291,7 @@ function AnaliseIaModalDaLive({
           <>
             <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
               <p className="flex items-center gap-1.5 font-semibold text-text-100">
-                <Icon name="sparkles" className="text-accent-300" /> Analise completa por IA
+                <Icon name="brain" className="text-accent-300" /> Analise completa por IA
               </p>
               <p className="mt-1 text-text-300">
                 Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
@@ -348,7 +348,7 @@ function AnaliseIaModalDaLive({
         )}
         {origem === 'ia' && (
           <AcaoDeIa
-            rotulo="Analisar a live"
+            rotulo="Analisar a live" icone="brain"
             rotuloEmVoo="analisando…"
             tamanho="md"
             destaque
@@ -417,13 +417,13 @@ function extrairCortesImportados(parsed: unknown): unknown[] | null {
 function ModoButton({
   active,
   onClick,
-  emoji,
+  icone,
   title,
   hint,
 }: {
   active: boolean;
   onClick: () => void;
-  emoji: string;
+  icone: IconName;
   title: string;
   hint: string;
 }) {
@@ -438,9 +438,7 @@ function ModoButton({
           : 'border-[var(--border)] bg-bg-900/40 hover:border-[var(--border-hover)]',
       )}
     >
-      <span className="text-lg" aria-hidden>
-        {emoji}
-      </span>
+      <Icon name={icone} size={16} />
       <span className="text-sm font-semibold text-text-100">{title}</span>
       <span className="text-[11px] text-text-300">{hint}</span>
     </button>

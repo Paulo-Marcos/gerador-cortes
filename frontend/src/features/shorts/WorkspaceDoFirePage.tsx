@@ -47,7 +47,7 @@ import { useFechoDoShort } from './useFechoDoShort';
 import type { PublicacaoRegistrada } from './shortsApi';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 /** Como cada plataforma se chama na prateleira. */
 const NOME_DA_PLATAFORMA: Record<string, string> = {
@@ -181,7 +181,7 @@ function CartaoDoPronto({
 
         {pronto && (
           <Button variant="outline" size="sm" onClick={onAlternar}>
-            <Icon name="send" />
+            <Icon name={ICONE_DO_CONCEITO.publicar} />
             {aberto ? 'fechar a publicação' : 'Publicar este'}
           </Button>
         )}
@@ -258,12 +258,12 @@ export default function WorkspaceDoFirePage() {
       // R4: idem à tela de curadoria — a live de origem é clicável.
       rotulos: fire ? [{ texto: fire.projeto_titulo, to: `/projetos/${fire.projeto_id}` }] : [],
       acoes: [
-        { icone: 'pencil', texto: 'Voltar à edição', onClick: () => navigate(`/shorts/${corteId}`) },
+        { icone: ICONE_DO_CONCEITO.editar, texto: 'Voltar à edição', onClick: () => navigate(`/shorts/${corteId}`) },
       ],
       barra: {
         secundario: {
           texto: 'Voltar à edição',
-          icone: 'pencil',
+          icone: ICONE_DO_CONCEITO.editar,
           onClick: () => navigate(`/shorts/${corteId}`),
         },
         terciario: { titulo: 'Ver na fila', icone: 'loader', onClick: () => navigate('/fila') },
@@ -272,7 +272,7 @@ export default function WorkspaceDoFirePage() {
             publicaveis.length === 0
               ? 'Nada pronto para publicar'
               : `Publicar ${publicaveis.length} short${publicaveis.length === 1 ? '' : 's'}`,
-          icone: 'send',
+          icone: ICONE_DO_CONCEITO.publicar,
           onClick: () => setPublicandoEmLote(true),
           desabilitado: publicaveis.length === 0,
         },
@@ -315,7 +315,7 @@ export default function WorkspaceDoFirePage() {
             </p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
               <Link to={`/shorts/${corteId}`}>
-                <Icon name="pencil" />
+                <Icon name={ICONE_DO_CONCEITO.editar} />
                 Ir para a edição
               </Link>
             </Button>

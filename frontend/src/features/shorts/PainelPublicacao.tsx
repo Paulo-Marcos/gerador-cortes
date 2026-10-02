@@ -22,7 +22,7 @@ import { comSegundos } from './capaDoShort';
 import { useConfirmarPublicacao, usePublicacoesDoCorte } from './useLotePublicacao';
 import { plataformasJaPublicadas } from './selecaoDoLote';
 import type { ShortSugerido } from './shortsApi';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
   /** D-565: o short inteiro, e nao so o id — o modal do post precisa dele. */
@@ -134,8 +134,8 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
           entrado — e so este aviso separa isso de "deu tudo certo". */}
       {publicar.isSuccess &&
         (publicar.data?.avisos ?? []).map((aviso) => (
-          <p key={aviso} className="text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
-            ⚠ {aviso}
+          <p key={aviso} className="flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+            <Icon name="triangle-alert" className="mt-px" />{aviso}
           </p>
         ))}
       {publicar.isError && (
@@ -182,14 +182,14 @@ function Destino({
             <MarcaManual ocupado={marcando} onMarcar={onMarcar} />
           ))}
         <Button size="sm" variant="outline" onClick={onPublicar} disabled={ocupado}>
-          {porApi ? <Icon name="send" /> : <Icon name="upload" />}
+          {porApi ? <Icon name={ICONE_DO_CONCEITO.publicar} /> : <Icon name="package" />}
           {porApi ? 'publicar' : 'preparar pacote'}
         </Button>
       </div>
 
       {pacote.avisos.map((aviso) => (
-        <p key={aviso} className="mt-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
-          ⚠ {aviso}
+        <p key={aviso} className="mt-1 flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+          <Icon name="triangle-alert" className="mt-px" />{aviso}
         </p>
       ))}
 

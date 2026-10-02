@@ -3,7 +3,7 @@
 // o botão de editar. Sem I/O — o container decide o que fazer no clique.
 import { Button } from '@/components/ui/button';
 import type { EditorialScaffold } from '@/features/channels/api/scaffolds';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
   scaffold: EditorialScaffold;
@@ -31,7 +31,7 @@ export function EditorialScaffoldCard({ scaffold, customizado, onEditar }: Props
           <p className="mt-1 text-sm text-[var(--wb-text-mute)]">{scaffold.descricao}</p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onEditar} className="shrink-0">
-          <Icon name="pencil" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
           Editar
         </Button>
       </div>

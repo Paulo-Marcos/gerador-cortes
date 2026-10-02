@@ -11,7 +11,7 @@ import {
   destinosPublicados,
 } from '@/features/projeto-detalhe/listasDePublicacao';
 import type { Corte,  StatusExportCorte } from '@/types/models';
-import { Icon, type IconName } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { ModalFields, ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
 import { CorteLinhaAp } from './CorteLinhaAp';
@@ -222,7 +222,7 @@ export default function WorkspaceProjetoPage() {
             disabled={refazerTranscricao.isPending}
           />
           <Utilitario
-            icone="search"
+            icone={ICONE_DO_CONCEITO.auditar}
             titulo="Auditar análise — ver por que a IA escolheu cada corte e o que foi descartado."
             cor="var(--info)"
             onClick={() => setAuditoriaAberta(true)}
@@ -232,7 +232,7 @@ export default function WorkspaceProjetoPage() {
               cabe um grupo com texto sem quebrar o ritmo dos utilitários. */}
           <MenuDeIa
             rotulo="Gerar trechos de todos os cortes"
-            icone="scissors"
+            icone={ICONE_DO_CONCEITO.iaGera}
             ocupado={analisarDesviosTodos.disparado}
             desabilitado={cortes.length === 0}
             onGerar={dispararTrechosTodos}
@@ -241,7 +241,7 @@ export default function WorkspaceProjetoPage() {
             alinhamento="direita"
           />
           <Utilitario
-            icone="send"
+            icone={ICONE_DO_CONCEITO.publicar}
             titulo="Subir para o TikTok (robô ou pacote)"
             cor="var(--mute)"
             onClick={() => setTiktokAberto(true)}
@@ -263,7 +263,7 @@ export default function WorkspaceProjetoPage() {
             onClick={() => setPublicarAberto(true)}
             style={prontidao.liberado ? undefined : { opacity: 0.45, cursor: 'not-allowed' }}
           >
-            <Icon name="send" />
+            <Icon name={ICONE_DO_CONCEITO.publicar} />
             {prontidao.total === 0
               ? 'Nada a publicar'
               : `Publicar ${prontidao.total} ${prontidao.total === 1 ? 'corte' : 'cortes'}`}
@@ -494,7 +494,7 @@ export default function WorkspaceProjetoPage() {
       <UpgradeModal
         open={publicarDe !== null}
         onClose={() => setPublicarDe(null)}
-        icon="send"
+        icon={ICONE_DO_CONCEITO.publicar}
         title={`Enviar o corte #${publicarDe?.numero ?? ''} ao YouTube`}
         width="600px"
         subtitle={
@@ -504,7 +504,7 @@ export default function WorkspaceProjetoPage() {
         }
         footerNote="público e sem desfazer pelo app"
         primaryLabel={agendarEm ? 'Agendar no YouTube' : 'Enviar ao YouTube agora'}
-        primaryIcon={agendarEm ? 'clock' : 'send'}
+        primaryIcon={agendarEm ? 'clock' : ICONE_DO_CONCEITO.publicar}
         onPrimary={() => {
           if (!publicarDe) return;
           enviarYoutube(publicarDe.corte_id, agendarEm ? new Date(agendarEm).toISOString() : null);
@@ -554,7 +554,7 @@ export default function WorkspaceProjetoPage() {
       <UpgradeModal
         open={informarUrlDe !== null}
         onClose={() => setInformarUrlDe(null)}
-        icon="play"
+        icon={ICONE_DO_CONCEITO.urlPublicada}
         title={`Informar a URL do corte #${informarUrlDe?.numero ?? ''}`}
         subtitle="para quando o vídeo já subiu fora do app"
         width="480px"

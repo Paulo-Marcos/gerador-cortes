@@ -3,7 +3,7 @@ import { CLAUDE_BRAND, ClaudeIcon } from '@/components/ui/claude-button';
 import { GEMINI_BRAND, GeminiIcon } from '@/components/ui/gemini-button';
 import type { ProviderIA } from '@/lib/providerIa';
 import { cn } from '@/lib/utils';
-import { Icon, type IconName } from '@/upgrade/Icon';
+import { ICONE_DO_CONCEITO, Icon, type IconName } from '@/upgrade/Icon';
 
 // D-609: uma ação de IA, dois provedores — sem repetir o verbo.
 //
@@ -48,6 +48,8 @@ interface AcaoDeIaProps {
   /** Ação principal da área: rótulo na cor de acento. */
   destaque?: boolean;
   tamanho?: 'sm' | 'md';
+  /** O desenho da ação. Padrão: IA gera. Analisar com a IA é o cérebro (D-858). */
+  icone?: IconName;
   /**
    * Só os dois botões, dividindo a largura. Para colunas estreitas, onde o
    * rótulo ao lado viraria reticências: quem usa põe a legenda acima.
@@ -65,6 +67,7 @@ export function AcaoDeIa({
   rotuloEmVoo = 'gerando…',
   destaque = false,
   tamanho = 'sm',
+  icone = ICONE_DO_CONCEITO.iaGera,
   apenasProvedores = false,
   className,
 }: AcaoDeIaProps) {
@@ -94,7 +97,7 @@ export function AcaoDeIa({
           {emVoo ? (
             <Icon name="loader-2" size={t.icone} className="animate-spin" />
           ) : (
-            <Icon name="sparkles" size={t.icone} />
+            <Icon name={icone} size={t.icone} />
           )}
           {/* aria-live: quem não vê o spinner ouve que a geração começou. */}
           <span aria-live="polite" className="truncate">

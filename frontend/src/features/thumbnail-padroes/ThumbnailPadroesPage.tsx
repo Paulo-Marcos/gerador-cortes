@@ -41,7 +41,7 @@ export function ThumbnailPadroesPage() {
         : 'o que as capas melhor avaliadas têm em comum — valide antes de aplicar',
       acoes: [
         {
-          icone: 'wand',
+          icone: 'brain',
           texto: 'Analisar padrões',
           forte: true,
           ia: { emVoo, onGerar: (provider) => analise.mutate(provider) },

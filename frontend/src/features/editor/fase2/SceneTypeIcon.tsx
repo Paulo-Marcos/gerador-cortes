@@ -1,40 +1,37 @@
+import { Icon, type IconName } from '@/upgrade/Icon';
 import { metaCena, type CenaIconName } from './sceneTypes';
 
-// Glifos emoji do design Workbench 1c (§ABA POS — itens de cena e timeline).
-// O protótipo usa emoji colorido por tipo (🎥 🖥 🔍 👤 ▦ …) no lugar de
-// ícones line-art; a chave continua sendo o `icon` de TIPOS_CENA.
-const EMOJI: Record<CenaIconName, string> = {
-  Film: '🎥',
-  PanelBottom: '▦',
-  FileText: '📋',
-  Hash: '🔢',
-  GitCompareArrows: '⚖',
-  Sparkles: '✨',
-  CircleHelp: '❓',
-  Rocket: '🚀',
-  AtSign: '👤',
-  CalendarDays: '📅',
-  BookOpen: '📖',
-  List: '⏳',
-  Brain: '🧠',
-  Tag: '🏷',
-  Check: '✅',
-  Image: '🖼',
+// D-858: o tipo de cena era um emoji colorido (🎥 📋 🔢 …), herdado do
+// protótipo Workbench 1c. Emoji fica fora da escala e do traço dos outros
+// ícones — cada sistema desenha o seu. Agora é o ícone de traço do `icon` de
+// TIPOS_CENA, na cor do tipo (o emoji trazia a cor no próprio desenho).
+const ICONE_DO_TIPO: Record<CenaIconName, IconName> = {
+  Film: 'film',
+  PanelBottom: 'panel-bottom',
+  FileText: 'file-text',
+  Hash: 'hash',
+  GitCompareArrows: 'git-compare-arrows',
+  Sparkles: 'sparkles',
+  CircleHelp: 'circle-help',
+  Rocket: 'rocket',
+  AtSign: 'at-sign',
+  CalendarDays: 'calendar-days',
+  BookOpen: 'book-open',
+  List: 'list',
+  Brain: 'brain',
+  Tag: 'tag',
+  Check: 'check',
+  Image: 'image',
 };
 
 interface Props {
   tipo: string;
-  size?: number;
   className?: string;
 }
 
-export function SceneTypeIcon({ tipo, size = 14, className }: Props) {
+export function SceneTypeIcon({ tipo, className }: Props) {
   const meta = metaCena(tipo);
-  return (
-    <span className={className} style={{ fontSize: size, lineHeight: 1 }} aria-hidden>
-      {EMOJI[meta.icon] ?? '🎬'}
-    </span>
-  );
+  return <Icon name={ICONE_DO_TIPO[meta.icon]} className={className} style={{ color: meta.color }} />;
 }
 
 export function sceneTypeStyle(tipo: string) {

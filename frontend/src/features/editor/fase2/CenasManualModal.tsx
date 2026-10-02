@@ -95,7 +95,7 @@ export function CenasManualModal({ open, onClose, corteId }: Props) {
       open={open}
       onClose={onClose}
       size="lg"
-      title="✍️ Cenas Remotion — manual (IA externa)"
+      title="Cenas Remotion — manual (IA externa)"
       description="Copie o prompt, cole numa IA externa, e importe o JSON gerado."
     >
       <PromptManualPanel

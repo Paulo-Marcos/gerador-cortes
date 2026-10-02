@@ -77,7 +77,7 @@ export function TrechosManualModal({ open, onClose, corteId }: Props) {
       open={open}
       onClose={onClose}
       size="lg"
-      title="✂️ Trechos a remover — manual (IA externa)"
+      title="Trechos a remover — manual (IA externa)"
       description="Copie o prompt, cole numa IA externa, e importe o JSON com os trechos a remover."
     >
       <PromptManualPanel

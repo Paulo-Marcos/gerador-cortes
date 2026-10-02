@@ -5,7 +5,7 @@
 import { Button } from '@/components/ui/button';
 import type { Canal, YoutubeAuthStatus } from '@/features/channels/api/canais';
 import { ConectarYoutubeTutorial } from './ConectarYoutubeTutorial';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface ChannelCardProps {
   canal: Canal;
@@ -65,7 +65,7 @@ export function ChannelCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onEditar}>
-            <Icon name="pencil" />
+            <Icon name={ICONE_DO_CONCEITO.editar} />
             Editar
           </Button>
           <Button

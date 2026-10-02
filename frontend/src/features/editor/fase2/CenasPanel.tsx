@@ -432,7 +432,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
                   className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                   style={{ background: style.soft, color: style.color, borderColor: style.border }}
                 >
-                  <SceneTypeIcon tipo={tipo} size={10} />
+                  <SceneTypeIcon tipo={tipo} />
                   {meta.label}
                 </span>
               );

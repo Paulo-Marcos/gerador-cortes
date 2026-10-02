@@ -44,6 +44,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **One drawing per idea.** The same icon used to mean different things: the
+  scissors were the Cuts step, "Edit cut" and "Generate trims"; the paper
+  plane was the Ready menu and "Upload to TikTok"; play was "Play video" and
+  "Enter the URL"; the magnifier was "Search" and "Audit". Now each idea of
+  the flow has its own, drawn as in the design board: AI generates is the
+  four-point sparkle, edit the pen, publish the upload arrow, ready the check
+  circle, published URL the link and audit the checklist. Preparing a package
+  to upload by hand shows a package, download shows a download arrow, and
+  analysing with AI is always the brain. A test checks every action labelled
+  with one of these ideas (D-858).
+- **No emoji in the interface.** Emoji drawn as icons (the 🎞️ 🎭 🎨 of the
+  cut steps, the 🎥 📋 🔢 of scene types, the 🧠 🧩 🛠 ⚖ of Channels, the
+  ⚡ of the speed, the 📅 of the schedule, the 🔥 of an empty Shorts page and
+  the ⚠ of warnings) came out of the icon scale, each system drawing its own.
+  They are line icons now, and scene types keep their colour. The 🔥 and 📖
+  that go into YouTube titles and covers stay: that is published content,
+  not interface. A test fails any new emoji in the interface (D-858).
 - **One icon scale.** The app had 24 icon sizes (9 to 34 px) and strokes from
   0.3 to 3. Icons now go through one component with three sizes (14 px next to
   text, 16 px in buttons and bars, 20 px in the rail; big drawings use an

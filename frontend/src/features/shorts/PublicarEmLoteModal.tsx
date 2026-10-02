@@ -48,7 +48,7 @@ import {
   problemaDoHorario,
   sugestaoDeHorario,
 } from './agendamentoDoLote';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // De quanto em quanto tempo o aviso do horário reavalia sozinho. Trinta segundos
 // bastam: a margem do backend é de cinco minutos, não de segundos.
@@ -203,7 +203,7 @@ export function PublicarEmLoteModal({
                 })
               }
             >
-              {criar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="send" />}
+              {criar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.publicar} />}
               Publicar {envios} {envios === 1 ? 'envio' : 'envios'}
             </Button>
           </div>

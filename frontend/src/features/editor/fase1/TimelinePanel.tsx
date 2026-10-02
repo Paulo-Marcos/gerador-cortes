@@ -785,7 +785,7 @@ function SpeedDisplay({
   const classes =
     'flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 font-code text-[11px] font-bold text-[var(--wb-warn)]';
   const numero = { fontVariantNumeric: 'tabular-nums' } as const;
-  const rotulo = `⚡ ${playbackRate.toFixed(2)}×`;
+  const rotulo = <><Icon name="gauge" />{playbackRate.toFixed(2)}×</>;
 
   if (!onAlternar) {
     return (

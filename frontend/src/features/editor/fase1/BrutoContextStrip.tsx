@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { segParaHms, segParaMmSs, validarHms } from '../timeUtils';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // BrutoContextStrip — replica `design_reference/src/v2_bruto.jsx:17-203`.
@@ -85,7 +85,7 @@ export function BrutoContextStrip({
               : 'text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
           )}
         >
-          <Icon name="edit-3" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
           Intervalo
         </button>
       </div>

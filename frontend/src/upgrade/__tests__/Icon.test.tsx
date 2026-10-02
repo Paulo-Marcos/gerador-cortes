@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { Icon } from '../Icon';
+import { ICONE_DO_CONCEITO, Icon, NOMES_DE_ICONE } from '../Icon';
 
 // D-861: o Icon é a única porta para o lucide (D-853). Estes casos fixam o
 // contrato que a Onda 2 (D-854..D-857) passou a usar em todo o app: a escala
@@ -51,5 +51,35 @@ describe('Icon', () => {
     expect(tag).toContain('flex-shrink:0');
     expect(tag).toContain('margin-top:2px');
     expect(tag).toContain('animate-spin');
+  });
+});
+
+// D-858: um conceito, um desenho. O dicionário é o da prancha de ícones do
+// canvas de design; a catraca umConceitoUmDesenho cobra o uso nas telas.
+describe('ICONE_DO_CONCEITO', () => {
+  it('dá a cada conceito do fluxo o desenho da prancha', () => {
+    expect(ICONE_DO_CONCEITO).toEqual({
+      iaGera: 'sparkle',
+      editar: 'pen',
+      publicar: 'upload',
+      prontos: 'circle-check',
+      urlPublicada: 'link',
+      auditar: 'list-checks',
+    });
+  });
+
+  it('nenhum desenho serve a dois conceitos', () => {
+    const desenhos = Object.values(ICONE_DO_CONCEITO);
+    expect(new Set(desenhos).size).toBe(desenhos.length);
+  });
+
+  it('o avião de papel saiu: era Prontos e TikTok ao mesmo tempo', () => {
+    expect(NOMES_DE_ICONE).not.toContain('send');
+  });
+
+  it('todo nome da escala desenha um svg do lucide', () => {
+    for (const nome of NOMES_DE_ICONE) {
+      expect(svg(renderToStaticMarkup(<Icon name={nome} />)), nome).toMatch(/class="lucide lucide-/);
+    }
   });
 });

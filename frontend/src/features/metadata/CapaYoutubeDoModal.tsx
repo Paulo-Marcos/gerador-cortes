@@ -9,7 +9,7 @@ import type { Corte } from '@/types/models';
 import { MODAL_ASIDE_BUTTON, ModalActionButton, ModalActionRow } from './modalPecas';
 import { ThumbnailAvaliacaoPanel } from './ThumbnailAvaliacaoPanel';
 import type { EstadoDoCard } from './useMetadataCard';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // A aba da capa do YouTube no modal (D-821): tudo o que opera ESTA capa, ao
 // lado dela, na ordem do trabalho — a prévia, 1. o prompt, 2. a imagem, e as
@@ -80,7 +80,7 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
             {card.generateThumbnail.isPending || card.conferindoCapa ? (
               <Icon name="loader-2" className="animate-spin" />
             ) : (
-              <Icon name="sparkles" />
+              <Icon name={ICONE_DO_CONCEITO.iaGera} />
             )}
             {card.conferindoCapa ? 'Gerando…' : 'Gerar no Gemini'}
           </Button>

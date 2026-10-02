@@ -306,7 +306,7 @@ function LinhaDoCorte({
             onClick={() => abrir.mutate()}
             title="Só monta o pacote, abre a pasta, copia a legenda e abre a aba. Você sobe à mão."
           >
-            {abrir.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="send" />}
+            {abrir.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="package" />}
             {preparado ? 'abrir' : 'Só o pacote'}
           </Button>
           {/* D-546: continua aqui como retaguarda. A vigilia devolve "nao sei"
