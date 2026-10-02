@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/upgrade/Icon';
 
 // Miniatura que AMPLIA ao clicar (D-821): conferir uma capa de 76px de largura
 // era adivinhar. Clique abre a imagem inteira, sem recorte, quase na tela
@@ -87,7 +87,7 @@ export function ImagemAmpliada({
         aria-label="Fechar"
         className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-[rgb(255_255_255/.14)] text-white hover:bg-[rgb(255_255_255/.24)]"
       >
-        <X size={18} aria-hidden />
+        <Icon name="x" size={20} />
       </button>
     </div>
   );

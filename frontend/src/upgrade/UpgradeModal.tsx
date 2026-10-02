@@ -118,7 +118,7 @@ export function UpgradeModal({
               color: iconColor,
             }}
           >
-            <Icon name={icon} size={14} />
+            <Icon name={icon} />
           </span>
           <span style={{ minWidth: 0, flex: 1 }}>
             <span style={{ display: 'block', fontSize: 14, fontWeight: 700, lineHeight: 1.3 }}>
@@ -145,7 +145,7 @@ export function UpgradeModal({
             style={{ border: 0, background: 'none', boxShadow: 'none', color: 'var(--mute)' }}
             aria-label="Fechar"
           >
-            <Icon name="x" size={14} />
+            <Icon name="x" />
           </button>
         </header>
 
@@ -185,7 +185,7 @@ export function UpgradeModal({
             className={primaryStrong ? 'btn btn-pri' : 'btn'}
             onClick={onPrimary ?? onClose}
           >
-            <Icon name={primaryIcon} size={13} />
+            <Icon name={primaryIcon} />
             {primaryLabel}
           </button>
         </footer>
@@ -282,7 +282,7 @@ export function ModalItems({ items }: { items: ModalItem[] }) {
               color: 'var(--on-accent)',
             }}
           >
-            {i.marcado ? <Icon name="check" size={10} stroke={3} /> : null}
+            {i.marcado ? <Icon name="check" /> : null}
           </span>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)' }}>
             {i.num}
@@ -336,7 +336,7 @@ export function ModalSteps({ steps }: { steps: ModalStep[] }) {
               color: e.cor,
             }}
           >
-            <Icon name={e.icone} size={11} />
+            <Icon name={e.icone} />
           </span>
           <span style={{ minWidth: 0, flex: 1, fontSize: 12.5, fontWeight: 600 }}>{e.titulo}</span>
           <span

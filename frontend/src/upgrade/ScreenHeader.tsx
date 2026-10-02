@@ -59,7 +59,7 @@ export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
             className={a.forte ? 'btn btn-pri' : 'btn'}
             onClick={a.onClick}
           >
-            <Icon name={a.icone} size={13} />
+            <Icon name={a.icone} />
             {a.texto}
           </button>
         ),
@@ -80,7 +80,7 @@ export function ScreenHeader({ icone, titulo, sub, acoes = [] }: ScreenHeaderPro
         padding: '14px 18px 10px',
       }}
     >
-      <Icon name={icone} size={17} style={{ color: 'var(--accent)' }} />
+      <Icon name={icone} size={16} style={{ color: 'var(--accent)' }} />
       <span style={{ minWidth: 0 }}>
         <h1
           style={{

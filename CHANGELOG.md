@@ -44,6 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **One icon scale.** The app had 24 icon sizes (9 to 34 px) and strokes from
+  0.3 to 3. Icons now go through one component with three sizes (14 px next to
+  text, 16 px in buttons and bars, 20 px in the rail; big drawings use an
+  explicit illustration size) and a single 1.75 stroke. Buttons draw their
+  icon at 16 px instead of 13. The shell, the shared UI pieces and the
+  Library, Workspace, queue and metadata screens are migrated; the remaining
+  screens follow area by area, and a ratchet test keeps new code from
+  importing icons around the component (D-853).
 - **New colors in code must come from the theme.** A third ratchet test,
   next to the file- and function-size ones, counts the colors written straight
   into the frontend code (Tailwind palette classes like `text-red-400` or

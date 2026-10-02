@@ -47,7 +47,7 @@ export function UpgradeToast({
         boxShadow: '0 18px 44px rgb(0 0 0/.3)',
       }}
     >
-      <Icon name={icon} size={14} style={{ color: iconColor }} />
+      <Icon name={icon} style={{ color: iconColor }} />
       <span style={{ minWidth: 0, flex: 1, fontSize: 12, lineHeight: 1.45 }}>
         <b>{title}</b>
         {detail ? <span style={{ color: 'var(--mute)' }}> · {detail}</span> : null}
@@ -67,7 +67,7 @@ export function UpgradeToast({
         }}
         aria-label="Fechar aviso"
       >
-        <Icon name="x" size={12} />
+        <Icon name="x" />
       </button>
     </div>
   );

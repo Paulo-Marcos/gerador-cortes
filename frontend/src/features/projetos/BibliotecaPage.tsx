@@ -50,18 +50,18 @@ function Vazio({ onCriar, onExplorar }: { onCriar: () => void; onExplorar: () =>
       className="card"
       style={{ display: 'grid', placeItems: 'center', gap: 7, padding: 22, textAlign: 'center' }}
     >
-      <Icon name="inbox" size={22} style={{ color: 'var(--dim)' }} />
+      <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
       <span style={{ fontSize: 12.5, fontWeight: 700 }}>Nenhuma live ainda</span>
       <span style={{ fontSize: 11.5, color: 'var(--mute)', maxWidth: 240, lineHeight: 1.5 }}>
         Busque no canal ou cole uma URL para o app baixar e analisar a primeira live.
       </span>
       <span style={{ display: 'flex', gap: 6, marginTop: 3 }}>
         <button type="button" className="btn" onClick={onExplorar}>
-          <Icon name="radio" size={12} />
+          <Icon name="radio" />
           Buscar lives
         </button>
         <button type="button" className="btn btn-pri" onClick={onCriar}>
-          <Icon name="plus" size={12} />
+          <Icon name="plus" />
           Nova live
         </button>
       </span>
@@ -163,7 +163,7 @@ export default function BibliotecaPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
         <label className="fld" style={{ width: 260 }}>
-          <Icon name="search" size={12} style={{ color: 'var(--dim)' }} />
+          <Icon name="search" style={{ color: 'var(--dim)' }} />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -212,7 +212,7 @@ export default function BibliotecaPage() {
         <div style={{ flex: 1 }} />
 
         <label className="fld">
-          <Icon name="list-filter" size={12} style={{ color: 'var(--mute)' }} />
+          <Icon name="list-filter" style={{ color: 'var(--mute)' }} />
           <select
             value={ordem}
             onChange={(e) => setOrdem(e.target.value as SortKey)}
@@ -248,7 +248,7 @@ export default function BibliotecaPage() {
             borderColor: 'var(--err-soft)',
           }}
         >
-          <Icon name="triangle-alert" size={14} style={{ color: 'var(--err)' }} />
+          <Icon name="triangle-alert" style={{ color: 'var(--err)' }} />
           <span style={{ minWidth: 0, flex: 1 }}>
             <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700 }}>
               Não foi possível carregar a lista real

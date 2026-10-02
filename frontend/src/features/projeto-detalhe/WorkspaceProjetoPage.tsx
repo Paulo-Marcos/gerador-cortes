@@ -49,7 +49,7 @@ function Estatistica({
   return (
     <div className="card" style={{ padding: '11px 12px' }}>
       <span className="lbl" style={{ display: 'flex', alignItems: 'center', gap: 5, color: cor }}>
-        <Icon name={icone} size={12} />
+        <Icon name={icone} />
         {rotulo}
       </span>
       <div
@@ -98,7 +98,7 @@ function Utilitario({
         color: cor,
       }}
     >
-      <Icon name={icone} size={13} />
+      <Icon name={icone} />
     </button>
   );
 }
@@ -173,7 +173,7 @@ export default function WorkspaceProjetoPage() {
                 color: e.feita ? 'var(--ok)' : 'var(--dim)',
               }}
             >
-              <Icon name={e.icone} size={12} />
+              <Icon name={e.icone} />
               {e.texto}
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.8 }}>
                 {e.valor}
@@ -250,7 +250,7 @@ export default function WorkspaceProjetoPage() {
         </span>
 
         <button type="button" className="btn" onClick={() => setAnaliseAberta(true)}>
-          <Icon name="brain" size={13} />
+          <Icon name="brain" />
           Reanalisar
         </button>
         {/* D-439: o lote só abre com todos prontos. O `title` no invólucro
@@ -264,7 +264,7 @@ export default function WorkspaceProjetoPage() {
             onClick={() => setPublicarAberto(true)}
             style={prontidao.liberado ? undefined : { opacity: 0.45, cursor: 'not-allowed' }}
           >
-            <Icon name="send" size={13} />
+            <Icon name="send" />
             {prontidao.total === 0
               ? 'Nada a publicar'
               : `Publicar ${prontidao.total} ${prontidao.total === 1 ? 'corte' : 'cortes'}`}
@@ -279,13 +279,13 @@ export default function WorkspaceProjetoPage() {
           className="card"
           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px' }}
         >
-          <Icon name="brain" size={14} style={{ color: 'var(--info)' }} />
+          <Icon name="brain" style={{ color: 'var(--info)' }} />
           <b style={{ fontSize: 12.5 }}>Analisando a live com a IA</b>
           <span style={{ fontSize: 12, color: 'var(--mute)' }}>
             os cortes propostos aparecem aqui quando terminar — pode seguir usando o app
           </span>
           <span style={{ flex: 1 }} />
-          <Icon name="loader" size={14} style={{ color: 'var(--info)' }} />
+          <Icon name="loader" style={{ color: 'var(--info)' }} />
         </div>
       ) : null}
 
@@ -296,7 +296,6 @@ export default function WorkspaceProjetoPage() {
         >
           <Icon
             name={progresso.status === 'baixando' ? 'download' : 'captions'}
-            size={14}
             style={{ color: 'var(--info)' }}
           />
           <b style={{ fontSize: 12.5 }}>
@@ -338,7 +337,7 @@ export default function WorkspaceProjetoPage() {
           <kbd>K</kbd> anda
         </span>
         <label className="fld" style={{ width: 200 }}>
-          <Icon name="search" size={12} style={{ color: 'var(--dim)' }} />
+          <Icon name="search" style={{ color: 'var(--dim)' }} />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -382,7 +381,7 @@ export default function WorkspaceProjetoPage() {
             onClick={() => void aplicarEmLote('devolver')}
             title="Tira a aprovação dos selecionados — não apaga nada"
           >
-            <Icon name="undo-2" size={13} />
+            <Icon name="undo-2" />
             Devolver
           </button>
           <button
@@ -392,7 +391,7 @@ export default function WorkspaceProjetoPage() {
             onClick={() => void aplicarEmLote('aprovar')}
             style={{ borderColor: 'var(--ok)', color: 'var(--ok)' }}
           >
-            <Icon name={emLote ? 'loader' : 'check'} size={13} />
+            <Icon name={emLote ? 'loader' : 'check'} />
             Aprovar
           </button>
           <button
@@ -402,7 +401,7 @@ export default function WorkspaceProjetoPage() {
             title="Limpar a seleção"
             aria-label="Limpar a seleção"
           >
-            <Icon name="x" size={13} />
+            <Icon name="x" />
           </button>
         </div>
       ) : null}
@@ -447,13 +446,13 @@ export default function WorkspaceProjetoPage() {
               textAlign: 'center',
             }}
           >
-            <Icon name="inbox" size={22} style={{ color: 'var(--dim)' }} />
+            <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
             <span style={{ fontSize: 12.5, fontWeight: 700 }}>
               {busca ? 'Nenhum corte com esse termo' : 'Esta live ainda não tem cortes'}
             </span>
             {busca ? null : (
               <button type="button" className="btn btn-pri" onClick={() => setAnaliseAberta(true)}>
-                <Icon name="brain" size={12} />
+                <Icon name="brain" />
                 Analisar com a IA
               </button>
             )}

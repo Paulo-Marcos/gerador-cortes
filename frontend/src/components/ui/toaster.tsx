@@ -1,7 +1,6 @@
-import { Bell, Check, Info, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { IconButton } from './icon-button';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 // D-599: na casca nova o aviso vira o toast do handoff — cartão de vidro no
 // canto, ícone colorido pelo tom, título em negrito e o resto em `--mute`.
@@ -36,29 +35,12 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const TONE_META: Record<ToastTone, { Icon: LucideIcon; className: string; iconClassName: string }> =
-  {
-    success: {
-      Icon: Check,
-      className: 'border-success/30 bg-[color-mix(in_oklch,var(--success)_12%,var(--wb-bg-card))]',
-      iconClassName: 'bg-success text-[var(--wb-accent-fg)]',
-    },
-    info: {
-      Icon: Info,
-      className: 'border-info/30 bg-[color-mix(in_oklch,var(--info)_10%,var(--wb-bg-card))]',
-      iconClassName: 'bg-info text-[var(--wb-accent-fg)]',
-    },
-    warning: {
-      Icon: TriangleAlert,
-      className: 'border-warning/30 bg-[color-mix(in_oklch,var(--warning)_12%,var(--wb-bg-card))]',
-      iconClassName: 'bg-warning text-[var(--wb-accent-fg)]',
-    },
-    error: {
-      Icon: Bell,
-      className: 'border-error/30 bg-[color-mix(in_oklch,var(--error)_12%,var(--wb-bg-card))]',
-      iconClassName: 'bg-error text-[var(--wb-accent-fg)]',
-    },
-  };
+const ICONE_DO_TOM: Record<ToastTone, IconName> = {
+  success: 'check',
+  info: 'info',
+  warning: 'triangle-alert',
+  error: 'bell',
+};
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -119,16 +101,16 @@ function ToastViewport({
       )}
     >
       {toasts.map((toast) => {
-        const tone = TONE_META[toast.tone];
-        const Icon = tone.Icon;
-
         return (
           <div
             key={toast.id}
             className="card pointer-events-none flex items-center gap-[9px] p-[10px_12px] animate-in fade-in slide-in-from-bottom-1"
             style={{ padding: '10px 12px', boxShadow: '0 18px 44px rgb(0 0 0/.3)' }}
           >
-            <Icon size={14} aria-hidden style={{ color: AP_TOM[toast.tone], flex: 'none' }} />
+            <Icon
+              name={ICONE_DO_TOM[toast.tone]}
+              style={{ color: AP_TOM[toast.tone], flex: 'none' }}
+            />
             <span className="min-w-0 flex-1 text-[12px] leading-[1.45]">
               {toast.title ? <b>{toast.title} </b> : null}
               <span style={{ color: 'var(--mute)' }}>{toast.message}</span>
@@ -141,42 +123,8 @@ function ToastViewport({
               className="btn btn-icon btn-ghost pointer-events-auto"
               style={{ width: 22, height: 22 }}
             >
-              <X size={12} aria-hidden />
+              <Icon name="x" />
             </button>
-          </div>
-        );
-
-        return (
-          <div
-            key={toast.id}
-            className={cn(
-              'pointer-events-auto grid min-h-[54px] grid-cols-[34px_minmax(0,1fr)_28px] items-center gap-2 rounded-lg border p-2.5 shadow-lg animate-in fade-in slide-in-from-bottom-1',
-              tone.className,
-            )}
-          >
-            <span
-              className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)]',
-                tone.iconClassName,
-              )}
-            >
-              <Icon size={15} aria-hidden />
-            </span>
-            <span className="min-w-0 text-sm font-semibold leading-snug text-[var(--wb-text)]">
-              {toast.title && (
-                <span className="block text-xs text-[var(--wb-text-mute)]">{toast.title}</span>
-              )}
-              {toast.message}
-            </span>
-            <IconButton
-              aria-label="Fechar aviso"
-              title="Fechar aviso"
-              size="sm"
-              variant="ghost"
-              onClick={() => onDismiss(toast.id)}
-            >
-              <X size={14} aria-hidden />
-            </IconButton>
           </div>
         );
       })}

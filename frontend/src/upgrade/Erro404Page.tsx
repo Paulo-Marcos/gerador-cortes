@@ -43,11 +43,11 @@ export default function Erro404Page() {
         </span>
         <span style={{ display: 'flex', gap: 6, marginTop: 4 }}>
           <button type="button" className="btn" onClick={() => navigate(-1)}>
-            <Icon name="arrow-left" size={12} />
+            <Icon name="arrow-left" />
             Voltar
           </button>
           <button type="button" className="btn btn-pri" onClick={() => navigate('/projetos')}>
-            <Icon name="home" size={12} />
+            <Icon name="home" />
             Biblioteca
           </button>
         </span>

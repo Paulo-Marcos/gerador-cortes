@@ -285,7 +285,7 @@ export function LinhaDeLista({ item }: { item: ItemDeLista }) {
           onClick={item.acao.onClick}
           style={{ width: 24, height: 24, marginRight: 4, flex: 'none', color: 'var(--accent)' }}
         >
-          <Icon name={item.acao.icone} size={12} />
+          <Icon name={item.acao.icone} />
         </button>
       ) : null}
     </div>
@@ -315,7 +315,7 @@ export function ColunaRecolhida({ titulo, onAbrir }: { titulo: string; onAbrir: 
         title={`Mostrar ${titulo.toLowerCase()}`}
         aria-label={`Mostrar ${titulo.toLowerCase()}`}
       >
-        <Icon name="panel-left" size={14} />
+        <Icon name="panel-left" />
       </button>
     </aside>
   );
@@ -363,7 +363,7 @@ export function ContextColumn({
               aria-label={`Recolher ${lista.titulo.toLowerCase()}`}
               style={{ width: 24, height: 24, marginRight: -4 }}
             >
-              <Icon name="panel-left" size={12} />
+              <Icon name="panel-left" />
             </button>
           ) : null
         }
@@ -392,7 +392,7 @@ export function ContextColumn({
             style={{ flex: 1, justifyContent: 'center' }}
             onClick={lista.acao.onClick}
           >
-            <Icon name="plus" size={12} />
+            <Icon name="plus" />
             {lista.acao.texto}
           </button>
         </div>

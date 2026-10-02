@@ -129,7 +129,7 @@ function Trilha({ itens }: { itens: Migalha[] }) {
               rotulo
             )}
             {ultimo ? null : (
-              <Icon name="chevron-right" size={12} style={{ color: 'var(--dim)' }} />
+              <Icon name="chevron-right" style={{ color: 'var(--dim)' }} />
             )}
           </span>
         );
@@ -182,7 +182,7 @@ function Seletor({
 
   const rotulo = (
     <>
-      <Icon name="scissors" size={12} style={{ color: 'var(--accent)' }} />
+      <Icon name="scissors" style={{ color: 'var(--accent)' }} />
       {atual.num ? (
         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
           #{atual.num}
@@ -219,7 +219,7 @@ function Seletor({
         onClick={atual.onAnterior}
         disabled={!atual.onAnterior}
       >
-        <Icon name="chevron-left" size={14} />
+        <Icon name="chevron-left" />
       </button>
 
       {compacto ? (
@@ -249,7 +249,7 @@ function Seletor({
           style={{ borderColor: aberto ? 'var(--accent)' : 'var(--line)', minWidth: 190 }}
         >
           {rotulo}
-          <Icon name="chevron-down" size={12} style={{ color: 'var(--dim)' }} />
+          <Icon name="chevron-down" style={{ color: 'var(--dim)' }} />
         </button>
       )}
 
@@ -262,7 +262,7 @@ function Seletor({
         onClick={atual.onProximo}
         disabled={!atual.onProximo}
       >
-        <Icon name="chevron-right" size={14} />
+        <Icon name="chevron-right" />
       </button>
 
       {aberto && !compacto && lista ? (
@@ -341,7 +341,7 @@ function Seletor({
                   setAberto(false);
                 }}
               >
-                <Icon name="layout-grid" size={12} />
+                <Icon name="layout-grid" />
                 Ver todos
               </button>
             </div>
@@ -406,7 +406,7 @@ export function TopBar({
             aria-keyshortcuts="Meta+BracketLeft"
             title={historico.anterior ? `Voltar para ${historico.anterior} (⌘[)` : 'Nada para trás'}
           >
-            <Icon name="arrow-left" size={13} />
+            <Icon name="arrow-left" />
           </button>
           <button
             type="button"
@@ -418,7 +418,7 @@ export function TopBar({
             aria-keyshortcuts="Meta+BracketRight"
             title={historico.proximo ? `Avançar para ${historico.proximo} (⌘])` : 'Nada à frente'}
           >
-            <Icon name="arrow-right" size={13} />
+            <Icon name="arrow-right" />
           </button>
         </span>
       ) : null}
@@ -465,7 +465,7 @@ export function TopBar({
             textAlign: 'left',
           }}
         >
-          <Icon name="command" size={12} />
+          <Icon name="command" />
           Buscar live, tela ou ação…
           <span style={{ flex: 1 }} />
           <kbd>⌘K</kbd>
@@ -479,7 +479,7 @@ export function TopBar({
           aria-keyshortcuts="Meta+K"
           onClick={onAbrirBusca}
         >
-          <Icon name="search" size={14} />
+          <Icon name="search" />
         </button>
       )}
 
@@ -490,7 +490,7 @@ export function TopBar({
           title={`Canal ativo: ${canal.nome} (${canal.handle}) — é para ele que os cortes são publicados. Trocar em Canais.`}
           style={{ flex: 'none', height: 24, maxWidth: 180, color: 'var(--ink)', textDecoration: 'none' }}
         >
-          <Icon name="radio" size={12} style={{ flex: 'none', color: 'var(--mute)' }} />
+          <Icon name="radio" style={{ flex: 'none', color: 'var(--mute)' }} />
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {buscaLarga ? canal.nome : canal.handle}
           </span>
@@ -503,7 +503,7 @@ export function TopBar({
           title={estado.texto}
           style={{ background: estado.bg, color: estado.cor, flex: 'none' }}
         >
-          <Icon name={estado.icone} size={12} />
+          <Icon name={estado.icone} />
           {buscaLarga ? estado.texto : null}
         </span>
       ) : null}
@@ -522,7 +522,7 @@ export function TopBar({
         onClick={onAbrirAvisos}
         style={{ position: 'relative', flex: 'none' }}
       >
-        <Icon name="bell" size={14} />
+        <Icon name="bell" />
         {avisosAtivos > 0 || avisoDeErro ? (
           <span
             aria-hidden
@@ -547,7 +547,7 @@ export function TopBar({
         aria-label={temaEscuro(tema) ? 'Tema claro' : 'Tema escuro'}
         style={{ flex: 'none' }}
       >
-        <Icon name={temaEscuro(tema) ? 'sun' : 'moon'} size={14} />
+        <Icon name={temaEscuro(tema) ? 'sun' : 'moon'} />
       </button>
     </header>
   );

@@ -47,7 +47,7 @@ function Segmentado<T extends string>({
               cursor: 'pointer',
             }}
           >
-            <Icon name={o.icone} size={12} />
+            <Icon name={o.icone} />
             {o.texto}
           </button>
         );

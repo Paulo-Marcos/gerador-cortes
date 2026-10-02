@@ -404,14 +404,14 @@ export function KitScreen() {
       <Secao titulo="Botões · 30 px · cantos de 4 px">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
           <button type="button" className="btn btn-pri">
-            <Icon name="check" size={13} />
+            <Icon name="check" />
             Primário
             <kbd style={{ background: 'rgb(255 255 255/.2)', borderColor: 'transparent', color: 'inherit' }}>
               ↵
             </kbd>
           </button>
           <button type="button" className="btn">
-            <Icon name="eye" size={13} />
+            <Icon name="eye" />
             Secundário
           </button>
           <button
@@ -419,15 +419,15 @@ export function KitScreen() {
             className="btn"
             style={{ borderColor: 'transparent', background: 'none', boxShadow: 'none', color: M }}
           >
-            <Icon name="x" size={13} />
+            <Icon name="x" />
             Fantasma
           </button>
           <button type="button" className="btn" style={{ color: ERR, borderColor: 'var(--err-soft)' }}>
-            <Icon name="trash" size={13} />
+            <Icon name="trash" />
             Perigo
           </button>
           <button type="button" className="btn btn-icon">
-            <Icon name="more-horizontal" size={14} />
+            <Icon name="more-horizontal" />
           </button>
           <span
             style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 'var(--r2)', background: 'var(--inset)' }}
@@ -444,7 +444,7 @@ export function KitScreen() {
             </button>
           </span>
           <button type="button" className="btn" disabled style={{ opacity: 0.45 }}>
-            <Icon name="loader" size={13} />
+            <Icon name="loader" />
             Processando…
           </button>
         </div>
@@ -482,16 +482,16 @@ export function KitScreen() {
             </span>
           ))}
           <span className="fld" style={{ width: 180, color: 'var(--dim)' }}>
-            <Icon name="search" size={12} />
+            <Icon name="search" />
             buscar…
           </span>
           <span className="fld" style={{ fontFamily: 'var(--mono)' }}>
             04:12.40
           </span>
           <span className="fld">
-            <Icon name="layout-template" size={12} style={{ color: M }} />
+            <Icon name="layout-template" style={{ color: M }} />
             Câmera + tela
-            <Icon name="chevron-down" size={12} style={{ color: 'var(--dim)' }} />
+            <Icon name="chevron-down" style={{ color: 'var(--dim)' }} />
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: M }}>
             <kbd>J</kbd>
@@ -521,7 +521,7 @@ export function KitScreen() {
                 borderColor: a.borda,
               }}
             >
-              <Icon name={a.n} size={14} style={{ color: a.cor }} />
+              <Icon name={a.n} style={{ color: a.cor }} />
               <span style={{ minWidth: 0, flex: 1 }}>
                 <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700 }}>{a.t}</span>
                 <span
@@ -545,13 +545,13 @@ export function KitScreen() {
             className="card"
             style={{ display: 'grid', placeItems: 'center', gap: 7, padding: 22, textAlign: 'center' }}
           >
-            <Icon name="inbox" size={22} style={{ color: 'var(--dim)' }} />
+            <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
             <span style={{ fontSize: 12.5, fontWeight: 700 }}>Nenhuma live ainda</span>
             <span style={{ fontSize: 11.5, color: M, maxWidth: 220, lineHeight: 1.5 }}>
               Busque no canal ou cole uma URL para o app baixar e analisar a primeira live.
             </span>
             <button type="button" className="btn btn-pri" style={{ marginTop: 3 }}>
-              <Icon name="radio" size={12} />
+              <Icon name="radio" />
               Buscar lives
             </button>
           </div>
@@ -572,7 +572,7 @@ export function KitScreen() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
           {BOTOES_MODAL.map((m) => (
             <button key={m.k} type="button" className="btn" onClick={() => setModal(m.k)}>
-              <Icon name={m.n} size={13} />
+              <Icon name={m.n} />
               {m.t}
             </button>
           ))}
