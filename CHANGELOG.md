@@ -50,9 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Enter the URL"; the magnifier was "Search" and "Audit". Now each idea of
   the flow has its own, drawn as in the design board: AI generates is the
   four-point sparkle, edit the pen, publish the upload arrow, ready the check
-  circle, published URL the link and audit the checklist. Preparing a package to upload by hand shows a package,
-  download shows a download arrow, and analysing with AI is always the brain.
-  A test checks every action labelled with one of these ideas (D-858).
+  circle, published URL the link and audit the checklist. Preparing a package
+  to upload by hand shows a package, download shows a download arrow, and
+  analysing with AI is always the brain. A test checks every action labelled
+  with one of these ideas (D-858).
 - **No emoji in the interface.** Emoji drawn as icons (the 🎞️ 🎭 🎨 of the
   cut steps, the 🎥 📋 🔢 of scene types, the 🧠 🧩 🛠 ⚖ of Channels, the
   ⚡ of the speed, the 📅 of the schedule, the 🔥 of an empty Shorts page and

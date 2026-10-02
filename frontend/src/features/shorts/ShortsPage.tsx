@@ -317,7 +317,7 @@ function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
         {gerar.isPending ? (
           <Icon name="loader-2" className="animate-spin" />
         ) : (
-          <Icon name="sparkles" />
+          <Icon name={ICONE_DO_CONCEITO.iaGera} />
         )}
         {gerar.isPending
           ? 'a IA está propondo…'
@@ -383,7 +383,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
           className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] px-3 text-[12px] font-semibold text-[var(--wb-accent-strong,var(--wb-accent))] disabled:opacity-60"
           title="Um corte por vez: refaz o bruto que falta e a IA propõe os trechos. Nada do que já existe é apagado."
         >
-          {grupo.precisaBaixar ? <Icon name="download" /> : <Icon name="sparkles" />}
+          {grupo.precisaBaixar ? <Icon name="download" /> : <Icon name={ICONE_DO_CONCEITO.iaGera} />}
           {grupo.precisaBaixar
             ? `Baixar a live e gerar (${grupo.pendentes})`
             : grupo.pendentes === 1

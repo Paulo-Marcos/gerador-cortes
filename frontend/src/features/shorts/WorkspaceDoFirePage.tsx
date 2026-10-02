@@ -258,12 +258,12 @@ export default function WorkspaceDoFirePage() {
       // R4: idem à tela de curadoria — a live de origem é clicável.
       rotulos: fire ? [{ texto: fire.projeto_titulo, to: `/projetos/${fire.projeto_id}` }] : [],
       acoes: [
-        { icone: 'pencil', texto: 'Voltar à edição', onClick: () => navigate(`/shorts/${corteId}`) },
+        { icone: ICONE_DO_CONCEITO.editar, texto: 'Voltar à edição', onClick: () => navigate(`/shorts/${corteId}`) },
       ],
       barra: {
         secundario: {
           texto: 'Voltar à edição',
-          icone: 'pencil',
+          icone: ICONE_DO_CONCEITO.editar,
           onClick: () => navigate(`/shorts/${corteId}`),
         },
         terciario: { titulo: 'Ver na fila', icone: 'loader', onClick: () => navigate('/fila') },
@@ -315,7 +315,7 @@ export default function WorkspaceDoFirePage() {
             </p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
               <Link to={`/shorts/${corteId}`}>
-                <Icon name="pencil" />
+                <Icon name={ICONE_DO_CONCEITO.editar} />
                 Ir para a edição
               </Link>
             </Button>

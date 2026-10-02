@@ -9,7 +9,7 @@ import {
   useGerarNoChatGPT,
   useSubirFotoDaPessoa,
 } from './useCapaNoChatGPT';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // D-804: o botão que troca o copiar-colar-no-ChatGPT por um clique.
 //
@@ -70,7 +70,7 @@ export function GerarNoChatGPT({
         onClick={() => gerar.mutate({ prompt: texto, pessoas: fotosQueVao(elenco.pessoas) })}
         title={motivo}
       >
-        {gerar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="sparkles" />}
+        {gerar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.iaGera} />}
         {gerar.isPending ? 'Gerando no ChatGPT…' : 'Gerar no ChatGPT'}
       </Button>
       {gerar.isPending && (

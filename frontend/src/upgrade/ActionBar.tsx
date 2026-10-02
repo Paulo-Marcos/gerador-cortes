@@ -1,4 +1,4 @@
-import { Icon } from './Icon';
+import { Icon, ICONE_DO_CONCEITO } from './Icon';
 import type { ChromeBarra } from './UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
               aria-label={a.editar.titulo}
               onClick={a.editar.onClick}
             >
-              <Icon name="pencil" />
+              <Icon name={ICONE_DO_CONCEITO.editar} />
             </button>
           ) : null}
         </span>

@@ -100,7 +100,7 @@ const BOTOES_MODAL: Array<{ n: IconName; t: string; k: ModalKey }> = [
   { n: 'rocket', t: 'Render', k: 'render' },
   { n: 'flame', t: 'Nota do corte', k: 'nota' },
   { n: ICONE_DO_CONCEITO.auditar, t: 'Auditoria', k: 'auditoria' },
-  { n: 'sparkles', t: 'Gerar com IA', k: 'padroes' },
+  { n: ICONE_DO_CONCEITO.iaGera, t: 'Gerar com IA', k: 'padroes' },
   { n: 'triangle-alert', t: 'Confirmação', k: 'confirmar' },
 ];
 
@@ -351,7 +351,7 @@ function ModalDemo({ aberto, fechar }: { aberto: ModalKey | null; fechar: () => 
           width="500px"
           footerNote="custo estimado: US$ 0,04"
           primaryLabel="Gerar 3 itens"
-          primaryIcon="sparkles"
+          primaryIcon={ICONE_DO_CONCEITO.iaGera}
         >
           <ModalItems items={ITENS_PADROES} />
         </UpgradeModal>

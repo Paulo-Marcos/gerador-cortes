@@ -15,7 +15,7 @@ import {
 import { useImportarAnalise, usePromptAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/features/diarizacao/useDiarizacao';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
-import { Icon, type IconName } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -270,7 +270,7 @@ function AnaliseIaModalDaLive({
               origem === 'ia' ? 'bg-bg-700 text-text-100' : 'text-text-300 hover:text-text-100',
             )}
           >
-            <Icon name="sparkles" />
+            <Icon name={ICONE_DO_CONCEITO.iaGera} />
             IA
           </button>
           <button
@@ -291,7 +291,7 @@ function AnaliseIaModalDaLive({
           <>
             <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
               <p className="flex items-center gap-1.5 font-semibold text-text-100">
-                <Icon name="sparkles" className="text-accent-300" /> Analise completa por IA
+                <Icon name="brain" className="text-accent-300" /> Analise completa por IA
               </p>
               <p className="mt-1 text-text-300">
                 Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover

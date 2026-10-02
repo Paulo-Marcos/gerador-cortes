@@ -25,10 +25,16 @@ const REGRAS: { conceito: string; rotulo: RegExp; icone: IconName }[] = [
     rotulo: /^(publicar\b|ir para publicar|enviar .*ao youtube|subir para o tiktok)/i,
     icone: ICONE_DO_CONCEITO.publicar,
   },
-  { conceito: 'editar', rotulo: /^editar\b/i, icone: ICONE_DO_CONCEITO.editar },
+  { conceito: 'editar', rotulo: /^(editar\b|voltar à edição|ir para a edição)/i, icone: ICONE_DO_CONCEITO.editar },
   { conceito: 'urlPublicada', rotulo: /^informar a url/i, icone: ICONE_DO_CONCEITO.urlPublicada },
   { conceito: 'auditar', rotulo: /^audit(ar\b|oria da análise)/i, icone: ICONE_DO_CONCEITO.auditar },
-  { conceito: 'iaGera', rotulo: /^gerar (trechos|com (a )?ia)\b/i, icone: ICONE_DO_CONCEITO.iaGera },
+  {
+    conceito: 'iaGera',
+    // "Gerar bruto" é render (tesoura); gerar COM a IA — trechos, o que falta,
+    // no ChatGPT, no Gemini — é a estrela.
+    rotulo: /^gerar (trechos|o que falta)\b|^gerar\b.*\b(com (a )?ia|no chatgpt|no gemini)\b/i,
+    icone: ICONE_DO_CONCEITO.iaGera,
+  },
   { conceito: 'prontos', rotulo: /^prontos$/i, icone: ICONE_DO_CONCEITO.prontos },
   // Decisões da D-858 fora do dicionário do design, para o mesmo desenho
   // não voltar a ser dois: o pacote para subir à mão não é publicar; baixar
@@ -129,42 +135,106 @@ function iconesDe(no: ts.JsxElement | ts.JsxSelfClosingElement, achados: Set<str
   ts.forEachChild(abertura.attributes, descer);
 }
 
-/** O ternário de um valor, desembrulhado: `{cond ? a : b}`, `(cond ? a : b)`. */
-function ternario(no: ts.Node | undefined): ts.ConditionalExpression | undefined {
-  if (!no) return undefined;
-  if (ts.isJsxExpression(no) || ts.isParenthesizedExpression(no)) return ternario(no.expression);
-  return ts.isConditionalExpression(no) ? no : undefined;
+/** Desembrulha `{…}`, `(…)` e `x as T`. */
+function nu(no: ts.Node): ts.Node {
+  if (ts.isJsxExpression(no) && no.expression) return nu(no.expression);
+  if (ts.isParenthesizedExpression(no) || ts.isAsExpression(no)) return nu(no.expression);
+  return no;
 }
 
-/** Os ícones de um ramo: um nome ('x', ICONE_DO_CONCEITO.y) ou um <Icon name=…> ali. */
-function iconesDoRamo(no: ts.Node): string[] {
-  const nu = ts.isParenthesizedExpression(no) ? no.expression : no;
-  if (ts.isJsxSelfClosingElement(nu) && nu.tagName.getText() === 'Icon') {
-    return atributo(nu.attributes, new Set(['name'])).flatMap(icones);
+type Folha = { caminho: string; no: ts.Node };
+
+/**
+ * As folhas de um ternário, cada uma com o caminho de condições até ela
+ * (`a?`, `a:b?`…), para ternário aninhado. A negação vira a mesma condição
+ * com os ramos trocados: `!porApi ? x : y` é `porApi ? y : x`.
+ */
+function folhas(no: ts.Node, caminho = ''): Folha[] {
+  const n = nu(no);
+  if (!ts.isConditionalExpression(n)) return [{ caminho, no: n }];
+  let condicao = nu(n.condition);
+  let sim: ts.Node = n.whenTrue;
+  let nao: ts.Node = n.whenFalse;
+  while (ts.isPrefixUnaryExpression(condicao) && condicao.operator === ts.SyntaxKind.ExclamationToken) {
+    condicao = nu(condicao.operand);
+    [sim, nao] = [nao, sim];
   }
-  return icones(nu);
+  const c = condicao.getText();
+  return [...folhas(sim, `${caminho}${c}?`), ...folhas(nao, `${caminho}${c}:`)];
+}
+
+/** O texto de uma folha — inclusive o de dentro de um fragmento `<>…</>`. */
+function textosDaFolha(no: ts.Node): string[] {
+  if (ts.isJsxFragment(no) || ts.isJsxElement(no)) {
+    return no.children.flatMap((f) => {
+      if (ts.isJsxText(f)) return f.text.trim() ? [f.text.trim()] : [];
+      if (ts.isJsxExpression(f)) return textos(f);
+      if (ts.isJsxElement(f) || ts.isJsxFragment(f)) return textosDaFolha(f);
+      return [];
+    });
+  }
+  return textos(no);
+}
+
+/**
+ * Os ícones de uma folha: os <Icon name=…> desenhados nela e o nome vindo do
+ * dicionário. String solta só conta como ícone quando a folha é valor de um
+ * atributo de ícone — num filho JSX, string é texto.
+ */
+function iconesDaFolha(no: ts.Node, literalVale: boolean): string[] {
+  if (ts.isJsxSelfClosingElement(no) || ts.isJsxElement(no) || ts.isJsxFragment(no)) {
+    const achados: string[] = [];
+    const ver = (n: ts.Node): void => {
+      if (ts.isJsxSelfClosingElement(n) && n.tagName.getText() === 'Icon') {
+        achados.push(...atributo(n.attributes, new Set(['name'])).flatMap(icones));
+      }
+      ts.forEachChild(n, ver);
+    };
+    ver(no);
+    return achados;
+  }
+  if (ts.isPropertyAccessExpression(no)) return icones(no);
+  return literalVale ? icones(no) : [];
 }
 
 type Par = { rotulos: string[]; icones: Set<string> };
+type FonteDeIcone = { no: ts.Node; literalVale: boolean };
 
 /**
- * Rótulo e ícone escolhidos pela MESMA condição andam juntos, ramo a ramo:
+ * Rótulo e ícone escolhidos pelas MESMAS condições andam juntos, folha a folha:
  * `porApi ? 'publicar' : 'preparar pacote'` com `porApi ? <upload/> : <package/>`.
  * Sem o par, trocar os ícones de lado passava — o conjunto era o mesmo
- * (achado da auditoria do #107).
+ * (achados das auditorias do #107). Devolve também o que foi pareado, para
+ * sair da conferência por conjunto: o ícone que só existe num ramo não pode
+ * ser cobrado do rótulo do outro.
  */
-function pares(deRotulo: ts.Node[], deIcone: ts.Node[]): Par[] {
-  const condicionais = (nos: ts.Node[]) =>
-    nos.map(ternario).filter((x): x is ts.ConditionalExpression => x !== undefined);
+function pares(deRotulo: ts.Node[], deIcone: FonteDeIcone[]) {
   const saida: Par[] = [];
-  for (const r of condicionais(deRotulo)) {
-    for (const i of condicionais(deIcone)) {
-      if (r.condition.getText() !== i.condition.getText()) continue;
-      saida.push({ rotulos: textos(r.whenTrue), icones: new Set(iconesDoRamo(i.whenTrue)) });
-      saida.push({ rotulos: textos(r.whenFalse), icones: new Set(iconesDoRamo(i.whenFalse)) });
+  const rotulosUsados = new Set<string>();
+  const iconesUsados = new Set<string>();
+  const condicional = (no: ts.Node) => ts.isConditionalExpression(nu(no));
+  for (const r of deRotulo.filter(condicional)) {
+    const fr = folhas(r);
+    // Ternário sem texto (só ícones) não é fonte de rótulo: pareado consigo
+    // mesmo, ele marcava os ícones como conferidos sem rótulo nenhum, e o
+    // "Gerar no Gemini" ao lado saía da conferência.
+    if (!fr.some((a) => textosDaFolha(a.no).length)) continue;
+    for (const fonte of deIcone.filter((f) => condicional(f.no))) {
+      const fi = folhas(fonte.no);
+      const iconesDe_ = (f: Folha) => iconesDaFolha(f.no, fonte.literalVale);
+      // Ternário que não desenha ícone (só texto) não é fonte de ícone.
+      if (!fi.some((f) => iconesDe_(f).length)) continue;
+      if (!fr.some((a) => fi.some((b) => b.caminho === a.caminho))) continue;
+      for (const a of fr) {
+        const b = fi.find((x) => x.caminho === a.caminho);
+        const rotulos = textosDaFolha(a.no);
+        rotulos.forEach((x) => rotulosUsados.add(x));
+        saida.push({ rotulos, icones: new Set(b ? iconesDe_(b) : []) });
+      }
+      fi.forEach((b) => iconesDe_(b).forEach((x) => iconesUsados.add(x)));
     }
   }
-  return saida;
+  return { pares: saida, rotulosUsados, iconesUsados };
 }
 
 function acoesDoCodigo(arquivo: string, codigo: string): Acao[] {
@@ -174,29 +244,42 @@ function acoesDoCodigo(arquivo: string, codigo: string): Acao[] {
   const registrar = (no: ts.Node, { rotulos, icones: achados }: Par) => {
     if (rotulos.length && achados.size) acoes.push({ arquivo, linha: linha(no), rotulos, icones: achados });
   };
+  // A conferência por conjunto, sem o que já foi conferido par a par.
+  const conjunto = (
+    no: ts.Node,
+    rotulos: string[],
+    achados: Iterable<string>,
+    usados: ReturnType<typeof pares>,
+  ) => {
+    registrar(no, {
+      rotulos: rotulos.filter((r) => !usados.rotulosUsados.has(r)),
+      icones: new Set([...achados].filter((i) => !usados.iconesUsados.has(i))),
+    });
+    usados.pares.forEach((p) => registrar(no, p));
+  };
 
   const visitar = (no: ts.Node): void => {
     if (ts.isJsxElement(no) || ts.isJsxSelfClosingElement(no)) {
       const abertura = ts.isJsxElement(no) ? no.openingElement : no;
+      const filhos = ts.isJsxElement(no) ? no.children.filter(ts.isJsxExpression) : [];
+      const deRotulo = [...atributo(abertura.attributes, ATRIBUTOS_DE_ROTULO), ...filhos];
+      const deIcone = [
+        ...atributo(abertura.attributes, ATRIBUTOS_DE_ICONE).map((n) => ({ no: n, literalVale: true })),
+        ...filhos.map((n) => ({ no: n, literalVale: false })),
+      ];
       const achados = new Set<string>();
       iconesDe(no, achados);
-      registrar(no, { rotulos: rotulosDe(no), icones: achados });
-      const filhos = ts.isJsxElement(no) ? no.children.filter(ts.isJsxExpression) : [];
-      // Entre os filhos, o ternário de ícone é o que desenha <Icon> num ramo; o
-      // de texto fica do lado do rótulo — senão o texto viraria "ícone".
-      const desenhaIcone = (f: ts.JsxExpression) => {
-        const c = ternario(f);
-        return !!c && [c.whenTrue, c.whenFalse].some((r) => iconesDoRamo(r).length > 0 && !textos(r).length);
-      };
-      const deRotulo = [...atributo(abertura.attributes, ATRIBUTOS_DE_ROTULO), ...filhos.filter((f) => !desenhaIcone(f))];
-      const deIcone = [...atributo(abertura.attributes, ATRIBUTOS_DE_ICONE), ...filhos.filter(desenhaIcone)];
-      for (const par of pares(deRotulo, deIcone)) registrar(no, par);
+      conjunto(no, rotulosDe(no), achados, pares(deRotulo, deIcone));
       // O botão principal de um modal vem em par de props (primaryLabel e
       // primaryIcon): é uma ação à parte da do título.
       const rotuloPrimario = atributo(abertura.attributes, new Set(['primaryLabel']));
       const iconePrimario = atributo(abertura.attributes, new Set(['primaryIcon']));
-      registrar(no, { rotulos: rotuloPrimario.flatMap(textos), icones: new Set(iconePrimario.flatMap(icones)) });
-      for (const par of pares(rotuloPrimario, iconePrimario)) registrar(no, par);
+      conjunto(
+        no,
+        rotuloPrimario.flatMap(textos),
+        iconePrimario.flatMap(icones),
+        pares(rotuloPrimario, iconePrimario.map((n) => ({ no: n, literalVale: true }))),
+      );
     } else if (ts.isObjectLiteralExpression(no)) {
       const rotulos: string[] = [];
       const achados = new Set<string>();
@@ -279,6 +362,49 @@ describe('a catraca de conceitos enxerga…', () => {
     expect(erradas(casos(botao('upload', 'package')), regra('pacote'))).toEqual([]);
     expect(erradas(casos(botao('package', 'upload')), regra('publicar'))).toHaveLength(1);
     expect(erradas(casos(botao('package', 'upload')), regra('pacote'))).toHaveLength(1);
+  });
+
+  it('ternário aninhado, folha a folha', () => {
+    const botao = (a: string, b: string) =>
+      `<Button>{agendar ? <Icon name="clock" /> : porApi ? <Icon name="${a}" /> : <Icon name="${b}" />}` +
+      `{agendar ? 'agendar' : porApi ? 'publicar' : 'preparar pacote'}</Button>`;
+    expect(erradas(casos(botao('upload', 'package')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(botao('package', 'upload')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('condição negada: !x ? a : b é x ? b : a', () => {
+    const botao = (a: string, b: string) =>
+      `<Button>{!porApi ? <Icon name="${a}" /> : <Icon name="${b}" />}{porApi ? 'publicar' : 'preparar pacote'}</Button>`;
+    expect(erradas(casos(botao('package', 'upload')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(botao('upload', 'package')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('texto e ícone dentro de um fragmento do ramo', () => {
+    const botao = (icone: string) =>
+      `<Button>{aberto ? 'fechar a publicação' : <><Icon name="${icone}" />Publicar este</>}</Button>`;
+    expect(erradas(casos(botao('upload')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(botao('rocket')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('ícone num ramo só não é cobrado do rótulo do outro', () => {
+    const botao = `<Button>{aberto ? <Icon name="x" /> : null}{aberto ? 'fechar a publicação' : 'Publicar este'}</Button>`;
+    expect(erradas(casos(botao), regra('publicar'))).toEqual([]);
+  });
+
+  it('gerar com a IA, no ChatGPT ou no Gemini é a estrela; gerar bruto não é', () => {
+    expect(erradas(casos('<Button><Icon name="sparkles" />Gerar no Gemini</Button>'), regra('iaGera'))).toHaveLength(1);
+    expect(erradas(casos('<Button><Icon name="sparkle" />Gerar no ChatGPT</Button>'), regra('iaGera'))).toEqual([]);
+    expect(erradas(casos('<Button><Icon name="scissors" />Gerar bruto</Button>'), regra('iaGera'))).toEqual([]);
+  });
+
+  it('ícone e rótulo em ternários de condições diferentes, lado a lado', () => {
+    // O botão "Gerar no Gemini" da capa: o spinner gira por uma condição, o
+    // texto troca por outra. Sem par, vale a conferência por conjunto.
+    const botao = (icone: string) =>
+      `<Button>{pendente || conferindo ? <Icon name="loader-2" /> : <Icon name="${icone}" />}` +
+      `{conferindo ? 'Gerando…' : 'Gerar no Gemini'}</Button>`;
+    expect(erradas(casos(botao('sparkle')), regra('iaGera'))).toEqual([]);
+    expect(erradas(casos(botao('sparkles')), regra('iaGera'))).toHaveLength(1);
   });
 
   it('o par primaryLabel/primaryIcon, ramo a ramo', () => {
