@@ -40,6 +40,24 @@ describe('AcaoDeIa', () => {
   it('desabilitado por fora trava mesmo sem geração em voo', () => {
     for (const botao of botoes(render({ desabilitado: true }))) expect(botao).toContain('disabled=""');
   });
+
+  // D-861: desde a D-857 os ícones da ação passam pelo Icon, na escala.
+  it.each([
+    ['sm', '14'],
+    ['md', '16'],
+  ] as const)('tamanho %s: o ícone da ação sai a %s px, com traço 1,75', (tamanho, px) => {
+    const faisca = render({ tamanho }).match(/<svg[^>]*lucide-sparkles[^>]*>/)?.[0] ?? '';
+    expect(faisca).toContain(`width="${px}"`);
+    expect(faisca).toContain('stroke-width="1.75"');
+  });
+
+  it('em voo, o ícone da ação vira o spinner', () => {
+    const html = render({ emVoo: 'claude' });
+    // Só o rótulo: o botão do provedor em voo também gira e casaria sozinho.
+    const rotulo = html.slice(0, html.indexOf('<button'));
+    expect(rotulo).toMatch(/<svg[^>]*lucide-loader-circle[^>]*animate-spin/);
+    expect(rotulo).not.toContain('lucide-sparkles');
+  });
 });
 
 describe('MenuDeIa', () => {
@@ -50,5 +68,24 @@ describe('MenuDeIa', () => {
     expect(html).toContain('aria-label="Gerar trechos de todos os cortes"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('role="menu"');
+  });
+
+  // D-861: o gatilho recebe o NOME do ícone (D-857) e o desenha a 16 px.
+  it('desenha no gatilho o ícone do nome recebido, a 16 px', () => {
+    const html = renderToStaticMarkup(
+      <MenuDeIa rotulo="Gerar trechos de todos os cortes" icone="scissors" onGerar={vi.fn()} />,
+    );
+    const tesoura = html.match(/<svg[^>]*lucide-scissors[^>]*>/)?.[0] ?? '';
+    expect(tesoura).toContain('width="16"');
+    expect(tesoura).toContain('stroke-width="1.75"');
+  });
+
+  it('ocupado, o gatilho gira e trava', () => {
+    const html = renderToStaticMarkup(
+      <MenuDeIa rotulo="Gerar trechos" icone="scissors" onGerar={vi.fn()} ocupado />,
+    );
+    expect(html).toMatch(/<svg[^>]*lucide-loader-circle[^>]*animate-spin/);
+    expect(html).not.toContain('lucide-scissors');
+    expect(botoes(html)[0]).toContain('disabled=""');
   });
 });

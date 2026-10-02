@@ -45,7 +45,7 @@ function metadado(overrides: Partial<MetadadoCorte> = {}): MetadadoCorte {
   };
 }
 
-function render(meta: MetadadoCorte) {
+function render(meta: MetadadoCorte, variant: 'modal' | 'card' = 'modal') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(metadataKey('c1'), meta);
   qc.setQueryData(['capa-chatgpt', 'configuracao'], {
@@ -58,7 +58,7 @@ function render(meta: MetadadoCorte) {
       <ToastProvider>
         <TooltipProvider>
           <MemoryRouter>
-            <MetadataCard projetoId="p1" cut={corte()} variant="modal" />
+            <MetadataCard projetoId="p1" cut={corte()} variant={variant} active={variant === 'card'} />
           </MemoryRouter>
         </TooltipProvider>
       </ToastProvider>
@@ -163,5 +163,35 @@ describe('ModalChip', () => {
     );
     expect(html).toContain('text-[var(--sel-on)]');
     expect(html).not.toContain('text-white');
+  });
+});
+
+// D-861: os botões "Manual" recebem o NOME do ícone desde a D-856 — no modal
+// pelo ModalActionButton, no cartão pelo SegmentedAiManual. Antes, um `Icon`
+// local escondia o da escala e o ícone podia sair a 24 px.
+describe('MetadataCard — ícones dos botões Manual', () => {
+  const manuais = (markup: string) =>
+    (markup.match(/<button[^>]*>(?:(?!<\/button>).)*?Manual<\/button>/gs) ?? []).map(
+      (botao) => botao.match(/<svg[^>]*>/)?.[0] ?? '',
+    );
+
+  it('no modal: varinha nos metadados e paleta na capa, a 14 px', () => {
+    const [metadados, capa] = manuais(render(metadado()));
+    expect(metadados).toContain('lucide-wand-sparkles');
+    expect(capa).toContain('lucide-palette');
+    for (const icone of [metadados, capa]) expect(icone).toContain('width="14"');
+  });
+
+  it('sem metadados ainda: o Manual do estado vazio também leva a varinha', () => {
+    const markup = render(metadado({ titulo_youtube: '' }));
+    expect(markup).toContain('Metadados ainda nao gerados');
+    expect(manuais(markup)[0]).toContain('lucide-wand-sparkles');
+  });
+
+  it('no cartão: os mesmos ícones, a 14 px', () => {
+    const [metadados, capa] = manuais(render(metadado(), 'card'));
+    expect(metadados).toContain('lucide-wand-sparkles');
+    expect(capa).toContain('lucide-palette');
+    for (const icone of [metadados, capa]) expect(icone).toContain('width="14"');
   });
 });
