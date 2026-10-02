@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, GripVertical, Loader2, Plus, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { fetchWaveformPeaks, waveformPeaksUrl } from '@/lib/api';
@@ -14,6 +13,7 @@ import { metaCena } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
 import type { YoutubeLayout, YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
 import { limitar } from '@/lib/limitar';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // SceneTimeline — replica `design_reference/src/v3_pos.jsx >
@@ -580,7 +580,7 @@ export function SceneTimeline({
     <section className="flex flex-shrink-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
       {/* Panel header — v3_pos.jsx:180-196 */}
       <header className="flex flex-shrink-0 items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <GripVertical size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+        <Icon name="grip-vertical" className="text-[var(--wb-text-dim)]" />
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Timeline · cenas + layout YouTube
         </span>
@@ -591,7 +591,7 @@ export function SceneTimeline({
               : 'rounded-full bg-[var(--wb-bg-card)] border border-[var(--wb-border-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text-mute)]'
           }
         >
-          {cenasRenderizadas && <Check size={10} strokeWidth={3} aria-hidden />}
+          {cenasRenderizadas && <Icon name="check" />}
           {ordenadas.length} cenas
         </span>
         <span
@@ -603,7 +603,7 @@ export function SceneTimeline({
         >
           {palcoGerado ? (
             <>
-              <Check size={10} strokeWidth={3} aria-hidden />
+              <Icon name="check" />
               palco gerado
             </>
           ) : (
@@ -621,7 +621,7 @@ export function SceneTimeline({
                     onClick={() => onAddRegion('compartilhada')}
                     className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-wb-info/45 bg-[var(--wb-info-soft)] px-2 font-code text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-info)] transition-opacity hover:opacity-85"
                   >
-                    <Plus size={11} strokeWidth={2.4} />
+                    <Icon name="plus" />
                     Comp.
                   </button>
                 </Tooltip>
@@ -631,7 +631,7 @@ export function SceneTimeline({
                     onClick={() => onAddRegion('full')}
                     className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-wb-violet/45 bg-[var(--wb-violet-soft)] px-2 font-code text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-violet)] transition-opacity hover:opacity-85"
                   >
-                    <Plus size={11} strokeWidth={2.4} />
+                    <Icon name="plus" />
                     Full
                   </button>
                 </Tooltip>
@@ -672,7 +672,7 @@ export function SceneTimeline({
                 aria-label="Diminuir zoom"
                 className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)] disabled:opacity-40"
               >
-                <ZoomOut size={13} />
+                <Icon name="zoom-out" />
               </button>
             </Tooltip>
             <Tooltip label="Aumentar zoom (ou role o mouse sobre a timeline)" side="bottom">
@@ -683,7 +683,7 @@ export function SceneTimeline({
                 aria-label="Aumentar zoom"
                 className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)] disabled:opacity-40"
               >
-                <ZoomIn size={13} />
+                <Icon name="zoom-in" />
               </button>
             </Tooltip>
           </>
@@ -840,9 +840,9 @@ export function SceneTimeline({
                     className="flex h-4 w-4 items-center justify-center rounded text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] disabled:cursor-wait disabled:opacity-50"
                   >
                     {detectandoSegmentos ? (
-                      <Loader2 size={10} className="animate-spin" />
+                      <Icon name="loader-2" className="animate-spin" />
                     ) : (
-                      <RotateCw size={10} />
+                      <Icon name="rotate-cw" />
                     )}
                   </button>
                 </Tooltip>

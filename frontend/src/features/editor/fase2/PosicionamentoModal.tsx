@@ -15,7 +15,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bookmark, Loader2, Pencil, Save, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +56,7 @@ import {
 } from '@/shared/palco/youtubeLayout';
 import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/shared/palco/youtubeBackgrounds';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
+import { Icon } from '@/upgrade/Icon';
 
 /** Resultado da confirmação do modal (F-060: inclui fundo e placa). */
 export interface PosicionamentoModalResult {
@@ -392,7 +392,7 @@ export function PosicionamentoModal({
             aria-label="Fechar modal"
             className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
           >
-            <X size={15} />
+            <Icon name="x" size={16} />
           </button>
         </header>
 
@@ -403,7 +403,7 @@ export function PosicionamentoModal({
             {/* Preset bar */}
             <section className="rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2">
               <div className="mb-1.5 flex items-center gap-1.5">
-                <Bookmark size={12} className="text-[var(--wb-text-dim)]" aria-hidden />
+                <Icon name="bookmark" className="text-[var(--wb-text-dim)]" />
                 <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
                   Presets
                 </span>
@@ -442,7 +442,7 @@ export function PosicionamentoModal({
                       disabled={!presetSelecionado || updatePreset.isPending}
                       aria-label="Renomear preset selecionado"
                     >
-                      <Pencil size={12} />
+                      <Icon name="pencil" />
                     </Button>
                   </span>
                 </Tooltip>
@@ -457,9 +457,9 @@ export function PosicionamentoModal({
                       aria-label="Remover preset selecionado"
                     >
                       {deletePreset.isPending ? (
-                        <Loader2 size={12} className="animate-spin" />
+                        <Icon name="loader-2" className="animate-spin" />
                       ) : (
-                        <X size={12} />
+                        <Icon name="x" />
                       )}
                     </Button>
                   </span>
@@ -629,9 +629,9 @@ export function PosicionamentoModal({
                   disabled={!presetTemMudancas || updatePreset.isPending}
                 >
                   {updatePreset.isPending ? (
-                    <Loader2 className="animate-spin" />
+                    <Icon name="loader-2" className="animate-spin" />
                   ) : (
-                    <Save size={13} />
+                    <Icon name="save" />
                   )}
                   Atualizar preset
                 </Button>
@@ -644,7 +644,7 @@ export function PosicionamentoModal({
             size="sm"
             onClick={() => setSalvarPresetOpen(true)}
           >
-            <Bookmark size={13} />
+            <Icon name="bookmark" />
             Salvar como novo
           </Button>
           <div className="flex-1" />
@@ -652,7 +652,7 @@ export function PosicionamentoModal({
             Cancelar
           </Button>
           <Button type="button" variant="default" size="sm" onClick={handleConfirm}>
-            <Save size={13} />
+            <Icon name="save" />
             Aplicar e fechar
           </Button>
         </footer>
@@ -707,7 +707,7 @@ export function PosicionamentoModal({
                   onClick={handleSalvarPreset}
                   disabled={!nomePreset.trim() || savePreset.isPending}
                 >
-                  {savePreset.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+                  {savePreset.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
                   Salvar
                 </Button>
               </div>
@@ -764,7 +764,7 @@ export function PosicionamentoModal({
                   onClick={handleRenomearPreset}
                   disabled={!nomeRenomear.trim() || updatePreset.isPending}
                 >
-                  {updatePreset.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+                  {updatePreset.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
                   Renomear
                 </Button>
               </div>

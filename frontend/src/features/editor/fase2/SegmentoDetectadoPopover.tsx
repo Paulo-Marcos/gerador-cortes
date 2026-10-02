@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { segParaMmSs } from '../timeUtils';
 import type { DecisaoSegmentoDetectado, SegmentoDetectado } from '@/types/models';
+import { Icon } from '@/upgrade/Icon';
 
 // F-054: popover ancorado num ponto da timeline, mostrando as 3 opções neutras
 // (Rejeitar / FULL / Compartilhada) lado a lado. Sem pré-seleção — decisão
@@ -82,7 +82,7 @@ export function SegmentoDetectadoPopover({
           onClick={onFechar}
           className="flex h-5 w-5 items-center justify-center rounded text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
         >
-          <X size={11} />
+          <Icon name="x" />
         </button>
       </header>
       <div className="grid grid-cols-3 gap-1.5">

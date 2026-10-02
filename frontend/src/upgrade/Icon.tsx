@@ -351,7 +351,9 @@ export function Icon({ name, size = 14, ilustracao, rotulo, className, style }: 
       size={ilustracao ?? size}
       strokeWidth={TRACO}
       className={className}
-      style={style}
+      // Ícone nunca encolhe: numa linha flex apertada (trilha longa, abas da
+      // Pós) o padrão `flex-shrink: 1` o espremia a 5–10 px (D-854).
+      style={{ flexShrink: 0, ...style }}
       {...(rotulo ? { role: 'img', 'aria-label': rotulo } : { 'aria-hidden': true })}
     />
   );

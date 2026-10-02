@@ -1,7 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { audioProxyUrl, waveformPeaksUrl } from '@/lib/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Loader2 } from 'lucide-react';
 import { EditorFase1 } from './fase1/EditorFase1';
 import { TrechosManualModal } from './fase1/TrechosManualModal';
 import { BrutoContextStrip } from './fase1/BrutoContextStrip';
@@ -13,6 +12,7 @@ import { resolveWaveformWindow } from './editorEditState';
 import { resolveCorteStagePath } from '@/features/post-production/postProductionNavigation';
 import { ORIGEM_API } from '@/lib/apiBase';
 import { useEditorPage } from './useEditorPage';
+import { Icon } from '@/upgrade/Icon';
 
 function appendQueryParams(url: string, params: Record<string, string>): string {
   const search = new URLSearchParams(params).toString();
@@ -41,7 +41,7 @@ export function EditorPage() {
   if (corteQuery.isLoading || cortesQuery.isLoading || !corteUI) {
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center text-[var(--wb-text-dim)]">
-        <Loader2 size={20} className="mr-2 animate-spin" />
+        <Icon name="loader-2" size={20} className="mr-2 animate-spin" />
         Carregando corte...
       </div>
     );

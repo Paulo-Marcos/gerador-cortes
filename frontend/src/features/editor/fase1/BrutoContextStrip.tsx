@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ChevronsLeft, ChevronsRight, Clock3, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { segParaHms, segParaMmSs, validarHms } from '../timeUtils';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // BrutoContextStrip — replica `design_reference/src/v2_bruto.jsx:17-203`.
@@ -85,7 +85,7 @@ export function BrutoContextStrip({
               : 'text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
           )}
         >
-          <Edit3 size={12} aria-hidden />
+          <Icon name="edit-3" />
           Intervalo
         </button>
       </div>
@@ -140,7 +140,7 @@ function TimeCell({ label, value }: { label: string; value: string }) {
 function PrevCard({ previous }: { previous?: PrevNextCut | null }) {
   return (
     <div className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-2.5 py-1">
-      <ChevronsLeft size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+      <Icon name="chevrons-left" className="text-[var(--wb-text-dim)]" />
       <div className="leading-tight">
         <div className="font-code text-[9px] uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
           Fim anterior{' '}
@@ -171,7 +171,7 @@ function NextCard({ next }: { next?: PrevNextCut | null }) {
           {next?.hms ?? '—'}
         </div>
       </div>
-      <ChevronsRight size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+      <Icon name="chevrons-right" className="text-[var(--wb-text-dim)]" />
     </div>
   );
 }
@@ -258,7 +258,7 @@ function CurrentTimeButton({
       onClick={onClick}
       className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] transition-colors hover:border-[var(--wb-accent)] hover:text-[var(--wb-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
     >
-      <Clock3 size={12} aria-hidden />
+      <Icon name="clock-3" />
     </button>
   );
 }

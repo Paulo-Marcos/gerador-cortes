@@ -7,7 +7,6 @@
  */
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crop, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -28,6 +27,7 @@ import {
   StageChrome,
 } from '@/shared/palco/youtubeChrome';
 import { limitar } from '@/lib/limitar';
+import { Icon } from '@/upgrade/Icon';
 
 export type SharedRectKey = Exclude<keyof YoutubeSharedConfig, 'telas'>;
 export type CropRectKey = 'crop_facecam' | 'crop_tela';
@@ -274,27 +274,27 @@ export function SharedRectEditor({
         <div className="grid grid-cols-3 gap-1">
           <span />
           <IconControl label="Mover para cima" onClick={() => move(0, -10)}>
-            <ArrowUp size={13} />
+            <Icon name="arrow-up" />
           </IconControl>
           <span />
           <IconControl label="Mover para esquerda" onClick={() => move(-10, 0)}>
-            <ArrowLeft size={13} />
+            <Icon name="arrow-left" />
           </IconControl>
           <IconControl label="Mover para baixo" onClick={() => move(0, 10)}>
-            <ArrowDown size={13} />
+            <Icon name="arrow-down" />
           </IconControl>
           <IconControl label="Mover para direita" onClick={() => move(10, 0)}>
-            <ArrowRight size={13} />
+            <Icon name="arrow-right" />
           </IconControl>
         </div>
         <div className="h-9 w-px bg-[var(--wb-border-soft)]" />
         {baseRect ? (
           <div className="grid grid-cols-2 gap-1">
             <IconControl label="Diminuir tamanho" onClick={() => setScale(scalePercent - 5)}>
-              <Minus size={13} />
+              <Icon name="minus" />
             </IconControl>
             <IconControl label="Aumentar tamanho" onClick={() => setScale(scalePercent + 5)}>
-              <Plus size={13} />
+              <Icon name="plus" />
             </IconControl>
           </div>
         ) : (
@@ -716,7 +716,7 @@ export function CropPicker({
           size="sm"
           onClick={onToggleDrawing}
         >
-          <Crop size={13} />
+          <Icon name="crop" />
           Desenhar
         </Button>
         <span className="font-code text-[10px] text-[var(--wb-text-dim)]">

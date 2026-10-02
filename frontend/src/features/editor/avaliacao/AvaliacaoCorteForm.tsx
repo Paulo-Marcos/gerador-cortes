@@ -1,6 +1,6 @@
-import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMotivosAvaliacao } from './useAvaliacaoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 // D-419: os três campos da avaliação de um corte — nota, ressalvas e um
 // comentário livre. Componente burro: não busca nem salva nada, só desenha o
@@ -36,7 +36,7 @@ function EstrelasAvaliacao({ voto, onChange }: EstrelasProps) {
           aria-pressed={n === voto}
           className="text-[var(--wb-text-mute)] transition-colors hover:text-warning"
         >
-          <Star size={20} className={n <= (voto ?? 0) ? 'fill-warning text-warning' : ''} />
+          <Icon name="star" size={20} className={n <= (voto ?? 0) ? 'fill-warning text-warning' : ''} />
         </button>
       ))}
     </span>

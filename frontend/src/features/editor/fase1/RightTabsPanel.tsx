@@ -1,7 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
-import { ChevronDown, Loader2, Plus, RotateCw, Search, Sparkles, Trash2, WandSparkles } from 'lucide-react';
-import { PanelRightClose, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import type { ProviderIA } from '@/lib/providerIa';
@@ -18,6 +16,7 @@ import { useCorte } from '@/features/editor/useCortes';
 import { useDiarizarCorte, useFalantes } from '@/features/diarizacao/useDiarizacao';
 import type { FalantesMap } from '@/features/diarizacao/api';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // RightTabsPanel — replica `design_reference/src/v2_bruto.jsx:405-624`.
@@ -175,7 +174,7 @@ export function RightTabsPanel({
               onClick={onRecolher}
               aria-label="Recolher a coluna de trechos"
             >
-              <PanelRightClose />
+              <Icon name="panel-right-close" size={16} />
             </IconButton>
           </Tooltip>
         ) : null}
@@ -216,7 +215,7 @@ export function RightTabsPanel({
             disabled={refreshPending}
             aria-label={refreshTitle}
           >
-            {refreshPending ? <Loader2 className="animate-spin" /> : <RotateCw />}
+            <Icon name={refreshPending ? 'loader-2' : 'rotate-cw'} size={16} className={cn(refreshPending && 'animate-spin')} />
           </IconButton>
         </Tooltip>
       </header>
@@ -403,7 +402,7 @@ const TrechosList = memo(function TrechosList({
               onClick={onGerarManual}
               className="inline-flex h-[26px] items-center gap-1.5 rounded-[6px] px-3 text-[10.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]"
             >
-              <WandSparkles size={12} aria-hidden />
+              <Icon name="wand-sparkles" />
               Manual
             </button>
           </Tooltip>
@@ -417,7 +416,7 @@ const TrechosList = memo(function TrechosList({
             aria-label="Adicionar trecho"
             className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent)] hover:text-[var(--wb-accent-fg)] disabled:pointer-events-none disabled:opacity-40"
           >
-            <Plus size={15} strokeWidth={2.2} aria-hidden />
+            <Icon name="plus" size={16} />
           </button>
         </Tooltip>
       </div>
@@ -426,7 +425,7 @@ const TrechosList = memo(function TrechosList({
       <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-2.5 py-2">
         {sortedWithOriginalIdx.length === 0 && (
           <div className="m-auto flex flex-col items-center gap-1 py-8 text-center text-[12px] text-[var(--wb-text-dim)]">
-            <Sparkles size={20} className="opacity-60" />
+            <Icon name="sparkles" size={20} className="opacity-60" />
             Nenhum trecho marcado.
             <span className="text-[11px]">Use IA / Manual / Silencios para gerar.</span>
           </div>
@@ -463,7 +462,7 @@ const TrechosList = memo(function TrechosList({
                   >
                     {mmssDecimo(d.inicio_hms)}
                   </span>
-                  <ChevronDown size={9} className="text-[var(--wb-text-dim)]" />
+                  <Icon name="chevron-down" className="text-[var(--wb-text-dim)]" />
                   <span
                     className="font-code text-[10.5px] text-[var(--wb-text-mute)]"
                     style={{ fontVariantNumeric: 'tabular-nums' }}
@@ -513,7 +512,7 @@ const TrechosList = memo(function TrechosList({
                   disabled={pending.removendo}
                   aria-label="Remover trecho"
                 >
-                  <Trash2 size={12} />
+                  <Icon name="trash-2" />
                 </IconButton>
               </Tooltip>
             </div>
@@ -578,7 +577,7 @@ function TranscriptList({
       {/* Busca — v2_bruto.jsx:553-582 */}
       <div className="flex-shrink-0 space-y-2 border-b border-[var(--wb-border-soft)] px-3 py-2.5">
         <div className="flex h-[30px] items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5">
-          <Search size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+          <Icon name="search" className="text-[var(--wb-text-dim)]" />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -600,7 +599,7 @@ function TranscriptList({
             onClick={onDiarizar}
             disabled={diarizando}
           >
-            {diarizando ? <Loader2 className="animate-spin" /> : <Users />}
+            {diarizando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="users" />}
             {diarizando ? 'Diarizando...' : 'Diarizar este corte'}
           </Button>
         </Tooltip>

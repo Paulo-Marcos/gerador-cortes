@@ -8,7 +8,6 @@ import {
   
   
 } from 'react';
-import { ChevronDown, Layers, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -39,10 +38,10 @@ import {
   
   type YoutubeSharedConfig,
 } from '@/shared/palco/youtubeLayout';
-import { ScanLine } from 'lucide-react';
 import { EscopoLadder, ModoBlock, RegionItem } from './youtubeLayoutPanel/components';
 import { MODE_LABEL } from './youtubeLayoutPanel/shared';
 import { useYoutubeLayoutPanel } from './useYoutubeLayoutPanel';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // YoutubeLayoutPanel — replica `design_reference/src/v3_pos.jsx > TabLayout`
@@ -113,7 +112,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
           {/* Cabecalho */}
           <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
-              <Layers size={14} className="flex-none text-[var(--wb-text-mute)]" aria-hidden />
+              <Icon name="layers" className="flex-none text-[var(--wb-text-mute)]" />
               <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
                 Layout YouTube
               </strong>
@@ -144,7 +143,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
                   disabled={detectandoSegmentos}
                   aria-label="Detectar segmentos no bruto"
                 >
-                  {detectandoSegmentos ? <Loader2 className="animate-spin" /> : <ScanLine />}
+                  {detectandoSegmentos ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="scan-line" />}
                   Detectar
                 </Button>
               </Tooltip>
@@ -157,7 +156,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
                     onClick={save}
                     disabled={atualizar.isPending}
                   >
-                    {atualizar.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+                    {atualizar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
                     Salvar
                   </Button>
                 </Tooltip>
@@ -263,12 +262,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
                   : `${draft.regioes.length} manuais`}
               </span>
               {draft.regioes.length > 0 && (
-                <ChevronDown
-                  size={12}
-                  className="text-[var(--wb-text-dim)] transition-transform"
-                  style={{ transform: regioesOpen ? 'rotate(180deg)' : 'none' }}
-                  aria-hidden
-                />
+                <Icon name="chevron-down" className="text-[var(--wb-text-dim)] transition-transform" style={{ transform: regioesOpen ? 'rotate(180deg)' : 'none' }} />
               )}
             </button>
 

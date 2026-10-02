@@ -1,5 +1,4 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
-import { ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Player, type PlayerRef } from '@remotion/player';
 import { Button } from '@/components/ui/button';
 import type { CenaRemotion, FontePreset } from '@/types/models';
@@ -10,6 +9,7 @@ import { CenasRemotionPreview, type SombraNivelPadrao } from './CenasRemotionPre
 import { buildCenaVisualRevision, type LayoutCardPadrao } from './cardPreviewContracts';
 import { resolveYoutubeModeAt, type YoutubeLayout } from '@/shared/palco/youtubeLayout';
 import { useTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';
+import { Icon } from '@/upgrade/Icon';
 
 const FPS = 30;
 
@@ -230,7 +230,7 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
               }
               className="border-white/20 bg-black/70 text-white backdrop-blur hover:bg-black/80"
             >
-              {cenasOcultas ? <EyeOff size={14} /> : <Eye size={14} />}
+              {cenasOcultas ? <Icon name="eye-off" /> : <Icon name="eye" />}
               Remotion {cenasOcultas ? 'off' : 'on'}
             </Button>
           )}
@@ -243,9 +243,9 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
             className="border-white/20 bg-black/70 text-white backdrop-blur hover:bg-black/80"
           >
             {abrindoStudio ? (
-              <Loader2 size={14} className="animate-spin" />
+              <Icon name="loader-2" className="animate-spin" />
             ) : (
-              <ExternalLink size={14} />
+              <Icon name="external-link" />
             )}
             Studio Remotion
           </Button>

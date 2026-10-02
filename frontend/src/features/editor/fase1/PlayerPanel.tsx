@@ -1,5 +1,4 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Scissors, Volume2 } from 'lucide-react';
 import { hmsParaSeg } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
@@ -7,6 +6,7 @@ import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
 import { legendaEm } from './legendaDoTrecho';
 import type { Desvio } from '@/types/models';
+import { Icon } from '@/upgrade/Icon';
 
 export type { PlayerHandle };
 
@@ -286,7 +286,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
                 pointerEvents: 'none',
               }}
             >
-              <Scissors size={11} aria-hidden />
+              <Icon name="scissors" />
               sem cortes
             </span>
           ) : null}
@@ -377,7 +377,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
             title="Ajustar a sincronia entre áudio e vídeo"
             style={{ alignSelf: 'flex-start', color: 'var(--mute)' }}
           >
-            <Volume2 size={12} aria-hidden />
+            <Icon name="volume-2" />
             Sincronia do áudio
             <span style={{ fontFamily: 'var(--mono)', color: audioOffsetMs ? 'var(--accent)' : 'var(--dim)' }}>
               {audioOffsetMs > 0 ? `+${audioOffsetMs}` : audioOffsetMs} ms

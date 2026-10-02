@@ -3,17 +3,6 @@
  * Extraídos da fachada; recebem tudo por props (sem estado do painel).
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import {
-  ArrowLeftRight,
-  Flag,
-  Folder,
-  Globe,
-  Minus,
-  Plus,
-  RotateCw,
-  Scissors,
-  Trash2,
-} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -23,6 +12,7 @@ import { DefinirSplitButton } from '../DefinirSplitButton';
 import type { YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
 import { MODE_LABEL, MODE_SHORT, round } from './shared';
 import { limitar } from '@/lib/limitar';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 // Collapsible removido (F-060): as secoes Fundo/Placa migraram para o modal
 // de posicionamento — fundo e placa agora pertencem ao preset/escopo.
@@ -113,7 +103,7 @@ export function EscopoLadder({
             className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent-soft)]"
           >
             {MODE_SHORT[modo]}
-            <ArrowLeftRight size={10} aria-hidden />
+            <Icon name="arrow-left-right" />
           </button>
         </Tooltip>
       </div>
@@ -127,7 +117,7 @@ export function EscopoLadder({
       <DefinirScopeRow
         title="Segmento (padrão)"
         hint="base das regiões"
-        icon={Flag}
+        icon="flag"
         tone="var(--wb-violet)"
         definido={segmentoPadraoDefinido}
         presetNome={presetSegmentoPadraoNome}
@@ -139,7 +129,7 @@ export function EscopoLadder({
       />
       <DefinirScopeRow
         title="Corte"
-        icon={Scissors}
+        icon="scissors"
         tone="var(--wb-accent)"
         ativo={escopoAtivo === 'corte'}
         definido={corteDefinido}
@@ -151,7 +141,7 @@ export function EscopoLadder({
       />
       <DefinirScopeRow
         title="Projeto"
-        icon={Folder}
+        icon="folder"
         tone="var(--wb-info)"
         ativo={escopoAtivo === 'projeto'}
         definido={projetoDefinido}
@@ -163,7 +153,7 @@ export function EscopoLadder({
       />
       <DefinirScopeRow
         title="Global"
-        icon={Globe}
+        icon="globe"
         tone="var(--wb-violet)"
         ativo={escopoAtivo === 'global'}
         definido={globalDefinido}
@@ -185,7 +175,7 @@ export function EscopoLadder({
 function DefinirScopeRow({
   title,
   hint,
-  icon: Icon,
+  icon,
   definido,
   presetNome,
   presetTipo,
@@ -199,7 +189,7 @@ function DefinirScopeRow({
   title: string;
   /** Nota curta ao lado do titulo (ex.: onde este escopo se aplica). */
   hint?: string;
-  icon: typeof Folder;
+  icon: IconName;
   /** Tem JSON salvo neste escopo (i.e. nao cai para o proximo da escada). */
   definido: boolean;
   /** Nome do preset salvo que bate com o config atual deste escopo. */
@@ -233,7 +223,7 @@ function DefinirScopeRow({
         className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
         style={{ background: 'color-mix(in oklch, ' + tone + ' 18%, transparent)', color: tone }}
       >
-        <Icon size={12} />
+        <Icon name={icon} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-baseline gap-1.5">
@@ -278,7 +268,7 @@ function DefinirScopeRow({
             aria-label="Remover padrao"
             className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
           >
-            <Trash2 size={12} />
+            <Icon name="trash-2" />
           </button>
         </Tooltip>
       )}
@@ -380,7 +370,7 @@ export function ModoBlock({
         Modo
       </span>
       <ModoRow
-        icon={Scissors}
+        icon="scissors"
         tone="var(--wb-accent)"
         label="Este corte"
         caption={
@@ -395,7 +385,7 @@ export function ModoBlock({
         resetLabel="Voltar ao modo do projeto"
       />
       <ModoRow
-        icon={Folder}
+        icon="folder"
         tone="var(--wb-info)"
         label="Novos cortes"
         caption="padrão do projeto"
@@ -411,7 +401,7 @@ export function ModoBlock({
 // pílulas são `flex-none` e ficam sempre alcançáveis por mais estreito que o
 // painel esteja — a regressão que o D-423 corrige.
 function ModoRow({
-  icon: Icon,
+  icon,
   tone,
   label,
   caption,
@@ -422,7 +412,7 @@ function ModoRow({
   onReset,
   resetLabel,
 }: {
-  icon: typeof Folder;
+  icon: IconName;
   tone: string;
   label: string;
   caption: string;
@@ -435,7 +425,7 @@ function ModoRow({
 }) {
   return (
     <div className="flex items-center gap-1.5 py-1">
-      <Icon size={11} className="flex-none" style={{ color: tone }} aria-hidden />
+      <Icon name={icon} className="flex-none" style={{ color: tone }} />
       <div className="min-w-0 flex-1">
         <div className="truncate font-code text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text)]">
           {label}
@@ -452,7 +442,7 @@ function ModoRow({
             aria-label={resetLabel}
             className="flex h-6 w-6 flex-none items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
           >
-            <RotateCw size={11} />
+            <Icon name="rotate-cw" />
           </button>
         </Tooltip>
       )}
@@ -565,7 +555,7 @@ export function RegionItem({
             aria-label="Remover intervalo"
             className="flex h-6 w-6 items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
           >
-            <Trash2 size={12} />
+            <Icon name="trash-2" />
           </button>
         </Tooltip>
       </div>
@@ -577,7 +567,7 @@ export function RegionItem({
               label="Recuar início 0,1s e ver o quadro"
               onClick={() => adjustInicio(-FINE_STEP_SEG)}
             >
-              <Minus size={11} />
+              <Icon name="minus" />
             </FineStepButton>
             <div className="min-w-0 flex-1">
               <TimeField
@@ -590,7 +580,7 @@ export function RegionItem({
               label="Avançar início 0,1s e ver o quadro"
               onClick={() => adjustInicio(+FINE_STEP_SEG)}
             >
-              <Plus size={11} />
+              <Icon name="plus" />
             </FineStepButton>
           </div>
         </label>
@@ -601,7 +591,7 @@ export function RegionItem({
               label="Recuar fim 0,1s e ver o quadro"
               onClick={() => adjustFim(-FINE_STEP_SEG)}
             >
-              <Minus size={11} />
+              <Icon name="minus" />
             </FineStepButton>
             <div className="min-w-0 flex-1">
               <TimeField
@@ -614,7 +604,7 @@ export function RegionItem({
               label="Avançar fim 0,1s e ver o quadro"
               onClick={() => adjustFim(+FINE_STEP_SEG)}
             >
-              <Plus size={11} />
+              <Icon name="plus" />
             </FineStepButton>
           </div>
         </label>
@@ -655,7 +645,7 @@ export function RegionItem({
                 onClick={onClearOverride}
                 className="inline-flex items-center gap-1 bg-transparent font-code text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
               >
-                <RotateCw size={10} />
+                <Icon name="rotate-cw" />
                 Reverter
               </button>
             </Tooltip>
