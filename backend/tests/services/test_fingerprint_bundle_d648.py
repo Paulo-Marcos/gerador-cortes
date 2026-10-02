@@ -9,7 +9,9 @@ ele reaproveita um bundle com o mascote ou o tema do canal ANTERIOR, e a maioria
 dos overlays some do vídeo (a regressão do D-190).
 """
 
+import os
 import threading
+from pathlib import Path
 
 import pytest
 from app.infrastructure.render.remotion_bundle import compute_src_fingerprint
@@ -107,6 +109,56 @@ def test_subir_o_remotion_no_lockfile_invalida(renderer):
     (renderer / "package-lock.json").write_text('{"remotion": "4.0.503"}', encoding="utf-8")
 
     assert helpers.fingerprint_do_bundle(renderer) != antes
+
+
+# D-863: no Windows, duas gravações seguidas podem cair no mesmo tick do relógio.
+# Fixar a data reproduz isso sem depender da sorte do CI.
+_MESMO_INSTANTE_NS = 1_700_000_000_000_000_000
+
+
+def _gravar_no_mesmo_instante(caminho, texto):
+    caminho.write_text(texto, encoding="utf-8")
+    os.utime(caminho, ns=(_MESMO_INSTANTE_NS, _MESMO_INSTANTE_NS))
+
+
+def test_lockfile_de_mesmo_tamanho_no_mesmo_tick_invalida(renderer):
+    """D-863: `4.0.502` → `4.0.503` tem o mesmo tamanho; se a data não avança,
+    tamanho + data não distinguem as versões e o cache devolve o bundle velho."""
+    lockfile = renderer / "package-lock.json"
+    _gravar_no_mesmo_instante(lockfile, '{"remotion": "4.0.502"}')
+    antes = helpers.fingerprint_do_bundle(renderer)
+
+    _gravar_no_mesmo_instante(lockfile, '{"remotion": "4.0.503"}')
+
+    assert helpers.fingerprint_do_bundle(renderer) != antes
+
+
+def test_codigo_de_mesmo_tamanho_no_mesmo_tick_invalida(renderer):
+    """D-863: o mesmo buraco valia para o `src/` (`Root = 1` → `Root = 2`)."""
+    root = renderer / "src" / "Root.tsx"
+    _gravar_no_mesmo_instante(root, "export const Root = 1;")
+    antes = helpers.fingerprint_do_bundle(renderer)
+
+    _gravar_no_mesmo_instante(root, "export const Root = 2;")
+
+    assert helpers.fingerprint_do_bundle(renderer) != antes
+
+
+def test_assinatura_nao_le_o_public(renderer, monkeypatch):
+    """O `public/` (~160 MB) é o peso que o cache existe para evitar (D-648):
+    a assinatura pode ler o que é pequeno, mas nunca o conteúdo dele."""
+    lidos = []
+    original = Path.read_bytes
+
+    def anotando(self):
+        lidos.append(self)
+        return original(self)
+
+    monkeypatch.setattr(Path, "read_bytes", anotando)
+
+    helpers._assinatura_do_disco(renderer)
+
+    assert not [p for p in lidos if (renderer / "public") in p.parents]
 
 
 def test_instalacao_sem_lockfile_continua_funcionando(renderer):

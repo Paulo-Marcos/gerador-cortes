@@ -146,6 +146,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **A Remotion upgrade in the lockfile always rebuilds the bundle.** The bundle
+  cache told "something changed" by each file's size and date, and on Windows
+  two writes in a row can share the same timestamp: `4.0.502` → `4.0.503` has
+  the same size, so the old bundle kept running with the new Remotion. The
+  small files (renderer code and the root configs) are now compared by
+  content; only `public/` (~160 MB) still goes by size and date (D-863).
 - **The Library card shows the right icon for "Bruto" and "Publicação".** The
   card's six-step strip looks up each icon by the step's label, but its map
   still said "Cortes" and "Publicado", so those two steps fell back to the
