@@ -1,16 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Image as ImageIcon,
-  Loader2,
-  Save,
-  Target,
-  Trash2,
-  Upload,
-} from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
@@ -19,6 +7,7 @@ import type { CenaRemotion } from '@/types/models';
 import { salvarRetratoDeUrl } from '@/features/editor/useCenas';
 import { metaCena, TIPOS_CENA } from './sceneTypes';
 import { SceneTypeIcon } from './SceneTypeIcon';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // CenaItem — replica `design_reference/src/v3_pos.jsx > CenaListItem (709-867)`.
@@ -117,12 +106,12 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
               </span>
               {semRetrato && (
                 <Tooltip label="Ficha biografica sem retrato" side="top">
-                  <AlertTriangle size={11} className="flex-shrink-0 text-[var(--wb-warn)]" />
+                  <Icon name="triangle-alert" className="flex-shrink-0 text-[var(--wb-warn)]" />
                 </Tooltip>
               )}
               {sobreposta && (
                 <Tooltip label="Sobreposicao com outra cena" side="top">
-                  <AlertTriangle size={11} className="flex-shrink-0 text-[var(--wb-err)]" />
+                  <Icon name="triangle-alert" className="flex-shrink-0 text-[var(--wb-err)]" />
                 </Tooltip>
               )}
             </div>
@@ -147,7 +136,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
             aria-label="Remover cena"
             className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
           >
-            <Trash2 size={13} />
+            <Icon name="trash-2" />
           </button>
         </Tooltip>
         <Tooltip label={aberto ? 'Recolher' : 'Editar cena'} side="left">
@@ -158,7 +147,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
             aria-label={aberto ? 'Recolher cena' : 'Editar cena'}
             className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
           >
-            {aberto ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            {aberto ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
           </button>
         </Tooltip>
       </div>
@@ -272,14 +261,14 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
           <div className="mt-3 flex items-center gap-1.5">
             <Tooltip label="Ir para essa cena no player" side="top">
               <Button type="button" variant="outline" size="sm" onClick={() => onSeek(cena.inicio)}>
-                <Target />
+                <Icon name="target" />
                 Ir
               </Button>
             </Tooltip>
             <div className="flex-1" />
             <Tooltip label="Fechar editor" side="top">
               <Button type="button" variant="default" size="sm" onClick={() => setAberto(false)}>
-                <Save />
+                <Icon name="save" />
                 Aplicar
               </Button>
             </Tooltip>
@@ -452,7 +441,7 @@ function RetratoBlock({
         }
         aria-hidden
       >
-        {tem ? <Check size={18} strokeWidth={2.5} /> : <ImageIcon size={18} />}
+        {tem ? <Icon name="check" size={20} /> : <Icon name="image" size={20} />}
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-[11.5px] font-semibold text-[var(--wb-text)]">
@@ -473,7 +462,7 @@ function RetratoBlock({
           onClick={handleColarUrl}
           disabled={persistindo}
         >
-          {persistindo ? <Loader2 className="animate-spin" /> : <Upload />}
+          {persistindo ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="upload" />}
           {tem ? 'Trocar' : 'URL'}
         </Button>
       </Tooltip>

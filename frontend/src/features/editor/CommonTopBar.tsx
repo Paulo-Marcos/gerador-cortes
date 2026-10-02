@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Check, Flame, MoreHorizontal, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Modal } from '@/components/ui/modal';
@@ -8,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { IconButton, type IconButtonProps } from '@/components/ui/icon-button';
 import { buildReadingPatch, getReadingClickIntent, type ReadingPatch } from '@/lib/readingMetadata';
 import type { Corte, Projeto } from '@/types/models';
+import { Icon, type IconName, type TamanhoDoIcone } from '@/upgrade/Icon';
 
 export interface MoreMenuItem {
-  icon: LucideIcon;
+  icon: IconName;
   label: string;
   kbd?: string;
   disabled?: boolean;
@@ -137,13 +137,12 @@ function MoreMenu({ items }: { items: MoreMenuItem[] }) {
               : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]',
           )}
         >
-          <MoreHorizontal size={16} aria-hidden />
+          <Icon name="more-horizontal" size={16} />
         </button>
       </Tooltip>
       {open && (
         <div className="absolute right-0 top-10 z-30 flex w-[220px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]">
           {items.map((it, idx) => {
-            const Icon = it.icon;
             return (
               <button
                 key={`${it.label}-${idx}`}
@@ -155,7 +154,7 @@ function MoreMenu({ items }: { items: MoreMenuItem[] }) {
                 disabled={it.disabled}
                 className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-50"
               >
-                <Icon size={13} className="text-[var(--wb-text-mute)]" />
+                <Icon name={it.icon} className="text-[var(--wb-text-mute)]" />
                 <span className="flex-1">{it.label}</span>
                 {it.kbd && (
                   <span className="font-code text-[10px] text-[var(--wb-text-dim)]">{it.kbd}</span>
@@ -178,7 +177,7 @@ function MoreMenu({ items }: { items: MoreMenuItem[] }) {
 // ─────────────────────────────────────────────────────────────
 
 interface StatusToggleCompactProps {
-  icon: LucideIcon;
+  icon: IconName;
   label: string;
   active: boolean;
   color: string;
@@ -192,11 +191,11 @@ interface StatusToggleCompactProps {
   /** Variante do IconButton quando `iconOnly` + `active` (cor por tipo:
    *  ok/err/fire-soft/leitura-soft). Inativo é sempre `inset`. */
   activeVariant?: IconButtonProps['variant'];
-  iconSize?: number;
+  iconSize?: TamanhoDoIcone;
 }
 
 export function StatusToggleCompact({
-  icon: Icon,
+  icon,
   label,
   active,
   color,
@@ -205,7 +204,7 @@ export function StatusToggleCompact({
   title,
   iconOnly,
   activeVariant = 'inset',
-  iconSize = 15,
+  iconSize = 16,
 }: StatusToggleCompactProps) {
   if (iconOnly) {
     // D-406 revisa a AUDITORIA-v2 §2 (Workbench 1c.dc.html:157-160), que fixava
@@ -226,7 +225,7 @@ export function StatusToggleCompact({
           aria-label={label}
           aria-pressed={active}
         >
-          <Icon size={iconSize} strokeWidth={active ? 2.6 : 2} aria-hidden />
+          <Icon name={icon} size={iconSize} />
         </IconButton>
       </Tooltip>
     );
@@ -252,7 +251,7 @@ export function StatusToggleCompact({
             : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text-mute)] hover:border-[var(--status-color)] hover:text-[var(--status-color)]',
         )}
       >
-        <Icon size={12} strokeWidth={active ? 2.6 : 2} aria-hidden />
+        <Icon name={icon} />
         <span className="whitespace-nowrap">{label}</span>
       </button>
     </Tooltip>
@@ -340,7 +339,7 @@ export function StatusToggleRow({
   return (
     <>
       <StatusToggleCompact
-        icon={Check}
+        icon="check"
         label="A · Aprovar"
         active={aprovado}
         color="var(--wb-ok)"
@@ -352,7 +351,7 @@ export function StatusToggleRow({
         iconSize={16}
       />
       <StatusToggleCompact
-        icon={Flame}
+        icon="flame"
         label="Fire"
         active={Boolean(corte.is_fire)}
         color="var(--wb-fire)"
@@ -363,7 +362,7 @@ export function StatusToggleRow({
         activeVariant="fire-soft"
       />
       <StatusToggleCompact
-        icon={BookOpen}
+        icon="book-open"
         label="Leitura"
         active={Boolean(corte.is_leitura)}
         color="var(--wb-leitura)"
@@ -376,7 +375,7 @@ export function StatusToggleRow({
         activeVariant="leitura-soft"
       />
       <StatusToggleCompact
-        icon={X}
+        icon="x"
         label="R · Rejeitar"
         active={rejeitado}
         color="var(--wb-err)"

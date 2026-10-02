@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Clock3, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -9,6 +8,7 @@ import { cortesApi } from '@/features/editor/api/cortes';
 import { corteKey, cortesProjetoKey } from '@/features/editor/useCortes';
 import type { Corte } from '@/types/models';
 import { hmsParaSeg, segParaHms, validarHms } from './timeUtils';
+import { Icon } from '@/upgrade/Icon';
 
 // F-056: criar corte manualmente a partir de [inicio_hms, fim_hms].
 // D-382: nao dispara mais a busca automatica de trechos a remover via Gemini
@@ -103,7 +103,7 @@ export function AdicionarCorteModal({
             Cancelar
           </Button>
           <Button type="button" onClick={submeter} disabled={!podeSubmeter || ocupado}>
-            {ocupado ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            {ocupado ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="plus" />}
             {labelAcao}
           </Button>
         </>
@@ -135,7 +135,7 @@ export function AdicionarCorteModal({
                     disabled={ocupado}
                     aria-label="Usar tempo atual como inicio"
                   >
-                    <Clock3 size={14} />
+                    <Icon name="clock-3" />
                   </Button>
                 </Tooltip>
               )}
@@ -165,7 +165,7 @@ export function AdicionarCorteModal({
                     disabled={ocupado}
                     aria-label="Usar tempo atual como fim"
                   >
-                    <Clock3 size={14} />
+                    <Icon name="clock-3" />
                   </Button>
                 </Tooltip>
               )}

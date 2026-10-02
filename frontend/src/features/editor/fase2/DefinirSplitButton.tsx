@@ -6,12 +6,12 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
+import { Icon } from '@/upgrade/Icon';
 
 interface DefinirSplitButtonProps {
   /** Texto do botão principal — "Definir", "Mudar posicionamento" etc. */
@@ -62,7 +62,7 @@ export function DefinirSplitButton({
         disabled={pending}
         className={cn('rounded-r-none border-r-0', compact && 'h-6 px-2 text-[10px]')}
       >
-        {pending ? <Loader2 className="animate-spin" /> : null}
+        {pending ? <Icon name="loader-2" className="animate-spin" /> : null}
         {label}
       </Button>
       <Button
@@ -75,7 +75,7 @@ export function DefinirSplitButton({
         aria-label={`${label} — escolher preset`}
         className={cn('rounded-l-none px-1.5', compact && 'h-6')}
       >
-        <ChevronDown size={12} />
+        <Icon name="chevron-down" />
       </Button>
 
       {open && (
@@ -88,7 +88,7 @@ export function DefinirSplitButton({
           </div>
           {isLoading ? (
             <div className="px-3 py-3 text-center text-[11px] text-[var(--wb-text-mute)]">
-              <Loader2 size={12} className="inline animate-spin" /> Carregando…
+              <Icon name="loader-2" className="inline animate-spin" /> Carregando…
             </div>
           ) : presets.length === 0 ? (
             <div className="px-3 py-3 text-center text-[11px] text-[var(--wb-text-mute)]">

@@ -1,16 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronDown,
-  ExternalLink,
-  Film,
-  Image as ImageIcon,
-  Loader2,
-  Plus,
-  Settings2,
-  ShieldCheck,
-} from 'lucide-react';
+import { ExternalLink, Image as ImageIcon, Plus, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
@@ -30,6 +19,7 @@ import { RendererConfigControls } from './RendererConfigControls';
 import { TIPOS_CENA } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
 import { validateSceneOverlaps } from './sceneValidation';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // CenasPanel — replica `design_reference/src/v3_pos.jsx > TabCenas (449-647)`.
@@ -229,7 +219,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
         {/* L1: titulo + chips + caption */}
         <div className="mb-2.5 flex items-center gap-2">
-          <Film size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
+          <Icon name="film" className="text-[var(--wb-text-mute)]" />
           <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
             Cenas Remotion
           </strong>
@@ -238,7 +228,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           </span>
           {fichasSemRetrato > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-warn)]">
-              <AlertTriangle size={10} strokeWidth={2.2} />
+              <Icon name="triangle-alert" />
               {fichasSemRetrato} sem retrato
             </span>
           )}
@@ -247,7 +237,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
               className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-ok)]"
               data-testid="cenas-validadas-badge"
             >
-              <CheckCircle2 size={10} /> validadas
+              <Icon name="circle-check" /> validadas
             </span>
           )}
           <div className="flex-1" />
@@ -341,7 +331,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
               onClick={handleSalvar}
               disabled={atualizar.isPending}
             >
-              {atualizar.isPending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+              {atualizar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="circle-check" />}
               Salvar cenas
             </Button>
           </div>
@@ -353,7 +343,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         {validation.overlappingIndices.size > 0 && (
           <div className="mx-1 mb-2.5 rounded-[var(--radius-sm)] border border-wb-err/30 bg-[var(--wb-err-soft)] p-2.5 text-xs text-[var(--wb-err)]">
             <div className="flex items-start gap-2">
-              <AlertTriangle size={14} className="mt-0.5" aria-hidden />
+              <Icon name="triangle-alert" className="mt-0.5" />
               <div className="flex flex-col gap-0.5">
                 <span className="font-semibold">Cenas sobrepostas detectadas</span>
                 <span>
@@ -368,7 +358,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
 
         {cenasOrdenadas.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-            <Film size={30} className="text-[var(--wb-text-dim)]" aria-hidden />
+            <Icon name="film" ilustracao={30} className="text-[var(--wb-text-dim)]" />
             <p className="text-sm font-medium text-[var(--wb-text)]">Nenhuma cena gerada</p>
             <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">
               Use Gerar por IA para criar automaticamente; ou Manual para uma cena vazia.
@@ -405,11 +395,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
             {Object.keys(TIPOS_CENA).length}
           </span>
-          <ChevronDown
-            size={11}
-            className="transition-transform"
-            style={{ transform: showTypes ? 'rotate(180deg)' : 'none' }}
-          />
+          <Icon name="chevron-down" className="transition-transform" style={{ transform: showTypes ? 'rotate(180deg)' : 'none' }} />
         </button>
         <div className="flex-1" />
         <Tooltip label={validarTooltip} side="top">
@@ -424,11 +410,11 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             className={cenasValidadas ? 'bg-[var(--wb-ok)] hover:opacity-90' : ''}
           >
             {validarCenas.isPending ? (
-              <Loader2 className="animate-spin" />
+              <Icon name="loader-2" className="animate-spin" />
             ) : cenasValidadas ? (
-              <CheckCircle2 />
+              <Icon name="circle-check" />
             ) : (
-              <ShieldCheck />
+              <Icon name="shield-check" />
             )}
             {cenasValidadas ? 'Validadas' : 'Marcar validadas'}
           </Button>

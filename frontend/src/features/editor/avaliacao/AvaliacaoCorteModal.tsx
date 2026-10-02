@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import { AvaliacaoCorteForm, RASCUNHO_VAZIO, type RascunhoAvaliacao } from './AvaliacaoCorteForm';
 import { useAvaliacaoCorte, useSalvarAvaliacaoCorte } from './useAvaliacaoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 /**
  * D-419: avaliação da qualidade de um corte.
@@ -93,7 +93,7 @@ export function AvaliacaoCorteModal({
             Agora não
           </Button>
           <Button size="sm" onClick={confirmar} disabled={!rascunho.voto || salvar.isPending}>
-            {salvar.isPending && <Loader2 className="animate-spin" aria-hidden />}
+            {salvar.isPending && <Icon name="loader-2" className="animate-spin" />}
             Salvar avaliação
           </Button>
         </>

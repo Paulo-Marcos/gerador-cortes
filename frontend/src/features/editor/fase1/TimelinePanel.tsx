@@ -12,7 +12,6 @@ import { createPortal } from 'react-dom';
 import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
-import { ChevronsLeft, ChevronsRight, Flag, Lock, MousePointer2, Pin, Play, Plus, RotateCw, Scissors, Settings, Merge, SplitSquareHorizontal, Unlock, ZoomIn, ZoomOut } from 'lucide-react';
 import type { Desvio } from '@/types/models';
 import { corDoSegmento } from './trechoBadge';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
@@ -20,6 +19,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { fetchWaveformPeaks } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { hmsParaSeg, segParaHms, segParaMmSs } from '../timeUtils';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // TimelinePanel — header refatorado conforme
@@ -745,7 +745,7 @@ const TransportGroup = memo(function TransportGroup({
     <div className="flex items-center gap-0.5 rounded-[var(--radius-sm)] bg-[var(--wb-bg-inset)] p-0.5">
       <Tooltip label="Inicio do corte" side="bottom">
         <button type="button" onClick={onSkipStart} aria-label="Inicio" className={btn}>
-          <ChevronsLeft size={14} />
+          <Icon name="chevrons-left" />
         </button>
       </Tooltip>
       <Tooltip label="Play/Pause" side="bottom">
@@ -758,12 +758,12 @@ const TransportGroup = memo(function TransportGroup({
           // classe e o ícone sumia no fundo escuro.
           style={{ color: 'var(--wb-ink-fg)' }}
         >
-          <Play size={13} />
+          <Icon name="play" />
         </button>
       </Tooltip>
       <Tooltip label="Fim do corte" side="bottom">
         <button type="button" onClick={onSkipEnd} aria-label="Fim" className={btn}>
-          <ChevronsRight size={14} />
+          <Icon name="chevrons-right" />
         </button>
       </Tooltip>
     </div>
@@ -980,7 +980,7 @@ function AdvancedMenu({
               : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
           )}
         >
-          <Settings size={14} />
+          <Icon name="settings" />
         </button>
       </Tooltip>
       {open &&
@@ -1040,7 +1040,7 @@ function AdvancedMenu({
               }}
               className={item}
             >
-              <ZoomOut size={13} className="text-[var(--wb-text-mute)]" />
+              <Icon name="zoom-out" className="text-[var(--wb-text-mute)]" />
               <span className="flex-1">Diminuir zoom</span>
               <span className={kbd}>Ctrl + −</span>
             </button>
@@ -1052,7 +1052,7 @@ function AdvancedMenu({
               }}
               className={item}
             >
-              <ZoomIn size={13} className="text-[var(--wb-text-mute)]" />
+              <Icon name="zoom-in" className="text-[var(--wb-text-mute)]" />
               <span className="flex-1">Aumentar zoom</span>
               <span className={kbd}>Ctrl + +</span>
             </button>
@@ -1065,10 +1065,7 @@ function AdvancedMenu({
               className={item}
               aria-pressed={!!smartPlay}
             >
-              <Scissors
-                size={13}
-                className={smartPlay ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'}
-              />
+              <Icon name="scissors" className={smartPlay ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'} />
               <span className="flex-1">Reproducao sem trechos{smartPlay ? ' · ativo' : ''}</span>
               <span className={kbd}>Ctrl + B</span>
             </button>
@@ -1081,10 +1078,7 @@ function AdvancedMenu({
               className={item}
               aria-pressed={!!pointer}
             >
-              <MousePointer2
-                size={13}
-                className={pointer ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'}
-              />
+              <Icon name="mouse-pointer-2" className={pointer ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'} />
               <span className="flex-1">{pointer ? 'Modo ponteiro · ativo' : 'Modo ponteiro'}</span>
               <span className={kbd}>Ctrl + P</span>
             </button>
@@ -1098,9 +1092,9 @@ function AdvancedMenu({
               aria-pressed={!!locked}
             >
               {locked ? (
-                <Lock size={13} className="text-[var(--wb-accent)]" />
+                <Icon name="lock" className="text-[var(--wb-accent)]" />
               ) : (
-                <Unlock size={13} className="text-[var(--wb-text-mute)]" />
+                <Icon name="unlock" className="text-[var(--wb-text-mute)]" />
               )}
               <span className="flex-1">{locked ? 'Destravar trecho' : 'Trecho destravado'}</span>
               <span className={kbd}>Ctrl + L</span>
@@ -1115,10 +1109,7 @@ function AdvancedMenu({
                 className={item}
                 aria-pressed={!!pinned}
               >
-                <Pin
-                  size={13}
-                  className={pinned ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'}
-                />
+                <Icon name="pin" className={pinned ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'} />
                 <span className="flex-1">
                   {pinned ? 'Liberar altura' : 'Fixar altura da timeline'}
                 </span>
@@ -1137,7 +1128,7 @@ function AdvancedMenu({
                     disabled={dividindo}
                     className={item}
                   >
-                    <SplitSquareHorizontal size={13} className="text-[var(--wb-text-mute)]" />
+                    <Icon name="split-square-horizontal" className="text-[var(--wb-text-mute)]" />
                     <span className="flex-1">Dividir corte aqui</span>
                     <span className={kbd}>D</span>
                   </button>
@@ -1152,7 +1143,7 @@ function AdvancedMenu({
                     disabled={juntando}
                     className={item}
                   >
-                    <Merge size={13} className="text-[var(--wb-text-mute)]" />
+                    <Icon name="merge" className="text-[var(--wb-text-mute)]" />
                     <span className="flex-1">Juntar com o proximo corte</span>
                     <span className={kbd}>^⌥J</span>
                   </button>
@@ -1166,7 +1157,7 @@ function AdvancedMenu({
                     }}
                     className={item}
                   >
-                    <Plus size={13} className="text-[var(--wb-text-mute)]" />
+                    <Icon name="plus" className="text-[var(--wb-text-mute)]" />
                     <span className="flex-1">Trecho aqui</span>
                     <span className={kbd}>Ctrl+Alt+T</span>
                   </button>
@@ -1181,10 +1172,7 @@ function AdvancedMenu({
                     disabled={refreshing}
                     className={item}
                   >
-                    <RotateCw
-                      size={13}
-                      className={cn('text-[var(--wb-text-mute)]', refreshing && 'animate-spin')}
-                    />
+                    <Icon name="rotate-cw" className={cn('text-[var(--wb-text-mute)]', refreshing && 'animate-spin')} />
                     <span className="flex-1">
                       {refreshing ? 'Atualizando onda…' : 'Atualizar onda de áudio'}
                     </span>
@@ -1337,7 +1325,7 @@ export function TimelinePanel({
             aria-label="Marcar inicio aqui"
             className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-ok-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-ok-ink)] transition-colors disabled:opacity-40"
           >
-            <Flag size={11} />
+            <Icon name="flag" />
             In
           </button>
         </Tooltip>
@@ -1349,7 +1337,7 @@ export function TimelinePanel({
             aria-label="Marcar fim aqui"
             className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-err-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-err)] transition-colors disabled:opacity-40"
           >
-            <Flag size={11} style={{ transform: 'scaleX(-1)' }} />
+            <Icon name="flag" style={{ transform: 'scaleX(-1)' }} />
             Out
           </button>
         </Tooltip>
@@ -1370,7 +1358,7 @@ export function TimelinePanel({
                 : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
             )}
           >
-            {locked ? <Lock size={13} /> : <Unlock size={13} />}
+            {locked ? <Icon name="lock" /> : <Icon name="unlock" />}
           </button>
         </Tooltip>
 

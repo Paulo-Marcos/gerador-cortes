@@ -1,7 +1,7 @@
-import { Headphones, Loader2, TriangleAlert, X } from 'lucide-react';
 import type { EstadoLipSync } from '@/hooks/useLipSyncPreview';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // AudioSyncControl (F-063) — ajuste fino de lip-sync por corte.
@@ -53,7 +53,7 @@ export function AudioSyncControl({
 
   const carregando = previewEnabled && previewEstado === 'carregando';
   const falhou = previewEnabled && previewEstado === 'erro';
-  const IconePreview = carregando ? Loader2 : falhou ? TriangleAlert : Headphones;
+  const iconePreview = carregando ? 'loader-2' : falhou ? 'triangle-alert' : 'headphones';
   const dicaDoPreview = !canPreview
     ? 'Áudio do corte ainda não disponível para preview'
     : carregando
@@ -82,7 +82,7 @@ export function AudioSyncControl({
                 : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
           )}
         >
-          <IconePreview size={13} className={cn(carregando && 'animate-spin')} aria-hidden />
+          <Icon name={iconePreview} className={cn(carregando && 'animate-spin')} />
         </button>
       </Tooltip>
       <span className="font-code text-[8.5px] font-extrabold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
@@ -168,7 +168,7 @@ export function AudioSyncControl({
           aria-label="Fechar sincronia do áudio"
           className="flex h-7 w-7 flex-none items-center justify-center rounded-md bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
         >
-          <X size={12} aria-hidden />
+          <Icon name="x" />
         </button>
       )}
     </div>

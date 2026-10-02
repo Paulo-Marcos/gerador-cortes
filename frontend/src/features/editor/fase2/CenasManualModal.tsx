@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useImportarCenasRemotion, usePromptCenasRemotion } from '@/features/editor/useCenas';
@@ -10,6 +9,7 @@ import {
   extrairPartesPrompt,
 } from '@/components/PromptManualPanel';
 import type { CenaRemotion, CenasRemotionPayload } from '@/types/models';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -115,9 +115,9 @@ export function CenasManualModal({ open, onClose, corteId }: Props) {
         </Button>
         <Button type="button" onClick={onImportar} disabled={!todasColadas || importar.isPending}>
           {importar.isPending ? (
-            <Loader2 size={14} className="animate-spin" />
+            <Icon name="loader-2" className="animate-spin" />
           ) : (
-            <CheckCircle2 size={14} />
+            <Icon name="circle-check" />
           )}
           Importar cenas{totalPartes > 1 ? ` (${partesColadas}/${totalPartes})` : ''}
         </Button>

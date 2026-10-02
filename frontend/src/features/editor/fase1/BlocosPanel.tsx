@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, GripVertical, Loader2, Merge, RotateCcw, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { segParaMmSs } from '../timeUtils';
 import type { ArranjoBlocos, BlocoArranjo } from '@/types/models';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // D-576 — a fila de blocos do corte.
@@ -88,7 +88,7 @@ export function BlocosPanel({
               onClick={() => onDividir(pontoSeg)}
               disabled={!podeDividir || pendente}
             >
-              <Scissors size={13} /> Dividir aqui
+              <Icon name="scissors" /> Dividir aqui
             </Button>
           </span>
         </Tooltip>
@@ -103,12 +103,12 @@ export function BlocosPanel({
                 onClick={onRestaurar}
                 disabled={pendente}
               >
-                <RotateCcw size={13} /> Ordem da live
+                <Icon name="rotate-ccw" /> Ordem da live
               </Button>
             </span>
           </Tooltip>
         )}
-        {pendente && <Loader2 size={14} className="animate-spin text-[var(--wb-text-dim)]" />}
+        {pendente && <Icon name="loader-2" className="animate-spin text-[var(--wb-text-dim)]" />}
       </div>
 
       {arranjo?.bruto_desatualizado && (
@@ -145,11 +145,7 @@ export function BlocosPanel({
                 arrastando === indice && 'opacity-50',
               )}
             >
-              <GripVertical
-                size={13}
-                className="flex-shrink-0 cursor-grab text-[var(--wb-text-dim)]"
-                aria-hidden
-              />
+              <Icon name="grip-vertical" className="flex-shrink-0 cursor-grab text-[var(--wb-text-dim)]" />
               <span className="flex-shrink-0 rounded-[5px] bg-[var(--wb-bg-inset)] px-1.5 py-px font-code text-[10px] font-bold text-[var(--wb-text-mute)]">
                 {rotuloDeOrigem(bloco, blocos)}
               </span>
@@ -182,7 +178,7 @@ export function BlocosPanel({
                 disabled={indice === 0 || pendente}
                 onClick={() => onMover(indice, indice - 1)}
               >
-                <ArrowUp size={13} />
+                <Icon name="arrow-up" />
               </IconButton>
               <IconButton
                 type="button"
@@ -192,7 +188,7 @@ export function BlocosPanel({
                 disabled={indice === blocos.length - 1 || pendente}
                 onClick={() => onMover(indice, indice + 1)}
               >
-                <ArrowDown size={13} />
+                <Icon name="arrow-down" />
               </IconButton>
               <Tooltip label="Juntar com o bloco seguinte na live (desfaz a divisão)" side="left">
                 <span>
@@ -204,7 +200,7 @@ export function BlocosPanel({
                     disabled={ultimoDaLive || pendente}
                     onClick={() => onFundir(indice)}
                   >
-                    <Merge size={13} />
+                    <Icon name="merge" />
                   </IconButton>
                 </span>
               </Tooltip>

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type {
   ApontamentoBruto,
@@ -15,6 +14,7 @@ import {
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerDoModelo, providerEmVoo } from '@/lib/providerIa';
+import { Icon } from '@/upgrade/Icon';
 
 // D-447: o parecer automático sobre a ESTRUTURA do bruto — nota, veredito e os
 // pontos que não fecham. Irmão do D-419 (voto humano sobre a PROPOSTA): este lê
@@ -54,15 +54,10 @@ function NotaEmEstrelas({ nota }: { nota: number }) {
   return (
     <span className="flex items-center gap-0.5" aria-label={`Nota ${nota} de 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          size={14}
-          aria-hidden
-          className={cn(
+        <Icon key={n} name="star" className={cn(
             'text-[var(--wb-text-mute)]',
             n <= nota && 'fill-warning text-warning',
-          )}
-        />
+          )} />
       ))}
     </span>
   );

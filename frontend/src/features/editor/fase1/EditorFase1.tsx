@@ -1,10 +1,10 @@
 import { useCallback, useState, type RefObject } from 'react';
-import { PanelRightOpen } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import type { Corte, StatusBrutoResponse } from '@/types/models';
 import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
 import { TimelinePanel } from './TimelinePanel';
 import { RightTabsPanel } from './RightTabsPanel';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // EditorFase1 — layout do Bruto (`01_BRUTO.md > Layout geral`)
@@ -282,7 +282,7 @@ export function EditorFase1({
             title={`Mostrar trechos, ordem e transcrição (${(corte.desvios ?? []).length} trechos)`}
             aria-label="Mostrar a coluna de trechos"
           >
-            <PanelRightOpen size={14} />
+            <Icon name="panel-right-open" />
           </button>
         </div>
       ) : null}

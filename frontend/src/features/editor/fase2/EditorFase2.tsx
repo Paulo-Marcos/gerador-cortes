@@ -1,16 +1,6 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useState } from 'react';
 import type { RefObject } from 'react';
-import {
-  ChevronDown,
-  ChevronRight,
-  Film,
-  Monitor,
-  Quote,
-  SlidersHorizontal,
-  Sparkles,
-  Type,
-} from 'lucide-react';
 import type { CenaRemotion, Corte, FontePreset } from '@/types/models';
 import type { PlayerHandle } from '../fase1/PlayerPanel';
 import { cn } from '@/lib/utils';
@@ -24,6 +14,7 @@ import { YoutubeLayoutPanel } from './YoutubeLayoutPanel';
 import { SegmentoDetectadoPopover } from './SegmentoDetectadoPopover';
 import { PanelShell } from '@/components/workbench/PanelShell';
 import { useEditorFase2 } from './useEditorFase2';
+import { Icon } from '@/upgrade/Icon';
 
 export type AbaDireita = 'cenas' | 'layout' | 'filtros';
 
@@ -342,19 +333,19 @@ export function EditorFase2(props: Props) {
             <AbaButton
               ativo={abaDireita === 'cenas'}
               onClick={() => setAbaDireita('cenas')}
-              icon={<Film size={12} aria-hidden />}
+              icon={<Icon name="film" />}
               label="Cenas Remotion"
             />
             <AbaButton
               ativo={abaDireita === 'layout'}
               onClick={() => setAbaDireita('layout')}
-              icon={<Monitor size={12} aria-hidden />}
+              icon={<Icon name="monitor" />}
               label="Layout"
             />
             <AbaButton
               ativo={abaDireita === 'filtros'}
               onClick={() => setAbaDireita('filtros')}
-              icon={<SlidersHorizontal size={12} aria-hidden />}
+              icon={<Icon name="sliders-horizontal" />}
               label="Filtros"
             />
           </div>
@@ -440,11 +431,11 @@ function FontePresetPanel({ value, pending, onChange }: FontePresetPanelProps) {
         aria-controls="fonte-preset-grid"
       >
         {expanded ? (
-          <ChevronDown size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
+          <Icon name="chevron-down" className="text-[var(--wb-text-mute)]" />
         ) : (
-          <ChevronRight size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
+          <Icon name="chevron-right" className="text-[var(--wb-text-mute)]" />
         )}
-        <Type size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
+        <Icon name="type" className="text-[var(--wb-text-mute)]" />
         <strong className="font-editorial text-[13px] font-medium text-[var(--wb-text)]">
           Fonte dos cards
         </strong>
@@ -517,7 +508,7 @@ function AberturaEditorial({
     >
       {contexto && (
         <div className="flex items-start gap-2">
-          <Sparkles size={13} className="mt-0.5 shrink-0 text-[var(--wb-accent)]" aria-hidden />
+          <Icon name="sparkles" className="mt-0.5 shrink-0 text-[var(--wb-accent)]" />
           <div className="min-w-0">
             <div className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
               Contextualização · 1ª cena
@@ -530,7 +521,7 @@ function AberturaEditorial({
       )}
       {gancho && (
         <div className={cn('flex items-start gap-2', contexto && 'mt-2')}>
-          <Quote size={13} className="mt-0.5 shrink-0 text-[var(--wb-text-mute)]" aria-hidden />
+          <Icon name="quote" className="mt-0.5 shrink-0 text-[var(--wb-text-mute)]" />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
