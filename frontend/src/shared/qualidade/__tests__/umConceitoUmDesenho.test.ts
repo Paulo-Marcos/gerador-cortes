@@ -11,6 +11,13 @@
 // configuração de ação, como o `primario` da barra) cujo rótulo começa por um
 // conceito do dicionário tem de levar o ícone dele. Vale para ação nova: não
 // há lista de exceção.
+//
+// Como o rótulo e o ícone mudam com o estado (`isPending ? … : …`,
+// `porApi && …`), a catraca SIMULA as renderizações: junta as condições do
+// elemento, percorre cada combinação de verdadeiro/falso e confere o que
+// aparece JUNTO em cada uma. Antes ela pareava ternários por regra, e cada
+// regra deixava um furo (aninhado, negação, `&&`, ícone num ramo só,
+// profundidades diferentes — achados das auditorias do #107).
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -32,7 +39,7 @@ const REGRAS: { conceito: string; rotulo: RegExp; icone: IconName }[] = [
     conceito: 'iaGera',
     // "Gerar bruto" é render (tesoura); gerar COM a IA — trechos, o que falta,
     // no ChatGPT, no Gemini — é a estrela.
-    rotulo: /^gerar (trechos|o que falta)\b|^gerar\b.*\b(com (a )?ia|no chatgpt|no gemini)\b/i,
+    rotulo: /^gerar (trechos|o que falta)\b|^gerar\b.*\b(com (a )?ia|no chatgpt|no gemini)\b|^ia$/i,
     icone: ICONE_DO_CONCEITO.iaGera,
   },
   { conceito: 'prontos', rotulo: /^prontos$/i, icone: ICONE_DO_CONCEITO.prontos },
@@ -41,7 +48,7 @@ const REGRAS: { conceito: string; rotulo: RegExp; icone: IconName }[] = [
   // não é tocar; analisar com a IA é o cérebro, como em "Reanalisar".
   { conceito: 'pacote', rotulo: /(^|\b)(só o pacote|preparar pacote)/i, icone: 'package' },
   { conceito: 'baixar', rotulo: /^baixar\b/i, icone: 'download' },
-  { conceito: 'analisar', rotulo: /^(re)?analisar\b/i, icone: 'brain' },
+  { conceito: 'analisar', rotulo: /^(re)?analisar\b|^an[aá]lise completa por ia/i, icone: 'brain' },
 ];
 
 // O spinner divide o lugar com o ícone enquanto a ação roda.
@@ -102,39 +109,6 @@ function rotulosDe(no: ts.JsxElement | ts.JsxSelfClosingElement): string[] {
   return rotulos;
 }
 
-/**
- * Os ícones de um elemento: os atributos icon/icone dele e os <Icon> lá dentro
- * — sem entrar em filho que tem rótulo próprio. O título de um modal não
- * herda o ícone do botão "Salvar" que mora no corpo dele.
- */
-function iconesDe(no: ts.JsxElement | ts.JsxSelfClosingElement, achados: Set<string>): void {
-  const abertura = ts.isJsxElement(no) ? no.openingElement : no;
-  if (abertura.tagName.getText() === 'Icon') {
-    for (const valor of atributo(abertura.attributes, new Set(['name']))) {
-      for (const nome of icones(valor)) achados.add(nome);
-    }
-    return;
-  }
-  const proprios = atributo(abertura.attributes, ATRIBUTOS_DE_ICONE);
-  for (const valor of proprios) {
-    for (const nome of icones(valor)) achados.add(nome);
-  }
-  // O botão de IA desenha o "IA gera" quando ninguém diz outro ícone: sem isto,
-  // "Analisar…" num AcaoDeIa sem `icone` passava com um ícone que não estava
-  // na tela (achado da auditoria do #107).
-  if (abertura.tagName.getText() === 'AcaoDeIa' && proprios.length === 0) achados.add(ICONE_DO_CONCEITO.iaGera);
-  const descer = (filho: ts.Node): void => {
-    if (ts.isJsxElement(filho) || ts.isJsxSelfClosingElement(filho)) {
-      const tag = (ts.isJsxElement(filho) ? filho.openingElement : filho).tagName.getText();
-      if (tag === 'Icon' || rotulosDe(filho).length === 0) iconesDe(filho, achados);
-      return;
-    }
-    ts.forEachChild(filho, descer);
-  };
-  if (ts.isJsxElement(no)) no.children.forEach(descer);
-  ts.forEachChild(abertura.attributes, descer);
-}
-
 /** Desembrulha `{…}`, `(…)` e `x as T`. */
 function nu(no: ts.Node): ts.Node {
   if (ts.isJsxExpression(no) && no.expression) return nu(no.expression);
@@ -142,154 +116,132 @@ function nu(no: ts.Node): ts.Node {
   return no;
 }
 
-type Folha = { caminho: string; no: ts.Node };
+/** Uma condição como átomo: `!x` é o átomo `x`, negado. */
+function atomo(condicao: ts.Node): { chave: string; negado: boolean } {
+  let c = nu(condicao);
+  let negado = false;
+  while (ts.isPrefixUnaryExpression(c) && c.operator === ts.SyntaxKind.ExclamationToken) {
+    c = nu(c.operand);
+    negado = !negado;
+  }
+  return { chave: c.getText(), negado };
+}
+
+type Visto = { rotulos: string[]; icones: string[] };
+type Fonte = { no: ts.Node; contexto: 'rotulo' | 'icone' };
 
 /**
- * As folhas de um ternário, cada uma com o caminho de condições até ela
- * (`a?`, `a:b?`…), para ternário aninhado. A negação vira a mesma condição
- * com os ramos trocados: `!porApi ? x : y` é `porApi ? y : x`.
+ * O que um pedaço de código mostra numa combinação de condições: o ramo do
+ * ternário que vale, o lado direito do `&&` se a condição vale, o texto e os
+ * <Icon> de um fragmento ou de um invólucro sem rótulo próprio. String é
+ * rótulo — ou ícone, quando vem de um atributo de ícone.
  */
-function folhas(no: ts.Node, caminho = ''): Folha[] {
+function ver(no: ts.Node, contexto: Fonte['contexto'], valor: Map<string, boolean>, saida: Visto): void {
   const n = nu(no);
-  if (!ts.isConditionalExpression(n)) return [{ caminho, no: n }];
-  let condicao = nu(n.condition);
-  let sim: ts.Node = n.whenTrue;
-  let nao: ts.Node = n.whenFalse;
-  while (ts.isPrefixUnaryExpression(condicao) && condicao.operator === ts.SyntaxKind.ExclamationToken) {
-    condicao = nu(condicao.operand);
-    [sim, nao] = [nao, sim];
-  }
-  const c = condicao.getText();
-  return [...folhas(sim, `${caminho}${c}?`), ...folhas(nao, `${caminho}${c}:`)];
-}
-
-/** O texto de uma folha — inclusive o de dentro de um fragmento `<>…</>`. */
-function textosDaFolha(no: ts.Node): string[] {
-  if (ts.isJsxFragment(no) || ts.isJsxElement(no)) {
-    return no.children.flatMap((f) => {
-      if (ts.isJsxText(f)) return f.text.trim() ? [f.text.trim()] : [];
-      if (ts.isJsxExpression(f)) return textos(f);
-      if (ts.isJsxElement(f) || ts.isJsxFragment(f)) return textosDaFolha(f);
-      return [];
-    });
-  }
-  return textos(no);
-}
-
-/**
- * Os ícones de uma folha: os <Icon name=…> desenhados nela e o nome vindo do
- * dicionário. String solta só conta como ícone quando a folha é valor de um
- * atributo de ícone — num filho JSX, string é texto.
- */
-function iconesDaFolha(no: ts.Node, literalVale: boolean): string[] {
-  if (ts.isJsxSelfClosingElement(no) || ts.isJsxElement(no) || ts.isJsxFragment(no)) {
-    const achados: string[] = [];
-    const ver = (n: ts.Node): void => {
-      if (ts.isJsxSelfClosingElement(n) && n.tagName.getText() === 'Icon') {
-        achados.push(...atributo(n.attributes, new Set(['name'])).flatMap(icones));
-      }
-      ts.forEachChild(n, ver);
-    };
-    ver(no);
-    return achados;
-  }
-  if (ts.isPropertyAccessExpression(no)) return icones(no);
-  return literalVale ? icones(no) : [];
-}
-
-type Par = { rotulos: string[]; icones: Set<string> };
-type FonteDeIcone = { no: ts.Node; literalVale: boolean };
-
-/**
- * Rótulo e ícone escolhidos pelas MESMAS condições andam juntos, folha a folha:
- * `porApi ? 'publicar' : 'preparar pacote'` com `porApi ? <upload/> : <package/>`.
- * Sem o par, trocar os ícones de lado passava — o conjunto era o mesmo
- * (achados das auditorias do #107). Devolve também o que foi pareado, para
- * sair da conferência por conjunto: o ícone que só existe num ramo não pode
- * ser cobrado do rótulo do outro.
- */
-function pares(deRotulo: ts.Node[], deIcone: FonteDeIcone[]) {
-  const saida: Par[] = [];
-  const rotulosUsados = new Set<string>();
-  const iconesUsados = new Set<string>();
-  const condicional = (no: ts.Node) => ts.isConditionalExpression(nu(no));
-  for (const r of deRotulo.filter(condicional)) {
-    const fr = folhas(r);
-    // Ternário sem texto (só ícones) não é fonte de rótulo: pareado consigo
-    // mesmo, ele marcava os ícones como conferidos sem rótulo nenhum, e o
-    // "Gerar no Gemini" ao lado saía da conferência.
-    if (!fr.some((a) => textosDaFolha(a.no).length)) continue;
-    for (const fonte of deIcone.filter((f) => condicional(f.no))) {
-      const fi = folhas(fonte.no);
-      const iconesDe_ = (f: Folha) => iconesDaFolha(f.no, fonte.literalVale);
-      // Ternário que não desenha ícone (só texto) não é fonte de ícone.
-      if (!fi.some((f) => iconesDe_(f).length)) continue;
-      if (!fr.some((a) => fi.some((b) => b.caminho === a.caminho))) continue;
-      for (const a of fr) {
-        const b = fi.find((x) => x.caminho === a.caminho);
-        const rotulos = textosDaFolha(a.no);
-        rotulos.forEach((x) => rotulosUsados.add(x));
-        saida.push({ rotulos, icones: new Set(b ? iconesDe_(b) : []) });
-      }
-      fi.forEach((b) => iconesDe_(b).forEach((x) => iconesUsados.add(x)));
+  const vale = (condicao: ts.Node) => {
+    const { chave, negado } = atomo(condicao);
+    return (valor.get(chave) ?? true) !== negado;
+  };
+  if (ts.isConditionalExpression(n)) {
+    ver(vale(n.condition) ? n.whenTrue : n.whenFalse, contexto, valor, saida);
+  } else if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+    if (vale(n.left)) ver(n.right, contexto, valor, saida);
+  } else if (ts.isPropertyAccessExpression(n) && n.expression.getText() === 'ICONE_DO_CONCEITO') {
+    saida.icones.push(...icones(n));
+  } else if (ts.isJsxText(n)) {
+    if (n.text.trim()) saida.rotulos.push(n.text.trim());
+  } else if (ts.isJsxFragment(n)) {
+    n.children.forEach((f) => ver(f, 'rotulo', valor, saida));
+  } else if (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n)) {
+    const abertura = ts.isJsxElement(n) ? n.openingElement : n;
+    if (abertura.tagName.getText() === 'Icon') {
+      atributo(abertura.attributes, new Set(['name'])).forEach((v) => ver(v, 'icone', valor, saida));
+    } else if (rotulosDe(n).length === 0 && ts.isJsxElement(n)) {
+      // Invólucro sem rótulo (span, div): o que ele mostra é do pai. Filho com
+      // rótulo próprio é outra ação — o título do modal não herda o ícone do
+      // botão "Salvar" do corpo.
+      n.children.forEach((f) => ver(f, 'rotulo', valor, saida));
     }
+  } else {
+    const txt = textos(n);
+    if (contexto === 'icone') saida.icones.push(...txt);
+    else saida.rotulos.push(...txt);
   }
-  return { pares: saida, rotulosUsados, iconesUsados };
+}
+
+const MAX_CONDICOES = 10;
+
+/** Cada combinação de verdadeiro/falso das condições das fontes, e o que ela mostra. */
+function renderizacoes(fontes: Fonte[], fixos: Visto): Visto[] {
+  const chaves = new Set<string>();
+  const juntar = (no: ts.Node): void => {
+    if (ts.isConditionalExpression(no)) chaves.add(atomo(no.condition).chave);
+    if (ts.isBinaryExpression(no) && no.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+      chaves.add(atomo(no.left).chave);
+    }
+    ts.forEachChild(no, juntar);
+  };
+  fontes.forEach((f) => juntar(f.no));
+  const lista = [...chaves].slice(0, MAX_CONDICOES);
+  const saidas: Visto[] = [];
+  for (let combinacao = 0; combinacao < 1 << lista.length; combinacao++) {
+    const valor = new Map(lista.map((c, i) => [c, Boolean(combinacao & (1 << i))]));
+    const saida: Visto = { rotulos: [...fixos.rotulos], icones: [...fixos.icones] };
+    for (const f of fontes) ver(f.no, f.contexto, valor, saida);
+    saidas.push(saida);
+  }
+  return saidas;
 }
 
 function acoesDoCodigo(arquivo: string, codigo: string): Acao[] {
   const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true);
   const linha = (no: ts.Node) => fonte.getLineAndCharacterOfPosition(no.getStart(fonte)).line + 1;
   const acoes: Acao[] = [];
-  const registrar = (no: ts.Node, { rotulos, icones: achados }: Par) => {
-    if (rotulos.length && achados.size) acoes.push({ arquivo, linha: linha(no), rotulos, icones: achados });
+  const vistas = new Set<string>();
+  const registrar = (no: ts.Node, fontes: Fonte[], fixos: Visto = { rotulos: [], icones: [] }) => {
+    for (const { rotulos, icones: achados } of renderizacoes(fontes, fixos)) {
+      if (!rotulos.length || !achados.length) continue;
+      const chave = `${linha(no)}|${rotulos.join('|')}|${[...new Set(achados)].sort().join('|')}`;
+      if (vistas.has(chave)) continue;
+      vistas.add(chave);
+      acoes.push({ arquivo, linha: linha(no), rotulos, icones: new Set(achados) });
+    }
   };
-  // A conferência por conjunto, sem o que já foi conferido par a par.
-  const conjunto = (
-    no: ts.Node,
-    rotulos: string[],
-    achados: Iterable<string>,
-    usados: ReturnType<typeof pares>,
-  ) => {
-    registrar(no, {
-      rotulos: rotulos.filter((r) => !usados.rotulosUsados.has(r)),
-      icones: new Set([...achados].filter((i) => !usados.iconesUsados.has(i))),
-    });
-    usados.pares.forEach((p) => registrar(no, p));
-  };
+  const como = (contexto: Fonte['contexto']) => (no: ts.Node) => ({ no, contexto });
 
   const visitar = (no: ts.Node): void => {
     if (ts.isJsxElement(no) || ts.isJsxSelfClosingElement(no)) {
       const abertura = ts.isJsxElement(no) ? no.openingElement : no;
-      const filhos = ts.isJsxElement(no) ? no.children.filter(ts.isJsxExpression) : [];
-      const deRotulo = [...atributo(abertura.attributes, ATRIBUTOS_DE_ROTULO), ...filhos];
-      const deIcone = [
-        ...atributo(abertura.attributes, ATRIBUTOS_DE_ICONE).map((n) => ({ no: n, literalVale: true })),
-        ...filhos.map((n) => ({ no: n, literalVale: false })),
-      ];
-      const achados = new Set<string>();
-      iconesDe(no, achados);
-      conjunto(no, rotulosDe(no), achados, pares(deRotulo, deIcone));
+      const deIcone = atributo(abertura.attributes, ATRIBUTOS_DE_ICONE);
+      // O botão de IA desenha o "IA gera" quando ninguém diz outro ícone: sem
+      // isto, "Analisar…" num AcaoDeIa sem `icone` passava com um ícone que não
+      // estava na tela (achado da auditoria do #107).
+      const padrao =
+        abertura.tagName.getText() === 'AcaoDeIa' && deIcone.length === 0 ? [ICONE_DO_CONCEITO.iaGera] : [];
+      registrar(
+        no,
+        [
+          ...atributo(abertura.attributes, ATRIBUTOS_DE_ROTULO).map(como('rotulo')),
+          ...deIcone.map(como('icone')),
+          ...(ts.isJsxElement(no) ? no.children.map(como('rotulo')) : []),
+        ],
+        { rotulos: [], icones: padrao },
+      );
       // O botão principal de um modal vem em par de props (primaryLabel e
       // primaryIcon): é uma ação à parte da do título.
-      const rotuloPrimario = atributo(abertura.attributes, new Set(['primaryLabel']));
-      const iconePrimario = atributo(abertura.attributes, new Set(['primaryIcon']));
-      conjunto(
-        no,
-        rotuloPrimario.flatMap(textos),
-        iconePrimario.flatMap(icones),
-        pares(rotuloPrimario, iconePrimario.map((n) => ({ no: n, literalVale: true }))),
-      );
+      registrar(no, [
+        ...atributo(abertura.attributes, new Set(['primaryLabel'])).map(como('rotulo')),
+        ...atributo(abertura.attributes, new Set(['primaryIcon'])).map(como('icone')),
+      ]);
     } else if (ts.isObjectLiteralExpression(no)) {
-      const rotulos: string[] = [];
-      const achados = new Set<string>();
+      const fontes: Fonte[] = [];
       for (const p of no.properties) {
         if (!ts.isPropertyAssignment(p)) continue;
         const nome = p.name.getText().replace(/['"]/g, '');
-        if (ATRIBUTOS_DE_ROTULO.has(nome)) rotulos.push(...textos(p.initializer));
-        if (ATRIBUTOS_DE_ICONE.has(nome)) for (const i of icones(p.initializer)) achados.add(i);
+        if (ATRIBUTOS_DE_ROTULO.has(nome)) fontes.push({ no: p.initializer, contexto: 'rotulo' });
+        if (ATRIBUTOS_DE_ICONE.has(nome)) fontes.push({ no: p.initializer, contexto: 'icone' });
       }
-      registrar(no, { rotulos, icones: achados });
+      registrar(no, fontes);
     }
     ts.forEachChild(no, visitar);
   };
@@ -405,6 +357,44 @@ describe('a catraca de conceitos enxerga…', () => {
       `{conferindo ? 'Gerando…' : 'Gerar no Gemini'}</Button>`;
     expect(erradas(casos(botao('sparkle')), regra('iaGera'))).toEqual([]);
     expect(erradas(casos(botao('sparkles')), regra('iaGera'))).toHaveLength(1);
+  });
+
+  it('rótulo mais fundo que o ícone (o "Gerar shorts com IA" da ShortsPage)', () => {
+    const botao = (icone: string) =>
+      `<Button>{pendente ? <Icon name="loader-2" /> : <Icon name="${icone}" />}` +
+      `{pendente ? 'gerando…' : temBruto ? 'Gerar shorts com IA' : 'Gerar bruto e shorts com IA'}</Button>`;
+    expect(erradas(casos(botao('sparkle')), regra('iaGera'))).toEqual([]);
+    expect(erradas(casos(botao('sparkles')), regra('iaGera'))).not.toEqual([]);
+  });
+
+  it('ícone mais fundo que o rótulo', () => {
+    const botao = (icone: string) =>
+      `<Button>{aberto ? <Icon name="x" /> : enviando ? <Icon name="loader-2" /> : <Icon name="${icone}" />}` +
+      `{aberto ? 'fechar a publicação' : 'Publicar este'}</Button>`;
+    expect(erradas(casos(botao('upload')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(botao('rocket')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('ícone fixo ao lado de um ícone que só aparece num ramo', () => {
+    const botao = (icone: string) =>
+      `<Button><Icon name="${icone}" />{aberto ? <Icon name="x" /> : null}{aberto ? 'fechar' : 'Publicar este'}</Button>`;
+    expect(erradas(casos(botao('upload')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(botao('rocket')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('&& no rótulo e no ícone', () => {
+    const rotulo = (icone: string) => `<Button><Icon name="${icone}" />{!aberto && 'Publicar este'}</Button>`;
+    expect(erradas(casos(rotulo('upload')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(rotulo('rocket')), regra('publicar'))).toHaveLength(1);
+    const icones_ = (a: string, b: string) =>
+      `<Button>{porApi && <Icon name="${a}" />}{!porApi && <Icon name="${b}" />}{porApi ? 'publicar' : 'preparar pacote'}</Button>`;
+    expect(erradas(casos(icones_('upload', 'package')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(icones_('package', 'upload')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('a aba "IA" é a estrela; "Análise completa por IA" é o cérebro', () => {
+    expect(erradas(casos('<button><Icon name="sparkles" />IA</button>'), regra('iaGera'))).toHaveLength(1);
+    expect(erradas(casos('<p><Icon name="sparkle" /> Analise completa por IA</p>'), regra('analisar'))).toHaveLength(1);
   });
 
   it('o par primaryLabel/primaryIcon, ramo a ramo', () => {
