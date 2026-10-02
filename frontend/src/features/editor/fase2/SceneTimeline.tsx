@@ -802,7 +802,7 @@ export function SceneTimeline({
                           : undefined,
                     }}
                   >
-                    <SceneTypeIcon tipo={cena.tipo} size={11} />
+                    <SceneTypeIcon tipo={cena.tipo} />
                     <span className="truncate text-[10.5px] font-semibold text-[var(--wb-text)]">
                       {cena.texto || meta.label}
                     </span>

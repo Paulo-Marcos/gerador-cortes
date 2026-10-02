@@ -461,14 +461,14 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     id: 'bruto.fire',
     screen: 'bruto',
     key: 'f',
-    description: 'Toggle 🔥 fire',
+    description: 'Alternar Fire',
     group: 'edicao',
   },
   {
     id: 'bruto.leitura',
     screen: 'bruto',
     key: 'l',
-    description: 'Toggle 📖 leitura',
+    description: 'Alternar leitura',
     group: 'edicao',
   },
   {

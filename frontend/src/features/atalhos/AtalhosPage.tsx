@@ -19,7 +19,7 @@ import {
   type ShortcutScreen,
 } from '@/shared/atalhos/shortcutsRegistry';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
   { id: 'todas', rotulo: 'Todas' },
@@ -263,7 +263,7 @@ export function AtalhosPage() {
                       aria-label={`Editar atalho de ${spec.description}`}
                       className="rounded-md px-1.5 py-0.5 text-[12px] text-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
                     >
-                      ✎
+                      <Icon name={ICONE_DO_CONCEITO.editar} />
                     </button>
                     {custom && (
                       <button

@@ -398,9 +398,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
 function Vazio() {
   return (
     <div className="mx-auto max-w-md py-16 text-center">
-      <span aria-hidden className="text-[32px]">
-        🔥
-      </span>
+      <Icon name="flame" ilustracao={32} className="mx-auto text-[var(--wb-text-mute)]" />
       <p className="mt-3 text-[14px] font-semibold text-[var(--wb-text)]">
         Nenhum corte na fábrica de shorts
       </p>

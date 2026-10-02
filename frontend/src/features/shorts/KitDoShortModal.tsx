@@ -77,8 +77,8 @@ function KitDaRede({ pacote }: { pacote: PacotePublicacao }) {
     <article className="flex flex-col gap-2 rounded-[9px] border border-[var(--wb-border)] p-2.5">
       <h4 className="text-[13px] font-bold">{pacote.rotulo}</h4>
       {pacote.avisos.map((aviso) => (
-        <p key={aviso} className="text-[11px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
-          ⚠ {aviso}
+        <p key={aviso} className="flex items-start gap-1 text-[11px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+          <Icon name="triangle-alert" className="mt-px" />{aviso}
         </p>
       ))}
       {temTitulo ? (

@@ -15,7 +15,7 @@ import {
 import { useImportarAnalise, usePromptAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/features/diarizacao/useDiarizacao';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -159,7 +159,7 @@ function AnaliseIaModalDaLive({
               setModo('reanalisar');
               reset();
             }}
-            emoji="🔄"
+            icone="brain"
             title="Analisar a live inteira"
             hint="Roda a IA na transcrição completa e adiciona os cortes aos já existentes."
           />
@@ -169,7 +169,7 @@ function AnaliseIaModalDaLive({
               setModo('intervalo');
               reset();
             }}
-            emoji="🎯"
+            icone="target"
             title="Cortes em intervalo"
             hint="Gera cortes apenas dentro de uma faixa de tempo."
           />
@@ -417,13 +417,13 @@ function extrairCortesImportados(parsed: unknown): unknown[] | null {
 function ModoButton({
   active,
   onClick,
-  emoji,
+  icone,
   title,
   hint,
 }: {
   active: boolean;
   onClick: () => void;
-  emoji: string;
+  icone: IconName;
   title: string;
   hint: string;
 }) {
@@ -438,9 +438,7 @@ function ModoButton({
           : 'border-[var(--border)] bg-bg-900/40 hover:border-[var(--border-hover)]',
       )}
     >
-      <span className="text-lg" aria-hidden>
-        {emoji}
-      </span>
+      <Icon name={icone} size={20} />
       <span className="text-sm font-semibold text-text-100">{title}</span>
       <span className="text-[11px] text-text-300">{hint}</span>
     </button>

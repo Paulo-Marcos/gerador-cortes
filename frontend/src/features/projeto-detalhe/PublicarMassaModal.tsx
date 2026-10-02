@@ -160,8 +160,8 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
 
           {/* Preview da agenda */}
           <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium text-text-300">
-              📅 Agenda ({agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'})
+            <p className="flex items-center gap-1 text-xs font-medium text-text-300">
+              <Icon name="calendar" />Agenda ({agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'})
             </p>
             <div className="max-h-56 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40">
               <ul className="divide-y divide-[var(--border)]">
