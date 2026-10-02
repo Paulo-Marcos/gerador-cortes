@@ -23,7 +23,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, CircleDashed, ClipboardList, FileText, Image as ImageIcon, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
@@ -45,6 +44,7 @@ import { capaImagemUrl, shortVideoUrl, type ShortPronto } from './shortsApi';
 import { useFechoDoShort } from './useFechoDoShort';
 import { useLoteAtual } from './useLotePublicacao';
 import { PRONTOS_KEY, useShortsProntos } from './useShortsProntos';
+import { Icon } from '@/upgrade/Icon';
 
 const FILTROS: Array<{ id: FiltroDosProntos; texto: string }> = [
   { id: 'todos', texto: 'Todos' },
@@ -169,7 +169,7 @@ export default function ShortsProntosPage() {
 
         {!isLoading && !isError && prontos.length === 0 && (
           <div className="mx-auto max-w-md py-16 text-center">
-            <LayoutGrid size={28} className="mx-auto text-[var(--wb-text-mute)]" aria-hidden />
+            <Icon name="layout-grid" ilustracao={28} className="mx-auto text-[var(--wb-text-mute)]" />
             <p className="mt-3 text-[14px] font-semibold">Nada esperando publicação</p>
             <p className="mt-2 text-[13px] leading-relaxed text-[var(--wb-text-mute)]">
               Todo short renderizado já está no YouTube, no TikTok e no Instagram. Os próximos que
@@ -326,7 +326,7 @@ function CartaoDaCentral({
                 )}
                 title={noAr ? `já está no ${rede.rotulo}` : `falta no ${rede.rotulo}`}
               >
-                {noAr ? <Check size={9} aria-hidden /> : <CircleDashed size={9} aria-hidden />}
+                {noAr ? <Icon name="check" /> : <Icon name="circle-dashed" />}
                 {rede.rotulo}
               </span>
             );
@@ -334,14 +334,14 @@ function CartaoDaCentral({
         </div>
 
         <BotaoDoFecho
-          icone={<FileText size={13} aria-hidden />}
+          icone={<Icon name="file-text" />}
           titulo={pronto.post.gerado ? pronto.post.titulo : 'Escrever o post'}
           nota={pronto.post.gerado ? `${pronto.post.hashtags} hashtags` : 'sem post ainda'}
           falta={!pronto.post.gerado}
           onClick={fecho.abrirPost}
         />
         <BotaoDoFecho
-          icone={<ImageIcon size={13} aria-hidden />}
+          icone={<Icon name="image" />}
           titulo={pronto.capa.tem_capa ? 'Capa escolhida' : 'Escolher a capa'}
           nota={pronto.capa.tem_capa ? 'trocar a capa' : 'sem capa — a rede escolhe um quadro'}
           falta={!pronto.capa.tem_capa}
@@ -349,7 +349,7 @@ function CartaoDaCentral({
         />
 
         <Button variant="outline" size="sm" onClick={() => setKitAberto(true)}>
-          <ClipboardList />
+          <Icon name="clipboard-list" />
           Kit de publicação
         </Button>
       </div>

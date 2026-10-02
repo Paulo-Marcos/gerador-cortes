@@ -28,7 +28,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCheck, Clock, Download, Flame, HardDrive, LayoutGrid, Loader2, Pencil, RotateCcw, Search, Sparkles, X } from 'lucide-react';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { motivoDoErro, shortsApi, type AndamentoDaLive, type ContagemShorts, type FireComBruto } from './shortsApi';
 import { ANDAMENTO_DAS_LIVES_KEY, estaRodando, FIRES_KEY, useAndamentoDasLives, useFires } from './useFires';
@@ -45,6 +44,7 @@ import {
   temEdicao,
   type FiltroDeFire,
 } from './filtrosDosFires';
+import { Icon } from '@/upgrade/Icon';
 
 const CHIPS: { chave: keyof ContagemShorts; um: string; varios: string; classe: string }[] = [
   { chave: 'sugerido', um: 'sugerido', varios: 'sugeridos', classe: 'text-[var(--wb-text-mute)]' },
@@ -126,7 +126,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
         className="flex flex-1 flex-col gap-2 p-3.5 pb-2.5 focus-visible:outline-none"
       >
         <div className="flex items-start gap-2">
-          <Flame size={15} aria-hidden style={{ color: 'var(--accent)', flex: 'none' }} />
+          <Icon name="flame" size={16} style={{ color: 'var(--accent)', flex: 'none' }} />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[14px] font-bold text-[var(--wb-text)]" title={fire.titulo}>
               {fire.titulo || `Corte ${fire.numero}`}
@@ -152,19 +152,19 @@ function FireCard({ fire }: { fire: FireComBruto }) {
 
         <div className="flex items-center gap-3 font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]">
           <span className="inline-flex items-center gap-1">
-            <Clock size={12} aria-hidden />
+            <Icon name="clock" />
             {formatarDuracao(fire.duracao_seg)}
           </span>
           {/* D-502: sem bruto o corte aparece assim mesmo — dizer "0 MB" seria
               fingir um arquivo. O que ele precisa é de um aviso do que falta. */}
           {fire.tem_bruto ? (
             <span className="inline-flex items-center gap-1">
-              <HardDrive size={12} aria-hidden />
+              <Icon name="hard-drive" />
               {fire.bruto_mb} MB de bruto
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-[var(--wb-warn-ink)]">
-              <HardDrive size={12} aria-hidden />
+              <Icon name="hard-drive" />
               sem bruto
             </span>
           )}
@@ -188,7 +188,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
           to={`/shorts/${fire.corte_id}`}
           className="inline-flex h-7 flex-1 items-center justify-center gap-1.5 rounded-[7px] text-[12px] font-semibold text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
         >
-          <Pencil size={12} aria-hidden />
+          <Icon name="pencil" />
           Editar
         </Link>
         <Link
@@ -207,7 +207,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
               : 'Ainda não há short finalizado neste corte'
           }
         >
-          <LayoutGrid size={12} aria-hidden />
+          <Icon name="layout-grid" />
           Workspace
         </Link>
         <AlternarFinalizado fire={fire} />
@@ -239,11 +239,11 @@ function AlternarFinalizado({ fire }: { fire: FireComBruto }) {
       }
     >
       {marcar.isPending ? (
-        <Loader2 size={12} className="animate-spin" aria-hidden />
+        <Icon name="loader-2" className="animate-spin" />
       ) : finalizado ? (
-        <RotateCcw size={12} aria-hidden />
+        <Icon name="rotate-ccw" />
       ) : (
-        <CheckCheck size={12} aria-hidden />
+        <Icon name="check-check" />
       )}
       {finalizado ? 'Reabrir' : 'Finalizar'}
     </button>
@@ -315,9 +315,9 @@ function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
         }
       >
         {gerar.isPending ? (
-          <Loader2 size={13} className="animate-spin" aria-hidden />
+          <Icon name="loader-2" className="animate-spin" />
         ) : (
-          <Sparkles size={13} aria-hidden />
+          <Icon name="sparkles" />
         )}
         {gerar.isPending
           ? 'a IA está propondo…'
@@ -370,7 +370,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
 
       {rodando && andamento ? (
         <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--wb-accent)]">
-          <Loader2 size={13} className="animate-spin" aria-hidden />
+          <Icon name="loader-2" className="animate-spin" />
           {andamento.etapa === 'baixando'
             ? 'baixando a live…'
             : `gerando ${Math.min(andamento.feitos + 1, andamento.total)} de ${andamento.total}…`}
@@ -383,7 +383,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
           className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] px-3 text-[12px] font-semibold text-[var(--wb-accent-strong,var(--wb-accent))] disabled:opacity-60"
           title="Um corte por vez: refaz o bruto que falta e a IA propõe os trechos. Nada do que já existe é apagado."
         >
-          {grupo.precisaBaixar ? <Download size={13} aria-hidden /> : <Sparkles size={13} aria-hidden />}
+          {grupo.precisaBaixar ? <Icon name="download" /> : <Icon name="sparkles" />}
           {grupo.precisaBaixar
             ? `Baixar a live e gerar (${grupo.pendentes})`
             : grupo.pendentes === 1
@@ -507,7 +507,7 @@ export default function ShortsPage() {
           : null}
         <div style={{ flex: 1 }} />
         <label className="fld" style={{ width: 240 }}>
-          <Search size={12} aria-hidden style={{ color: 'var(--dim)' }} />
+          <Icon name="search" style={{ color: 'var(--dim)' }} />
           <input
             type="search"
             value={busca}
@@ -531,7 +531,7 @@ export default function ShortsPage() {
               className="btn btn-icon btn-ghost"
               style={{ width: 18, height: 18 }}
             >
-              <X size={11} />
+              <Icon name="x" />
             </button>
           ) : null}
         </label>

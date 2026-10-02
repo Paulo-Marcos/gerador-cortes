@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Ban, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ShortSugerido, VereditoDoRosto } from './shortsApi';
 import { janelaNova, mmss } from './linhaDoTempoShort';
@@ -15,6 +14,7 @@ import {
   useRenderizarPrevia,
   useRenderizarShort,
 } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 /**
  * D-477: o veredito do detector em uma linha.
@@ -133,7 +133,7 @@ export function ColunaDeDecisoes({
             onClick={onCriarManual}
             disabled={criarManual.isPending || duracaoRegua <= 0}
           >
-            <Plus />
+            <Icon name="plus" />
             Novo trecho em {mmss(tempoAtual)}
           </Button>
 
@@ -179,7 +179,7 @@ export function ColunaDeDecisoes({
           {/* D-746: o motivo do "Novo trecho" apagado, escrito. */}
           {duracaoRegua <= 0 && (
             <span className="flex items-center gap-1 text-[11px] text-[var(--wb-warn-ink)]">
-              <Ban size={11} aria-hidden />
+              <Icon name="ban" />
               Sem bruto na régua: gere o bruto antes de marcar um trecho.
             </span>
           )}

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, ChevronLeft, ChevronRight, Copy, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
@@ -27,6 +26,7 @@ import {
   usePromptDaCapa,
   useSubirArteDaCapa,
 } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 // D-565 (onda 4): escolher o quadro de capa do short.
 //
@@ -221,7 +221,7 @@ export function CapaModal({ open, onClose, short }: Props) {
                 disabled={instante.seg <= 0}
                 onClick={() => mover(-PASSO_GROSSO_SEG)}
               >
-                <ChevronLeft />
+                <Icon name="chevron-left" />
               </Button>
               <span className="font-code text-[14px] tabular-nums text-[var(--wb-text)]">
                 {comSegundos(instante.seg)}
@@ -233,7 +233,7 @@ export function CapaModal({ open, onClose, short }: Props) {
                 disabled={instante.seg >= duracao}
                 onClick={() => mover(PASSO_GROSSO_SEG)}
               >
-                <ChevronRight />
+                <Icon name="chevron-right" />
               </Button>
               <span className="ml-2 font-code text-[11px] text-[var(--wb-text-mute)]">
                 de {comSegundos(duracao)}
@@ -305,7 +305,7 @@ export function CapaModal({ open, onClose, short }: Props) {
               disabled={gerar.isPending || duracao <= 0}
               onClick={() => gerar.mutate({ instante_seg: instante.seg })}
             >
-              {gerar.isPending ? <Loader2 className="animate-spin" /> : <Camera />}
+              {gerar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="camera" />}
               {gerar.isPending ? 'tirando…' : 'Usar este quadro'}
             </Button>
             {gerar.isError && (
@@ -405,7 +405,7 @@ function ArteDaCapa({
           )}
           {texto && (
             <Button variant="ghost" size="sm" onClick={copiar}>
-              {copiado ? <Check /> : <Copy />}
+              {copiado ? <Icon name="check" /> : <Icon name="copy" />}
               {copiado ? 'copiado' : 'Copiar'}
             </Button>
           )}
@@ -462,7 +462,7 @@ function ArteDaCapa({
             disabled={subir.isPending}
             onClick={() => seletor.current?.click()}
           >
-            {subir.isPending ? <Loader2 className="animate-spin" /> : <Upload />}
+            {subir.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="upload" />}
             {subir.isPending ? 'subindo…' : 'Escolher a imagem'}
           </Button>
           {!subir.isPending && (

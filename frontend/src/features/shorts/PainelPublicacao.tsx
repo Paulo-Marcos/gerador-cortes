@@ -8,7 +8,6 @@
 // Os avisos aparecem ANTES do botão. Descobrir que o vídeo passa do limite
 // depois de subir é o erro que esta tela existe para evitar.
 import { useState } from 'react';
-import { Check, FileText, Image, Send, Upload } from 'lucide-react';
 import { useIsMutating } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import type { PacotePublicacao } from './shortsApi';
@@ -23,6 +22,7 @@ import { comSegundos } from './capaDoShort';
 import { useConfirmarPublicacao, usePublicacoesDoCorte } from './useLotePublicacao';
 import { plataformasJaPublicadas } from './selecaoDoLote';
 import type { ShortSugerido } from './shortsApi';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   /** D-565: o short inteiro, e nao so o id — o modal do post precisa dele. */
@@ -69,7 +69,7 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
         onClick={onEscreverPost}
         className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
       >
-        <FileText size={13} className="flex-none opacity-70" aria-hidden />
+        <Icon name="file-text" className="flex-none opacity-70" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[12.5px] font-semibold text-[var(--wb-text)]">
             {post.data?.titulo || 'Escrever o post'}
@@ -92,7 +92,7 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
         onClick={onEscolherCapa}
         className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
       >
-        <Image size={13} className="flex-none opacity-70" aria-hidden />
+        <Icon name="image" className="flex-none opacity-70" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[12.5px] font-semibold text-[var(--wb-text)]">
             {capa.data?.tem_capa ? 'Capa escolhida' : 'Escolher a capa'}
@@ -175,14 +175,14 @@ function Destino({
         {!porApi &&
           (jaPublicado ? (
             <span className="inline-flex flex-none items-center gap-1 text-[11px] font-semibold text-[var(--wb-ok-ink)]">
-              <Check size={12} aria-hidden />
+              <Icon name="check" />
               no ar
             </span>
           ) : (
             <MarcaManual ocupado={marcando} onMarcar={onMarcar} />
           ))}
         <Button size="sm" variant="outline" onClick={onPublicar} disabled={ocupado}>
-          {porApi ? <Send aria-hidden /> : <Upload aria-hidden />}
+          {porApi ? <Icon name="send" /> : <Icon name="upload" />}
           {porApi ? 'publicar' : 'preparar pacote'}
         </Button>
       </div>
@@ -237,7 +237,7 @@ function MarcaManual({ ocupado, onMarcar }: { ocupado: boolean; onMarcar: () => 
         }}
         className="text-[var(--wb-ok-ink)]"
       >
-        <Check aria-hidden />
+        <Icon name="check" />
         confirmar
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setPerguntando(false)}>

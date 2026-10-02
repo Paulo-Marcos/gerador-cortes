@@ -1,10 +1,10 @@
-import { ScanFace, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { temPalcoProprio } from './aplicarPalco';
 import { temColagem } from './segmentosDoShort';
 import type { ShortSugerido } from './shortsApi';
+import { Icon } from '@/upgrade/Icon';
 
 // D-542: dois assuntos no painel do candidato, e não seis.
 //
@@ -144,7 +144,7 @@ export function LinhaDeAjuste({
           onClick={onDefinirPalco}
           title="Como a tela monta, o enquadramento, de onde vem cada janela, o fundo, a moldura e os presets"
         >
-          <SlidersHorizontal />
+          <Icon name="sliders-horizontal" />
           Definir palco
         </Button>
 
@@ -164,7 +164,7 @@ export function LinhaDeAjuste({
           disabled={ocupado || enquadrando}
           onClick={onEnquadrarPeloRosto}
         >
-          <ScanFace />
+          <Icon name="scan-face" />
           {enquadrando ? 'olhando…' : 'enquadrar pelo rosto'}
         </Button>
       </Grupo>

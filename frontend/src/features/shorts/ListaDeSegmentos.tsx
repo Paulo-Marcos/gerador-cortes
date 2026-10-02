@@ -1,11 +1,3 @@
-import {
-  ArrowDown,
-  ArrowLeftToLine,
-  ArrowRightToLine,
-  ArrowUp,
-  Scissors,
-  Trash2,
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { janelaNova, mmss } from './linhaDoTempoShort';
 import {
@@ -20,6 +12,7 @@ import {
   type Segmento,
 } from './segmentosDoShort';
 import type { ShortSugerido } from './shortsApi';
+import { Icon } from '@/upgrade/Icon';
 
 // D-604: os segmentos do bruto que este short toca, listados na ordem de toque.
 //
@@ -91,7 +84,7 @@ export function ListaDeSegmentos({
               : 'Marca um segmento novo a partir de onde o player está.'
           }
         >
-          <Scissors />
+          <Icon name="scissors" />
           Segmento em {mmss(tempoAtualSeg)}
         </Button>
       </div>
@@ -138,7 +131,7 @@ export function ListaDeSegmentos({
                 title={`Começar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
                 aria-label={`Começar o segmento ${indice + 1} onde o player está`}
               >
-                <ArrowLeftToLine />
+                <Icon name="arrow-left-to-line" />
               </Button>
               <Button
                 size="icon-sm"
@@ -150,7 +143,7 @@ export function ListaDeSegmentos({
                 title={`Terminar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
                 aria-label={`Terminar o segmento ${indice + 1} onde o player está`}
               >
-                <ArrowRightToLine />
+                <Icon name="arrow-right-to-line" />
               </Button>
               <Button
                 size="icon-sm"
@@ -159,7 +152,7 @@ export function ListaDeSegmentos({
                 onClick={() => onGravar(comSegmentoMovido(short, indice, -1))}
                 aria-label={`Tocar o segmento ${indice + 1} mais cedo`}
               >
-                <ArrowUp />
+                <Icon name="arrow-up" />
               </Button>
               <Button
                 size="icon-sm"
@@ -168,7 +161,7 @@ export function ListaDeSegmentos({
                 onClick={() => onGravar(comSegmentoMovido(short, indice, 1))}
                 aria-label={`Tocar o segmento ${indice + 1} mais tarde`}
               >
-                <ArrowDown />
+                <Icon name="arrow-down" />
               </Button>
               <Button
                 size="icon-sm"
@@ -178,7 +171,7 @@ export function ListaDeSegmentos({
                 title={`Tirar o segmento ${indice + 1}`}
                 aria-label={`Tirar o segmento ${indice + 1}`}
               >
-                <Trash2 />
+                <Icon name="trash-2" />
               </Button>
             </li>
           ))}

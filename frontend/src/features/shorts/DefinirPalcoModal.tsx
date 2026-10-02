@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Maximize2, Minimize2, Move, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -26,6 +25,7 @@ import { mudancaDoArranjo, mudancaDoPalco, palcoDoShort } from './aplicarPalco';
 import { usePalcoDoCorte } from './useShortsDoCorte';
 import { useArranjosDePalco } from './useShortsDoCorte';
 import type { AtualizarShortBody, PlanoDesenhavel, Retangulo, ShortSugerido } from './shortsApi';
+import { Icon } from '@/upgrade/Icon';
 
 // D-509: um lugar só para montar a tela do short.
 //
@@ -236,7 +236,7 @@ export function DefinirPalcoModal({
                   <div className="flex items-center gap-1.5">
                     <span className="text-[12.5px] font-semibold">{arranjo.nome}</span>
                     {arranjoEmUso === arranjo.chave && (
-                      <Check size={12} className="text-[var(--wb-accent-strong)]" aria-hidden />
+                      <Icon name="check" className="text-[var(--wb-accent-strong)]" />
                     )}
                   </div>
                   {/* O impedimento no lugar do porquê: a opção desabilitada
@@ -313,7 +313,7 @@ export function DefinirPalcoModal({
                     title={fonteMedida ? undefined : 'Espere o vídeo carregar: o recorte usa a resolução dele.'}
                     onClick={() => marcarRegiao(regiao)}
                   >
-                    <Plus />
+                    <Icon name="plus" />
                     {REGIAO[regiao] ?? regiao}
                   </Button>
                 ))}
@@ -389,7 +389,7 @@ export function DefinirPalcoModal({
                 disabled={ocupado || !plano}
                 onClick={() => redimensionar(1 / PASSO_DO_TAMANHO)}
               >
-                <Minimize2 />
+                <Icon name="minimize-2" />
               </Button>
               <span className="w-[46px] text-center font-code text-[12px] tabular-nums">
                 {Math.round(ocupacao * 100)}%
@@ -401,7 +401,7 @@ export function DefinirPalcoModal({
                 disabled={ocupado || !plano}
                 onClick={() => redimensionar(PASSO_DO_TAMANHO)}
               >
-                <Maximize2 />
+                <Icon name="maximize-2" />
               </Button>
               {/* D-562: o mesmo gesto que vivia na página, agora ao lado do
                   controle de tamanho — mover e dimensionar são a mesma decisão,
@@ -414,7 +414,7 @@ export function DefinirPalcoModal({
                 disabled={ocupado || !plano}
                 onClick={() => setMovendo((v) => !v)}
               >
-                <Move />
+                <Icon name="move" />
                 {movendo ? 'movendo' : 'mover no quadro'}
               </Button>
               <Button
@@ -580,7 +580,7 @@ export function DefinirPalcoModal({
                 }
                 aria-label="Estreitar a legenda"
               >
-                <Minimize2 size={12} aria-hidden />
+                <Icon name="minimize-2" />
               </Button>
               <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
                 {Math.round(lugarDaLegenda.largura)}%
@@ -599,7 +599,7 @@ export function DefinirPalcoModal({
                 }
                 aria-label="Alargar a legenda"
               >
-                <Maximize2 size={12} aria-hidden />
+                <Icon name="maximize-2" />
               </Button>
               {/* Só aparece quando há o que desfazer: um botão "voltar ao
                   padrão" sempre visível sobre um trecho que já segue o padrão é

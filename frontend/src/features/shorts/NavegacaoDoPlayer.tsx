@@ -1,6 +1,6 @@
-import { ChevronFirst, ChevronLast, SkipBack } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { mmss } from './linhaDoTempoShort';
+import { Icon } from '@/upgrade/Icon';
 
 // D-539: os três lugares para onde sempre se quer voltar.
 //
@@ -36,7 +36,7 @@ export function NavegacaoDoPlayer({ trecho, onIrPara }: Props) {
         onClick={() => onIrPara(0)}
         title="Volta ao primeiro quadro do corte"
       >
-        <SkipBack />
+        <Icon name="skip-back" />
         início do corte
       </Button>
 
@@ -48,7 +48,7 @@ export function NavegacaoDoPlayer({ trecho, onIrPara }: Props) {
             onClick={() => onIrPara(trecho.inicio_seg)}
             title="Põe o cursor exatamente na borda de início do trecho"
           >
-            <ChevronFirst />
+            <Icon name="chevron-first" />
             início · {mmss(trecho.inicio_seg)}
           </Button>
           <Button
@@ -57,7 +57,7 @@ export function NavegacaoDoPlayer({ trecho, onIrPara }: Props) {
             onClick={() => onIrPara(trecho.fim_seg)}
             title="Põe o cursor exatamente na borda de fim do trecho"
           >
-            <ChevronLast />
+            <Icon name="chevron-last" />
             fim · {mmss(trecho.fim_seg)}
           </Button>
         </>

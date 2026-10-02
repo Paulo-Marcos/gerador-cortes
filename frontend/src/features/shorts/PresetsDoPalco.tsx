@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Loader2, Pencil, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -9,6 +8,7 @@ import {
   useUpdateLayoutPreset,
 } from '@/shared/palco/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
+import { Icon } from '@/upgrade/Icon';
 
 // D-567: o CRUD de presets sai de dentro do modal do palco.
 //
@@ -65,7 +65,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
             )
           }
         >
-          {salvar.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+          {salvar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
           Salvar
         </Button>
       </div>
@@ -124,7 +124,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
                   disabled={ocupado || regravar.isPending}
                   onClick={() => regravar.mutate({ id: preset.id, body: { payload: comoEstaHoje() } })}
                 >
-                  <RefreshCw />
+                  <Icon name="refresh-cw" />
                   regravar
                 </Button>
                 {/* Regravar não muda nada visível — o nome continua o mesmo. Sem
@@ -145,7 +145,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
                     setNomeEditado(preset.nome);
                   }}
                 >
-                  <Pencil />
+                  <Icon name="pencil" />
                 </Button>
                 <Button
                   size="sm"
@@ -154,7 +154,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
                   disabled={apagar.isPending}
                   onClick={() => apagar.mutate(preset.id)}
                 >
-                  <Trash2 />
+                  <Icon name="trash-2" />
                 </Button>
               </>
             )}

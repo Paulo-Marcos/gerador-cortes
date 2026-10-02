@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
-import { Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   arrasteDoSegmento,
@@ -14,6 +13,7 @@ import {
 import { brutoUrl, type ShortSugerido } from './shortsApi';
 import { arrastar, mmss, type Borda, type Bordas } from './linhaDoTempoShort';
 import { BORDA_DO_REJEITADO, COR_DO_REJEITADO, bordaDoShort, corDoShort } from './coresDosShorts';
+import { Icon } from '@/upgrade/Icon';
 
 // D-548: a régua da curadoria, com o mesmo instrumento do editor de bruto.
 //
@@ -534,7 +534,7 @@ export function ReguaDeOnda({
           disabled={zoom <= ZOOM_MINIMO}
           onClick={() => mudarZoom(1 / FATOR_DO_BOTAO)}
         >
-          <Minus />
+          <Icon name="minus" />
         </Button>
         <span className="w-[38px] text-center" title="Ctrl + roda do mouse sobre a onda">
           {zoom.toFixed(1)}×
@@ -546,7 +546,7 @@ export function ReguaDeOnda({
           disabled={zoom >= ZOOM_MAXIMO}
           onClick={() => mudarZoom(FATOR_DO_BOTAO)}
         >
-          <Plus />
+          <Icon name="plus" />
         </Button>
       </div>
 

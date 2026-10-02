@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { aplicarCampo, CANVAS, type Retangulo } from './arrastarSlot';
 import { BlocosArrastaveis } from './BlocosArrastaveis';
+import { Icon } from '@/upgrade/Icon';
 
 // D-493: os blocos do palco, arrastáveis sobre a própria prévia.
 //
@@ -79,7 +79,7 @@ export function CamposDoPalco({
         <div className="flex-1" />
         {ajustados.length > 0 && (
           <Button variant="ghost" size="sm" disabled={ocupado} onClick={onDesfazer}>
-            <RotateCcw />
+            <Icon name="rotate-ccw" />
             voltar ao modelo
           </Button>
         )}
