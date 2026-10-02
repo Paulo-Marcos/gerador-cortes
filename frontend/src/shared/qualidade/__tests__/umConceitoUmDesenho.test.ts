@@ -116,15 +116,45 @@ function nu(no: ts.Node): ts.Node {
   return no;
 }
 
-/** Uma condição como átomo: `!x` é o átomo `x`, negado. */
-function atomo(condicao: ts.Node): { chave: string; negado: boolean } {
-  let c = nu(condicao);
-  let negado = false;
-  while (ts.isPrefixUnaryExpression(c) && c.operator === ts.SyntaxKind.ExclamationToken) {
-    c = nu(c.operand);
-    negado = !negado;
+const E_LOGICO = new Set([
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.QuestionQuestionToken,
+]);
+
+/**
+ * Os átomos de uma condição: as folhas que não são `!`, `&&`, `||` nem `??`.
+ * `!aberto && pronto` são `aberto` e `pronto` — tratar a condição inteira como
+ * um átomo só criava combinações impossíveis e reprovava código certo
+ * (achado da auditoria do #107).
+ */
+function atomos(condicao: ts.Node): string[] {
+  const c = nu(condicao);
+  if (ts.isPrefixUnaryExpression(c) && c.operator === ts.SyntaxKind.ExclamationToken) return atomos(c.operand);
+  if (ts.isBinaryExpression(c) && E_LOGICO.has(c.operatorToken.kind)) return [...atomos(c.left), ...atomos(c.right)];
+  return [c.getText()];
+}
+
+/** O valor de uma condição numa combinação, a partir dos átomos. */
+function avaliar(condicao: ts.Node, valor: Map<string, boolean>): boolean {
+  const c = nu(condicao);
+  if (ts.isPrefixUnaryExpression(c) && c.operator === ts.SyntaxKind.ExclamationToken) return !avaliar(c.operand, valor);
+  if (ts.isBinaryExpression(c) && c.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+    return avaliar(c.left, valor) && avaliar(c.right, valor);
   }
-  return { chave: c.getText(), negado };
+  if (ts.isBinaryExpression(c) && E_LOGICO.has(c.operatorToken.kind)) {
+    return avaliar(c.left, valor) || avaliar(c.right, valor);
+  }
+  const v = valor.get(c.getText());
+  if (v === undefined) throw new Error(`condição fora da simulação: ${c.getText()}`);
+  return v;
+}
+
+const INLINE = new Set(['span', 'strong', 'em', 'b', 'i', 'small', 'kbd']);
+
+/** Elemento que faz parte da ação do pai: inline e sem rótulo próprio. */
+function envolve(no: ts.JsxElement | ts.JsxSelfClosingElement): no is ts.JsxElement {
+  return ts.isJsxElement(no) && INLINE.has(no.openingElement.tagName.getText()) && rotulosDe(no).length === 0;
 }
 
 type Visto = { rotulos: string[]; icones: string[] };
@@ -138,10 +168,7 @@ type Fonte = { no: ts.Node; contexto: 'rotulo' | 'icone' };
  */
 function ver(no: ts.Node, contexto: Fonte['contexto'], valor: Map<string, boolean>, saida: Visto): void {
   const n = nu(no);
-  const vale = (condicao: ts.Node) => {
-    const { chave, negado } = atomo(condicao);
-    return (valor.get(chave) ?? true) !== negado;
-  };
+  const vale = (condicao: ts.Node) => avaliar(condicao, valor);
   if (ts.isConditionalExpression(n)) {
     ver(vale(n.condition) ? n.whenTrue : n.whenFalse, contexto, valor, saida);
   } else if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
@@ -156,10 +183,11 @@ function ver(no: ts.Node, contexto: Fonte['contexto'], valor: Map<string, boolea
     const abertura = ts.isJsxElement(n) ? n.openingElement : n;
     if (abertura.tagName.getText() === 'Icon') {
       atributo(abertura.attributes, new Set(['name'])).forEach((v) => ver(v, 'icone', valor, saida));
-    } else if (rotulosDe(n).length === 0 && ts.isJsxElement(n)) {
-      // Invólucro sem rótulo (span, div): o que ele mostra é do pai. Filho com
-      // rótulo próprio é outra ação — o título do modal não herda o ícone do
-      // botão "Salvar" do corpo.
+    } else if (envolve(n)) {
+      // Invólucro inline sem rótulo (span, strong…): o que ele mostra é do pai.
+      // Filho com rótulo próprio é outra ação — o título do modal não herda o
+      // ícone do botão "Salvar" do corpo —, e bloco (div, section) é conteúdo,
+      // não parte da ação.
       n.children.forEach((f) => ver(f, 'rotulo', valor, saida));
     }
   } else {
@@ -171,18 +199,56 @@ function ver(no: ts.Node, contexto: Fonte['contexto'], valor: Map<string, boolea
 
 const MAX_CONDICOES = 10;
 
+/**
+ * As condições que a simulação ALCANÇA — o mesmo caminho do `ver`: não entra
+ * em filho com rótulo próprio, que é outra ação. Contar a subárvore inteira
+ * deixava a catraca lenta e passava do teto à toa em contêineres.
+ */
+function condicoesAlcancadas(no: ts.Node, chaves: Set<string>): void {
+  const n = nu(no);
+  if (ts.isConditionalExpression(n)) {
+    atomos(n.condition).forEach((a) => chaves.add(a));
+    condicoesAlcancadas(n.whenTrue, chaves);
+    condicoesAlcancadas(n.whenFalse, chaves);
+  } else if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+    atomos(n.left).forEach((a) => chaves.add(a));
+    condicoesAlcancadas(n.right, chaves);
+  } else if (ts.isJsxFragment(n)) {
+    n.children.forEach((f) => condicoesAlcancadas(f, chaves));
+  } else if (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n)) {
+    const abertura = ts.isJsxElement(n) ? n.openingElement : n;
+    if (abertura.tagName.getText() === 'Icon') {
+      atributo(abertura.attributes, new Set(['name'])).forEach((v) => condicoesAlcancadas(v, chaves));
+    } else if (envolve(n)) {
+      n.children.forEach((f) => condicoesAlcancadas(f, chaves));
+    }
+  }
+}
+
+/** Todos os rótulos que as fontes podem mostrar, em qualquer ramo. */
+function rotulosPossiveis(fontes: Fonte[]): string[] {
+  const saida: string[] = [];
+  const juntar = (no: ts.Node): void => {
+    const n = nu(no);
+    if (ts.isConditionalExpression(n)) [n.whenTrue, n.whenFalse].forEach(juntar);
+    else if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) juntar(n.right);
+    else if (ts.isJsxText(n)) saida.push(n.text.trim());
+    else if (ts.isJsxFragment(n)) n.children.forEach(juntar);
+    else if ((ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n)) && envolve(n)) n.children.forEach(juntar);
+    else saida.push(...textos(n));
+  };
+  fontes.filter((f) => f.contexto === 'rotulo').forEach((f) => juntar(f.no));
+  return saida;
+}
+
 /** Cada combinação de verdadeiro/falso das condições das fontes, e o que ela mostra. */
 function renderizacoes(fontes: Fonte[], fixos: Visto): Visto[] {
   const chaves = new Set<string>();
-  const juntar = (no: ts.Node): void => {
-    if (ts.isConditionalExpression(no)) chaves.add(atomo(no.condition).chave);
-    if (ts.isBinaryExpression(no) && no.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
-      chaves.add(atomo(no.left).chave);
-    }
-    ts.forEachChild(no, juntar);
-  };
-  fontes.forEach((f) => juntar(f.no));
-  const lista = [...chaves].slice(0, MAX_CONDICOES);
+  fontes.forEach((f) => condicoesAlcancadas(f.no, chaves));
+  // Acima do teto, a simulação não corta em silêncio: avisa, e o elemento se
+  // divide (ou o teto sobe com motivo).
+  if (chaves.size > MAX_CONDICOES) throw new Error(`${chaves.size} condições (teto ${MAX_CONDICOES})`);
+  const lista = [...chaves];
   const saidas: Visto[] = [];
   for (let combinacao = 0; combinacao < 1 << lista.length; combinacao++) {
     const valor = new Map(lista.map((c, i) => [c, Boolean(combinacao & (1 << i))]));
@@ -199,7 +265,17 @@ function acoesDoCodigo(arquivo: string, codigo: string): Acao[] {
   const acoes: Acao[] = [];
   const vistas = new Set<string>();
   const registrar = (no: ts.Node, fontes: Fonte[], fixos: Visto = { rotulos: [], icones: [] }) => {
-    for (const { rotulos, icones: achados } of renderizacoes(fontes, fixos)) {
+    // Só simula o que pode dizer um conceito: o resto não tem como quebrar a
+    // regra, e simular contêiner (card, linha de lista) só custava tempo.
+    const possiveis = rotulosPossiveis(fontes);
+    if (!possiveis.some((r) => REGRAS.some((regra) => regra.rotulo.test(r)))) return;
+    let vistos: Visto[];
+    try {
+      vistos = renderizacoes(fontes, fixos);
+    } catch (erro) {
+      throw new Error(`${arquivo}:${linha(no)}: ${(erro as Error).message}`);
+    }
+    for (const { rotulos, icones: achados } of vistos) {
       if (!rotulos.length || !achados.length) continue;
       const chave = `${linha(no)}|${rotulos.join('|')}|${[...new Set(achados)].sort().join('|')}`;
       if (vistas.has(chave)) continue;
@@ -278,7 +354,8 @@ describe('um conceito, um desenho (D-858)', () => {
   const acoes = todasAsAcoes();
 
   it('acha as ações (a varredura não ficou cega)', () => {
-    expect(acoes.length).toBeGreaterThan(100);
+    // Só entram as ações que dizem um conceito: 88 em 02/10/2026.
+    expect(acoes.length).toBeGreaterThan(60);
   });
 
   it('enxerga o ícone vindo do dicionário, em name={…} e em icone={…}', () => {
@@ -390,6 +467,21 @@ describe('a catraca de conceitos enxerga…', () => {
       `<Button>{porApi && <Icon name="${a}" />}{!porApi && <Icon name="${b}" />}{porApi ? 'publicar' : 'preparar pacote'}</Button>`;
     expect(erradas(casos(icones_('upload', 'package')), regra('publicar'))).toEqual([]);
     expect(erradas(casos(icones_('package', 'upload')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('condição composta é avaliada pelos átomos: código certo não reprova', () => {
+    // Variantes do "Publicar este" do workspace do Fire: `!aberto && pronto` e
+    // `aberto || travado` dependem de `aberto`, como o ternário do ícone.
+    const e = `<Button>{aberto ? <Icon name="x" /> : <Icon name="upload" />}{!aberto && pronto ? 'Publicar este' : 'fechar'}</Button>`;
+    const ou = `<Button>{aberto ? <Icon name="x" /> : <Icon name="upload" />}{aberto || travado ? 'fechar' : 'Publicar este'}</Button>`;
+    expect(erradas(casos(e), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(ou), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(ou.replace('"upload"', '"rocket"')), regra('publicar'))).toHaveLength(1);
+  });
+
+  it('acima do teto de condições, falha em voz alta em vez de cortar', () => {
+    const muitas = Array.from({ length: 11 }, (_, i) => `{c${i} && 'x'}`).join('');
+    expect(() => casos(`<Button title="Publicar">${muitas}</Button>`)).toThrow(/11 condições/);
   });
 
   it('a aba "IA" é a estrela; "Análise completa por IA" é o cérebro', () => {
