@@ -46,4 +46,18 @@ describe('PreRequisitosLista', () => {
     expect(html).not.toContain('resolva ffmpeg');
     expect(html).toContain('opcional');
   });
+
+  // D-861: o estado de cada item é dito por um ícone, por nome desde a D-857.
+  it.each([
+    ['ok', 'lucide-circle-check'],
+    ['aviso', 'lucide-triangle-alert'],
+    ['erro', 'lucide-circle-x'],
+  ] as const)('estado %s: desenha %s a 16 px', (estado, classe) => {
+    const html = renderToStaticMarkup(
+      <PreRequisitosLista ambiente={{ pronto: true, itens: [item('ffmpeg', estado)] }} />,
+    );
+    const icone = html.match(/<svg[^>]*>/)?.[0] ?? '';
+    expect(icone).toContain(classe);
+    expect(icone).toContain('width="16"');
+  });
 });
