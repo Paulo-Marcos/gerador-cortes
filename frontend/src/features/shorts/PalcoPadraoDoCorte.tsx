@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useDefinirPalcoPadrao, usePalcoPadrao, useSeguirPalcoPadrao } from './useShortsDoCorte';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // D-570: o palco que vale para TODOS os shorts deste corte.
 //
@@ -98,7 +98,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
           aria-label="Editar o palco padrão"
           onClick={() => onEditar(escolhido)}
         >
-          <Icon name="pencil" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
           editar
         </Button>
         <Button

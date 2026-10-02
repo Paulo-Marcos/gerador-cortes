@@ -348,7 +348,7 @@ function AnaliseIaModalDaLive({
         )}
         {origem === 'ia' && (
           <AcaoDeIa
-            rotulo="Analisar a live"
+            rotulo="Analisar a live" icone="brain"
             rotuloEmVoo="analisando…"
             tamanho="md"
             destaque
@@ -438,7 +438,7 @@ function ModoButton({
           : 'border-[var(--border)] bg-bg-900/40 hover:border-[var(--border-hover)]',
       )}
     >
-      <Icon name={icone} size={20} />
+      <Icon name={icone} size={16} />
       <span className="text-sm font-semibold text-text-100">{title}</span>
       <span className="text-[11px] text-text-300">{hint}</span>
     </button>

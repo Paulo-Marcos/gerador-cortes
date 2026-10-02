@@ -59,8 +59,8 @@ describe('Icon', () => {
 describe('ICONE_DO_CONCEITO', () => {
   it('dá a cada conceito do fluxo o desenho da prancha', () => {
     expect(ICONE_DO_CONCEITO).toEqual({
-      iaGera: 'sparkles',
-      editar: 'pencil',
+      iaGera: 'sparkle',
+      editar: 'pen',
       publicar: 'upload',
       prontos: 'circle-check',
       urlPublicada: 'link',

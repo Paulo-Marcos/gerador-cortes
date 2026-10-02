@@ -46,9 +46,18 @@ describe('AcaoDeIa', () => {
     ['sm', '14'],
     ['md', '16'],
   ] as const)('tamanho %s: o ícone da ação sai a %s px, com traço 1,75', (tamanho, px) => {
-    const faisca = render({ tamanho }).match(/<svg[^>]*lucide-sparkles[^>]*>/)?.[0] ?? '';
+    // O "IA gera" da prancha é a estrela simples (sparkle), não os brilhinhos (D-858).
+    const faisca = render({ tamanho }).match(/<svg[^>]*lucide-sparkle"[^>]*>/)?.[0] ?? '';
     expect(faisca).toContain(`width="${px}"`);
     expect(faisca).toContain('stroke-width="1.75"');
+  });
+
+  // D-858: a ação pode dizer o seu desenho — analisar com a IA é o cérebro.
+  it('com icone, desenha esse ícone no lugar do "IA gera"', () => {
+    const html = render({ icone: 'brain' });
+    const rotulo = html.slice(0, html.indexOf('<button'));
+    expect(rotulo).toMatch(/<svg[^>]*lucide-brain/);
+    expect(rotulo).not.toContain('lucide-sparkle');
   });
 
   it('em voo, o ícone da ação vira o spinner', () => {
@@ -56,7 +65,7 @@ describe('AcaoDeIa', () => {
     // Só o rótulo: o botão do provedor em voo também gira e casaria sozinho.
     const rotulo = html.slice(0, html.indexOf('<button'));
     expect(rotulo).toMatch(/<svg[^>]*lucide-loader-circle[^>]*animate-spin/);
-    expect(rotulo).not.toContain('lucide-sparkles');
+    expect(rotulo).not.toContain('lucide-sparkle"');
   });
 });
 

@@ -3,7 +3,7 @@
 // com o botão de editar. Sem I/O — o container decide o que fazer no clique.
 import { Button } from '@/components/ui/button';
 import type { EditorialSkill } from '@/features/channels/api/skillsEditoriais';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
   skill: EditorialSkill;
@@ -31,7 +31,7 @@ export function EditorialSkillCard({ skill, customizada, onEditar }: Props) {
           <p className="mt-1 text-sm text-[var(--wb-text-mute)]">{skill.descricao}</p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onEditar} className="shrink-0">
-          <Icon name="pencil" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
           Editar
         </Button>
       </div>

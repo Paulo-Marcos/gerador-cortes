@@ -11,23 +11,18 @@ const kebab = (nome: string) => nome.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLo
 
 describe('SceneTypeIcon', () => {
   it.each(Object.entries(TIPOS_CENA).map(([tipo, meta]) => [tipo, meta.icon] as const))(
-    'tipo %s: desenha o ícone %s, a 14 px, sem emoji',
+    'tipo %s: desenha o ícone %s, a 14 px, na cor do tipo, sem emoji',
     (tipo, icone) => {
       const html = renderToStaticMarkup(<SceneTypeIcon tipo={tipo} />);
       expect(svg(html)).toMatch(/class="lucide lucide-/);
       expect(svg(html)).toContain('width="14"');
-      // o ícone do tipo: o lucide grava o nome canônico na classe
-      expect(html).toMatch(new RegExp(`lucide-${kebab(icone).split('-')[0]}`));
+      // o ícone do tipo, pelo nome inteiro (a aspa impede `list` casar com
+      // `list-checks`), e na cor do tipo
+      expect(svg(html)).toContain(`lucide-${kebab(icone)}"`);
+      expect(svg(html)).toContain(`color:${metaCena(tipo).color}`);
       expect(html).not.toMatch(/\p{Extended_Pictographic}/u);
     },
   );
-
-  it('pinta o ícone com a cor do tipo', () => {
-    const tipo = Object.keys(TIPOS_CENA)[0];
-    expect(svg(renderToStaticMarkup(<SceneTypeIcon tipo={tipo} />))).toContain(
-      `color:${metaCena(tipo).color}`,
-    );
-  });
 
   it('tipo desconhecido usa o ícone padrão do metaCena (filme), não um emoji', () => {
     const html = renderToStaticMarkup(<SceneTypeIcon tipo="tipo-que-nao-existe" />);

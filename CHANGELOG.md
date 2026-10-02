@@ -48,9 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scissors were the Cuts step, "Edit cut" and "Generate trims"; the paper
   plane was the Ready menu and "Upload to TikTok"; play was "Play video" and
   "Enter the URL"; the magnifier was "Search" and "Audit". Now each idea of
-  the flow has its own: AI generates is the sparkles, edit the pencil, publish
-  the upload arrow, ready the check circle, published URL the link and audit
-  the checklist. Preparing a package to upload by hand shows a package,
+  the flow has its own, drawn as in the design board: AI generates is the
+  four-point sparkle, edit the pen, publish the upload arrow, ready the check
+  circle, published URL the link and audit the checklist. Preparing a package to upload by hand shows a package,
   download shows a download arrow, and analysing with AI is always the brain.
   A test checks every action labelled with one of these ideas (D-858).
 - **No emoji in the interface.** Emoji drawn as icons (the 🎞️ 🎭 🎨 of the

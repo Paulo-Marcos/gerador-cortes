@@ -43,7 +43,7 @@ const NEUTROS = new Set<string>(['loader', 'loader-2']);
 // Botão só com seta é abrir/recolher (a cena, o painel), não a ação que o
 // título nomeia: "Editar cena" num chevron diz o que se abre, não o que se faz.
 const DE_ABRIR = /^chevron-/;
-const ATRIBUTOS_DE_ROTULO = new Set(['title', 'aria-label', 'label', 'rotulo', 'titulo', 'texto', 'menu']);
+const ATRIBUTOS_DE_ROTULO = new Set(['title', 'aria-label', 'label', 'rotulo', 'descricao', 'titulo', 'texto', 'menu']);
 const ATRIBUTOS_DE_ICONE = new Set(['icon', 'icone']);
 
 /** Os textos que uma expressão pode produzir (literal, template, ternário). */
@@ -109,9 +109,14 @@ function iconesDe(no: ts.JsxElement | ts.JsxSelfClosingElement, achados: Set<str
     }
     return;
   }
-  for (const valor of atributo(abertura.attributes, ATRIBUTOS_DE_ICONE)) {
+  const proprios = atributo(abertura.attributes, ATRIBUTOS_DE_ICONE);
+  for (const valor of proprios) {
     for (const nome of icones(valor)) achados.add(nome);
   }
+  // O botão de IA desenha o "IA gera" quando ninguém diz outro ícone: sem isto,
+  // "Analisar…" num AcaoDeIa sem `icone` passava com um ícone que não estava
+  // na tela (achado da auditoria do #107).
+  if (abertura.tagName.getText() === 'AcaoDeIa' && proprios.length === 0) achados.add(ICONE_DO_CONCEITO.iaGera);
   const descer = (filho: ts.Node): void => {
     if (ts.isJsxElement(filho) || ts.isJsxSelfClosingElement(filho)) {
       const tag = (ts.isJsxElement(filho) ? filho.openingElement : filho).tagName.getText();
@@ -124,25 +129,74 @@ function iconesDe(no: ts.JsxElement | ts.JsxSelfClosingElement, achados: Set<str
   ts.forEachChild(abertura.attributes, descer);
 }
 
-function acoesDoArquivo(arquivo: string): Acao[] {
-  const fonte = ts.createSourceFile(arquivo, readFileSync(arquivo, 'utf8'), ts.ScriptTarget.Latest, true);
+/** O ternário de um valor, desembrulhado: `{cond ? a : b}`, `(cond ? a : b)`. */
+function ternario(no: ts.Node | undefined): ts.ConditionalExpression | undefined {
+  if (!no) return undefined;
+  if (ts.isJsxExpression(no) || ts.isParenthesizedExpression(no)) return ternario(no.expression);
+  return ts.isConditionalExpression(no) ? no : undefined;
+}
+
+/** Os ícones de um ramo: um nome ('x', ICONE_DO_CONCEITO.y) ou um <Icon name=…> ali. */
+function iconesDoRamo(no: ts.Node): string[] {
+  const nu = ts.isParenthesizedExpression(no) ? no.expression : no;
+  if (ts.isJsxSelfClosingElement(nu) && nu.tagName.getText() === 'Icon') {
+    return atributo(nu.attributes, new Set(['name'])).flatMap(icones);
+  }
+  return icones(nu);
+}
+
+type Par = { rotulos: string[]; icones: Set<string> };
+
+/**
+ * Rótulo e ícone escolhidos pela MESMA condição andam juntos, ramo a ramo:
+ * `porApi ? 'publicar' : 'preparar pacote'` com `porApi ? <upload/> : <package/>`.
+ * Sem o par, trocar os ícones de lado passava — o conjunto era o mesmo
+ * (achado da auditoria do #107).
+ */
+function pares(deRotulo: ts.Node[], deIcone: ts.Node[]): Par[] {
+  const condicionais = (nos: ts.Node[]) =>
+    nos.map(ternario).filter((x): x is ts.ConditionalExpression => x !== undefined);
+  const saida: Par[] = [];
+  for (const r of condicionais(deRotulo)) {
+    for (const i of condicionais(deIcone)) {
+      if (r.condition.getText() !== i.condition.getText()) continue;
+      saida.push({ rotulos: textos(r.whenTrue), icones: new Set(iconesDoRamo(i.whenTrue)) });
+      saida.push({ rotulos: textos(r.whenFalse), icones: new Set(iconesDoRamo(i.whenFalse)) });
+    }
+  }
+  return saida;
+}
+
+function acoesDoCodigo(arquivo: string, codigo: string): Acao[] {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true);
   const linha = (no: ts.Node) => fonte.getLineAndCharacterOfPosition(no.getStart(fonte)).line + 1;
   const acoes: Acao[] = [];
+  const registrar = (no: ts.Node, { rotulos, icones: achados }: Par) => {
+    if (rotulos.length && achados.size) acoes.push({ arquivo, linha: linha(no), rotulos, icones: achados });
+  };
 
   const visitar = (no: ts.Node): void => {
     if (ts.isJsxElement(no) || ts.isJsxSelfClosingElement(no)) {
-      const rotulos = rotulosDe(no);
+      const abertura = ts.isJsxElement(no) ? no.openingElement : no;
       const achados = new Set<string>();
       iconesDe(no, achados);
-      if (rotulos.length && achados.size) acoes.push({ arquivo, linha: linha(no), rotulos, icones: achados });
+      registrar(no, { rotulos: rotulosDe(no), icones: achados });
+      const filhos = ts.isJsxElement(no) ? no.children.filter(ts.isJsxExpression) : [];
+      // Entre os filhos, o ternário de ícone é o que desenha <Icon> num ramo; o
+      // de texto fica do lado do rótulo — senão o texto viraria "ícone".
+      const desenhaIcone = (f: ts.JsxExpression) => {
+        const c = ternario(f);
+        return !!c && [c.whenTrue, c.whenFalse].some((r) => iconesDoRamo(r).length > 0 && !textos(r).length);
+      };
+      const deRotulo = [...atributo(abertura.attributes, ATRIBUTOS_DE_ROTULO), ...filhos.filter((f) => !desenhaIcone(f))];
+      const deIcone = [...atributo(abertura.attributes, ATRIBUTOS_DE_ICONE), ...filhos.filter(desenhaIcone)];
+      for (const par of pares(deRotulo, deIcone)) registrar(no, par);
       // O botão principal de um modal vem em par de props (primaryLabel e
       // primaryIcon): é uma ação à parte da do título.
-      const abertura = ts.isJsxElement(no) ? no.openingElement : no;
-      const rotuloPrimario = atributo(abertura.attributes, new Set(['primaryLabel'])).flatMap(textos);
-      const iconePrimario = new Set(atributo(abertura.attributes, new Set(['primaryIcon'])).flatMap(icones));
-      if (rotuloPrimario.length && iconePrimario.size) {
-        acoes.push({ arquivo, linha: linha(no), rotulos: rotuloPrimario, icones: iconePrimario });
-      }
+      const rotuloPrimario = atributo(abertura.attributes, new Set(['primaryLabel']));
+      const iconePrimario = atributo(abertura.attributes, new Set(['primaryIcon']));
+      registrar(no, { rotulos: rotuloPrimario.flatMap(textos), icones: new Set(iconePrimario.flatMap(icones)) });
+      for (const par of pares(rotuloPrimario, iconePrimario)) registrar(no, par);
     } else if (ts.isObjectLiteralExpression(no)) {
       const rotulos: string[] = [];
       const achados = new Set<string>();
@@ -152,7 +206,7 @@ function acoesDoArquivo(arquivo: string): Acao[] {
         if (ATRIBUTOS_DE_ROTULO.has(nome)) rotulos.push(...textos(p.initializer));
         if (ATRIBUTOS_DE_ICONE.has(nome)) for (const i of icones(p.initializer)) achados.add(i);
       }
-      if (rotulos.length && achados.size) acoes.push({ arquivo, linha: linha(no), rotulos, icones: achados });
+      registrar(no, { rotulos, icones: achados });
     }
     ts.forEachChild(no, visitar);
   };
@@ -164,8 +218,26 @@ function todasAsAcoes(): Acao[] {
   const arquivos = execFileSync('git', ['ls-files', 'src'], { encoding: 'utf8', timeout: 60_000 })
     .split('\n')
     .filter((caminho) => /\.tsx?$/.test(caminho) && !TESTES.test(caminho));
-  return arquivos.flatMap(acoesDoArquivo);
+  return arquivos.flatMap((arquivo) => acoesDoCodigo(arquivo, readFileSync(arquivo, 'utf8')));
 }
+
+/** As ações que quebram a regra: rotuladas com o conceito e sem o desenho dele. */
+function erradas(acoes: Acao[], { rotulo, icone }: { rotulo: RegExp; icone: string }): string[] {
+  return acoes
+    .filter((a) => a.rotulos.some((r) => rotulo.test(r)))
+    .filter((a) => ![...a.icones].every((i) => DE_ABRIR.test(i) || NEUTROS.has(i)))
+    .filter((a) => !a.icones.has(icone))
+    .map(
+      (a) =>
+        `${a.arquivo}:${a.linha} [${[...a.icones].filter((i) => !NEUTROS.has(i)).join(', ')}] ${a.rotulos.join(' | ')}`,
+    );
+}
+
+const regra = (conceito: string) => {
+  const achada = REGRAS.find((r) => r.conceito === conceito);
+  if (!achada) throw new Error(`regra ${conceito} não existe`);
+  return achada;
+};
 
 describe('um conceito, um desenho (D-858)', () => {
   const acoes = todasAsAcoes();
@@ -184,12 +256,35 @@ describe('um conceito, um desenho (D-858)', () => {
     expect(rotulosVistos).toContain('Gerar trechos de todos os cortes');
   });
 
-  it.each(REGRAS)('ação de "$conceito" usa o ícone $icone', ({ rotulo, icone }) => {
-    const erradas = acoes
-      .filter((a) => a.rotulos.some((r) => rotulo.test(r)))
-      .filter((a) => ![...a.icones].every((i) => DE_ABRIR.test(i) || NEUTROS.has(i)))
-      .filter((a) => !a.icones.has(icone))
-      .map((a) => `${a.arquivo}:${a.linha} [${[...a.icones].filter((i) => !NEUTROS.has(i)).join(', ')}] ${a.rotulos.join(' | ')}`);
-    expect(erradas).toEqual([]);
+  it.each(REGRAS)('ação de "$conceito" usa o ícone $icone', (r) => {
+    expect(erradas(acoes, r)).toEqual([]);
+  });
+});
+
+// A catraca contra ela mesma: casos que ela tem de reprovar e de aprovar.
+describe('a catraca de conceitos enxerga…', () => {
+  const casos = (codigo: string) => acoesDoCodigo('caso.tsx', codigo);
+
+  it('o "IA gera" que o AcaoDeIa desenha quando não recebe ícone', () => {
+    const semIcone = '<AcaoDeIa rotulo="Analisar padrões" emVoo={null} />';
+    const comCerebro = '<AcaoDeIa rotulo="Analisar padrões" icone="brain" emVoo={null} />';
+    expect(erradas(casos(semIcone), regra('analisar'))).toHaveLength(1);
+    expect(erradas(casos(comCerebro), regra('analisar'))).toEqual([]);
+  });
+
+  it('rótulo e ícone do mesmo ternário, ramo a ramo', () => {
+    const botao = (a: string, b: string) =>
+      `<Button>{porApi ? <Icon name="${a}" /> : <Icon name="${b}" />}{porApi ? 'publicar' : 'preparar pacote'}</Button>`;
+    expect(erradas(casos(botao('upload', 'package')), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(botao('upload', 'package')), regra('pacote'))).toEqual([]);
+    expect(erradas(casos(botao('package', 'upload')), regra('publicar'))).toHaveLength(1);
+    expect(erradas(casos(botao('package', 'upload')), regra('pacote'))).toHaveLength(1);
+  });
+
+  it('o par primaryLabel/primaryIcon, ramo a ramo', () => {
+    const modal = (icone: string) =>
+      `<UpgradeModal primaryLabel={agendar ? 'Agendar no YouTube' : 'Enviar ao YouTube agora'} primaryIcon={${icone}} />`;
+    expect(erradas(casos(modal("agendar ? 'clock' : 'upload'")), regra('publicar'))).toEqual([]);
+    expect(erradas(casos(modal("agendar ? 'upload' : 'rocket'")), regra('publicar'))).toHaveLength(1);
   });
 });

@@ -72,7 +72,7 @@ function DemoConteudo() {
       rotulos: ['LIVE 267', `#${atual.num}`],
       acoes: [
         { icone: 'flame', texto: 'Marcar fire' },
-        { icone: 'sparkles', texto: 'Gerar trechos' },
+        { icone: 'sparkle', texto: 'Gerar trechos' },
       ],
       estado: { texto: 'salvo', icone: 'circle-check', cor: OK, bg: 'var(--ok-soft)' },
       contexto: {

@@ -44,7 +44,7 @@ import {
   temEdicao,
   type FiltroDeFire,
 } from './filtrosDosFires';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 const CHIPS: { chave: keyof ContagemShorts; um: string; varios: string; classe: string }[] = [
   { chave: 'sugerido', um: 'sugerido', varios: 'sugeridos', classe: 'text-[var(--wb-text-mute)]' },
@@ -188,7 +188,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
           to={`/shorts/${fire.corte_id}`}
           className="inline-flex h-7 flex-1 items-center justify-center gap-1.5 rounded-[7px] text-[12px] font-semibold text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
         >
-          <Icon name="pencil" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
           Editar
         </Link>
         <Link

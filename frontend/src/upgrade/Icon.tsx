@@ -105,6 +105,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Pause,
+  Pen,
   Pencil,
   Pin,
   Play,
@@ -129,6 +130,7 @@ import {
   ShieldCheck,
   SkipBack,
   SlidersHorizontal,
+  Sparkle,
   Sparkles,
   SplitSquareHorizontal,
   Star,
@@ -288,6 +290,7 @@ const ICONS = {
   'panel-right-close': PanelRightClose,
   'panel-right-open': PanelRightOpen,
   pause: Pause,
+  pen: Pen,
   pencil: Pencil,
   pin: Pin,
   play: Play,
@@ -312,6 +315,7 @@ const ICONS = {
   'shield-check': ShieldCheck,
   'skip-back': SkipBack,
   'sliders-horizontal': SlidersHorizontal,
+  sparkle: Sparkle,
   sparkles: Sparkles,
   'split-square-horizontal': SplitSquareHorizontal,
   star: Star,
@@ -354,10 +358,12 @@ export const NOMES_DE_ICONE = Object.keys(ICONS) as IconName[];
 // conceito do fluxo tem agora o seu, e a catraca umConceitoUmDesenho.test
 // cobra que a ação rotulada com o conceito use este glifo.
 export const ICONE_DO_CONCEITO = {
-  /** A IA produz algo: trechos, metadados, capa. */
-  iaGera: 'sparkles',
-  /** Abrir para editar: o corte, a capa. */
-  editar: 'pencil',
+  /** A IA produz algo: trechos, metadados, capa. A estrela simples da
+   *  prancha — o `sparkles` (com os brilhinhos) não é este desenho. */
+  iaGera: 'sparkle',
+  /** Abrir para editar: o corte, a capa. O traço único da prancha — o
+   *  `pencil` tem a faixa da borracha, que ela não desenha. */
+  editar: 'pen',
   /** Mandar para fora: YouTube, TikTok, Reels. */
   publicar: 'upload',
   /** O que já pode sair. */
