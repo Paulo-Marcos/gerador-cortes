@@ -1,5 +1,4 @@
 import { useState, type RefObject } from 'react';
-import { Loader2, Minus, Plus, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -30,6 +29,7 @@ import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 import { useGuardarPresetPadrao } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 // D-594: onde a APARÊNCIA do gancho vira um preset com nome.
 //
@@ -322,12 +322,12 @@ function EditorDoPresetDeGancho({
                   void salvar(nome, { cor, realce, fonte, tamanho, duracao, ...lugar }, virarPadrao)
                 }
               >
-                {gravando ? <Loader2 className="animate-spin" /> : <Save />}
+                {gravando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
                 {preset ? 'Salvar alterações' : 'Criar preset'}
               </Button>
               {preset && (
                 <Button size="sm" variant="ghost" disabled={apagando} onClick={apagar}>
-                  <Trash2 />
+                  <Icon name="trash-2" />
                   apagar
                 </Button>
               )}
@@ -397,13 +397,13 @@ function Passo({
   return (
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm" aria-label={`Diminuir ${nome}`} disabled={noMinimo} onClick={menos}>
-        <Minus />
+        <Icon name="minus" />
       </Button>
       <span className="w-[46px] text-center font-code text-[13px] tabular-nums text-[var(--wb-text)]">
         {rotulo}
       </span>
       <Button variant="outline" size="sm" aria-label={`Aumentar ${nome}`} disabled={noMaximo} onClick={mais}>
-        <Plus />
+        <Icon name="plus" />
       </Button>
     </div>
   );

@@ -14,12 +14,12 @@
 // mão: abrir a rede e colar, campo por campo, sem voltar ao editor do post.
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { PacotePublicacao, ShortIdentificado } from './shortsApi';
 import { usePreviaPublicacao } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -121,7 +121,7 @@ function CampoCopiavel({ rotulo, texto, linhas }: { rotulo: string; texto: strin
           }
           aria-label={`Copiar ${rotulo.toLowerCase()}`}
         >
-          {resultado === 'copiado' ? <Check aria-hidden /> : <Copy aria-hidden />}
+          {resultado === 'copiado' ? <Icon name="check" /> : <Icon name="copy" />}
           {resultado === 'copiado'
             ? 'copiado'
             : resultado === 'falhou'

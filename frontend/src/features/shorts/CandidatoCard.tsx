@@ -1,15 +1,3 @@
-import {
-  Ban,
-  Check,
-  Clapperboard,
-  Eye,
-  Image as ImageIcon,
-  MoveHorizontal,
-  Play,
-  Plus,
-  Undo2,
-  X,
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { cn } from '@/lib/utils';
@@ -29,6 +17,7 @@ import {
   useProgressoRender,
 } from './useShortsDoCorte';
 import { useFechoDoShort } from './useFechoDoShort';
+import { Icon } from '@/upgrade/Icon';
 
 // D-492: o card de um candidato, reorganizado.
 //
@@ -133,23 +122,23 @@ export function CandidatoCard({
   const aparencia = APARENCIA[short.status];
 
   const acoes: Record<AcaoId, { rotulo: string; icone: React.ReactNode; ao: () => void }> = {
-    aprovar: { rotulo: 'Aprovar', icone: <Check />, ao: () => onStatus('aprovado') },
-    rejeitar: { rotulo: 'Rejeitar', icone: <X />, ao: () => onStatus('rejeitado') },
-    voltar: { rotulo: 'Voltar para sugerido', icone: <Undo2 />, ao: () => onStatus('sugerido') },
+    aprovar: { rotulo: 'Aprovar', icone: <Icon name="check" />, ao: () => onStatus('aprovado') },
+    rejeitar: { rotulo: 'Rejeitar', icone: <Icon name="x" />, ao: () => onStatus('rejeitado') },
+    voltar: { rotulo: 'Voltar para sugerido', icone: <Icon name="undo-2" />, ao: () => onStatus('sugerido') },
     // D-746: o verbo do RESULTADO — "gerar" não diz o que sai do clique.
-    previa: { rotulo: 'Renderizar prévia', icone: <Eye />, ao: onPrevia },
-    refazerPrevia: { rotulo: 'Renderizar prévia de novo', icone: <Eye />, ao: onPrevia },
+    previa: { rotulo: 'Renderizar prévia', icone: <Icon name="eye" />, ao: onPrevia },
+    refazerPrevia: { rotulo: 'Renderizar prévia de novo', icone: <Icon name="eye" />, ao: onPrevia },
     // D-585: finalizar dispara o render E a IA escreve o post, sem modal. O
     // texto não depende do arquivo, então esses minutos de render são
     // justamente o tempo em que ele se escreve — revisar fica no painel.
     finalizar: {
       rotulo: 'Renderizar short',
-      icone: <Clapperboard />,
+      icone: <Icon name="clapperboard" />,
       ao: () => fecho.finalizar(onRenderizar),
     },
     // Refazer NÃO mexe no post: o texto já existe, e o que se está refazendo é
     // o arquivo.
-    refazerFinal: { rotulo: 'Renderizar short de novo', icone: <Clapperboard />, ao: onRenderizar },
+    refazerFinal: { rotulo: 'Renderizar short de novo', icone: <Icon name="clapperboard" />, ao: onRenderizar },
   };
 
   // D-495: rejeitado COLAPSA. Ele ja foi decidido — manter o card inteiro
@@ -187,7 +176,7 @@ export function CandidatoCard({
             onStatus('sugerido');
           }}
         >
-          <Undo2 />
+          <Icon name="undo-2" />
           Voltar
         </Button>
       </article>
@@ -281,7 +270,7 @@ export function CandidatoCard({
                 style={{ backgroundColor: corDoGancho || '#ffffff' }}
               />
             ) : (
-              <Plus size={11} className="flex-none opacity-70" aria-hidden />
+              <Icon name="plus" className="flex-none opacity-70" />
             )}
             <span className="truncate">
               {short.gancho_tela || 'escrever o gancho da abertura'}
@@ -357,7 +346,7 @@ export function CandidatoCard({
             onAlternarAjuste();
           }}
         >
-          <MoveHorizontal />
+          <Icon name="move-horizontal" />
           {aberto ? 'ocultar ajustes' : 'ajustar'}
         </Button>
       </div>
@@ -412,7 +401,7 @@ export function CandidatoCard({
             onTocar();
           }}
         >
-          <Play />
+          <Icon name="play" />
           Assistir
         </Button>
 
@@ -469,7 +458,7 @@ export function CandidatoCard({
           sete de oito cartões ficavam apagados sem explicação. */}
       {ocupado && !renderizando && (
         <p className="flex items-center gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-1.5 text-[11px] text-[var(--wb-warn-ink)]">
-          <Ban size={11} className="flex-none" aria-hidden />
+          <Icon name="ban" className="flex-none" />
           Aguarde: uma gravação, prévia ou render deste corte ainda está em andamento.
         </p>
       )}
@@ -513,7 +502,7 @@ export function CandidatoCard({
           }}
           className="flex w-full items-center gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-2 text-left text-[11.5px] text-[var(--wb-warn-ink)] transition-colors hover:bg-[var(--wb-bg-inset)]"
         >
-          <ImageIcon size={12} className="flex-none" aria-hidden />
+          <Icon name="image" className="flex-none" />
           Falta escolher a capa — sem ela a plataforma pega um quadro qualquer.
         </button>
       )}

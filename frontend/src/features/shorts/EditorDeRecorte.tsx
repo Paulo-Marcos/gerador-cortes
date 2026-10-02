@@ -1,7 +1,7 @@
-import { Crop, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BlocosArrastaveis } from './BlocosArrastaveis';
 import type { Limites, Retangulo } from './arrastarSlot';
+import { Icon } from '@/upgrade/Icon';
 
 // D-499: o recorte deste short sobre o quadro-fonte.
 //
@@ -69,7 +69,7 @@ export function ControlesDoRecorte({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Button variant={ativo ? 'secondary' : 'outline'} size="sm" onClick={onAlternar}>
-        <Crop />
+        <Icon name="crop" />
         {ativo ? 'marcando o recorte' : 'Recortar da live'}
       </Button>
       {marcados.length > 0 && (
@@ -78,7 +78,7 @@ export function ControlesDoRecorte({
             {marcados.join(', ')} · deste short
           </span>
           <Button variant="ghost" size="sm" disabled={ocupado} onClick={onDesfazer}>
-            <RotateCcw />
+            <Icon name="rotate-ccw" />
             voltar ao preset
           </Button>
         </>

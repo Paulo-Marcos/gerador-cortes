@@ -1,10 +1,11 @@
-import { Captions, CheckCheck, Gauge, LayoutTemplate, Redo2, RotateCcw, Trash2, Undo2 } from 'lucide-react';
+import { CheckCheck, RotateCcw, Trash2 } from 'lucide-react';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { cn } from '@/lib/utils';
 import { BotaoDeCluster } from './BotaoDeCluster';
 import { rotuloDescarteBruto } from './descarteBruto';
 import type { FireComBruto } from './shortsApi';
 import type { EdicaoDoShort } from './useEdicaoDoShort';
+import { Icon } from '@/upgrade/Icon';
 
 // D-479: o operador precisa saber a QUALIDADE do que está lendo. A auto-legenda
 // erra grafia, e erro de grafia num short vira o produto — o texto é o conteúdo.
@@ -103,7 +104,7 @@ export function CabecalhoDoFire({
               titulo="Ver o short montado no palco, ou o quadro cru com a janela 9:16"
               rotulo="Palco"
             >
-              <LayoutTemplate size={13} aria-hidden />
+              <Icon name="layout-template" />
             </BotaoDeCluster>
           )}
           {fonteDaTranscricao !== null && temPalavras && (
@@ -113,7 +114,7 @@ export function CabecalhoDoFire({
               titulo={`Legenda na prévia — fonte: ${ROTULO_FONTE[fonteDaTranscricao] ?? fonteDaTranscricao}`}
               rotulo="Legenda"
             >
-              <Captions size={13} aria-hidden />
+              <Icon name="captions" />
             </BotaoDeCluster>
           )}
           {fonteDaTranscricao !== null && !temPalavras && (
@@ -137,7 +138,7 @@ export function CabecalhoDoFire({
                 : 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong,var(--wb-accent))]',
             )}
           >
-            <Gauge size={11} aria-hidden />
+            <Icon name="gauge" />
             {velocidade.toFixed(2)}×
           </button>
         </div>
@@ -156,7 +157,7 @@ export function CabecalhoDoFire({
             rotulo="Desfazer"
             soIcone
           >
-            <Undo2 size={13} aria-hidden />
+            <Icon name="undo-2" />
           </BotaoDeCluster>
           <BotaoDeCluster
             ativo={false}
@@ -166,7 +167,7 @@ export function CabecalhoDoFire({
             rotulo="Refazer"
             soIcone
           >
-            <Redo2 size={13} aria-hidden />
+            <Icon name="redo-2" />
           </BotaoDeCluster>
         </div>
 

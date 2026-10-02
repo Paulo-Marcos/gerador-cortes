@@ -1,5 +1,4 @@
 import { useEffect, useEffectEvent, useState, type RefObject } from 'react';
-import { Eraser, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -35,6 +34,7 @@ import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { useUltimaGeracao } from '@/features/ia';
 import { useSugerirGanchos } from './useShortsDoCorte';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
+import { Icon } from '@/upgrade/Icon';
 
 // D-565: onde o título-gancho é escrito.
 //
@@ -533,7 +533,7 @@ export function GanchoModal({
                   })
                 }
               >
-                <Minus />
+                <Icon name="minus" />
               </Button>
               <span className="font-code text-[13px] tabular-nums text-[var(--wb-text)]">
                 {Math.round(lugarNaTela.largura)}% de largura
@@ -550,7 +550,7 @@ export function GanchoModal({
                   })
                 }
               >
-                <Plus />
+                <Icon name="plus" />
               </Button>
             </div>
             <div className="flex items-baseline gap-2">
@@ -584,7 +584,7 @@ export function GanchoModal({
                 disabled={ocupado || duracaoNaTela <= DURACAO_MIN_SEG}
                 onClick={() => setAteSeg(Math.max(DURACAO_MIN_SEG, duracaoNaTela - DURACAO_PASSO_SEG))}
               >
-                <Minus />
+                <Icon name="minus" />
               </Button>
               <span className="font-code text-[13px] tabular-nums text-[var(--wb-text)]">
                 {duracaoNaTela.toFixed(1)}s
@@ -596,7 +596,7 @@ export function GanchoModal({
                 disabled={ocupado || duracaoNaTela >= DURACAO_MAX_SEG}
                 onClick={() => setAteSeg(Math.min(DURACAO_MAX_SEG, duracaoNaTela + DURACAO_PASSO_SEG))}
               >
-                <Plus />
+                <Icon name="plus" />
               </Button>
               {ateSeg > 0 ? (
                 <button
@@ -634,7 +634,7 @@ export function GanchoModal({
                 disabled={ocupado}
                 onClick={() => onGravar({ texto: '', ateSeg, cor, realce, ...lugarGravado })}
               >
-                <Eraser />
+                <Icon name="eraser" />
                 Tirar o gancho
               </Button>
             )}

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Check, ChevronDown, ChevronRight, CircleDashed, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { foiCancelado } from './estadoDoCandidato';
 import { useLogDoRender } from './useShortsDoCorte';
 import type { PassoRender, ProgressoRender } from './shortsApi';
+import { Icon } from '@/upgrade/Icon';
 
 // D-485: o que estava faltando durante cinco minutos e meio de silêncio.
 //
@@ -24,10 +24,10 @@ interface Props {
 }
 
 const ICONE: Record<PassoRender['status'], React.ReactNode> = {
-  pendente: <CircleDashed size={11} className="text-[var(--wb-text-mute)]" aria-hidden />,
-  rodando: <Loader2 size={11} className="animate-spin text-[var(--wb-accent)]" aria-hidden />,
-  concluido: <Check size={11} className="text-[var(--wb-ok-ink)]" aria-hidden />,
-  erro: <X size={11} className="text-[var(--wb-warn-ink)]" aria-hidden />,
+  pendente: <Icon name="circle-dashed" className="text-[var(--wb-text-mute)]" />,
+  rodando: <Icon name="loader-2" className="animate-spin text-[var(--wb-accent)]" />,
+  concluido: <Icon name="check" className="text-[var(--wb-ok-ink)]" />,
+  erro: <Icon name="x" className="text-[var(--wb-warn-ink)]" />,
 };
 
 function decorrido(segundos: number): string {
@@ -133,7 +133,7 @@ function LogDoWorker({ shortId, emCurso }: { shortId: string; emCurso: boolean }
         onClick={() => setVerLog((v) => !v)}
         className="mt-2 flex items-center gap-1 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
       >
-        {verLog ? <ChevronDown size={11} aria-hidden /> : <ChevronRight size={11} aria-hidden />}
+        {verLog ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
         log do worker
       </button>
 

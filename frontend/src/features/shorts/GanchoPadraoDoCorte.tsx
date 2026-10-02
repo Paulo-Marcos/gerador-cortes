@@ -1,6 +1,6 @@
-import { Pencil, Plus, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDefinirGanchoPadrao, useGanchoPadrao, useSeguirGanchoPadrao } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 // D-594: o gancho que vale para TODOS os shorts deste corte.
 //
@@ -46,7 +46,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex w-[58px] items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
-          <Type size={11} aria-hidden />
+          <Icon name="type" />
           gancho
         </span>
 
@@ -72,11 +72,11 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
           aria-label="Editar o gancho padrão"
           onClick={() => onEditar(escolhido)}
         >
-          <Pencil />
+          <Icon name="pencil" />
           editar
         </Button>
         <Button size="sm" variant="ghost" onClick={() => onEditar(null)}>
-          <Plus />
+          <Icon name="plus" />
           novo
         </Button>
       </div>

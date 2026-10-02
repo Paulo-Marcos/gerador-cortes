@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Loader2, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -10,6 +9,7 @@ import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { mudancaDoPalco, palcoDoShort } from './aplicarPalco';
 import { shortsApi, type AtualizarShortBody, type ShortSugerido } from './shortsApi';
 import { PALCO_KEY, useGuardarPresetPadrao, usePalcoPadrao } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 // D-594: criar e editar um PALCO a partir do menu de padrões do corte.
 //
@@ -143,12 +143,12 @@ function EditorDoPresetDePalco({
           disabled={!nome.trim() || gravando}
           onClick={() => void salvar(nome, palcoDoShort(rascunho), virarPadrao)}
         >
-          {gravando ? <Loader2 className="animate-spin" /> : <Save />}
+          {gravando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
           {editando ? 'Salvar alterações' : 'Criar preset'}
         </Button>
         {editando && (
           <Button size="sm" variant="ghost" disabled={apagando} onClick={apagar}>
-            <Trash2 />
+            <Icon name="trash-2" />
             apagar
           </Button>
         )}

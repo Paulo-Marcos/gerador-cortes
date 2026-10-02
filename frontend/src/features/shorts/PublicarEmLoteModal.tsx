@@ -19,7 +19,6 @@
 // estado honesto para isso — e o botão que o fecha é o único jeito de o app
 // saber. Marcar sozinho seria inventar um fato.
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CircleDashed, Clock, Hand, Loader2, Send, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -49,6 +48,7 @@ import {
   problemaDoHorario,
   sugestaoDeHorario,
 } from './agendamentoDoLote';
+import { Icon } from '@/upgrade/Icon';
 
 // De quanto em quanto tempo o aviso do horário reavalia sozinho. Trinta segundos
 // bastam: a margem do backend é de cinco minutos, não de segundos.
@@ -174,7 +174,7 @@ export function PublicarEmLoteModal({
               title={lote?.cancelado ? 'o item em curso termina; os que esperavam foram cancelados' : undefined}
               onClick={() => cancelar.mutate()}
             >
-              {(cancelar.isPending || lote?.cancelado) && <Loader2 className="animate-spin" />}
+              {(cancelar.isPending || lote?.cancelado) && <Icon name="loader-2" className="animate-spin" />}
               {lote?.cancelado ? 'Cancelando…' : 'Cancelar o lote'}
             </Button>
           </div>
@@ -203,7 +203,7 @@ export function PublicarEmLoteModal({
                 })
               }
             >
-              {criar.isPending ? <Loader2 className="animate-spin" /> : <Send />}
+              {criar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="send" />}
               Publicar {envios} {envios === 1 ? 'envio' : 'envios'}
             </Button>
           </div>
@@ -298,7 +298,7 @@ export function PublicarEmLoteModal({
                       role="alert"
                       className="flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]"
                     >
-                      <TriangleAlert className="mt-px size-3.5 shrink-0" />
+                      <Icon name="triangle-alert" className="mt-px shrink-0" />
                       {problemaDoAgendamento}
                     </p>
                   )}
@@ -478,7 +478,7 @@ function Caixa({
       )}
     >
       <span className="flex items-center gap-1.5 text-[12.5px] font-bold">
-        {marcada && <Check size={12} aria-hidden />}
+        {marcada && <Icon name="check" />}
         {titulo}
       </span>
       <span className="text-[11px] text-[var(--wb-text-mute)]">{nota}</span>
@@ -519,7 +519,7 @@ function LinhaDoShort({
               : 'border-[var(--wb-border)]',
           )}
         >
-          {marcado && <Check size={11} aria-hidden />}
+          {marcado && <Icon name="check" />}
         </span>
         <span className="min-w-0 flex-1 truncate text-[12.5px]">
           {short.titulo || `Trecho ${short.numero}`}
@@ -556,12 +556,12 @@ export function PainelDoLote({ raias, corteId }: { raias: RaiaDoLote[]; corteId?
           <h4 className="flex items-center gap-1.5 text-[12.5px] font-bold">
             {raia.rotulo}
             {raia.exige_humano && (
-              <Hand size={11} className="text-[var(--wb-text-mute)]" aria-label="depende de você" />
+              <Icon name="hand" rotulo="depende de você" className="text-[var(--wb-text-mute)]" />
             )}
           </h4>
           {raia.aviso && (
             <p className="mt-1 flex items-start gap-1 text-[11px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
-              <TriangleAlert size={11} className="mt-0.5 flex-none" aria-hidden />
+              <Icon name="triangle-alert" className="mt-0.5 flex-none" />
               {raia.aviso}
             </p>
           )}
@@ -626,21 +626,21 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
 
 function Icone({ estado }: { estado: EstadoItemLote }) {
   if (estado === 'preparando') {
-    return <Loader2 size={12} className="flex-none animate-spin text-[var(--wb-accent)]" />;
+    return <Icon name="loader-2" className="flex-none animate-spin text-[var(--wb-accent)]" />;
   }
   if (estado === 'publicado') {
-    return <Check size={12} className="flex-none text-[var(--wb-ok-ink,var(--wb-accent))]" />;
+    return <Icon name="check" className="flex-none text-[var(--wb-ok-ink,var(--wb-accent))]" />;
   }
   if (estado === 'sua_vez') {
-    return <Hand size={12} className="flex-none text-[var(--wb-accent)]" />;
+    return <Icon name="hand" className="flex-none text-[var(--wb-accent)]" />;
   }
   if (estado === 'erro') {
-    return <TriangleAlert size={12} className="flex-none text-[var(--wb-text-dim)]" />;
+    return <Icon name="triangle-alert" className="flex-none text-[var(--wb-text-dim)]" />;
   }
   if (estado === 'aguardando') {
-    return <Clock size={12} className="flex-none text-[var(--wb-text-mute)]" />;
+    return <Icon name="clock" className="flex-none text-[var(--wb-text-mute)]" />;
   }
-  return <CircleDashed size={12} className="flex-none text-[var(--wb-text-mute)]" />;
+  return <Icon name="circle-dashed" className="flex-none text-[var(--wb-text-mute)]" />;
 }
 
 function rotuloCurto(plataforma: string): string {

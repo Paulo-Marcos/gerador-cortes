@@ -1,6 +1,6 @@
-import { LayoutTemplate, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDefinirPalcoPadrao, usePalcoPadrao, useSeguirPalcoPadrao } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 // D-570: o palco que vale para TODOS os shorts deste corte.
 //
@@ -69,7 +69,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex w-[58px] items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
-          <LayoutTemplate size={11} aria-hidden />
+          <Icon name="layout-template" />
           palco
         </span>
 
@@ -98,7 +98,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
           aria-label="Editar o palco padrão"
           onClick={() => onEditar(escolhido)}
         >
-          <Pencil />
+          <Icon name="pencil" />
           editar
         </Button>
         <Button
@@ -108,7 +108,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
           title={podeEditar ? undefined : semTrecho}
           onClick={() => onEditar(null)}
         >
-          <Plus />
+          <Icon name="plus" />
           novo
         </Button>
       </div>

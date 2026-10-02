@@ -1,7 +1,7 @@
-import { Crop, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { EstadoPalco } from './shortsApi';
 import { useEscolherPreset, usePalcoDoCorte } from './useShortsDoCorte';
+import { Icon } from '@/upgrade/Icon';
 
 // E-036/D-487: de onde saem as regiões que o palco recorta.
 //
@@ -56,7 +56,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
           palco: dizem de onde saem os recortes. O palco do short e o ARRANJO,
           que tem nomes proprios ("Tela em cima, pessoa embaixo"). */}
       <span className="inline-flex items-center gap-1 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)]">
-        <Crop size={11} aria-hidden />
+        <Icon name="crop" />
         recortes
       </span>
 
@@ -86,7 +86,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
             : `Regiões: ${regioes.map((r) => ROTULO_REGIAO[r] ?? r).join(', ')}`
         }
       >
-        {semRegiao && <TriangleAlert size={11} aria-hidden />}
+        {semRegiao && <Icon name="triangle-alert" />}
         {ROTULO_ORIGEM[estado.origem]}
         {!semRegiao && ` · ${regioes.map((r) => ROTULO_REGIAO[r] ?? r).join(' + ')}`}
       </span>

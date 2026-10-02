@@ -25,7 +25,6 @@
 // resposta ("falta renderizar") é exatamente o que esta tela deve dizer.
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Clapperboard, Image as ImageIcon, LayoutGrid, Loader2, Pencil, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SeloDeEstado } from '@/upgrade/SeloDeEstado';
 import { APARENCIA } from './estadoDoCandidato';
@@ -48,6 +47,7 @@ import { useFechoDoShort } from './useFechoDoShort';
 import type { PublicacaoRegistrada } from './shortsApi';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
+import { Icon } from '@/upgrade/Icon';
 
 /** Como cada plataforma se chama na prateleira. */
 const NOME_DA_PLATAFORMA: Record<string, string> = {
@@ -114,7 +114,7 @@ function CartaoDoPronto({
           // vídeo quebrado.
           <div className="absolute inset-0 grid place-items-center p-4 text-center">
             <div>
-              <Clapperboard size={24} className="mx-auto text-[var(--wb-text-mute)]" aria-hidden />
+              <Icon name="clapperboard" ilustracao={24} className="mx-auto text-[var(--wb-text-mute)]" />
               <p className="mt-2 text-[12px] font-semibold text-[var(--wb-text-dim)]">
                 aprovado, falta o arquivo
               </p>
@@ -126,9 +126,9 @@ function CartaoDoPronto({
                 onClick={() => fecho.finalizar(() => renderizar.mutate(short.id))}
               >
                 {renderizando || renderizar.isPending ? (
-                  <Loader2 className="animate-spin" />
+                  <Icon name="loader-2" className="animate-spin" />
                 ) : (
-                  <Clapperboard />
+                  <Icon name="clapperboard" />
                 )}
                 {renderizando ? 'renderizando…' : 'Finalizar'}
               </Button>
@@ -173,7 +173,7 @@ function CartaoDoPronto({
               className="ml-auto inline-flex items-center gap-0.5 text-[10px] text-[var(--wb-text-mute)]"
               title="Este short tem capa escolhida"
             >
-              <ImageIcon size={10} aria-hidden />
+              <Icon name="image" />
               capa
             </span>
           )}
@@ -181,7 +181,7 @@ function CartaoDoPronto({
 
         {pronto && (
           <Button variant="outline" size="sm" onClick={onAlternar}>
-            <Send />
+            <Icon name="send" />
             {aberto ? 'fechar a publicação' : 'Publicar este'}
           </Button>
         )}
@@ -305,7 +305,7 @@ export default function WorkspaceDoFirePage() {
 
         {!isLoading && !isError && naPrateleira.length === 0 && (
           <div className="mx-auto max-w-md py-16 text-center">
-            <LayoutGrid size={28} className="mx-auto text-[var(--wb-text-mute)]" aria-hidden />
+            <Icon name="layout-grid" ilustracao={28} className="mx-auto text-[var(--wb-text-mute)]" />
             <p className="mt-3 text-[14px] font-semibold text-[var(--wb-text)]">
               Nada aprovado ainda neste corte
             </p>
@@ -315,7 +315,7 @@ export default function WorkspaceDoFirePage() {
             </p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
               <Link to={`/shorts/${corteId}`}>
-                <Pencil />
+                <Icon name="pencil" />
                 Ir para a edição
               </Link>
             </Button>
