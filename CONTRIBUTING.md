@@ -39,7 +39,7 @@ As regras de trabalho vivem no [AGENTS.md](AGENTS.md). O essencial:
 - **Commit:** Conventional Commits + gitmoji antes do tipo, em português no
   imperativo, escopo `(D-NNN)`, um commit por funcionalidade, sempre com pathspec.
 - **Camadas:** routers → services → domain (puro) / infrastructure, verificadas
-  pelo import-linter; código novo em domain/services nasce com teste.
+  pelo import-linter; toda mudança vem com teste que cobre o pedido.
 - **Portão de qualidade**, o mesmo do CI:
   - backend: `ruff check .`, `ruff format --check .`, `lint-imports`, `pytest`;
   - frontend: `npm run lint`, `npx tsc --noEmit`, `npx vitest run`, `npm run build`;

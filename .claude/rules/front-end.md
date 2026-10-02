@@ -11,6 +11,7 @@ O essencial deste escopo — vale com ou sem skill instalada:
 - Componente "burro" (JSX) separado de hook/serviço (lógica e I/O). O estado vem da API pelo TanStack Query.
 - Fronteiras verificadas pelo ESLint: `components/` não importa `features/`; `hooks/` não importa `components/`; `lib/` e `types/` não sobem.
 - Sem `console.*`. Mudança de tela se testa no navegador, não só no type-check.
+- **Toda mudança vem com teste** (vitest + Testing Library): cada item do pedido — tela, componente, hook, refatoração — tem o teste que o cobre. O navegador confere; o teste fixa.
 - Correção de defeito começa pelo teste que reproduz o bug: ele falha antes da correção e passa depois (antes/depois no `ready --validation`). Sem refactor de carona nem teste enfraquecido.
 - Portão: `npm run lint`, `npx tsc --noEmit`, `npx vitest run`, `npm run build`. **Não rode `npm run format`.**
 
