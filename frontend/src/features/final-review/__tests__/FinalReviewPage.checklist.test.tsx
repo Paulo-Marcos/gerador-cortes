@@ -83,7 +83,9 @@ function linhasDoChecklist(html: string): [string, string, boolean][] {
     const svgs = linha.match(/<svg[^>]*>/g) ?? [];
     const rotulo = linha.match(/<span class="text-\[12\.5px\][^>]*>([^<]*)</)?.[1] ?? '';
     const glifo = svgs.at(-1)?.match(/lucide-([\w-]+)/)?.[1] ?? '';
-    return [rotulo, glifo, svgs.length === 2];
+    // A bolinha do item feito leva o check; o glifo do item vem depois dela.
+    const check = svgs.length === 2 && /lucide-check(?![\w-])/.test(svgs[0]);
+    return [rotulo, glifo, check];
   });
 }
 

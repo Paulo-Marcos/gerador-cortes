@@ -53,8 +53,10 @@ describe('AcaoDeIa', () => {
 
   it('em voo, o ícone da ação vira o spinner', () => {
     const html = render({ emVoo: 'claude' });
-    expect(html).toMatch(/<svg[^>]*lucide-loader-circle[^>]*animate-spin/);
-    expect(html).not.toContain('lucide-sparkles');
+    // Só o rótulo: o botão do provedor em voo também gira e casaria sozinho.
+    const rotulo = html.slice(0, html.indexOf('<button'));
+    expect(rotulo).toMatch(/<svg[^>]*lucide-loader-circle[^>]*animate-spin/);
+    expect(rotulo).not.toContain('lucide-sparkles');
   });
 });
 

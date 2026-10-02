@@ -182,6 +182,12 @@ describe('MetadataCard — ícones dos botões Manual', () => {
     for (const icone of [metadados, capa]) expect(icone).toContain('width="14"');
   });
 
+  it('sem metadados ainda: o Manual do estado vazio também leva a varinha', () => {
+    const markup = render(metadado({ titulo_youtube: '' }));
+    expect(markup).toContain('Metadados ainda nao gerados');
+    expect(manuais(markup)[0]).toContain('lucide-wand-sparkles');
+  });
+
   it('no cartão: os mesmos ícones, a 14 px', () => {
     const [metadados, capa] = manuais(render(metadado(), 'card'));
     expect(metadados).toContain('lucide-wand-sparkles');
