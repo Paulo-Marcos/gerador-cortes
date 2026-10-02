@@ -215,7 +215,7 @@ export function RightTabsPanel({
             disabled={refreshPending}
             aria-label={refreshTitle}
           >
-            <IconeDeAtualizar girando={refreshPending} />
+            <Icon name={refreshPending ? 'loader-2' : 'rotate-cw'} size={16} className={cn(refreshPending && 'animate-spin')} />
           </IconButton>
         </Tooltip>
       </header>
@@ -315,15 +315,6 @@ function TabButton({
         </span>
       ) : null}
     </button>
-  );
-}
-
-/** Atualizar: gira enquanto busca. 16 px, o degrau de botão da escala. */
-function IconeDeAtualizar({ girando }: { girando: boolean }) {
-  return girando ? (
-    <Icon name="loader-2" size={16} className="animate-spin" />
-  ) : (
-    <Icon name="rotate-cw" size={16} />
   );
 }
 
