@@ -131,8 +131,10 @@ jobs:
       # D-808: bloquear só o crítico deixou 31 alertas altos e médios se
       # acumularem com o CI verde. Agora o alto também barra; o médio segue
       # informativo (ex.: react-router, que só se corrige na versão 7).
+      # D-872: o portão aceita só os GHSA sem correção listados no script,
+      # cada um com motivo e data para rever.
       - name: npm audit (bloqueia em CVE alto ou critico)
-        run: npm audit --audit-level=high
+        run: python3 ../bin/npm_audit_gate.py
 
       - name: npm audit (informativo, moderate)
         continue-on-error: true
@@ -179,8 +181,10 @@ jobs:
       # D-808: bloquear só o crítico deixou 31 alertas altos e médios se
       # acumularem com o CI verde. Agora o alto também barra; o médio segue
       # informativo (ex.: react-router, que só se corrige na versão 7).
+      # D-872: o portão aceita só os GHSA sem correção listados no script,
+      # cada um com motivo e data para rever.
       - name: npm audit (bloqueia em CVE alto ou critico)
-        run: npm audit --audit-level=high
+        run: python3 ../bin/npm_audit_gate.py
 
       - name: npm audit (informativo, moderate)
         continue-on-error: true
