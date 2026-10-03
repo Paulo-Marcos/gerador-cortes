@@ -123,10 +123,10 @@ def _assets_servidos_do_bundle(renderer_dir: Path) -> list[Path]:
 # Calcular o fingerprint relê 165 MB (src + public + theme) e custa 2,8s com o
 # disco frio — a cada render, dentro do event loop, com o app congelado no meio.
 #
-# O truque é separar "mudou?" de "qual é o hash?". Descobrir se algo mudou custa
-# 6ms (nome, tamanho e data de cada arquivo); o hash do CONTEÚDO só é refeito
-# quando essa assinatura muda. O valor devolvido é idêntico ao de antes — é o
-# mesmo cálculo, só não repetido à toa.
+# O truque é separar "mudou?" de "qual é o hash?". Descobrir se algo mudou é
+# barato (o que é pequeno pelo conteúdo, o `public/` por tamanho e data); o hash
+# completo só é refeito quando essa assinatura muda. O valor devolvido é idêntico
+# ao de antes — é o mesmo cálculo, só não repetido à toa.
 
 _fingerprint_em_cache: tuple[str, str] | None = None
 
@@ -149,21 +149,32 @@ def _extras_do_fingerprint(renderer_dir: Path) -> list[Path]:
 
 
 def _assinatura_do_disco(renderer_dir: Path) -> str:
-    """Retrato barato da árvore: caminho, tamanho e data de cada arquivo.
+    """Retrato barato da árvore: o suficiente para saber se algo mudou.
 
-    Não abre arquivo nenhum. `st_mtime_ns` é nanossegundos: duas edições no
-    mesmo segundo não se escondem atrás da granularidade do relógio.
+    Tamanho e data não bastam. No Windows, duas gravações seguidas podem cair no
+    mesmo tick do relógio, e duas versões de mesmo tamanho (`4.0.502` → `4.0.503`
+    no lockfile) saíam com a mesma assinatura: o cache devolvia o bundle velho
+    (D-863). Por isso o que é pequeno entra pelo CONTEÚDO: o `src/` (~0,5 MB) e os
+    arquivos da raiz (~0,2 MB). Só o `public/` (~160 MB, o peso que o cache existe
+    para evitar) segue por tamanho e data.
     """
+    public_dir = renderer_dir / "public"
     hasher = hashlib.sha256()
     for relativo, caminho in _walk_source_files(renderer_dir / "src"):
-        st = caminho.stat()
-        hasher.update(f"src:{relativo}|{st.st_size}|{st.st_mtime_ns}\0".encode())
+        hasher.update(f"src:{relativo}|{_hash_do_conteudo(caminho)}\0".encode())
     for extra in sorted(_extras_do_fingerprint(renderer_dir)):
         if not extra.is_file():
             continue
-        st = extra.stat()
-        hasher.update(f"extra:{extra.name}|{st.st_size}|{st.st_mtime_ns}\0".encode())
+        if public_dir in extra.parents:
+            st = extra.stat()
+            hasher.update(f"extra:{extra.name}|{st.st_size}|{st.st_mtime_ns}\0".encode())
+        else:
+            hasher.update(f"extra:{extra.name}|{_hash_do_conteudo(extra)}\0".encode())
     return hasher.hexdigest()
+
+
+def _hash_do_conteudo(caminho: Path) -> str:
+    return hashlib.sha256(caminho.read_bytes()).hexdigest()
 
 
 def fingerprint_do_bundle(renderer_dir: Path) -> str:
