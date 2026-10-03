@@ -29,7 +29,7 @@
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^7.18.4",
     "remotion": "4.0.529",
-    "tailwind-merge": "^2.5.4",
+    "tailwind-merge": "^3.7.0",
     "tailwindcss-animate": "^1.0.7",
     "wavesurfer.js": "^7.12.12",
     "zod": "4.6.5"
