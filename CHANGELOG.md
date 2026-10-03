@@ -152,6 +152,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the same size, so the old bundle kept running with the new Remotion. The
   small files (renderer code and the root configs) are now compared by
   content; only `public/` (~160 MB) still goes by size and date (D-863).
+- **The editor's main button says the truth on a processed cut.** On a cut
+  already rendered (processado), the button said "Approve cut", but clicking
+  it — or pressing Enter — un-approves, as on any approved cut, sending it
+  back to proposed. It now says "Approved", so the click does what the label
+  says. The label, the click and the Workspace's A key share one approval
+  rule (D-864).
 - **The Library card shows the right icon for "Bruto" and "Publicação".** The
   card's six-step strip looks up each icon by the step's label, but its map
   still said "Cortes" and "Publicado", so those two steps fell back to the

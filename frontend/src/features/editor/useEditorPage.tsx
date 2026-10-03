@@ -9,6 +9,7 @@ import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaud
 import { cortesApi } from '@/features/editor/api/cortes';
 import { useToast } from '@/components/ui/toaster';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
+import { estaAprovado, statusAoAlternarVeredito } from '@/lib/statusDoCorte';
 import type { Corte, Desvio } from '@/types/models';
 import { type PlayerHandle } from './fase1/PlayerPanel';
 import { MAX_MS, MIN_MS, STEP_FINO } from './fase1/AudioSyncControl';
@@ -35,8 +36,6 @@ import {
 // Lido uma vez, no modulo, pela mesma razao do router: casca e tela nunca
 // podem ficar em versoes diferentes dentro da mesma sessao.
 
-export const APROVADO_STATUS_SET = new Set<Corte['status']>(['aprovado', 'processado']);
-
 export function findPreviousApprovedCorte(cortes: Corte[], corte: Corte): Corte | null {
   return (
     cortes
@@ -44,7 +43,7 @@ export function findPreviousApprovedCorte(cortes: Corte[], corte: Corte): Corte 
         (item) =>
           item.id !== corte.id &&
           item.numero < corte.numero &&
-          APROVADO_STATUS_SET.has(item.status),
+          estaAprovado(item.status),
       )
       .sort((a, b) => b.numero - a.numero)[0] ?? null
   );
@@ -583,9 +582,7 @@ export function useEditorPage() {
 
   function toggleAprovado() {
     if (!corteUI) return;
-    const aprovado = ['aprovado', 'processado'].includes(corteUI.status);
-    const status: Corte['status'] = aprovado ? 'proposto' : 'aprovado';
-    atualizarCorte.mutate({ status });
+    atualizarCorte.mutate({ status: statusAoAlternarVeredito(corteUI.status) });
   }
 
   const deletarCorte = useDeletarCorte(corteId, projetoId);

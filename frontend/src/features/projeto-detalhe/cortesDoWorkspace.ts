@@ -1,5 +1,6 @@
 import type { Corte, StatusCorte, StatusExportCorte } from '@/types/models';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
+import { estaAprovado } from '@/lib/statusDoCorte';
 
 // ─────────────────────────────────────────────────────────────
 // A lista de cortes do Workspace.
@@ -58,7 +59,7 @@ export function acaoDaTeclaNaLinha(
       return 'subir';
     case 'a':
       if (status === 'proposto') return 'aprovar';
-      if (status === 'aprovado' || status === 'processado') return 'devolver';
+      if (status && estaAprovado(status)) return 'devolver';
       return null;
     case 'r':
       return status ? 'excluir' : null;

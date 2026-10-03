@@ -4,6 +4,7 @@ import { ReadingModal } from '@/features/editor/CommonTopBar';
 import type { ReadingPatch } from '@/lib/readingMetadata';
 import { useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
+import { estaAprovado } from '@/lib/statusDoCorte';
 import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { COR_DO_SELO, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
@@ -250,7 +251,7 @@ export function BancadaChrome({
             }
           : undefined,
         primario: {
-          texto: corte.status === 'aprovado' ? 'Aprovado' : 'Aprovar corte',
+          texto: estaAprovado(corte.status) ? 'Aprovado' : 'Aprovar corte',
           icone: 'check',
           onClick: onAprovar,
         },
