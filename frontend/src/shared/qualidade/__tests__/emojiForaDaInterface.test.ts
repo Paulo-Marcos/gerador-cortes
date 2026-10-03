@@ -47,8 +47,11 @@ describe('emoji fora da interface (D-858)', () => {
     .split('\n')
     .filter((caminho) => /\.tsx?$/.test(caminho) && !TESTES.test(caminho));
 
+  // A varredura roda na montagem da suíte, como nas outras catracas: dentro do
+  // `it` ela concorria com o limite de 5 s e estourava com a máquina carregada.
+  const achados = arquivos.filter((a) => !CONTEUDO_PUBLICADO.has(a)).flatMap(emojisDoArquivo);
+
   it('nenhum texto da interface leva emoji', () => {
-    const achados = arquivos.filter((a) => !CONTEUDO_PUBLICADO.has(a)).flatMap(emojisDoArquivo);
     expect(achados, 'Use <Icon name=…> do upgrade/Icon no lugar do emoji').toEqual([]);
   });
 
