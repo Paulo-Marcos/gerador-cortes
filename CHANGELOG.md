@@ -219,6 +219,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   what the cut card's ribbon reads (D-862).
 
 ### Security
+- **The CI npm audit accepts only dated exceptions.** GHSA-vfj7-8cjw-p6xm
+  (`braces`, high) has no fixed version and failed every PR; it comes in
+  through Tailwind 3, which only reads its own config globs at build time.
+  `bin/npm_audit_gate.py` now runs the audit and still fails on any high or
+  critical advisory, except the GHSAs it lists with a reason and a review
+  date (this one until 2027-01-03); an expired exception fails again (D-872).
 - **React Router 7.18.** Closes the two open advisories on React Router 6: an
   open redirect through a backslash in `<Link>` and `useNavigate`, and a
   constructor injection in server-side hydration (not used by the app, closed
