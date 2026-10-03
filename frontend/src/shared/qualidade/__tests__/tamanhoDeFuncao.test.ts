@@ -74,7 +74,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::DefinirScopeRow": 103,
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::EscopoLadder": 134,
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::RegionItem": 194,
-  "src/features/editor/useEditorPage.tsx::useEditorPage": 575,
+  "src/features/editor/useEditorPage.tsx::useEditorPage": 574,
   "src/features/fila/FilaPage.tsx::LinhaJob": 126,
   "src/features/final-review/FinalReviewPage.tsx::FinalReviewPage": 372,
   "src/features/lives/LiveSearchPage.tsx::LiveSearchPage": 224,

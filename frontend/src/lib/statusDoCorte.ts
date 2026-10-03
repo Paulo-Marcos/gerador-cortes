@@ -10,3 +10,8 @@ const APROVADOS = new Set<StatusCorte>(['aprovado', 'processado']);
 export function estaAprovado(status: StatusCorte): boolean {
   return APROVADOS.has(status);
 }
+
+/** O veredito alterna: aprovado (ou processado) volta a proposto; o resto é aprovado. */
+export function statusAoAlternarVeredito(status: StatusCorte): StatusCorte {
+  return estaAprovado(status) ? 'proposto' : 'aprovado';
+}

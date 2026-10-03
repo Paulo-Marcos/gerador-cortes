@@ -20,7 +20,9 @@ vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', () => ({ useProjeto: () 
 
 const { BancadaChrome } = await import('../BancadaChrome');
 
-function rotuloDoPrincipal(status: Corte['status']): string | undefined {
+function principal(status: Corte['status'], onAprovar = vi.fn()) {
+  // Zerado a cada caso: sem isto, um caso sem barra publicada leria a do anterior.
+  publicado = null;
   const corte = { id: 'c1', numero: 1, titulo_proposto: 'Corte', status } as unknown as Corte;
   renderToStaticMarkup(
     <QueryClientProvider client={new QueryClient()}>
@@ -39,12 +41,13 @@ function rotuloDoPrincipal(status: Corte['status']): string | undefined {
           brutoPronto
           brutoOcupado={false}
           onToggleFire={vi.fn()}
-          onAprovar={vi.fn()}
+          onAprovar={onAprovar}
         />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  return publicado?.barra?.primario.texto;
+  // o render reatribui `publicado` pelo mock; o tsc não enxerga isso
+  return (publicado as Chrome | null)?.barra?.primario;
 }
 
 describe('BancadaChrome — rótulo do veredito', () => {
@@ -53,6 +56,12 @@ describe('BancadaChrome — rótulo do veredito', () => {
     ['aprovado', 'Aprovado'],
     ['processado', 'Aprovado'],
   ] as const)('status %s: o principal diz "%s"', (status, rotulo) => {
-    expect(rotuloDoPrincipal(status)).toBe(rotulo);
+    expect(principal(status)?.texto).toBe(rotulo);
+  });
+
+  it('o principal (clique e Enter) chama o veredito da tela', () => {
+    const onAprovar = vi.fn();
+    principal('processado', onAprovar)?.onClick?.();
+    expect(onAprovar).toHaveBeenCalledTimes(1);
   });
 });

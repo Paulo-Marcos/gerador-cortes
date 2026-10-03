@@ -9,7 +9,7 @@ import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaud
 import { cortesApi } from '@/features/editor/api/cortes';
 import { useToast } from '@/components/ui/toaster';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
-import { estaAprovado } from '@/lib/statusDoCorte';
+import { estaAprovado, statusAoAlternarVeredito } from '@/lib/statusDoCorte';
 import type { Corte, Desvio } from '@/types/models';
 import { type PlayerHandle } from './fase1/PlayerPanel';
 import { MAX_MS, MIN_MS, STEP_FINO } from './fase1/AudioSyncControl';
@@ -582,8 +582,7 @@ export function useEditorPage() {
 
   function toggleAprovado() {
     if (!corteUI) return;
-    const status: Corte['status'] = estaAprovado(corteUI.status) ? 'proposto' : 'aprovado';
-    atualizarCorte.mutate({ status });
+    atualizarCorte.mutate({ status: statusAoAlternarVeredito(corteUI.status) });
   }
 
   const deletarCorte = useDeletarCorte(corteId, projetoId);
