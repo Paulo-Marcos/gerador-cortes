@@ -78,14 +78,6 @@ function DemoConteudo() {
       contexto: {
         titulo: 'LIVE 267 — Juros',
         sub: 'Respondendo inscritos · 2h14',
-        etapas: [
-          { icone: 'download', titulo: 'Baixado', estado: 'feito' },
-          { icone: 'brain', titulo: 'Analisado', estado: 'feito' },
-          { icone: 'scissors', titulo: 'Cortes', estado: 'agora' },
-          { icone: 'clapperboard', titulo: 'Pós', estado: 'feito' },
-          { icone: 'tags', titulo: 'Metadados', estado: 'todo' },
-          { icone: 'rocket', titulo: 'Publicado', estado: 'todo' },
-        ],
         listaTitulo: 'Cortes da live',
         listaResumo: '14 · 8 prontos',
         acao: { texto: 'Novo corte' },

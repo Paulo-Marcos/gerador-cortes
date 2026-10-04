@@ -44,6 +44,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **One trail of steps for a live.** A live had three step rulers with
+  different names: the strip under the top bar (Workspace · Cortes · Pós ·
+  Metadados · Revisão), the Workspace's "Etapas da live" band and its four
+  number cards. Now every screen of a live shows one trail of seven steps —
+  Baixado, Analisado, Cortes, Pós, Metadados, Revisão, Publicado — each with
+  a ✓ when done and a count ("3 de 9"). The open screen's step is lit; on
+  the Workspace, the step where the live stopped. Revisão counts the cuts
+  ready to publish ("N de M prontos"), and a cut already on air counts as
+  done in every step before it, so a cleaned-up live does not look stuck.
+  Baixado and Analisado lead to the Workspace; Publicado opens it with a new
+  "No ar" filter, shown as a chip that turns it off. The cards and the band
+  are gone from the Workspace; what only the cards said (scheduled uploads,
+  disk) moved to its subtitle (D-866).
 - **One drawing per idea.** The same icon used to mean different things: the
   scissors were the Cuts step, "Edit cut" and "Generate trims"; the paper
   plane was the Ready menu and "Upload to TikTok"; play was "Play video" and

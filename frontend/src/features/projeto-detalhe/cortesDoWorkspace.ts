@@ -68,3 +68,49 @@ export function acaoDaTeclaNaLinha(
       return null;
   }
 }
+
+/**
+ * D-866: o subtítulo do Workspace. Os quatro cartões de números saíram (a
+ * trilha conta Cortes, Pós e Publicado); o que só eles diziam — agendados e
+ * o disco — passa a morar aqui, ao lado do que o subtítulo já contava.
+ */
+export function subDoWorkspace(n: {
+  duracao: string;
+  cortes: number;
+  fires: number;
+  publicados: number;
+  agendados: number;
+  arquivosLimpos: boolean;
+}): string {
+  return [
+    `${n.duracao} de live`,
+    `${n.cortes} cortes`,
+    `${n.fires} fire`,
+    n.publicados > 0 ? `${n.publicados} no ar` : 'nenhum no ar',
+    ...(n.agendados > 0 ? [`+${n.agendados} agendados`] : []),
+    n.arquivosLimpos ? 'mídia pesada apagada' : 'bruto guardado em disco',
+  ].join(' · ');
+}
+
+/** A linha entra na lista? Busca por título ou número e, com o filtro "No ar"
+ *  (aonde a etapa Publicado da trilha leva, D-866), só o que já subiu. */
+export function linhaPassaNoFiltro(
+  status: StatusExportCorte,
+  termo: string,
+  soNoAr: boolean,
+): boolean {
+  if (soNoAr && !status.youtube_url_publicado) return false;
+  return (
+    !termo ||
+    (status.titulo ?? '').toLowerCase().includes(termo) ||
+    String(status.numero).includes(termo)
+  );
+}
+
+/** Lista vazia: diz por quê, e só oferece analisar quando a live não tem
+ *  corte nenhum — não quando a busca ou o filtro "No ar" esconderam todos. */
+export function listaVaziaDoWorkspace(busca: string, soNoAr: boolean) {
+  if (soNoAr) return { texto: 'Nenhum corte no ar ainda', ofereceAnalise: false };
+  if (busca) return { texto: 'Nenhum corte com esse termo', ofereceAnalise: false };
+  return { texto: 'Esta live ainda não tem cortes', ofereceAnalise: true };
+}
