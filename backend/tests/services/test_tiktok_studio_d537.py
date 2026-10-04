@@ -651,11 +651,12 @@ class TestContrato:
         navegador; o que se guarda aqui continua sendo o mesmo — o caminho que
         `tiktok_studio.perfil_do_chrome()` devolve.
         """
-        from app.services import navegador_assistido
+        from app.services import navegador_assistido, navegador_do_robo
 
         monkeypatch.setattr(
             navegador_assistido, "active_channel_root", lambda: tmp_path / "canal-b"
         )
+        monkeypatch.setattr(navegador_do_robo, "edge_no_disco", lambda: tmp_path / "msedge.exe")
 
         # D-873: sem escolha gravada o navegador e o Edge, que tem pasta propria.
         assert tiktok_studio.perfil_do_chrome() == tmp_path / "canal-b" / "browser" / "tiktok-edge"

@@ -1,7 +1,8 @@
 """O navegador em que o robô do TikTok e do Instagram abre: Chrome ou Edge (D-832).
 
-A escolha é do canal, no banco, editável na tela (ADR-0012). D-873: o Edge é o
-padrão — o operador deixou o Chrome —, e o Chrome segue como escolha na tela.
+A escolha é do canal, no banco, editável na tela (ADR-0012). D-873: sem escolha
+gravada, o Edge — o operador deixou o Chrome. É preferência, não exigência: numa
+máquina sem Edge o padrão cai no Chrome (só quem ESCOLHEU o Edge ouve o erro).
 
 ## Por que o Edge tem perfil próprio
 
@@ -38,8 +39,13 @@ def _conhecido(navegador: str) -> Navegador | None:
 
 
 def navegador_do_canal() -> Navegador:
-    """O navegador escolhido para o canal ativo; o Edge quando não há escolha (D-873)."""
-    return _conhecido(navegador_do_robo_store.ler(*_banco_e_canal())) or EDGE
+    """O navegador escolhido para o canal ativo; sem escolha, o Edge se houver (D-873).
+
+    Perfil e executável saem os dois daqui: decidir o padrão num só lugar é o que
+    impede abrir o Chrome dentro da pasta de sessão do Edge.
+    """
+    escolhido = _conhecido(navegador_do_robo_store.ler(*_banco_e_canal()))
+    return escolhido or (EDGE if edge_no_disco() else CHROME)
 
 
 def escolher_navegador(navegador: str) -> Navegador:

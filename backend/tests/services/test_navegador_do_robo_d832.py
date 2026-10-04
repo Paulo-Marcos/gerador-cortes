@@ -44,6 +44,16 @@ def test_sem_escolha_abre_o_edge(canal, edge):
     assert navegador_do_robo.executavel_escolhido() == edge
 
 
+def test_sem_escolha_e_sem_edge_cai_no_chrome(canal, monkeypatch):
+    """O padrão é preferência, não exigência: máquina sem Edge (o CI no Linux)
+    segue no Chrome, com a pasta do Chrome — navegador e perfil decididos juntos."""
+    monkeypatch.setattr(navegador_do_robo, "edge_no_disco", lambda: None)
+
+    assert navegador_do_robo.navegador_do_canal() == "chrome"
+    assert navegador_do_robo.perfil_da_plataforma("tiktok").name == "tiktok"
+    assert navegador_do_robo.executavel_escolhido() is None
+
+
 def test_chrome_escolhido_segue_o_chrome_de_sempre(canal):
     navegador_do_robo.escolher_navegador("chrome")
 
@@ -83,7 +93,7 @@ def test_edge_escolhido_e_ausente_explica_o_que_fazer(canal, monkeypatch):
         navegador_do_robo.executavel_escolhido()
 
 
-def test_navegador_desconhecido_e_recusado(canal):
+def test_navegador_desconhecido_e_recusado(canal, edge):
     with pytest.raises(PedidoInvalido):
         navegador_do_robo.escolher_navegador("firefox")
 

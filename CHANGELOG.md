@@ -159,8 +159,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   then reported the step as failed. It now confirms the dialog; the proof of
   publishing is still the tab leaving the upload page (D-873).
 - **The TikTok and Instagram robot opens Edge, not Chrome, by default.** A
-  channel that never chose a browser now gets Edge; Chrome is still a choice
-  in Settings. The first time, log in once in the Edge window (D-873).
+  channel that never chose a browser now gets Edge (Chrome when Edge is not
+  installed); Chrome is still a choice in Settings. The first time, log in
+  once in the Edge window (D-873).
 - **A Remotion upgrade in the lockfile always rebuilds the bundle.** The bundle
   cache told "something changed" by each file's size and date, and on Windows
   two writes in a row can share the same timestamp: `4.0.502` → `4.0.503` has
