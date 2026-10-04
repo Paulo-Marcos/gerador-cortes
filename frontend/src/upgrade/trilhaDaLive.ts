@@ -133,6 +133,11 @@ function passosDaLive(dados: DadosDaLive): Passo[] {
   // anda para trás — sem isto toda live antiga pareceria parada na Pós.
   const quantos = (campo: keyof (typeof doExport)[number]) =>
     doExport.filter((e) => Boolean(e[campo]) || Boolean(e.youtube_url_publicado)).length;
+  // Live limpa é live encerrada (decisão do Paulo): o Limpar apaga o vídeo
+  // também de quem só subiu no TikTok ou não subiu, então o que vem do disco
+  // (vídeo pronto, pronto para publicar) deixa de ser fonte de verdade.
+  const doDisco = (campo: 'video_pronto' | 'pronto_publicar') =>
+    dados.arquivosLimpos ? aprovados : quantos(campo);
 
   const baixado = total > 0 || STATUS_JA_BAIXADO.has(dados.statusDoProjeto ?? '');
   const analisado = total > 0 || dados.statusDoProjeto === 'analisado';
@@ -156,11 +161,11 @@ function passosDaLive(dados: DadosDaLive): Passo[] {
       // Feito quando nenhum corte espera decisão e ao menos um foi aprovado.
       feita: aprovados > 0 && vivos.every((c) => c.status !== 'proposto'),
     },
-    sobreAprovados('pos', 'Pós', quantos('video_pronto'), aprovados),
+    sobreAprovados('pos', 'Pós', doDisco('video_pronto'), aprovados),
     sobreAprovados('metadados', 'Metadados', quantos('metadados_completos'), aprovados),
     // Revisão feita = o corte está pronto para publicar (vídeo, capa e
     // metadados) — decisão do Paulo, Onda 3.
-    sobreAprovados('revisao', 'Revisão', quantos('pronto_publicar'), aprovados, ' prontos'),
+    sobreAprovados('revisao', 'Revisão', doDisco('pronto_publicar'), aprovados, ' prontos'),
     sobreAprovados('publicado', 'Publicado', quantos('youtube_url_publicado'), aprovados),
   ];
 }
