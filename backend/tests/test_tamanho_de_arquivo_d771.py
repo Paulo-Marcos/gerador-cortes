@@ -92,7 +92,6 @@ EXCECOES = {
     "frontend/src/shared/palco/youtubeBackgrounds.tsx": 638,
     "frontend/src/shared/palco/youtubeLayout.ts": 784,
     "frontend/src/upgrade/KitScreen.tsx": 602,
-    "frontend/src/upgrade/TopBar.tsx": 554,
     "video-renderer/src/cenas-v2/CenaComparativo.tsx": 512,
 }
 
