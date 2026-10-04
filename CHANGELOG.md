@@ -54,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ready to publish ("N de M prontos"). A cut already on air counts as done
   in every step before it, and a cleaned-up live counts as finished: since
   "Limpar" deletes the videos, Pós counts every approved cut and Revisão
-  only asks for the metadata — so an old live does not look stuck.
+  asks only for the title and cover, which live in the database — so an old
+  live does not look stuck.
   Baixado and Analisado lead to the Workspace; Publicado opens it with a new
   "No ar" filter, shown as a chip that turns it off. The cards and the band
   are gone from the Workspace; what only the cards said (scheduled uploads,

@@ -44,7 +44,13 @@ export type DadosDaLive = {
   exportados: Array<
     Pick<
       StatusExportCorte,
-      'corte_id' | 'video_pronto' | 'metadados_completos' | 'pronto_publicar' | 'youtube_url_publicado'
+      | 'corte_id'
+      | 'video_pronto'
+      | 'metadados_completos'
+      | 'pronto_publicar'
+      | 'titulo_youtube'
+      | 'thumbnail_pronta'
+      | 'youtube_url_publicado'
     >
   >;
 };
@@ -134,11 +140,16 @@ function passosDaLive(dados: DadosDaLive): Passo[] {
   const quantos = (campo: keyof (typeof doExport)[number]) =>
     doExport.filter((e) => Boolean(e[campo]) || Boolean(e.youtube_url_publicado)).length;
   // Live limpa é live encerrada (decisão do Paulo): o Limpar apaga o vídeo
-  // também de quem só subiu no TikTok ou não subiu, então o que vem do disco
-  // (vídeo, capa) deixa de ser fonte de verdade e conta como feito. Os
-  // metadados moram no banco: na Revisão, eles continuam valendo.
+  // também de quem só subiu no TikTok ou não subiu, então o vídeo deixa de
+  // ser fonte de verdade e conta como feito. `pronto_publicar` é vídeo +
+  // título + capa (routers/export.py); título e capa moram no banco e
+  // sobrevivem ao Limpar — na live limpa, a Revisão pede só os dois.
   const renderizados = dados.arquivosLimpos ? aprovados : quantos('video_pronto');
-  const prontos = quantos(dados.arquivosLimpos ? 'metadados_completos' : 'pronto_publicar');
+  const prontos = dados.arquivosLimpos
+    ? doExport.filter(
+        (e) => (Boolean(e.titulo_youtube) && e.thumbnail_pronta) || Boolean(e.youtube_url_publicado),
+      ).length
+    : quantos('pronto_publicar');
 
   const baixado = total > 0 || STATUS_JA_BAIXADO.has(dados.statusDoProjeto ?? '');
   const analisado = total > 0 || dados.statusDoProjeto === 'analisado';

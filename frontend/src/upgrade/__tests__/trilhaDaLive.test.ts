@@ -22,6 +22,8 @@ function corte(id: string, status: StatusCorte) {
 function exportado(corte_id: string, campos: Partial<Exportado> = {}): Exportado {
   return {
     corte_id,
+    titulo_youtube: null,
+    thumbnail_pronta: false,
     video_pronto: false,
     metadados_completos: false,
     pronto_publicar: false,
@@ -117,20 +119,34 @@ describe('trilhaDaLive', () => {
   it('live limpa é live encerrada: Pós conta todos os aprovados (decisão do Paulo)', () => {
     // O Limpar (D-598) apaga o vídeo também de quem só subiu no TikTok ou não
     // subiu; o disco deixa de ser a fonte de verdade, e a live já terminou.
-    // Na Revisão, o que vem do disco (vídeo, capa) conta como feito, mas os
-    // metadados moram no banco: sem eles o corte não estava pronto.
+    // Na Revisão, pronto_publicar = vídeo + título + capa (export.py). Só o
+    // vídeo vem do disco; título e capa moram no banco e continuam valendo.
     const limpa: DadosDaLive = {
       ...LIVE,
       arquivosLimpos: true,
-      cortes: [corte('a', 'aprovado'), corte('b', 'aprovado'), corte('c', 'proposto')],
-      exportados: [exportado('a'), exportado('b', { metadados_completos: true })],
+      cortes: [
+        corte('a', 'aprovado'),
+        corte('b', 'aprovado'),
+        corte('d', 'aprovado'),
+        corte('e', 'aprovado'),
+        corte('c', 'proposto'),
+      ],
+      exportados: [
+        // 'a' tem título e descrição, mas não tem capa: não estava pronto.
+        exportado('a', { metadados_completos: true, titulo_youtube: 'A' }),
+        // 'b' e 'd' têm título e capa (sem descrição): estavam prontos.
+        exportado('b', { titulo_youtube: 'B', thumbnail_pronta: true }),
+        exportado('d', { titulo_youtube: 'D', thumbnail_pronta: true }),
+        // 'e' tem capa, mas não tem título: não estava pronto.
+        exportado('e', { thumbnail_pronta: true }),
+      ],
     };
     const e = porId(trilhaDaLive('projeto', '267', null, limpa));
-    expect([e.pos.contagem, e.revisao.contagem]).toEqual(['2 de 2', '1 de 2 prontos']);
+    expect([e.pos.contagem, e.revisao.contagem]).toEqual(['4 de 4', '2 de 4 prontos']);
     expect([e.pos.feita, e.revisao.feita]).toEqual([true, false]);
     // Metadados e Publicado não vêm do disco: continuam contando o que é.
-    expect(e.metadados.contagem).toBe('1 de 2');
-    expect(e.publicado.contagem).toBe('0 de 2');
+    expect(e.metadados.contagem).toBe('1 de 4');
+    expect(e.publicado.contagem).toBe('0 de 4');
   });
 
   it('Cortes só fica feito quando nenhum corte espera decisão', () => {
