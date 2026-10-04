@@ -34,8 +34,19 @@ def edge(monkeypatch, tmp_path):
     return exe
 
 
-def test_sem_escolha_segue_o_chrome_de_sempre(canal):
-    assert navegador_do_robo.navegador_do_canal() == "chrome"
+def test_sem_escolha_abre_o_edge(canal, edge):
+    """D-873: o Edge é o padrão; o Chrome passou a ser escolha."""
+    assert navegador_do_robo.navegador_do_canal() == "edge"
+    assert (
+        navegador_do_robo.perfil_da_plataforma("tiktok")
+        == canal["canal"] / "browser" / "tiktok-edge"
+    )
+    assert navegador_do_robo.executavel_escolhido() == edge
+
+
+def test_chrome_escolhido_segue_o_chrome_de_sempre(canal):
+    navegador_do_robo.escolher_navegador("chrome")
+
     assert navegador_do_robo.perfil_da_plataforma("tiktok") == canal["canal"] / "browser" / "tiktok"
     # None: o `garantir_chrome` procura o Chrome e fala do CHROME_PATH como antes.
     assert navegador_do_robo.executavel_escolhido() is None
@@ -58,10 +69,10 @@ def test_voltar_ao_chrome_volta_a_pasta_de_antes(canal, edge):
 
 
 def test_a_escolha_e_do_canal(canal, edge):
-    navegador_do_robo.escolher_navegador("edge")
+    navegador_do_robo.escolher_navegador("chrome")
     canal["canal"] = canal["canal"].parent / "canal-b"
 
-    assert navegador_do_robo.navegador_do_canal() == "chrome"
+    assert navegador_do_robo.navegador_do_canal() == "edge"
 
 
 def test_edge_escolhido_e_ausente_explica_o_que_fazer(canal, monkeypatch):
@@ -76,7 +87,7 @@ def test_navegador_desconhecido_e_recusado(canal):
     with pytest.raises(PedidoInvalido):
         navegador_do_robo.escolher_navegador("firefox")
 
-    assert navegador_do_robo.navegador_do_canal() == "chrome"
+    assert navegador_do_robo.navegador_do_canal() == "edge"
 
 
 @pytest.mark.parametrize(("robo", "dominio"), ROBOS)
@@ -110,7 +121,7 @@ def test_a_tela_le_e_grava_a_escolha_pela_api(canal, edge):
     cliente = TestClient(app)
     rota = "/api/channels/ativo/navegador-do-robo"
 
-    assert cliente.get(rota).json() == {"navegador": "chrome"}
-    assert cliente.put(rota, json={"navegador": "edge"}).json() == {"navegador": "edge"}
     assert cliente.get(rota).json() == {"navegador": "edge"}
+    assert cliente.put(rota, json={"navegador": "chrome"}).json() == {"navegador": "chrome"}
+    assert cliente.get(rota).json() == {"navegador": "chrome"}
     assert cliente.put(rota, json={"navegador": "firefox"}).status_code == 422

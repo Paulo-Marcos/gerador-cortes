@@ -1,7 +1,7 @@
 """O navegador em que o robô do TikTok e do Instagram abre: Chrome ou Edge (D-832).
 
-A escolha é do canal, no banco, editável na tela (ADR-0012). O Chrome continua
-o padrão: quem nunca escolheu segue exatamente como antes.
+A escolha é do canal, no banco, editável na tela (ADR-0012). D-873: o Edge é o
+padrão — o operador deixou o Chrome —, e o Chrome segue como escolha na tela.
 
 ## Por que o Edge tem perfil próprio
 
@@ -38,8 +38,8 @@ def _conhecido(navegador: str) -> Navegador | None:
 
 
 def navegador_do_canal() -> Navegador:
-    """O navegador escolhido para o canal ativo; o Chrome quando não há escolha."""
-    return _conhecido(navegador_do_robo_store.ler(*_banco_e_canal())) or CHROME
+    """O navegador escolhido para o canal ativo; o Edge quando não há escolha (D-873)."""
+    return _conhecido(navegador_do_robo_store.ler(*_banco_e_canal())) or EDGE
 
 
 def escolher_navegador(navegador: str) -> Navegador:

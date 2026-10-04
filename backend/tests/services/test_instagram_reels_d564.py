@@ -548,7 +548,7 @@ class TestContrato:
         monkeypatch.setattr(navegador_assistido, "active_channel_root", lambda: tmp_path / "canal")
 
         assert instagram_reels.perfil_do_chrome() != tiktok_studio.perfil_do_chrome()
-        assert instagram_reels.perfil_do_chrome().name == "instagram"
+        assert instagram_reels.perfil_do_chrome().name == "instagram-edge"  # D-873: Edge padrão
 
     def test_os_dois_robos_nunca_dividem_a_porta(self, monkeypatch, tmp_path):
         """Duas sessões, dois Chromes, duas portas — senão um mata o outro.

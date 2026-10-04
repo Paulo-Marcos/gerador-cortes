@@ -657,7 +657,8 @@ class TestContrato:
             navegador_assistido, "active_channel_root", lambda: tmp_path / "canal-b"
         )
 
-        assert tiktok_studio.perfil_do_chrome() == tmp_path / "canal-b" / "browser" / "tiktok"
+        # D-873: sem escolha gravada o navegador e o Edge, que tem pasta propria.
+        assert tiktok_studio.perfil_do_chrome() == tmp_path / "canal-b" / "browser" / "tiktok-edge"
 
 
 @pytest.mark.asyncio
