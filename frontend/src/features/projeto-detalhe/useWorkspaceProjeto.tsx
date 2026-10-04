@@ -5,6 +5,8 @@ import { useToast } from '@/components/ui/toaster';
 import {
   linhaPassaNoFiltro,
   mesclarCortesComExport,
+  selecionadosVisiveis,
+  semFiltroNoAr,
   subDoWorkspace,
 } from '@/features/projeto-detalhe/cortesDoWorkspace';
 import { avaliarProntidaoPublicacao } from '@/features/projeto-detalhe/prontidaoPublicacao';
@@ -79,11 +81,7 @@ export function useWorkspaceProjeto() {
   // Ele mora na URL para o link da trilha chegar filtrado e o voltar desfazer.
   const [parametros, setParametros] = useSearchParams();
   const soNoAr = filtroNoArLigado(parametros.toString());
-  const tirarFiltroNoAr = () =>
-    setParametros((p) => {
-      p.delete('filtro');
-      return p;
-    });
+  const tirarFiltroNoAr = () => setParametros(semFiltroNoAr);
 
   const cortes = useMemo(() => cortesQuery.data ?? [], [cortesQuery.data]);
   // A lista sai dos CORTES e recebe o export por cima (ver `cortesDoWorkspace`):
@@ -122,7 +120,8 @@ export function useWorkspaceProjeto() {
 
   // D-746: numa live de 14 cortes a triagem era dezenas de cliques. Seleção
   // em lote + A/R na linha focada. "Devolver" nunca apaga: tira a aprovação.
-  const [selecionados, setSelecionados] = useState<Set<string>>(() => new Set());
+  const [selecao, setSelecionados] = useState<Set<string>>(() => new Set());
+  const selecionados = useMemo(() => selecionadosVisiveis(selecao, linhas), [selecao, linhas]);
   const [emLote, setEmLote] = useState(false);
   const alternarSelecao = (corteId: string) =>
     setSelecionados((atual) => {

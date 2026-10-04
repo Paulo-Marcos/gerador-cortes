@@ -8,8 +8,6 @@ import {
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { useCanais } from '@/features/channels/useChannels';
-import { useCortesProjeto } from '@/features/editor/useCortes';
-import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { GavetaDaFila } from './GavetaDaFila';
 import { GlobalRail, TRILHO_ESTREITO, TRILHO_LARGO, type FilaDoTrilho } from './GlobalRail';
 import {
@@ -24,8 +22,8 @@ import { PaletaDeComandos } from './PaletaDeComandos';
 import { ScreenHeader } from './ScreenHeader';
 import { TopBar } from './TopBar';
 import { barraComTeclas, overlayAberto, useAtalhosDaCasca } from './useAtalhosDaCasca';
-import { dentroDeUmaLive, filtroNoArLigado, trilhaDaLive } from './trilhaDaLive';
 import { TrilhaDeEtapas } from './TrilhaDeEtapas';
+import { useTrilhaDaLive } from './useTrilhaDaLive';
 import {
   UpgradeChromeProvider,
   listaDoChrome,
@@ -33,7 +31,6 @@ import {
 } from './UpgradeChrome';
 import {
   CABECALHO,
-  corteDaLive,
   entraNoHistorico,
   type TelaId,
   menuDoTrilho,
@@ -47,7 +44,7 @@ import { useUpgradeTheme } from './useUpgradeTheme';
 // D-599 · A casca.
 //
 // Faixas fixas, sempre nesta ordem: trilho (onde posso ir) → barra
-// superior (onde estou) → fita da live (em que fase) → contexto (o que
+// superior (onde estou) → trilha da live (em que etapa) → contexto (o que
 // mais existe aqui) → conteúdo, com a barra de ações ancorada embaixo.
 // Só o miolo rola. É essa fixidez que faz a casca desaparecer da
 // atenção: quem usa para de procurar as coisas e passa a saber onde
@@ -187,33 +184,6 @@ type CascaProps = {
   /** Cartão da fila no pé do trilho. Só as vitrines passam isto à mão. */
   fila?: FilaDoTrilho;
 };
-
-/**
- * A trilha leva ao corte aberto, não ao primeiro da live (D-798), e conta
- * pelos dados da live (D-866): são as mesmas queries que as telas da live
- * já fazem, então chegam do cache.
- */
-function useTrilhaDaLive(tela: TelaId, projetoId: string | null) {
-  const { pathname, search } = useLocation();
-  const corteId = corteDaLive(pathname, search);
-  const filtroNoAr = tela === 'projeto' && filtroNoArLigado(search);
-  const daLive = projetoId && dentroDeUmaLive(tela) ? projetoId : undefined;
-  const projeto = useProjeto(daLive).data;
-  const cortes = useCortesProjeto(daLive).data;
-  const exportados = useExportStatus(daLive).data?.cortes;
-  return useMemo(() => {
-    const dados =
-      projeto && cortes
-        ? {
-            statusDoProjeto: projeto.status,
-            arquivosLimpos: Boolean(projeto.arquivos_limpos),
-            cortes,
-            exportados: exportados ?? [],
-          }
-        : undefined;
-    return trilhaDaLive(tela, projetoId, corteId, dados, filtroNoAr);
-  }, [tela, projetoId, corteId, projeto, cortes, exportados, filtroNoAr]);
-}
 
 function Casca({ children, fila }: CascaProps) {
   const { pathname } = useLocation();

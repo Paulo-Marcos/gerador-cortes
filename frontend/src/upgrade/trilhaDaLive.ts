@@ -49,6 +49,25 @@ export type DadosDaLive = {
   >;
 };
 
+/**
+ * Os dados da trilha a partir das três queries da live. Sem projeto ou sem
+ * cortes ainda não há o que contar (a trilha mostra as casas sem contagem);
+ * export ausente é live sem render nenhum, não "carregando".
+ */
+export function dadosDaLive(
+  projeto: { status?: string | null; arquivos_limpos?: boolean | null } | undefined,
+  cortes: DadosDaLive['cortes'] | undefined,
+  exportados: DadosDaLive['exportados'] | undefined,
+): DadosDaLive | undefined {
+  if (!projeto || !cortes) return undefined;
+  return {
+    statusDoProjeto: projeto.status ?? undefined,
+    arquivosLimpos: Boolean(projeto.arquivos_limpos),
+    cortes,
+    exportados: exportados ?? [],
+  };
+}
+
 /** O filtro do Workspace a que a etapa Publicado leva. */
 export const FILTRO_NO_AR = 'no-ar';
 

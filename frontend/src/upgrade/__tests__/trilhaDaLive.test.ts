@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { StatusCorte } from '@/types/models';
 import {
+  dadosDaLive,
   dentroDeUmaLive,
   filtroNoArLigado,
   trilhaDaLive,
@@ -192,9 +193,43 @@ describe('filtroNoArLigado', () => {
 
   it('a trilha e o Workspace leem o filtro pela mesma função', () => {
     const fonte = (c: string) => readFileSync(resolve(__dirname, c), 'utf8');
-    expect(fonte('../UpgradeShell.tsx')).toContain("tela === 'projeto' && filtroNoArLigado(search)");
+    expect(fonte('../useTrilhaDaLive.ts')).toContain("tela === 'projeto' && filtroNoArLigado(search)");
     expect(fonte('../../features/projeto-detalhe/useWorkspaceProjeto.tsx')).toContain(
       'const soNoAr = filtroNoArLigado(parametros.toString());',
     );
+  });
+});
+
+describe('trilhaDaLive · bordas do download e da análise', () => {
+  it('transcrevendo: Baixado feito, Analisado ainda não', () => {
+    const transcrevendo: DadosDaLive = { ...LIVE, statusDoProjeto: 'transcrevendo', cortes: [], exportados: [] };
+    const e = porId(trilhaDaLive('projeto', '267', null, transcrevendo));
+    expect(e.baixado.feita).toBe(true);
+    expect(e.analisado.feita).toBe(false);
+  });
+
+  it('analisado sem corte nenhum: a análise terminou, com zero propostos', () => {
+    const vazia: DadosDaLive = { ...LIVE, statusDoProjeto: 'analisado', cortes: [], exportados: [] };
+    const e = porId(trilhaDaLive('projeto', '267', null, vazia));
+    expect(e.analisado.feita).toBe(true);
+    expect(e.analisado.contagem).toBe('0 propostos');
+  });
+});
+
+describe('dadosDaLive', () => {
+  const cortes = [corte('a', 'aprovado')];
+
+  it('sem projeto ou sem cortes ainda não há o que contar', () => {
+    expect(dadosDaLive(undefined, cortes, [])).toBeUndefined();
+    expect(dadosDaLive({ status: 'analisado' }, undefined, [])).toBeUndefined();
+  });
+
+  it('monta os dados; export ausente é live sem render, não carregando', () => {
+    expect(dadosDaLive({ status: 'analisado', arquivos_limpos: true }, cortes, undefined)).toEqual({
+      statusDoProjeto: 'analisado',
+      arquivosLimpos: true,
+      cortes,
+      exportados: [],
+    });
   });
 });
