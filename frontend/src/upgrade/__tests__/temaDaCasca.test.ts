@@ -99,14 +99,16 @@ describe('o acento é ação, não lugar', () => {
   // Sobre o arquivo inteiro, não linha a linha: o ternário quebrado em duas
   // linhas (`ativo` ⏎ `? '…--wb-accent…'`) escapava — achado da auditoria do #94.
   const selecaoComAcento = /\b(ativo|ativa|active|selecionado|selecionada|agora)\s*\?\s*['`][^'`]*--(wb-)?accent/g;
+  // A varredura roda na montagem da suíte (D-875): dentro do `it` ela
+  // concorria com o limite de 5 s e estourava num worktree de disco frio.
+  const achados = fontes(raiz).flatMap((arquivo) => {
+    const texto = readFileSync(arquivo, 'utf-8');
+    return [...texto.matchAll(selecaoComAcento)].map(
+      (m) => `${relative(raiz, arquivo)}:${texto.slice(0, m.index).split('\n').length}`,
+    );
+  });
 
   it('nenhum estado de seleção escolhe a cor do acento', () => {
-    const achados = fontes(raiz).flatMap((arquivo) => {
-      const texto = readFileSync(arquivo, 'utf-8');
-      return [...texto.matchAll(selecaoComAcento)].map(
-        (m) => `${relative(raiz, arquivo)}:${texto.slice(0, m.index).split('\n').length}`,
-      );
-    });
     expect(achados).toEqual([]);
   });
 
@@ -128,15 +130,17 @@ describe('estado fala uma língua só', () => {
     ]);
   });
 
+  // Na montagem da suíte, não no `it`, pelo mesmo motivo da varredura do acento.
+  const raiz = resolve(__dirname, '../..');
+  const fontes = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const caminho = resolve(dir, e.name);
+      if (e.isDirectory()) return fontes(caminho);
+      return /\.tsx?$/.test(e.name) ? [caminho] : [];
+    });
+  const importam = fontes(raiz).filter((f) => /components\/ui\/status-chip/.test(readFileSync(f, 'utf-8')));
+
   it('ninguém mais importa o StatusChip', () => {
-    const raiz = resolve(__dirname, '../..');
-    const fontes = (dir: string): string[] =>
-      readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-        const caminho = resolve(dir, e.name);
-        if (e.isDirectory()) return fontes(caminho);
-        return /\.tsx?$/.test(e.name) ? [caminho] : [];
-      });
-    const importam = fontes(raiz).filter((f) => /components\/ui\/status-chip/.test(readFileSync(f, 'utf-8')));
     expect(importam.map((f) => relative(raiz, f))).toEqual([]);
   });
 
