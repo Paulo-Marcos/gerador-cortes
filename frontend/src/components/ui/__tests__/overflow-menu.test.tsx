@@ -1,3 +1,4 @@
+import { Children, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GatilhoDoMenu, ItemDoMenu, OverflowMenu } from '../overflow-menu';
@@ -11,17 +12,27 @@ import { AcoesDaTela } from '@/upgrade/ScreenHeader';
 // `useState(false)` do menu começa em true — só neste arquivo e só enquanto
 // `abrirMenu` estiver ligado.
 let abrirMenu = false;
+// D-867: com `espiarAberto`, o setter do estado aberto/fechado anota o que
+// recebeu — é assim que se vê, sem DOM, o menu ligar gatilho e itens a ele.
+let espiarAberto = false;
+const mudancasDoAberto: unknown[] = [];
 vi.mock('react', async (original) => {
   const react = await original<typeof import('react')>();
   return {
     ...react,
-    useState: ((inicial: unknown) =>
-      react.useState(abrirMenu && inicial === false ? true : inicial)) as typeof react.useState,
+    useState: ((inicial: unknown) => {
+      const par = react.useState(abrirMenu && inicial === false ? true : inicial);
+      if (espiarAberto && inicial === false)
+        return [par[0], (valor: unknown) => mudancasDoAberto.push(valor)];
+      return par;
+    }) as typeof react.useState,
   };
 });
 
 afterEach(() => {
   abrirMenu = false;
+  espiarAberto = false;
+  mudancasDoAberto.length = 0;
 });
 
 const itens = [
@@ -137,7 +148,10 @@ describe('GatilhoDoMenu e ItemDoMenu (D-867)', () => {
   it('o item ligado fecha o menu e faz a ação', () => {
     const fechar = vi.fn();
     const agir = vi.fn();
-    ItemDoMenu({ item: { label: 'Reanalisar', onClick: agir }, onFechar: fechar }).props.onClick();
+    const ligado = ItemDoMenu({ item: { label: 'Reanalisar', onClick: agir }, onFechar: fechar });
+    // Sem a marca: um leitor de tela anunciaria todo item como desligado.
+    expect(ligado.props['aria-disabled']).toBeUndefined();
+    ligado.props.onClick();
     expect(fechar).toHaveBeenCalledOnce();
     expect(agir).toHaveBeenCalledOnce();
   });
@@ -156,5 +170,32 @@ describe('GatilhoDoMenu e ItemDoMenu (D-867)', () => {
     expect(item.props.disabled).toBeUndefined();
     expect(item.props['aria-disabled']).toBe(true);
     expect(item.props.title).toBe('A live está sem cortes');
+  });
+});
+
+describe('OverflowMenu liga gatilho e itens ao estado aberto (D-867)', () => {
+  type Elemento = ReactElement<Record<string, unknown>>;
+
+  it('o gatilho alterna e o item fecha', () => {
+    abrirMenu = true;
+    espiarAberto = true;
+    let arvore: Elemento | undefined;
+    function Sonda() {
+      arvore = OverflowMenu({ texto: 'Mais', items: itens }) as Elemento;
+      return arvore;
+    }
+    renderToStaticMarkup(<Sonda />);
+    const filhos = Children.toArray(arvore!.props.children as ReactNode) as Elemento[];
+
+    const gatilho = filhos.find((e) => e.type === GatilhoDoMenu)!;
+    (gatilho.props.onAlternar as () => void)();
+    const alternar = mudancasDoAberto.at(-1) as (aberto: boolean) => boolean;
+    expect([alternar(false), alternar(true)]).toEqual([true, false]);
+
+    const painel = filhos.find((e) => e.props.role === 'menu')!;
+    const [primeiro] = Children.toArray(painel.props.children as ReactNode) as Elemento[];
+    expect(primeiro.type).toBe(ItemDoMenu);
+    (primeiro.props.onFechar as () => void)();
+    expect(mudancasDoAberto.at(-1)).toBe(false);
   });
 });

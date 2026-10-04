@@ -126,8 +126,11 @@ describe('Workspace sem a fileira de ícones soltos', () => {
   });
 
   it('refazer a transcrição continua pedindo confirmação', () => {
-    const funcao = hook.slice(hook.indexOf('function dispararRefazerTranscricao()'));
-    expect(funcao.slice(0, 200)).toContain('confirmacao.executarOuPedir(');
+    // A função inteira é o pedido: nada roda antes dele, e a ação vai como
+    // callback (sem parênteses) — chamá-la ali refaria sem perguntar.
+    expect(hook).toMatch(
+      /function dispararRefazerTranscricao\(\) \{\s*confirmacao\.executarOuPedir\(\s*\{[\s\S]*?\},\s*refazerTranscricaoConfirmado,\s*\);\s*\}/,
+    );
   });
 
   it('abrir a pasta leva junto o aviso de erro que o botão tinha', () => {
