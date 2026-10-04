@@ -129,6 +129,7 @@ describe('trilhaDaLive', () => {
         corte('b', 'aprovado'),
         corte('d', 'aprovado'),
         corte('e', 'aprovado'),
+        corte('f', 'aprovado'),
         corte('c', 'proposto'),
       ],
       exportados: [
@@ -139,14 +140,16 @@ describe('trilhaDaLive', () => {
         exportado('d', { titulo_youtube: 'D', thumbnail_pronta: true }),
         // 'e' tem capa, mas não tem título: não estava pronto.
         exportado('e', { thumbnail_pronta: true }),
+        // 'f' está no ar sem título nem capa no banco: já passou da Revisão.
+        exportado('f', { youtube_url_publicado: 'https://youtu.be/f' }),
       ],
     };
     const e = porId(trilhaDaLive('projeto', '267', null, limpa));
-    expect([e.pos.contagem, e.revisao.contagem]).toEqual(['4 de 4', '2 de 4 prontos']);
+    expect([e.pos.contagem, e.revisao.contagem]).toEqual(['5 de 5', '3 de 5 prontos']);
     expect([e.pos.feita, e.revisao.feita]).toEqual([true, false]);
     // Metadados e Publicado não vêm do disco: continuam contando o que é.
-    expect(e.metadados.contagem).toBe('1 de 4');
-    expect(e.publicado.contagem).toBe('0 de 4');
+    expect(e.metadados.contagem).toBe('2 de 5');
+    expect(e.publicado.contagem).toBe('1 de 5');
   });
 
   it('Cortes só fica feito quando nenhum corte espera decisão', () => {
