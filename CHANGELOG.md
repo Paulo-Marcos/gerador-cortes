@@ -169,6 +169,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **The theme checks no longer time out on a fresh checkout.** Two tests that
+  read every frontend source file (the accent as a selection color, and the
+  old StatusChip import) did that reading inside the test, under the 5 s
+  limit; on a cold disk one took 5.6 s. The reading now happens when the suite
+  loads, as in the emoji check, and the tests only compare (D-875).
 - **The cut switcher's list opens again on the dense screens.** On the
   editor, Pós and Revisão, with the window too narrow for the side column,
   clicking the switcher in the top bar opened nothing: the bar cut off
