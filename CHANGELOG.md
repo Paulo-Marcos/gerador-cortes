@@ -146,6 +146,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **The theme checks no longer time out on a fresh checkout.** Two tests that
+  read every frontend source file (the accent as a selection color, and the
+  old StatusChip import) did that reading inside the test, under the 5 s
+  limit; on a cold disk one took 5.6 s. The reading now happens when the suite
+  loads, as in the emoji check, and the tests only compare (D-875).
 - **J and K go the same way on every screen that switches cuts: J is the
   previous cut, K the next.** The editor already worked that way, but the app frame (Metadados,
   Pós), the top switcher and the Workspace list went the other way, and the
