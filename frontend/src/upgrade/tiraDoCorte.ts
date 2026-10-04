@@ -33,6 +33,8 @@ export type Pip = {
   nome: string;
   /** O `hint` de `buildStatusPills`, sem reescrita. */
   descricao: string;
+  /** D-868: o que falta fazer, em palavras ("gerar bruto"). */
+  verbo: string;
   grupo: GrupoDaTira;
   estado: EstadoDoPip;
 };
@@ -42,15 +44,18 @@ export type Pip = {
  * lados. Casar por índice quebraria em silêncio no dia em que alguém
  * inserir uma etapa no meio de `buildStatusPills`.
  */
-const POR_ROTULO: Record<string, { sigla: string; grupo: GrupoDaTira }> = {
-  Bruto: { sigla: 'BRU', grupo: 'CENAS' },
-  Cenas: { sigla: 'CEN', grupo: 'CENAS' },
-  Graded: { sigla: 'GRD', grupo: 'RENDER' },
-  Overlays: { sigla: 'OVL', grupo: 'RENDER' },
-  Final: { sigla: 'FIN', grupo: 'RENDER' },
-  Thumb: { sigla: 'THU', grupo: 'PUBLICAÇÃO' },
-  Meta: { sigla: 'MET', grupo: 'PUBLICAÇÃO' },
-  YouTube: { sigla: 'YT', grupo: 'PUBLICAÇÃO' },
+// D-868: o verbo diz o que falta em palavras — a linha do Workspace troca as
+// siglas por "próximo: gerar bruto". O rótulo de `buildStatusPills` é inglês
+// ("Graded", "Thumb") e aquele arquivo está travado; o verbo mora aqui.
+const POR_ROTULO: Record<string, { sigla: string; grupo: GrupoDaTira; verbo: string }> = {
+  Bruto: { sigla: 'BRU', grupo: 'CENAS', verbo: 'gerar bruto' },
+  Cenas: { sigla: 'CEN', grupo: 'CENAS', verbo: 'validar cenas' },
+  Graded: { sigla: 'GRD', grupo: 'RENDER', verbo: 'aplicar filtro' },
+  Overlays: { sigla: 'OVL', grupo: 'RENDER', verbo: 'renderizar overlays' },
+  Final: { sigla: 'FIN', grupo: 'RENDER', verbo: 'renderizar final' },
+  Thumb: { sigla: 'THU', grupo: 'PUBLICAÇÃO', verbo: 'gerar capa' },
+  Meta: { sigla: 'MET', grupo: 'PUBLICAÇÃO', verbo: 'completar metadados' },
+  YouTube: { sigla: 'YT', grupo: 'PUBLICAÇÃO', verbo: 'publicar no YouTube' },
 };
 
 export type Tira = {
@@ -84,6 +89,7 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
       done: p.done,
       descricao: p.hint,
       sigla: meta?.sigla ?? p.label.slice(0, 3).toUpperCase(),
+      verbo: meta?.verbo ?? p.label.toLowerCase(),
       grupo: meta?.grupo ?? ('PUBLICAÇÃO' as GrupoDaTira),
     };
   });
@@ -98,6 +104,7 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
     sigla: p.sigla,
     nome: p.nome,
     descricao: p.descricao,
+    verbo: p.verbo,
     grupo: p.grupo,
     estado: rejeitado
       ? i === 0
@@ -145,4 +152,18 @@ export function textoDaProxima(t: Tira): string {
   if (t.proxima) return `próximo: ${t.proxima.nome.toLowerCase()}`;
   const noAr = t.grupos.some((g) => g.pips.some((p) => p.nome === 'YouTube' && p.estado === 'feito'));
   return noAr ? 'no ar' : 'nada pendente';
+}
+
+/**
+ * D-868: o estado da linha em palavras, ao lado da barra de 8 passos —
+ * "3 de 8 · próximo: renderizar overlays". Corte no ar não manda fazer nada
+ * (a limpeza apaga os intermediários); corte rejeitado não tem próxima.
+ */
+export function resumoDaLinha(t: Tira): string {
+  const rejeitado = t.grupos.some((g) => g.pips.some((p) => p.estado === 'rejeitado'));
+  if (rejeitado) return 'corte rejeitado';
+  const conta = `${t.feitas} de ${t.total}`;
+  if (t.proxima) return `${conta} · próximo: ${t.proxima.verbo}`;
+  const noAr = t.grupos.some((g) => g.pips.some((p) => p.nome === 'YouTube' && p.estado === 'feito'));
+  return `${conta} · ${noAr ? 'no ar' : 'nada pendente'}`;
 }

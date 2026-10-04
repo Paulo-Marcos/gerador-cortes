@@ -199,3 +199,11 @@ describe('OverflowMenu liga gatilho e itens ao estado aberto (D-867)', () => {
     expect(mudancasDoAberto.at(-1)).toBe(false);
   });
 });
+
+describe('GatilhoDoMenu grande (D-868)', () => {
+  it('o gatilho grande tem 32 px — o alvo das ações da linha do corte', () => {
+    const base = { label: 'Mais ações', compact: false, open: false, onAlternar: vi.fn() };
+    expect(GatilhoDoMenu({ ...base, grande: true }).props.className).toContain('h-8 w-8');
+    expect(GatilhoDoMenu(base).props.className).toContain('h-7 w-7');
+  });
+});

@@ -36,6 +36,8 @@ interface Props {
   align?: 'left' | 'right';
   /** Gatilho compacto (26px) para cantos apertados. */
   compact?: boolean;
+  /** D-868: gatilho de 32 px, o alvo das ações da linha do corte. */
+  grande?: boolean;
   /** D-867: gatilho com rótulo ("⋯ Mais"), da família dos botões do
    *  cabeçalho. Sem isto, o gatilho é só o ícone. */
   texto?: string;
@@ -48,12 +50,14 @@ export function GatilhoDoMenu({
   texto,
   label,
   compact,
+  grande = false,
   open,
   onAlternar,
 }: {
   texto?: string;
   label: string;
   compact: boolean;
+  grande?: boolean;
   open: boolean;
   onAlternar: () => void;
 }) {
@@ -81,7 +85,7 @@ export function GatilhoDoMenu({
       aria-expanded={open}
       className={cn(
         'flex shrink-0 items-center justify-center rounded-[7px] font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-        compact ? 'h-[26px] w-[26px]' : 'h-7 w-7',
+        compact ? 'h-[26px] w-[26px]' : grande ? 'h-8 w-8' : 'h-7 w-7',
         open
           ? 'bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
           : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
@@ -164,6 +168,7 @@ export function OverflowMenu({
   label = 'Mais ações',
   align = 'right',
   compact = false,
+  grande,
   texto,
   className,
 }: Props) {
@@ -196,6 +201,7 @@ export function OverflowMenu({
         texto={texto}
         label={label}
         compact={compact}
+        grande={grande}
         open={open}
         onAlternar={() => setOpen((current) => !current)}
       />
