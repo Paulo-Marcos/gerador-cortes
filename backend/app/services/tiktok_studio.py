@@ -18,10 +18,9 @@ Um `launch_persistent_context` resolveria o login (perfil guardado) mas não a
 saída: quando o Playwright para, ele mata o contexto que criou — e a aba que o
 operador precisa revisar fecha na cara dele.
 
-Conectar por CDP resolve os dois. O navegador (o Edge por padrão, D-873) é um
-processo INDEPENDENTE, com perfil dedicado (`instance/channels/<canal>/browser/`);
-o operador loga ali uma vez, à mão, e a sessão fica. Nós conectamos, trabalhamos
-e desconectamos — e ele continua vivo, com a aba pronta.
+Conectar por CDP resolve os dois. O navegador (o Edge por padrão, D-873) é um processo
+INDEPENDENTE, com perfil dedicado em `instance/channels/<canal>/browser/`; o operador loga
+ali uma vez, à mão, e a sessão fica — e ele sobrevive à desconexão, com a aba pronta.
 
 ## A costura que permite testar isto
 
@@ -45,6 +44,7 @@ não é um contratempo, é o desenho.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import re
 import threading
@@ -479,10 +479,9 @@ def _marcar_aba(pagina: Pagina, marca: str) -> None:
 def _publicar_agora(pagina: Pagina) -> None:
     """Clica em Publicar, confirma o "Publicar agora" e ESPERA sair do upload (D-564).
 
-    So roda com o interruptor ligado. D-873: quase sempre o TikTok abre um dialogo
-    "Publicar agora", e so ele, clicado, publica. A prova e a NAVEGACAO — clique
-    aceito nao e post no ar: ao publicar, ele leva a aba para a lista de
-    publicacoes (a mesma assimetria que a `publicou` do dominio explora).
+    So roda com o interruptor ligado. D-873: quase sempre o TikTok abre o dialogo
+    "Publicar agora", e so ele publica. A prova e a NAVEGACAO, nunca o clique: ao
+    publicar, a aba vai para a lista de publicacoes (a assimetria da `publicou`).
     """
     from app.domain.publicacao.tiktok_studio import publicou
 
@@ -494,7 +493,8 @@ def _publicar_agora(pagina: Pagina) -> None:
             logger.info("[TikTokStudio] publicado sozinho")
             return
         if pagina.existe("publicar_agora", segundos=INTERVALO_DA_VIGILIA):
-            _passo(pagina.clicar, Passo.PUBLICAR, "publicar_agora", segundos=5.0)
+            with contextlib.suppress(Exception):  # fechando, ele some sob o clique
+                pagina.clicar("publicar_agora", segundos=5.0)
     raise RoteiroInterrompido(
         Passo.PUBLICAR, f"a pagina nao saiu do upload em {int(SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO)}s"
     )

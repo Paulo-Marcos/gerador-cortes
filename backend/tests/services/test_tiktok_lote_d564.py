@@ -199,6 +199,25 @@ class TestPublicarSozinho:
         assert pagina.cliques[-2:] == ["botao_publicar", "publicar_agora"]
         assert relatorio["publicado"] is True
 
+    def test_dialogo_que_some_no_meio_do_clique_nao_desmente_a_publicacao(self, video):
+        """Fechando, o diálogo ainda parece visível; o segundo clique não acha o
+        botão e estoura. Quem decide é a navegação, não esse clique."""
+
+        class DialogoQueFecha(PaginaFalsa):
+            def clicar(self, alvo, *, segundos):
+                if alvo == "publicar_agora" and "publicar_agora" in self.cliques:
+                    self.url = DEPOIS_DE_PUBLICAR
+                    raise TimeoutError("publicar_agora sumiu")
+                self.cliques.append(alvo)
+                if alvo == "botao_publicar":
+                    self.dialogo_aberto = True
+
+        relatorio = tiktok_studio.executar_roteiro(
+            DialogoQueFecha(), video=video, legenda="oi", capa=None, publicar_sozinho=True
+        )
+
+        assert relatorio["publicado"] is True
+
     def test_sem_o_dialogo_nao_procura_o_que_confirmar(self, video):
         """Quando o Publicar já navega, o robô não clica em mais nada."""
         pagina = PaginaFalsa()
