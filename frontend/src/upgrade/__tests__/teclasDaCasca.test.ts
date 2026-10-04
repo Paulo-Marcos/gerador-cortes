@@ -17,10 +17,11 @@ const base: Contexto = {
 const com = (parcial: Partial<Contexto>): Contexto => ({ ...base, ...parcial });
 
 describe('acaoDaTecla', () => {
+  // D-865: o sentido do editor vale para o app inteiro — J anterior, K próximo.
   it('J e K trocam de corte quando nada disputa o teclado', () => {
-    expect(acaoDaTecla(com({ tecla: 'j' }))).toBe('proximo');
-    expect(acaoDaTecla(com({ tecla: 'k' }))).toBe('anterior');
-    expect(acaoDaTecla(com({ tecla: 'J' }))).toBe('proximo');
+    expect(acaoDaTecla(com({ tecla: 'j' }))).toBe('anterior');
+    expect(acaoDaTecla(com({ tecla: 'k' }))).toBe('proximo');
+    expect(acaoDaTecla(com({ tecla: 'J' }))).toBe('anterior');
   });
 
   it('J digitado num campo de titulo e letra, nao troca de corte', () => {

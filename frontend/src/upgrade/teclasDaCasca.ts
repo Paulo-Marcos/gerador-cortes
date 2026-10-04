@@ -62,8 +62,9 @@ export function acaoDaTecla(c: Contexto): AcaoDaCasca | null {
   // estiver escrevendo — nunca à casca.
   if (c.digitando || c.meta || c.ctrl || c.alt) return null;
 
-  if (tecla === 'j') return 'proximo';
-  if (tecla === 'k') return 'anterior';
+  // D-865: o sentido do editor vale para o app inteiro — J anterior, K próximo.
+  if (tecla === 'j') return 'anterior';
+  if (tecla === 'k') return 'proximo';
 
   if (tecla === 'enter') {
     // Com o foco num controle de decisão, o navegador JÁ vai clicar nele.

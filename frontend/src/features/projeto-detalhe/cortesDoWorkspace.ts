@@ -53,10 +53,11 @@ export function acaoDaTeclaNaLinha(
   status: StatusCorte | undefined,
 ): AcaoDaTecla | null {
   switch (tecla.toLowerCase()) {
+    // D-865: J anterior (sobe), K próximo (desce) — o sentido do editor.
     case 'j':
-      return 'descer';
-    case 'k':
       return 'subir';
+    case 'k':
+      return 'descer';
     case 'a':
       if (status === 'proposto') return 'aprovar';
       if (status && estaAprovado(status)) return 'devolver';

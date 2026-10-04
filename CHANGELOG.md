@@ -146,6 +146,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **J and K go the same way on every screen that switches cuts: J is the
+  previous cut, K the next.** The editor already worked that way, but the app frame (Metadados,
+  Pós), the top switcher and the Workspace list went the other way, and the
+  editor's own switcher read "Próximo item · J" while J went back. The
+  switcher (its tooltip and the shortcut it announces to screen readers),
+  the frame and the list now follow the editor; in the Workspace J
+  moves up the list and K down (D-865).
 - **A Remotion upgrade in the lockfile always rebuilds the bundle.** The bundle
   cache told "something changed" by each file's size and date, and on Windows
   two writes in a row can share the same timestamp: `4.0.502` → `4.0.503` has

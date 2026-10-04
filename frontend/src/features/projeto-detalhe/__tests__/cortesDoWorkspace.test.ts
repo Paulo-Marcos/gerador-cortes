@@ -110,15 +110,16 @@ describe('acaoDaTeclaNaLinha', () => {
     },
   );
 
+  // D-865: J anterior (sobe), K próximo (desce) — o sentido do editor.
   it('J e K andam entre as linhas', () => {
-    expect(acaoDaTeclaNaLinha('j', 'proposto')).toBe('descer');
-    expect(acaoDaTeclaNaLinha('K', 'aprovado')).toBe('subir');
+    expect(acaoDaTeclaNaLinha('j', 'proposto')).toBe('subir');
+    expect(acaoDaTeclaNaLinha('K', 'aprovado')).toBe('descer');
   });
 
   it('sem corte carregado, só a navegação vale', () => {
     expect(acaoDaTeclaNaLinha('a', undefined)).toBeNull();
     expect(acaoDaTeclaNaLinha('r', undefined)).toBeNull();
-    expect(acaoDaTeclaNaLinha('j', undefined)).toBe('descer');
+    expect(acaoDaTeclaNaLinha('j', undefined)).toBe('subir');
   });
 
   it('outra tecla não faz nada', () => {

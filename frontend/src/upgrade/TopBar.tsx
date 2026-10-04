@@ -213,9 +213,9 @@ function Seletor({
       <button
         type="button"
         className="btn btn-icon"
-        title="Item anterior · K"
+        title="Item anterior · J"
         aria-label="Item anterior"
-        aria-keyshortcuts="K"
+        aria-keyshortcuts="J"
         onClick={atual.onAnterior}
         disabled={!atual.onAnterior}
       >
@@ -256,9 +256,9 @@ function Seletor({
       <button
         type="button"
         className="btn btn-icon"
-        title="Próximo item · J"
+        title="Próximo item · K"
         aria-label="Próximo item"
-        aria-keyshortcuts="J"
+        aria-keyshortcuts="K"
         onClick={atual.onProximo}
         disabled={!atual.onProximo}
       >
