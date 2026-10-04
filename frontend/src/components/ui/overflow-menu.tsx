@@ -44,7 +44,7 @@ interface Props {
 
 /** O botão que abre o menu: só o ⋯, ou "⋯ Mais" com rótulo (D-867), da
  *  família dos botões do cabeçalho — aí o texto visível é o nome dele. */
-function Gatilho({
+export function GatilhoDoMenu({
   texto,
   label,
   compact,
@@ -92,6 +92,73 @@ function Gatilho({
   );
 }
 
+const itemClass =
+  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--wb-bg-inset)]';
+
+/**
+ * Um item do painel. D-867: item desligado é `aria-disabled`, não `disabled`
+ * — botão desabilitado não recebe eventos nem foco, e o `title` que explica
+ * o motivo nunca aparecia (o mesmo achado da D-439). Ele segue alcançável,
+ * mostra o porquê e o clique não faz nada.
+ */
+export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFechar: () => void }) {
+  const conteudo = (
+    <>
+      {item.icon && (
+        <Icon
+          name={item.icon}
+          className={item.danger ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text-mute)]'}
+        />
+      )}
+      <span className="flex-1">{item.label}</span>
+      {item.kbd && (
+        <span className="font-code text-[10px] text-[var(--wb-text-dim)]">{item.kbd}</span>
+      )}
+    </>
+  );
+
+  // Item de upload: <label> com input de arquivo escondido.
+  if (item.accept && item.onFile) {
+    return (
+      <label role="menuitem" className={cn(itemClass, 'cursor-pointer text-[var(--wb-text)]')}>
+        {conteudo}
+        <input
+          type="file"
+          accept={item.accept}
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.currentTarget.value = '';
+            onFechar();
+            if (file) item.onFile?.(file);
+          }}
+        />
+      </label>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      title={item.title}
+      aria-disabled={item.disabled || undefined}
+      onClick={() => {
+        if (item.disabled) return;
+        onFechar();
+        item.onClick?.();
+      }}
+      className={cn(
+        itemClass,
+        item.disabled && 'cursor-not-allowed opacity-50',
+        item.danger ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text)]',
+      )}
+    >
+      {conteudo}
+    </button>
+  );
+}
+
 export function OverflowMenu({
   items,
   label = 'Mais ações',
@@ -119,16 +186,13 @@ export function OverflowMenu({
     };
   }, [open]);
 
-  const itemClass =
-    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-50';
-
   return (
     <div
       ref={wrapRef}
       className={cn('relative', className)}
       onClick={(event) => event.stopPropagation()}
     >
-      <Gatilho
+      <GatilhoDoMenu
         texto={texto}
         label={label}
         compact={compact}
@@ -144,68 +208,9 @@ export function OverflowMenu({
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >
-          {items.map((item, idx) => {
-            const conteudo = (
-              <>
-                {item.icon && (
-                  <Icon
-                    name={item.icon}
-                    className={item.danger ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text-mute)]'}
-                  />
-                )}
-                <span className="flex-1">{item.label}</span>
-                {item.kbd && (
-                  <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
-                    {item.kbd}
-                  </span>
-                )}
-              </>
-            );
-
-            // Item de upload: <label> com input de arquivo escondido.
-            if (item.accept && item.onFile) {
-              return (
-                <label
-                  key={`${item.label}-${idx}`}
-                  role="menuitem"
-                  className={cn(itemClass, 'cursor-pointer text-[var(--wb-text)]')}
-                >
-                  {conteudo}
-                  <input
-                    type="file"
-                    accept={item.accept}
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.currentTarget.value = '';
-                      setOpen(false);
-                      if (file) item.onFile?.(file);
-                    }}
-                  />
-                </label>
-              );
-            }
-
-            return (
-              <button
-                key={`${item.label}-${idx}`}
-                type="button"
-                role="menuitem"
-                title={item.title}
-                disabled={item.disabled}
-                onClick={() => {
-                  setOpen(false);
-                  item.onClick?.();
-                }}
-                className={cn(
-                  itemClass,
-                  item.danger ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text)]',
-                )}
-              >
-                {conteudo}
-              </button>
-            );
-          })}
+          {items.map((item, idx) => (
+            <ItemDoMenu key={`${item.label}-${idx}`} item={item} onFechar={() => setOpen(false)} />
+          ))}
         </div>
       )}
     </div>

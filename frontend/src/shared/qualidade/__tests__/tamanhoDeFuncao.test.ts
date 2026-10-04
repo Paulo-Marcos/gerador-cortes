@@ -30,7 +30,6 @@ const EXCECOES: Record<string, number> = {
   "src/components/PromptManualPanel.tsx::PromptManualPanel": 223,
   "src/components/PromptManualPanel.tsx::PromptManualPanel.map": 103,
   "src/components/ui/modal.tsx::Modal": 103,
-  "src/components/ui/overflow-menu.tsx::OverflowMenu": 119,
   "src/features/analises/PropostaFinalTab.tsx::PropostaFinalTab": 102,
   "src/features/analises/YoutubeDesempenhoTab.tsx::YoutubeDesempenhoTab": 122,
   "src/features/atalhos/AtalhosPage.tsx::AtalhosPage": 226,

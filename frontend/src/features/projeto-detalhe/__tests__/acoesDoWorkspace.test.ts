@@ -85,6 +85,13 @@ describe('acoesDoWorkspace', () => {
 });
 
 describe('Workspace sem a fileira de ícones soltos', () => {
+  it('na faixa só resta um utilitário de ícone: o do TikTok', () => {
+    // Pega também um ícone que volte com outro título.
+    const usos = [...pagina.matchAll(/<Utilitario\b[\s\S]*?\/>/g)].map((m) => m[0]);
+    expect(usos).toHaveLength(1);
+    expect(usos[0]).toContain('Subir para o TikTok');
+  });
+
   it('as quatro ações saem do corpo da tela', () => {
     expect(pagina).not.toContain('titulo="Abrir a pasta do projeto"');
     expect(pagina).not.toMatch(/titulo="Refazer transcrição/);
@@ -109,7 +116,23 @@ describe('Workspace sem a fileira de ícones soltos', () => {
       expect(bloco).toContain(fio);
   });
 
+  it('o cabeçalho republica quando as travas mudam (deps do useDefinirChrome)', () => {
+    // Sem isto o Mais publicado no primeiro render nunca desliga: dava para
+    // abrir a pasta ou refazer a transcrição duas vezes.
+    const chamada = hook.slice(hook.indexOf('acoes: acoesDoWorkspace({'));
+    const deps = chamada.slice(chamada.indexOf('['), chamada.indexOf('],') + 1);
+    for (const dep of ['pasta.abrindo', 'refazerTranscricao.isPending', 'cortes.length'])
+      expect(deps).toContain(dep);
+  });
+
+  it('refazer a transcrição continua pedindo confirmação', () => {
+    const funcao = hook.slice(hook.indexOf('function dispararRefazerTranscricao()'));
+    expect(funcao.slice(0, 200)).toContain('confirmacao.executarOuPedir(');
+  });
+
   it('abrir a pasta leva junto o aviso de erro que o botão tinha', () => {
-    expect(hook).toMatch(/abrirPasta\.mutate\(id, \{\s*onError:[\s\S]*?Não consegui abrir a pasta/);
+    expect(hook).toMatch(
+      /abrirPasta\.mutate\(id, \{\s*onError:[\s\S]*?Não consegui abrir a pasta\.', \{\s*tone: 'error'/,
+    );
   });
 });

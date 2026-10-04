@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { OverflowMenu } from '../overflow-menu';
+import { GatilhoDoMenu, ItemDoMenu, OverflowMenu } from '../overflow-menu';
 import { AcoesDaTela } from '@/upgrade/ScreenHeader';
 
 // D-861: desde a D-857 o item do menu recebe o NOME do ícone e o menu o desenha
@@ -117,5 +117,44 @@ describe('OverflowMenu com rótulo (D-867)', () => {
     expect(html).toMatch(/aria-haspopup="menu"[^>]*>.*?Mais<\/button>/);
     expect(html).toContain('role="menu"');
     expect(html).toContain('Reanalisar');
+  });
+});
+
+// D-867 · comportamento, sem DOM: o componente devolve o elemento, e o teste
+// chama o onClick dele — é o mesmo que o React chamaria no clique.
+describe('GatilhoDoMenu e ItemDoMenu (D-867)', () => {
+  const base = { label: 'Mais ações', compact: false };
+
+  it('o gatilho com rótulo alterna o menu e anuncia se está aberto', () => {
+    const alternar = vi.fn();
+    const fechado = GatilhoDoMenu({ ...base, texto: 'Mais', open: false, onAlternar: alternar });
+    fechado.props.onClick();
+    expect(alternar).toHaveBeenCalledOnce();
+    expect(fechado.props['aria-expanded']).toBe(false);
+    expect(GatilhoDoMenu({ ...base, texto: 'Mais', open: true, onAlternar: alternar }).props['aria-expanded']).toBe(true);
+  });
+
+  it('o item ligado fecha o menu e faz a ação', () => {
+    const fechar = vi.fn();
+    const agir = vi.fn();
+    ItemDoMenu({ item: { label: 'Reanalisar', onClick: agir }, onFechar: fechar }).props.onClick();
+    expect(fechar).toHaveBeenCalledOnce();
+    expect(agir).toHaveBeenCalledOnce();
+  });
+
+  it('o item desligado mostra o motivo e não age — aria-disabled, não disabled', () => {
+    const fechar = vi.fn();
+    const agir = vi.fn();
+    const item = ItemDoMenu({
+      item: { label: 'Auditar análise', disabled: true, title: 'A live está sem cortes', onClick: agir },
+      onFechar: fechar,
+    });
+    item.props.onClick();
+    expect(agir).not.toHaveBeenCalled();
+    expect(fechar).not.toHaveBeenCalled();
+    // `disabled` de verdade engole o hover e o foco, e o motivo some (D-439).
+    expect(item.props.disabled).toBeUndefined();
+    expect(item.props['aria-disabled']).toBe(true);
+    expect(item.props.title).toBe('A live está sem cortes');
   });
 });

@@ -31,7 +31,9 @@ export type ScreenAction = {
    *  em vez do cérebro — D-858). */
   ia?: { emVoo: ProviderIA | null; onGerar: (provider: ProviderIA) => void };
   /** D-867: ação que abre um menu — o "Mais" (⋯) das ações raras da tela.
-   *  Com isto, `onClick` é ignorado e o `texto` vira o rótulo do gatilho. */
+   *  Com isto, `onClick` é ignorado e o `texto` vira o rótulo do gatilho.
+   *  Ainda não serve às telas densas: lá as ações sobem para a barra
+   *  superior, que tem `overflow: hidden` e recorta o painel (medido). */
   menu?: OverflowMenuItem[];
 };
 
