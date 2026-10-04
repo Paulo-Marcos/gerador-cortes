@@ -16,8 +16,8 @@ import type { DestinoDeMenu, Grupo, TelaId } from './upgradeRoutes';
 //
 // RODADA 2 · duas correções estruturais:
 //
-//   1. A LISTA É FIXA. As cinco fases da live saíram daqui (viraram a
-//      fita de `FitaDaLive`): o trilho não muda mais de tamanho conforme
+//   1. A LISTA É FIXA. As fases da live saíram daqui (viraram uma faixa
+//      própria, hoje a `TrilhaDeEtapas`): o trilho não muda mais de tamanho conforme
 //      a rota. "Biblioteca" acende em todas as telas de dentro de uma
 //      live — é de lá que a live veio —, então nenhuma tela profunda
 //      fica com o menu apagado.
