@@ -543,12 +543,13 @@ class TestContrato:
 
     def test_o_perfil_do_instagram_nao_e_o_do_tiktok(self, monkeypatch, tmp_path):
         """Perfil compartilhado faria um Chrome herdar cookies do outro."""
-        from app.services import navegador_assistido, tiktok_studio
+        from app.services import navegador_assistido, navegador_do_robo, tiktok_studio
 
         monkeypatch.setattr(navegador_assistido, "active_channel_root", lambda: tmp_path / "canal")
+        monkeypatch.setattr(navegador_do_robo, "edge_no_disco", lambda: tmp_path / "msedge.exe")
 
         assert instagram_reels.perfil_do_chrome() != tiktok_studio.perfil_do_chrome()
-        assert instagram_reels.perfil_do_chrome().name == "instagram"
+        assert instagram_reels.perfil_do_chrome().name == "instagram-edge"  # D-873: Edge padrão
 
     def test_os_dois_robos_nunca_dividem_a_porta(self, monkeypatch, tmp_path):
         """Duas sessões, dois Chromes, duas portas — senão um mata o outro.

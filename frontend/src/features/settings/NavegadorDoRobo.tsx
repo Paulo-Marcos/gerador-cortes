@@ -7,8 +7,8 @@ import { settingsApi, type Navegador } from './api';
 export const CHAVE_NAVEGADOR_DO_ROBO = ['navegador-do-robo'];
 
 const NAVEGADORES: Array<{ value: Navegador; label: string }> = [
-  { value: 'chrome', label: 'Google Chrome' },
   { value: 'edge', label: 'Microsoft Edge' },
+  { value: 'chrome', label: 'Google Chrome' },
 ];
 
 export function NavegadorDoRobo() {
@@ -34,7 +34,7 @@ export function NavegadorDoRobo() {
         Navegador do robô (TikTok e Instagram)
       </span>
       <select
-        value={query.data?.navegador ?? 'chrome'}
+        value={query.data?.navegador ?? 'edge'}
         disabled={query.isLoading || mutation.isPending}
         onChange={(event) => mutation.mutate(event.target.value as Navegador)}
         className="h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-semibold text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"

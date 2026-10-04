@@ -2,11 +2,11 @@
 
 ## O que este módulo é, em uma frase
 
-O braço que executa o roteiro de `domain/publicacao/tiktok_studio.py`: abre o Chrome do
-operador, sobe o MP4, escreve a legenda, troca a capa — e para com a aba pronta
-e o botão *Publicar* aceso, sem tocar nele.
+O braço que executa o roteiro de `domain/publicacao/tiktok_studio.py`: abre o navegador
+do operador, sobe o MP4, escreve a legenda, troca a capa — e para com a aba pronta,
+só apertando *Publicar* com o interruptor que o operador ligou (D-564).
 
-## Por que o Chrome DELE, e por CDP
+## Por que o navegador DELE, e por CDP
 
 Duas alternativas foram descartadas, e as duas por motivos práticos.
 
@@ -18,11 +18,9 @@ Um `launch_persistent_context` resolveria o login (perfil guardado) mas não a
 saída: quando o Playwright para, ele mata o contexto que criou — e a aba que o
 operador precisa revisar fecha na cara dele.
 
-Conectar por CDP resolve os dois. O Chrome é um processo INDEPENDENTE, iniciado
-com um perfil dedicado (`instance/channels/<canal>/browser/tiktok`); o operador
-loga ali uma vez, à mão, e a sessão fica. Nós conectamos, fazemos o trabalho e
-desconectamos — e o Chrome continua vivo, com a aba pronta. De quebra é um
-Chrome de verdade, que é o que o TikTok espera ver.
+Conectar por CDP resolve os dois. O navegador (o Edge por padrão, D-873) é um processo
+INDEPENDENTE, com perfil dedicado em `instance/channels/<canal>/browser/`; o operador loga
+ali uma vez, à mão, e a sessão fica — e ele sobrevive à desconexão, com a aba pronta.
 
 ## A costura que permite testar isto
 
@@ -41,13 +39,12 @@ e a falha já disse qual.
 Não digita senha, não cria conta, não resolve captcha. Se o TikTok pedir
 verificação, o roteiro para e entrega a janela aberta — a intervenção humana ali
 não é um contratempo, é o desenho.
-
-E não clica em *Publicar*. Ver o docstring do módulo de domínio.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import re
 import threading
@@ -197,6 +194,8 @@ SELETORES: dict[str, str] = {
         '[role="dialog"] button.header-button:has-text("Save")'
     ),
     "botao_publicar": '[data-e2e="post_video_button"]',
+    # D-873: o diálogo que o Publicar quase sempre abre. Sem `data-e2e` medido: vai pelo texto.
+    "publicar_agora": 'button:has-text("Publicar agora"), button:has-text("Post now")',
     # D-580, MEDIDOS em 11/09/2026 — e mais dois palpites mortos para a lista:
     #
     # 4. O rotulo NAO e "Agendar": e "Programar". Procurar pelo texto obvio nao
@@ -478,12 +477,11 @@ def _marcar_aba(pagina: Pagina, marca: str) -> None:
 
 
 def _publicar_agora(pagina: Pagina) -> None:
-    """Clica em Publicar e ESPERA a pagina sair do upload (D-564).
+    """Clica em Publicar, confirma o "Publicar agora" e ESPERA sair do upload (D-564).
 
-    So roda com o interruptor ligado pelo operador. O clique sozinho nao prova
-    nada — o TikTok pode recusar com um aviso na propria pagina e ficar onde
-    esta. A prova e a NAVEGACAO: ao publicar, ele leva a aba para a lista de
-    publicacoes (a mesma assimetria que a `publicou` do dominio explora).
+    So roda com o interruptor ligado. D-873: quase sempre o TikTok abre o dialogo
+    "Publicar agora", e so ele publica. A prova e a NAVEGACAO, nunca o clique: ao
+    publicar, a aba vai para a lista de publicacoes (a assimetria da `publicou`).
     """
     from app.domain.publicacao.tiktok_studio import publicou
 
@@ -494,7 +492,9 @@ def _publicar_agora(pagina: Pagina) -> None:
         if publicou(pagina.url_atual()):
             logger.info("[TikTokStudio] publicado sozinho")
             return
-        time.sleep(INTERVALO_DA_VIGILIA)
+        if pagina.existe("publicar_agora", segundos=INTERVALO_DA_VIGILIA):
+            with contextlib.suppress(Exception):  # fechando, ele some sob o clique
+                pagina.clicar("publicar_agora", segundos=5.0)
     raise RoteiroInterrompido(
         Passo.PUBLICAR, f"a pagina nao saiu do upload em {int(SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO)}s"
     )
