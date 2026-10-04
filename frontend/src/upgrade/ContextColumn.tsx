@@ -16,7 +16,7 @@ import type { ChromeLista, ItemDeLista } from './UpgradeChrome';
 // seletor — por isso elas moram aqui e são exportadas.
 //
 // RODADA 2 · três coisas saíram:
-//   · a esteira da live (virou a fita de `FitaDaLive`, um lugar só);
+//   · a esteira da live (virou uma faixa própria, hoje a `TrilhaDeEtapas`);
 //   · a caixa de miniatura quando não há miniatura — eram 14 retângulos
 //     cinza idênticos gastando 38 px de largura para não dizer nada;
 //   · o contrato duplo: agora entra UMA `lista`, a mesma que o painel

@@ -83,14 +83,6 @@ export type ChromeAtual = {
   onVerTodos?: () => void;
 };
 
-/** Um passo da esteira da live, quando a tela conhece o estado real. */
-export type EtapaProjeto = {
-  icone: IconName;
-  titulo: string;
-  estado: 'feito' | 'agora' | 'todo';
-  onClick?: () => void;
-};
-
 export type ChromeBarra = {
   secundario?: { texto: string; icone: IconName; onClick?: () => void };
   terciario?: { titulo: string; icone: IconName; onClick?: () => void };
@@ -158,12 +150,11 @@ export type ContextoItem = {
   onClick?: () => void;
 };
 
-/** @deprecated use `lista` + `chrome.etapas`. */
+/** @deprecated use `lista`. */
 export type ChromeContexto = {
   titulo: string;
   sub?: string;
   thumb?: string;
-  etapas?: EtapaProjeto[];
   listaTitulo: string;
   listaResumo?: string;
   itens: ContextoItem[];
@@ -221,10 +212,9 @@ export type Chrome = {
   lista?: ChromeLista;
   /** O item em foco dentro dessa lista. */
   atual?: ChromeAtual;
-  /** Estado real das fases da live, quando a tela o conhece. A fita já
-   *  existe sem isto (ela sabe em que fase a rota está). */
-  etapas?: EtapaProjeto[];
-  /** @deprecated use `lista` (+ `chrome.etapas`). */
+  // D-866: o estado das etapas da live não vem mais da tela — a casca o lê
+  // dos dados da live (`trilhaDaLive`).
+  /** @deprecated use `lista`. */
   contexto?: ChromeContexto;
   /** @deprecated use `lista` + `atual`. */
   seletor?: ChromeSeletor;
@@ -287,11 +277,6 @@ export function listaDoChrome(chrome: Chrome): { lista?: ChromeLista; atual?: Ch
       : undefined);
 
   return { lista, atual };
-}
-
-/** Estado real das fases, venha do campo novo ou do contexto antigo. */
-export function etapasDoChrome(chrome: Chrome): EtapaProjeto[] | undefined {
-  return chrome.etapas ?? chrome.contexto?.etapas;
 }
 
 type ChromeStore = {

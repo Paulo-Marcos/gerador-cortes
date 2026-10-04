@@ -68,3 +68,84 @@ export function acaoDaTeclaNaLinha(
       return null;
   }
 }
+
+/**
+ * D-866: o subtítulo do Workspace. Os quatro cartões de números saíram (a
+ * trilha conta Cortes, Pós e Publicado); o que só eles diziam — agendados e
+ * o disco — passa a morar aqui, ao lado do que o subtítulo já contava.
+ */
+export function subDoWorkspace(n: {
+  duracao: string;
+  cortes: number;
+  fires: number;
+  publicados: number;
+  agendados: number;
+  arquivosLimpos: boolean;
+}): string {
+  return [
+    `${n.duracao} de live`,
+    `${n.cortes} cortes`,
+    `${n.fires} fire`,
+    n.publicados > 0 ? `${n.publicados} no ar` : 'nenhum no ar',
+    ...(n.agendados > 0 ? [`+${n.agendados} agendados`] : []),
+    n.arquivosLimpos ? 'mídia pesada apagada' : 'bruto guardado em disco',
+  ].join(' · ');
+}
+
+/** A linha entra na lista? Busca por título ou número e, com o filtro "No ar"
+ *  (aonde a etapa Publicado da trilha leva, D-866), só o que já subiu. */
+export function linhaPassaNoFiltro(
+  status: StatusExportCorte,
+  termo: string,
+  soNoAr: boolean,
+): boolean {
+  if (soNoAr && !status.youtube_url_publicado) return false;
+  return (
+    !termo ||
+    (status.titulo ?? '').toLowerCase().includes(termo) ||
+    String(status.numero).includes(termo)
+  );
+}
+
+/** Lista vazia: diz por quê, e só oferece analisar quando a live não tem
+ *  corte nenhum — não quando a busca ou o filtro "No ar" esconderam todos. */
+export function listaVaziaDoWorkspace(busca: string, soNoAr: boolean) {
+  if (soNoAr) return { texto: 'Nenhum corte no ar ainda', ofereceAnalise: false };
+  if (busca) return { texto: 'Nenhum corte com esse termo', ofereceAnalise: false };
+  return { texto: 'Esta live ainda não tem cortes', ofereceAnalise: true };
+}
+
+/**
+ * O lote age sobre o que se VÊ. Selecionar, buscar ou filtrar ("No ar") e
+ * depois aprovar/devolver agia também nos cortes que a busca ou o filtro
+ * esconderam — o "N selecionados" contava quem não estava na tela.
+ */
+export function selecionadosVisiveis(
+  selecionados: ReadonlySet<string>,
+  linhas: ReadonlyArray<{ status: { corte_id: string } }>,
+): Set<string> {
+  return new Set(linhas.map((l) => l.status.corte_id).filter((id) => selecionados.has(id)));
+}
+
+/** Os cortes sobre os quais o lote age: selecionados E visíveis. */
+export function alvosDoLote<C extends { id: string }>(
+  cortes: C[],
+  selecao: ReadonlySet<string>,
+  linhas: ReadonlyArray<{ status: { corte_id: string } }>,
+): C[] {
+  const visiveis = selecionadosVisiveis(selecao, linhas);
+  return cortes.filter((c) => visiveis.has(c.id));
+}
+
+/** ▲/▼ trocam o corte com o vizinho na ordem da LIVE; com a lista filtrada o
+ *  vizinho pode estar escondido, e o clique reordenaria às cegas. */
+export function podeReordenar(busca: string, soNoAr: boolean): boolean {
+  return !soNoAr && busca.trim() === '';
+}
+
+/** Desliga o filtro "No ar" sem perder o resto da URL. */
+export function semFiltroNoAr(parametros: URLSearchParams): URLSearchParams {
+  const resto = new URLSearchParams(parametros);
+  resto.delete('filtro');
+  return resto;
+}

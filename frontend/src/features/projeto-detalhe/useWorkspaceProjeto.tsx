@@ -1,8 +1,15 @@
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
-import { mesclarCortesComExport } from '@/features/projeto-detalhe/cortesDoWorkspace';
+import {
+  alvosDoLote,
+  linhaPassaNoFiltro,
+  mesclarCortesComExport,
+  selecionadosVisiveis,
+  semFiltroNoAr,
+  subDoWorkspace,
+} from '@/features/projeto-detalhe/cortesDoWorkspace';
 import { avaliarProntidaoPublicacao } from '@/features/projeto-detalhe/prontidaoPublicacao';
 import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/features/editor/useCortes';
 import {
@@ -24,7 +31,7 @@ import { cortesApi } from '@/features/editor/api/cortes';
 import { formatarDuracao } from '@/lib/utils';
 import type {  DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { useCanais } from '@/features/channels/useChannels';
-import { type IconName } from '@/upgrade/Icon';
+import { filtroNoArLigado } from '@/upgrade/trilhaDaLive';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import type { CorteFiltro } from './WorkspaceProjetoPage';
 
@@ -71,6 +78,11 @@ export function useWorkspaceProjeto() {
   // primeiro. Agora o operador escolhe qual.
   const [destinoALiberar, setDestinoALiberar] = useState<DestinoPublicacao | null>(null);
   const [busca, setBusca] = useState('');
+  // D-866: a etapa Publicado da trilha abre o Workspace com o filtro "No ar".
+  // Ele mora na URL para o link da trilha chegar filtrado e o voltar desfazer.
+  const [parametros, setParametros] = useSearchParams();
+  const soNoAr = filtroNoArLigado(parametros.toString());
+  const tirarFiltroNoAr = () => setParametros(semFiltroNoAr);
 
   const cortes = useMemo(() => cortesQuery.data ?? [], [cortesQuery.data]);
   // A lista sai dos CORTES e recebe o export por cima (ver `cortesDoWorkspace`):
@@ -98,20 +110,10 @@ export function useWorkspaceProjeto() {
     const termo = busca.trim().toLowerCase();
     return statusList
       .map((status) => ({ status, corte: porId.get(status.corte_id) }))
-      .filter(
-        ({ status }) =>
-          !termo ||
-          (status.titulo ?? '').toLowerCase().includes(termo) ||
-          String(status.numero).includes(termo),
-      );
-  }, [statusList, porId, busca]);
+      .filter(({ status }) => linhaPassaNoFiltro(status, termo, soNoAr));
+  }, [statusList, porId, busca, soNoAr]);
 
   const fires = useMemo(() => cortes.filter((c) => c.is_fire).length, [cortes]);
-  const aprovados = useMemo(
-    () => cortes.filter((c) => c.status !== 'proposto' && c.status !== 'rejeitado').length,
-    [cortes],
-  );
-  const renderizados = statusList.filter((s) => s.video_pronto).length;
   const publicados = statusList.filter((s) => s.youtube_url_publicado).length;
   const agendados = statusList.filter(
     (s) => s.youtube_scheduled_at && !s.youtube_url_publicado,
@@ -119,7 +121,8 @@ export function useWorkspaceProjeto() {
 
   // D-746: numa live de 14 cortes a triagem era dezenas de cliques. Seleção
   // em lote + A/R na linha focada. "Devolver" nunca apaga: tira a aprovação.
-  const [selecionados, setSelecionados] = useState<Set<string>>(() => new Set());
+  const [selecao, setSelecionados] = useState<Set<string>>(() => new Set());
+  const selecionados = useMemo(() => selecionadosVisiveis(selecao, linhas), [selecao, linhas]);
   const [emLote, setEmLote] = useState(false);
   const alternarSelecao = (corteId: string) =>
     setSelecionados((atual) => {
@@ -130,7 +133,7 @@ export function useWorkspaceProjeto() {
     });
 
   async function aplicarEmLote(acao: 'aprovar' | 'devolver') {
-    const alvos = cortes.filter((c) => selecionados.has(c.id));
+    const alvos = alvosDoLote(cortes, selecao, linhas);
     const elegiveis = alvos.filter((c) =>
       acao === 'aprovar' ? c.status === 'proposto' : ['aprovado', 'processado'].includes(c.status),
     );
@@ -298,7 +301,14 @@ export function useWorkspaceProjeto() {
   useDefinirChrome(
     {
       titulo: dados?.titulo_live || 'Workspace do projeto',
-      sub: `${duracao} de live · ${cortes.length} cortes · ${fires} fire · ${publicados} no ar`,
+      sub: subDoWorkspace({
+        duracao,
+        cortes: cortes.length,
+        fires,
+        publicados,
+        agendados,
+        arquivosLimpos: Boolean(dados?.arquivos_limpos),
+      }),
       rotulos: [dados?.titulo_live ?? 'live'],
       acoes: [
         ...(dados?.youtube_url
@@ -336,27 +346,18 @@ export function useWorkspaceProjeto() {
                 bg: 'var(--warn-soft)',
               },
     },
-    [dados?.titulo_live, dados?.youtube_url, duracao, cortes.length, fires, publicados, prontidao],
+    [
+      dados?.titulo_live,
+      dados?.youtube_url,
+      dados?.arquivos_limpos,
+      duracao,
+      cortes.length,
+      fires,
+      publicados,
+      agendados,
+      prontidao,
+    ],
   );
 
-  const etapas: Array<{ icone: IconName; texto: string; valor: string; feita: boolean }> = [
-    {
-      icone: 'download',
-      texto: 'Baixado',
-      valor: dados?.arquivos_limpos ? 'limpo' : 'ok',
-      feita: true,
-    },
-    { icone: 'brain', texto: 'Analisado', valor: `${cortes.length}`, feita: cortes.length > 0 },
-    { icone: 'scissors', texto: 'Cortes', valor: `${aprovados}`, feita: aprovados > 0 },
-    { icone: 'clapperboard', texto: 'Pós', valor: `${renderizados}`, feita: renderizados > 0 },
-    {
-      icone: 'tags',
-      texto: 'Metadados',
-      valor: `${statusList.filter((s) => s.metadados_completos).length}`,
-      feita: statusList.some((s) => s.metadados_completos),
-    },
-    { icone: 'rocket', texto: 'Publicado', valor: `${publicados}`, feita: publicados > 0 },
-  ];
-
-  return { abrirPasta, agendados, agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, aprovados, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararRefazerTranscricao, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, etapas, fires, id, informarUrlDe, liberarDe, linhas, mover, notify, novoCorteAberto, progresso, prontidao, publicados, publicarAberto, publicarDe, refazerTranscricao, renderizados, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, statusList, tiktokAberto, urlManual };
+  return { abrirPasta, agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararRefazerTranscricao, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, notify, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, refazerTranscricao, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
 }
