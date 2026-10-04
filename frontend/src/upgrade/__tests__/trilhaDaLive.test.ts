@@ -114,6 +114,23 @@ describe('trilhaDaLive', () => {
     ]);
   });
 
+  it('live limpa é live encerrada: Pós e Revisão contam todos os aprovados (decisão do Paulo)', () => {
+    // O Limpar (D-598) apaga o vídeo também de quem só subiu no TikTok ou não
+    // subiu; o disco deixa de ser a fonte de verdade, e a live já terminou.
+    const limpa: DadosDaLive = {
+      ...LIVE,
+      arquivosLimpos: true,
+      cortes: [corte('a', 'aprovado'), corte('b', 'aprovado'), corte('c', 'proposto')],
+      exportados: [exportado('a'), exportado('b', { metadados_completos: true })],
+    };
+    const e = porId(trilhaDaLive('projeto', '267', null, limpa));
+    expect([e.pos.contagem, e.revisao.contagem]).toEqual(['2 de 2', '2 de 2 prontos']);
+    expect([e.pos.feita, e.revisao.feita]).toEqual([true, true]);
+    // Metadados e Publicado não vêm do disco: continuam contando o que é.
+    expect(e.metadados.contagem).toBe('1 de 2');
+    expect(e.publicado.contagem).toBe('0 de 2');
+  });
+
   it('Cortes só fica feito quando nenhum corte espera decisão', () => {
     expect(porId(trilhaDaLive('projeto', '267', null, LIVE)).cortes.feita).toBe(false);
     const decidida = { ...LIVE, cortes: LIVE.cortes.filter((c) => c.status !== 'proposto') };
