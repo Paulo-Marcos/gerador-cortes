@@ -169,6 +169,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **The cut switcher's list opens again on the dense screens.** On the
+  editor, Pós and Revisão, with the window too narrow for the side column,
+  clicking the switcher in the top bar opened nothing: the bar cut off
+  whatever hung below its 44 px, so the list was there but invisible. The bar
+  now trims only sideways (its row is wider than the bar and must not
+  scroll), and menus opened from it show in full (D-876).
 - **J and K go the same way on every screen that switches cuts: J is the
   previous cut, K the next.** The editor already worked that way, but the app frame (Metadados,
   Pós), the top switcher and the Workspace list went the other way, and the

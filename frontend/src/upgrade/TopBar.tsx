@@ -384,12 +384,12 @@ export function TopBar({
         minHeight: 44,
         padding: '0 12px',
         borderBottom: '1px solid var(--line)',
-        overflow: 'hidden',
-        // O backdrop-filter do `.gl` cria um contexto de empilhamento: o
-        // z-index do painel do seletor fica preso AQUI dentro. Sem subir o
-        // cabeçalho inteiro de camada, os cartões de vidro do miolo — que vêm
-        // depois no DOM e criam seus próprios contextos — eram pintados por
-        // cima da lista de cortes aberta.
+        // Corta só de lado — a linha fundida passa da barra (1161 px em 888,
+        // medido) e não pode rolar — e deixa descer o painel do seletor e o
+        // "Mais", que o `hidden` sumia nos 44 px (D-876).
+        overflow: 'clip visible',
+        // `.gl` prende o z-index do painel aqui; sem subir a barra de camada,
+        // os cartões de vidro do miolo eram pintados por cima da lista aberta.
         position: 'relative',
         zIndex: 30,
       }}
