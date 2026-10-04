@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { exportStatusKey } from '@/shared/chavesDeCache';
 import { PainelDoLote } from '@/features/shorts/PublicarEmLoteModal';
 import { motivoDoErro, shortsApi, type EnvioAssistido } from '@/features/shorts/shortsApi';
 import { useCancelarLote, useCriarLote, useLoteAtual } from '@/features/shorts/useLotePublicacao';

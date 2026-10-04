@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { exportStatusKey } from '@/shared/chavesDeCache';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
