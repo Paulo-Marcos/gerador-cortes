@@ -162,6 +162,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   channel that never chose a browser now gets Edge (Chrome when Edge is not
   installed); Chrome is still a choice in Settings. The first time, log in
   once in the Edge window (D-873).
+- **The TikTok publish modal test no longer times out on a busy machine.**
+  The test loaded the modal inside the test case, so building its whole
+  import tree (~0.5 s, 95% of the case) ran under the 5 s limit and blew it
+  when the full suite shared the CPU. The modal is now loaded with the test
+  file, and the modal and its batch panel take the cache key from the light
+  module instead of the project page's hook, which pulled eleven more
+  modules; a test fails if they go back to the heavy import (D-874).
 - **A Remotion upgrade in the lockfile always rebuilds the bundle.** The bundle
   cache told "something changed" by each file's size and date, and on Windows
   two writes in a row can share the same timestamp: `4.0.502` → `4.0.503` has
