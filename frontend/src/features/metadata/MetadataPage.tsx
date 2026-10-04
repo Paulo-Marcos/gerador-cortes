@@ -20,7 +20,7 @@ function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
 /**
  * D-427: a aba de trabalho amarrada a um corte chega aqui com `?corte=` —
  * sem isso a tela abriria sempre no primeiro corte do projeto.
- * D-798: o corte ativo volta para a URL — é de lá que a fita de fases
+ * D-798: o corte ativo volta para a URL — é de lá que a trilha de etapas
  * (Cortes, Pós, Revisão) tira o corte para onde levar.
  */
 function useCorteAtivoNaUrl(): [string, (corteId: string) => void] {

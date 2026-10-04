@@ -69,6 +69,8 @@ export function TrilhaDeEtapas({ etapas }: { etapas: EtapaDaTrilha[] }) {
             key={e.id}
             to={e.to}
             aria-current={e.agora ? 'step' : undefined}
+            // O ✓ é desenho (aria-hidden): o leitor de tela ouve a palavra.
+            aria-label={`${e.texto}: ${e.contagem}${e.feita ? ', concluída' : ''}`}
             title={`${e.texto} · ${e.contagem}`}
             style={{
               display: 'flex',

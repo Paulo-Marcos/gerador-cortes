@@ -5,6 +5,9 @@ import { statusExportPendente } from '@/features/publicacao/statusExport';
 import {
   linhaPassaNoFiltro,
   listaVaziaDoWorkspace,
+  podeReordenar,
+  selecionadosVisiveis,
+  semFiltroNoAr,
   subDoWorkspace,
 } from '../cortesDoWorkspace';
 
@@ -13,6 +16,8 @@ import {
 // para o subtítulo; e a etapa Publicado chega com o filtro "No ar".
 
 const pagina = readFileSync(resolve(__dirname, '../WorkspaceProjetoPage.tsx'), 'utf8');
+const hook = readFileSync(resolve(__dirname, '../useWorkspaceProjeto.tsx'), 'utf8');
+const selo = readFileSync(resolve(__dirname, '../SeloNoAr.tsx'), 'utf8');
 
 function linha(numero: number, titulo: string, youtube_url_publicado = '') {
   return {
@@ -73,13 +78,14 @@ describe('filtro "No ar"', () => {
   });
 
   it('a lista do Workspace passa pelo filtro com o "No ar" da URL', () => {
-    const hook = readFileSync(resolve(__dirname, '../useWorkspaceProjeto.tsx'), 'utf8');
     expect(hook).toContain('linhaPassaNoFiltro(status, termo, soNoAr)');
   });
 
   it('a tela mostra o filtro ligado num selo que o desliga', () => {
-    expect(pagina).toMatch(/soNoAr \? \(\s*<button[^>]*?onClick=\{tirarFiltroNoAr\}/);
-    expect(pagina).toContain('Só os no ar · {linhas.length}');
+    expect(pagina).toContain(
+      '{soNoAr ? <SeloNoAr total={linhas.length} onTirar={tirarFiltroNoAr} /> : null}',
+    );
+    expect(selo).toMatch(/onClick=\{onTirar\}[\s\S]*?Só os no ar · \{total\}/);
   });
 
   it('lista vazia pelo filtro diz por quê e não oferece analisar a live', () => {
@@ -92,5 +98,38 @@ describe('filtro "No ar"', () => {
       texto: 'Esta live ainda não tem cortes',
       ofereceAnalise: true,
     });
+  });
+});
+
+describe('filtro "No ar" · o que a auditoria pegou', () => {
+  const linhas = [{ status: { corte_id: 'a' } }, { status: { corte_id: 'b' } }];
+
+  it('o lote age só sobre os selecionados que estão na tela', () => {
+    expect([...selecionadosVisiveis(new Set(['a', 'x']), linhas)]).toEqual(['a']);
+    expect(hook).toContain('selecionadosVisiveis(selecao, linhas)');
+  });
+
+  it('▲/▼ ficam desligados com a lista filtrada ou buscada', () => {
+    expect(podeReordenar('', false)).toBe(true);
+    expect(podeReordenar('', true)).toBe(false);
+    expect(podeReordenar('pedro', false)).toBe(false);
+    expect(podeReordenar('   ', false)).toBe(true);
+    expect(pagina).toContain('podeSubir={podeReordenar(busca, soNoAr) && i > 0}');
+    expect(pagina).toContain('podeDescer={podeReordenar(busca, soNoAr) && i < linhas.length - 1}');
+  });
+
+  it('desligar o filtro preserva o resto da URL', () => {
+    const resto = semFiltroNoAr(new URLSearchParams('filtro=no-ar&corte=7'));
+    expect(resto.toString()).toBe('corte=7');
+    expect(hook).toContain('setParametros(semFiltroNoAr)');
+  });
+
+  it('a tela usa a regra da lista vazia, e o subtítulo recebe os agendados', () => {
+    expect(pagina).toContain('{!listaVazia.ofereceAnalise ? null : (');
+    expect(hook).toMatch(/subDoWorkspace\(\{[^}]*\bagendados,/);
+  });
+
+  it('o selo diz ao leitor de tela que o clique tira o filtro', () => {
+    expect(selo).toContain('aria-label={`Tirar o filtro: só os no ar (${total})`}');
   });
 });

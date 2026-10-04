@@ -72,3 +72,11 @@ describe('TrilhaDeEtapas', () => {
     expect(() => fonte('../FitaDaLive.tsx')).toThrow();
   });
 });
+
+describe('TrilhaDeEtapas · leitor de tela', () => {
+  it('cada casa diz o nome, a contagem e, se for o caso, que está concluída', () => {
+    const html = desenhar();
+    expect(html).toContain('aria-label="Baixado: ok, concluída"');
+    expect(html).toContain('aria-label="Metadados: 0 de 1"');
+  });
+});

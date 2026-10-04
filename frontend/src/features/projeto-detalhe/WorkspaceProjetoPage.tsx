@@ -15,7 +15,8 @@ import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { ModalFields, ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
 import { CorteLinhaAp } from './CorteLinhaAp';
-import { listaVaziaDoWorkspace } from './cortesDoWorkspace';
+import { listaVaziaDoWorkspace, podeReordenar } from './cortesDoWorkspace';
+import { SeloNoAr } from './SeloNoAr';
 import { useWorkspaceProjeto } from './useWorkspaceProjeto';
 
 // ─────────────────────────────────────────────────────────────────
@@ -234,21 +235,7 @@ export default function WorkspaceProjetoPage() {
         <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>
           {cortes.length} cortes · {prontidao.prontos} prontos · {fires} fire
         </span>
-        {/* D-866: a etapa Publicado da trilha chega aqui filtrada. O selo diz
-            que o filtro está ligado e é ele mesmo quem o desliga. */}
-        {soNoAr ? (
-          <button
-            type="button"
-            className="chip"
-            onClick={tirarFiltroNoAr}
-            title="Mostrar todos os cortes"
-            style={{ height: 24, border: 0, background: 'var(--ok-soft)', color: 'var(--ok)', cursor: 'pointer' }}
-          >
-            <Icon name="rocket" />
-            Só os no ar · {linhas.length}
-            <Icon name="x" />
-          </button>
-        ) : null}
+        {soNoAr ? <SeloNoAr total={linhas.length} onTirar={tirarFiltroNoAr} /> : null}
         <div style={{ flex: 1 }} />
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--dim)' }}>
           <kbd>A</kbd> aprova/devolve · <kbd>R</kbd> exclui · <kbd>J</kbd>
@@ -331,8 +318,8 @@ export default function WorkspaceProjetoPage() {
             projetoId={id}
             corte={corte}
             status={status}
-            podeSubir={i > 0}
-            podeDescer={i < linhas.length - 1}
+            podeSubir={podeReordenar(busca, soNoAr) && i > 0}
+            podeDescer={podeReordenar(busca, soNoAr) && i < linhas.length - 1}
             reordenando={reordenar.isPending}
             onMover={(delta) => mover(status.corte_id, delta)}
             onEnviarYoutube={() => {
