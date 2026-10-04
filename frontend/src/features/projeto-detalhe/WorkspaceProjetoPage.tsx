@@ -15,57 +15,21 @@ import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { ModalFields, ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
 import { CorteLinhaAp } from './CorteLinhaAp';
+import { listaVaziaDoWorkspace } from './cortesDoWorkspace';
 import { useWorkspaceProjeto } from './useWorkspaceProjeto';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Etapa 3 · o Workspace do projeto.
 //
-// A tela responde três perguntas em três alturas, de cima para baixo:
-// quanto esta live rendeu (os quatro números), onde ela parou (a faixa
-// de etapas, que também é onde moram as ações do projeto inteiro) e o
-// que cada corte ainda deve (a lista).
+// A tela responde o que cada corte ainda deve (a lista). Onde a live parou
+// e quanto ela rendeu moram na trilha da casca (D-866), que trocou os
+// quatro cartões de números e a faixa "Etapas da live" desta tela; o que
+// só os cartões diziam (agendados, disco) foi para o subtítulo.
 //
-// As ações do projeto ficam na faixa de etapas, e não espalhadas: é ali
-// que se lê o estado da live, e decidir ao lado de onde se lê evita o
-// vaivém entre o topo e o rodapé que a tela antiga exigia.
+// As ações do projeto inteiro ficam na faixa logo acima da lista.
 // ─────────────────────────────────────────────────────────────────
 
 export type CorteFiltro = { status: StatusExportCorte; corte: Corte | undefined };
-
-function Estatistica({
-  icone,
-  rotulo,
-  valor,
-  sub,
-  cor,
-}: {
-  icone: IconName;
-  rotulo: string;
-  valor: string;
-  sub: string;
-  cor: string;
-}) {
-  return (
-    <div className="card" style={{ padding: '11px 12px' }}>
-      <span className="lbl" style={{ display: 'flex', alignItems: 'center', gap: 5, color: cor }}>
-        <Icon name={icone} />
-        {rotulo}
-      </span>
-      <div
-        style={{
-          marginTop: 5,
-          fontSize: 24,
-          fontWeight: 700,
-          letterSpacing: '-.02em',
-          lineHeight: 1,
-        }}
-      >
-        {valor}
-      </div>
-      <div style={{ marginTop: 2, fontSize: 11, color: 'var(--mute)' }}>{sub}</div>
-    </div>
-  );
-}
 
 function Utilitario({
   icone,
@@ -103,49 +67,12 @@ function Utilitario({
 }
 
 export default function WorkspaceProjetoPage() {
-  const { abrirPasta, agendados, agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, aprovados, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararRefazerTranscricao, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, etapas, fires, id, informarUrlDe, liberarDe, linhas, mover, notify, novoCorteAberto, progresso, prontidao, publicados, publicarAberto, publicarDe, refazerTranscricao, renderizados, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, statusList, tiktokAberto, urlManual } = useWorkspaceProjeto();
+  const { abrirPasta, agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararRefazerTranscricao, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, notify, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, refazerTranscricao, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
+  const listaVazia = listaVaziaDoWorkspace(busca, soNoAr);
 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div
-        style={{
-          display: 'grid',
-          gap: 10,
-          gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))',
-        }}
-      >
-        <Estatistica
-          icone="scissors"
-          rotulo="Cortes"
-          valor={String(cortes.length)}
-          sub={`${aprovados} aprovados · ${fires} fire`}
-          // R4: estatística é dado, não ação — o acento fica com os botões.
-          cor="var(--ink)"
-        />
-        <Estatistica
-          icone="clapperboard"
-          rotulo="Renders"
-          valor={`${renderizados}/${aprovados || cortes.length}`}
-          sub={renderizados === aprovados ? 'todos prontos' : 'aguardando render'}
-          cor="var(--info)"
-        />
-        <Estatistica
-          icone="rocket"
-          rotulo="No ar"
-          valor={String(publicados)}
-          sub={agendados > 0 ? `+${agendados} agendados` : 'sem agendamentos'}
-          cor="var(--ok)"
-        />
-        <Estatistica
-          icone="hard-drive"
-          rotulo="Disco"
-          valor={dados?.arquivos_limpos ? 'limpo' : 'em uso'}
-          sub={dados?.arquivos_limpos ? 'mídia pesada apagada' : 'bruto guardado'}
-          cor="var(--warn)"
-        />
-      </div>
-
       <div
         className="card"
         style={{
@@ -161,29 +88,6 @@ export default function WorkspaceProjetoPage() {
           zIndex: 5,
         }}
       >
-        <span className="lbl">Etapas da live</span>
-        {etapas.map((e, i) => (
-          <span key={e.texto} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              className="chip"
-              style={{
-                height: 26,
-                background: e.feita ? 'var(--ok-soft)' : 'var(--inset)',
-                color: e.feita ? 'var(--ok)' : 'var(--dim)',
-              }}
-            >
-              <Icon name={e.icone} />
-              {e.texto}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.8 }}>
-                {e.valor}
-              </span>
-            </span>
-            {i < etapas.length - 1 ? (
-              <span style={{ width: 14, height: 1, background: 'var(--line)' }} aria-hidden />
-            ) : null}
-          </span>
-        ))}
-
         <div style={{ flex: 1 }} />
 
         {/* Cluster de utilitários: as ferramentas raras ficam recuadas, sem
@@ -330,6 +234,21 @@ export default function WorkspaceProjetoPage() {
         <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>
           {cortes.length} cortes · {prontidao.prontos} prontos · {fires} fire
         </span>
+        {/* D-866: a etapa Publicado da trilha chega aqui filtrada. O selo diz
+            que o filtro está ligado e é ele mesmo quem o desliga. */}
+        {soNoAr ? (
+          <button
+            type="button"
+            className="chip"
+            onClick={tirarFiltroNoAr}
+            title="Mostrar todos os cortes"
+            style={{ height: 24, border: 0, background: 'var(--ok-soft)', color: 'var(--ok)', cursor: 'pointer' }}
+          >
+            <Icon name="rocket" />
+            Só os no ar · {linhas.length}
+            <Icon name="x" />
+          </button>
+        ) : null}
         <div style={{ flex: 1 }} />
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--dim)' }}>
           <kbd>A</kbd> aprova/devolve · <kbd>R</kbd> exclui · <kbd>J</kbd>
@@ -447,9 +366,9 @@ export default function WorkspaceProjetoPage() {
           >
             <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
             <span style={{ fontSize: 12.5, fontWeight: 700 }}>
-              {busca ? 'Nenhum corte com esse termo' : 'Esta live ainda não tem cortes'}
+              {listaVazia.texto}
             </span>
-            {busca ? null : (
+            {!listaVazia.ofereceAnalise ? null : (
               <button type="button" className="btn btn-pri" onClick={() => setAnaliseAberta(true)}>
                 <Icon name="brain" />
                 Analisar com a IA

@@ -11,10 +11,10 @@ import type { IconName } from './Icon';
 // são DERIVADOS dela: acrescentar tela é uma linha, e nenhuma das quatro
 // vistas pode ficar para trás.
 //
-// A segunda mudança da rodada mora aqui também: `esteiraDaLive`. As cinco
-// fases de uma live saíram do trilho (eram elas que faziam o menu global
-// mudar de tamanho conforme a rota) e passaram a ser uma fita própria, com
-// uma definição só — a desta tabela.
+// A segunda mudança da rodada: as fases de uma live saíram do trilho (eram
+// elas que faziam o menu global mudar de tamanho conforme a rota) e
+// passaram a ser uma faixa própria — hoje a trilha de `trilhaDaLive`
+// (D-866), que tira desta tabela as rotas das telas da live.
 // ─────────────────────────────────────────────────────────────────
 
 export type TelaId =
@@ -345,7 +345,7 @@ function telasDoItem(id: TelaId): TelaId[] {
  * uma live aberta, empurrando Shorts, Inteligência e o rodapé 170 px para
  * baixo. Um menu global que muda de tamanho deixa de ser um lugar fixo, que
  * é a única coisa que um menu global precisa ser. As fases da live viraram
- * a fita de `esteiraDaLive`, e "Biblioteca" acende em todas elas: é de lá
+ * a trilha de `trilhaDaLive`, e "Biblioteca" acende em todas elas: é de lá
  * que a live veio.
  */
 export function menuDoTrilho(): Record<Grupo, DestinoDeMenu[]> {

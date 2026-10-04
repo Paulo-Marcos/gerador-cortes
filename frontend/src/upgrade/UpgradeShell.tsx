@@ -7,8 +7,9 @@ import {
 } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
-import { FitaDaLive } from './FitaDaLive';
 import { useCanais } from '@/features/channels/useChannels';
+import { useCortesProjeto } from '@/features/editor/useCortes';
+import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { GavetaDaFila } from './GavetaDaFila';
 import { GlobalRail, TRILHO_ESTREITO, TRILHO_LARGO, type FilaDoTrilho } from './GlobalRail';
 import {
@@ -23,10 +24,10 @@ import { PaletaDeComandos } from './PaletaDeComandos';
 import { ScreenHeader } from './ScreenHeader';
 import { TopBar } from './TopBar';
 import { barraComTeclas, overlayAberto, useAtalhosDaCasca } from './useAtalhosDaCasca';
-import { esteiraDaLive } from './esteiraDaLive';
+import { dentroDeUmaLive, filtroNoArLigado, trilhaDaLive } from './trilhaDaLive';
+import { TrilhaDeEtapas } from './TrilhaDeEtapas';
 import {
   UpgradeChromeProvider,
-  etapasDoChrome,
   listaDoChrome,
   useChrome,
 } from './UpgradeChrome';
@@ -54,9 +55,9 @@ import { useUpgradeTheme } from './useUpgradeTheme';
 //
 // RODADA 2 · quatro decisões mudaram de lugar, e todas para cá:
 //
-//   1. O TRILHO NÃO MUDA MAIS DE TAMANHO. As cinco fases da live saíram
-//      dele e viraram a `FitaDaLive` — um lugar só, e só nas telas de
-//      dentro de uma live. `menuDoTrilho()` é fixo, vindo da tabela de
+//   1. O TRILHO NÃO MUDA MAIS DE TAMANHO. As fases da live saíram dele
+//      e viraram uma faixa própria — hoje a `TrilhaDeEtapas` (D-866) —, um
+//      lugar só, e só nas telas de dentro de uma live. `menuDoTrilho()` é fixo, vindo da tabela de
 //      telas.
 //   2. TELA DENSA FUNDE O CABEÇALHO na barra superior: ~46 px devolvidos
 //      ao player, e o título deixa de repetir a última migalha.
@@ -187,11 +188,31 @@ type CascaProps = {
   fila?: FilaDoTrilho;
 };
 
-/** A fita de fases leva ao corte aberto, não ao primeiro da live (D-798). */
-function useEsteiraDaLive(tela: TelaId, projetoId: string | null) {
+/**
+ * A trilha leva ao corte aberto, não ao primeiro da live (D-798), e conta
+ * pelos dados da live (D-866): são as mesmas queries que as telas da live
+ * já fazem, então chegam do cache.
+ */
+function useTrilhaDaLive(tela: TelaId, projetoId: string | null) {
   const { pathname, search } = useLocation();
   const corteId = corteDaLive(pathname, search);
-  return useMemo(() => esteiraDaLive(tela, projetoId, corteId), [tela, projetoId, corteId]);
+  const filtroNoAr = tela === 'projeto' && filtroNoArLigado(search);
+  const daLive = projetoId && dentroDeUmaLive(tela) ? projetoId : undefined;
+  const projeto = useProjeto(daLive).data;
+  const cortes = useCortesProjeto(daLive).data;
+  const exportados = useExportStatus(daLive).data?.cortes;
+  return useMemo(() => {
+    const dados =
+      projeto && cortes
+        ? {
+            statusDoProjeto: projeto.status,
+            arquivosLimpos: Boolean(projeto.arquivos_limpos),
+            cortes,
+            exportados: exportados ?? [],
+          }
+        : undefined;
+    return trilhaDaLive(tela, projetoId, corteId, dados, filtroNoAr);
+  }, [tela, projetoId, corteId, projeto, cortes, exportados, filtroNoAr]);
 }
 
 function Casca({ children, fila }: CascaProps) {
@@ -243,7 +264,7 @@ function Casca({ children, fila }: CascaProps) {
     () => trilhaDaTela(tela, chrome.rotulos, projetoId),
     [tela, chrome.rotulos, projetoId],
   );
-  const passos = useEsteiraDaLive(tela, projetoId);
+  const etapasDaLive = useTrilhaDaLive(tela, projetoId);
   const denso = Boolean(chrome.denso);
 
   // D-746: cada tela visitada entra na pilha (← →) e em "Onde eu estava".
@@ -332,7 +353,7 @@ function Casca({ children, fila }: CascaProps) {
           />
         ) : null}
 
-        <FitaDaLive passos={passos} etapas={etapasDoChrome(chrome)} />
+        <TrilhaDeEtapas etapas={etapasDaLive} />
 
         <div style={{ display: 'flex', minHeight: 0, flex: 1 }}>
           {listaNaColuna && lista ? (

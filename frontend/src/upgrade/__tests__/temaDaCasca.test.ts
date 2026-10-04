@@ -110,8 +110,8 @@ describe('o acento é ação, não lugar', () => {
     expect(achados).toEqual([]);
   });
 
-  it('a fase atual da live não usa a cor de aviso', () => {
-    expect(ler('../FitaDaLive.tsx')).not.toMatch(/agora:\s*\{[^}]*--warn/);
+  it('a etapa acesa da trilha não usa a cor de aviso', () => {
+    expect(ler('../TrilhaDeEtapas.tsx')).not.toMatch(/agora:\s*\{[^}]*--warn/);
   });
 });
 
