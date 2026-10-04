@@ -68,7 +68,7 @@ function Utilitario({
 }
 
 export default function WorkspaceProjetoPage() {
-  const { abrirPasta, agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararRefazerTranscricao, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, notify, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, refazerTranscricao, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
+  const { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
   const listaVazia = listaVaziaDoWorkspace(busca, soNoAr);
 
 
@@ -91,9 +91,9 @@ export default function WorkspaceProjetoPage() {
       >
         <div style={{ flex: 1 }} />
 
-        {/* Cluster de utilitários: as ferramentas raras ficam recuadas, sem
-            borda própria, para não disputarem peso com as duas decisões da
-            direita. Cada uma leva a sua cor — a fileira toda em cinza some. */}
+        {/* D-867: reanalisar, refazer a transcrição, auditar e abrir a pasta
+            foram para o "Mais" do cabeçalho, com rótulo. Ficam aqui o gerar
+            trechos e o TikTok, que são do fluxo (D-870 os leva ao rodapé). */}
         <span
           style={{
             display: 'inline-flex',
@@ -105,34 +105,6 @@ export default function WorkspaceProjetoPage() {
             background: 'var(--inset)',
           }}
         >
-          <Utilitario
-            icone="hard-drive"
-            titulo="Abrir a pasta do projeto"
-            cor="var(--mute)"
-            onClick={() =>
-              abrirPasta.mutate(id, {
-                onError: (erro) =>
-                  notify(erro instanceof Error ? erro.message : 'Não consegui abrir a pasta.', {
-                    tone: 'error',
-                  }),
-              })
-            }
-            disabled={abrirPasta.isPending}
-          />
-          <Utilitario
-            icone="rotate-ccw"
-            titulo="Refazer transcrição — re-baixa as legendas em json3 e re-sincroniza todos os cortes."
-            cor="var(--accent)"
-            onClick={dispararRefazerTranscricao}
-            disabled={refazerTranscricao.isPending}
-          />
-          <Utilitario
-            icone={ICONE_DO_CONCEITO.auditar}
-            titulo="Auditar análise — ver por que a IA escolheu cada corte e o que foi descartado."
-            cor="var(--info)"
-            onClick={() => setAuditoriaAberta(true)}
-            disabled={cortes.length === 0}
-          />
           {/* Mesmo ícone da fileira, mas abre a escolha do provedor: aqui não
               cabe um grupo com texto sem quebrar o ritmo dos utilitários. */}
           <MenuDeIa
@@ -153,10 +125,6 @@ export default function WorkspaceProjetoPage() {
           />
         </span>
 
-        <button type="button" className="btn" onClick={() => setAnaliseAberta(true)}>
-          <Icon name="brain" />
-          Reanalisar
-        </button>
         {/* D-439: o lote só abre com todos prontos. O `title` no invólucro
             porque botão desabilitado não recebe eventos — sem ele o motivo
             do bloqueio nunca apareceria. */}

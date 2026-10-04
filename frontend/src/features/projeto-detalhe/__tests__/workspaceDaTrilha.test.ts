@@ -38,9 +38,9 @@ describe('Workspace sem os cartões e sem a faixa de etapas', () => {
     expect(pagina).not.toMatch(/etapas\.map/);
   });
 
-  it('as ações do projeto continuam na tela', () => {
-    expect(pagina).toContain('Abrir a pasta do projeto');
-    expect(pagina).toContain('Reanalisar');
+  it('as ações do projeto continuam ao alcance', () => {
+    // D-867: reanalisar, refazer a transcrição, auditar e abrir a pasta foram
+    // para o "Mais" do cabeçalho (acoesDoWorkspace.test); o gerar trechos fica.
     expect(pagina).toContain('Gerar trechos de todos os cortes');
   });
 });
