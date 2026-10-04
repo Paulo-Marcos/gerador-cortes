@@ -22,8 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `personagens`. To get the tag, update your channel's thumbnail scaffold in
   Canais (D-840).
 - **Choose Chrome or Edge for the TikTok and Instagram robot.** Settings →
-  Aplicação has a new "Navegador do robô" choice, saved per channel; Chrome
-  stays the default. Edge gets its own session folder next to Chrome's
+  Aplicação has a new "Navegador do robô" choice, saved per channel; Edge is
+  the default (D-873). Edge gets its own session folder next to Chrome's
   (`browser/tiktok-edge`): Chrome encrypts its cookies with a key Edge cannot
   open, so sharing the folder would log both out. Log in once in the Edge
   window the first time (D-832).
@@ -153,6 +153,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   switcher (its tooltip and the shortcut it announces to screen readers),
   the frame and the list now follow the editor; in the Workspace J
   moves up the list and K down (D-865).
+- **"Publish on its own" finishes on TikTok.** Most of the time TikTok answers
+  the Publish click with a "Publicar agora" (Post now) dialog, and the robot
+  waited two minutes for a page change that only that second click brings,
+  then reported the step as failed. It now confirms the dialog; the proof of
+  publishing is still the tab leaving the upload page (D-873).
+- **The TikTok and Instagram robot opens Edge, not Chrome, by default.** A
+  channel that never chose a browser now gets Edge; Chrome is still a choice
+  in Settings. The first time, log in once in the Edge window (D-873).
 - **A Remotion upgrade in the lockfile always rebuilds the bundle.** The bundle
   cache told "something changed" by each file's size and date, and on Windows
   two writes in a row can share the same timestamp: `4.0.502` → `4.0.503` has
