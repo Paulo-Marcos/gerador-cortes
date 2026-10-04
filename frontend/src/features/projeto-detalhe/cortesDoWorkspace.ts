@@ -127,6 +127,16 @@ export function selecionadosVisiveis(
   return new Set(linhas.map((l) => l.status.corte_id).filter((id) => selecionados.has(id)));
 }
 
+/** Os cortes sobre os quais o lote age: selecionados E visíveis. */
+export function alvosDoLote<C extends { id: string }>(
+  cortes: C[],
+  selecao: ReadonlySet<string>,
+  linhas: ReadonlyArray<{ status: { corte_id: string } }>,
+): C[] {
+  const visiveis = selecionadosVisiveis(selecao, linhas);
+  return cortes.filter((c) => visiveis.has(c.id));
+}
+
 /** ▲/▼ trocam o corte com o vizinho na ordem da LIVE; com a lista filtrada o
  *  vizinho pode estar escondido, e o clique reordenaria às cegas. */
 export function podeReordenar(busca: string, soNoAr: boolean): boolean {

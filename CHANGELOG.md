@@ -52,9 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a ✓ when done and a count ("3 de 9"). The open screen's step is lit; on
   the Workspace, the step where the live stopped. Revisão counts the cuts
   ready to publish ("N de M prontos"). A cut already on air counts as done
-  in every step before it, and a cleaned-up live counts as finished — Pós
-  and Revisão count every approved cut, since "Limpar" deletes the videos —
-  so an old live does not look stuck.
+  in every step before it, and a cleaned-up live counts as finished: since
+  "Limpar" deletes the videos, Pós counts every approved cut and Revisão
+  only asks for the metadata — so an old live does not look stuck.
   Baixado and Analisado lead to the Workspace; Publicado opens it with a new
   "No ar" filter, shown as a chip that turns it off. The cards and the band
   are gone from the Workspace; what only the cards said (scheduled uploads,

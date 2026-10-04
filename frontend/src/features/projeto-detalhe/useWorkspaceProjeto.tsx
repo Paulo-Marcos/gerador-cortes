@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import {
+  alvosDoLote,
   linhaPassaNoFiltro,
   mesclarCortesComExport,
   selecionadosVisiveis,
@@ -132,7 +133,7 @@ export function useWorkspaceProjeto() {
     });
 
   async function aplicarEmLote(acao: 'aprovar' | 'devolver') {
-    const alvos = cortes.filter((c) => selecionados.has(c.id));
+    const alvos = alvosDoLote(cortes, selecao, linhas);
     const elegiveis = alvos.filter((c) =>
       acao === 'aprovar' ? c.status === 'proposto' : ['aprovado', 'processado'].includes(c.status),
     );

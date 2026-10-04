@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import {
+  alvosDoLote,
   linhaPassaNoFiltro,
   listaVaziaDoWorkspace,
   podeReordenar,
@@ -107,6 +108,13 @@ describe('filtro "No ar" · o que a auditoria pegou', () => {
   it('o lote age só sobre os selecionados que estão na tela', () => {
     expect([...selecionadosVisiveis(new Set(['a', 'x']), linhas)]).toEqual(['a']);
     expect(hook).toContain('selecionadosVisiveis(selecao, linhas)');
+  });
+
+  it('os alvos do lote são os cortes selecionados E visíveis', () => {
+    const cortes = [{ id: 'a' }, { id: 'b' }, { id: 'x' }];
+    // 'x' foi selecionado e depois escondido pelo filtro: fica fora do lote.
+    expect(alvosDoLote(cortes, new Set(['a', 'x']), linhas).map((c) => c.id)).toEqual(['a']);
+    expect(hook).toContain('alvosDoLote(cortes, selecao, linhas)');
   });
 
   it('▲/▼ ficam desligados com a lista filtrada ou buscada', () => {

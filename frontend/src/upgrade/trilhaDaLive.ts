@@ -135,9 +135,10 @@ function passosDaLive(dados: DadosDaLive): Passo[] {
     doExport.filter((e) => Boolean(e[campo]) || Boolean(e.youtube_url_publicado)).length;
   // Live limpa é live encerrada (decisão do Paulo): o Limpar apaga o vídeo
   // também de quem só subiu no TikTok ou não subiu, então o que vem do disco
-  // (vídeo pronto, pronto para publicar) deixa de ser fonte de verdade.
-  const doDisco = (campo: 'video_pronto' | 'pronto_publicar') =>
-    dados.arquivosLimpos ? aprovados : quantos(campo);
+  // (vídeo, capa) deixa de ser fonte de verdade e conta como feito. Os
+  // metadados moram no banco: na Revisão, eles continuam valendo.
+  const renderizados = dados.arquivosLimpos ? aprovados : quantos('video_pronto');
+  const prontos = quantos(dados.arquivosLimpos ? 'metadados_completos' : 'pronto_publicar');
 
   const baixado = total > 0 || STATUS_JA_BAIXADO.has(dados.statusDoProjeto ?? '');
   const analisado = total > 0 || dados.statusDoProjeto === 'analisado';
@@ -161,11 +162,11 @@ function passosDaLive(dados: DadosDaLive): Passo[] {
       // Feito quando nenhum corte espera decisão e ao menos um foi aprovado.
       feita: aprovados > 0 && vivos.every((c) => c.status !== 'proposto'),
     },
-    sobreAprovados('pos', 'Pós', doDisco('video_pronto'), aprovados),
+    sobreAprovados('pos', 'Pós', renderizados, aprovados),
     sobreAprovados('metadados', 'Metadados', quantos('metadados_completos'), aprovados),
     // Revisão feita = o corte está pronto para publicar (vídeo, capa e
     // metadados) — decisão do Paulo, Onda 3.
-    sobreAprovados('revisao', 'Revisão', doDisco('pronto_publicar'), aprovados, ' prontos'),
+    sobreAprovados('revisao', 'Revisão', prontos, aprovados, ' prontos'),
     sobreAprovados('publicado', 'Publicado', quantos('youtube_url_publicado'), aprovados),
   ];
 }
