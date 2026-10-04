@@ -10,6 +10,7 @@ import {
   semFiltroNoAr,
   subDoWorkspace,
 } from '@/features/projeto-detalhe/cortesDoWorkspace';
+import { acoesDoWorkspace } from '@/features/projeto-detalhe/acoesDoWorkspace';
 import { avaliarProntidaoPublicacao } from '@/features/projeto-detalhe/prontidaoPublicacao';
 import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/features/editor/useCortes';
 import {
@@ -38,6 +39,23 @@ import type { CorteFiltro } from './WorkspaceProjetoPage';
 
 // D-729: o container de WorkspaceProjetoPage — estado, efeitos e ações. A view, em
 // WorkspaceProjetoPage.tsx, só desenha o que este hook devolve.
+/** D-867: abrir a pasta saiu da tela para o "Mais" do cabeçalho; o aviso de
+ *  erro, que morava no botão, vem junto. */
+function useAbrirPastaDoProjeto(id: string) {
+  const abrirPasta = useAbrirPastaProjeto();
+  const { notify } = useToast();
+  return {
+    abrindo: abrirPasta.isPending,
+    abrir: () =>
+      abrirPasta.mutate(id, {
+        onError: (erro) =>
+          notify(erro instanceof Error ? erro.message : 'Não consegui abrir a pasta.', {
+            tone: 'error',
+          }),
+      }),
+  };
+}
+
 export function useWorkspaceProjeto() {
   const { id = '' } = useParams<{ id: string }>();
   const { notify } = useToast();
@@ -48,7 +66,7 @@ export function useWorkspaceProjeto() {
   const progresso = useProjetoProgressoWS(id);
   const analiseEmVoo = useAnaliseClaudeEmAndamento(id);
 
-  const abrirPasta = useAbrirPastaProjeto();
+  const pasta = useAbrirPastaDoProjeto(id);
   const refazerTranscricao = useRefazerTranscricao(id);
   const analisarDesviosTodos = useAnalisarDesviosTodos(id);
   const confirmacao = useConfirmacao();
@@ -310,18 +328,17 @@ export function useWorkspaceProjeto() {
         arquivosLimpos: Boolean(dados?.arquivos_limpos),
       }),
       rotulos: [dados?.titulo_live ?? 'live'],
-      acoes: [
-        ...(dados?.youtube_url
-          ? [
-              {
-                icone: 'external-link' as const,
-                texto: 'Ver no YouTube',
-                onClick: () => window.open(dados.youtube_url, '_blank', 'noopener,noreferrer'),
-              },
-            ]
-          : []),
-        { icone: 'plus' as const, texto: 'Novo corte', onClick: () => setNovoCorteAberto(true) },
-      ],
+      acoes: acoesDoWorkspace({
+        youtubeUrl: dados?.youtube_url,
+        temCortes: cortes.length > 0,
+        abrindoPasta: pasta.abrindo,
+        refazendoTranscricao: refazerTranscricao.isPending,
+        novoCorte: () => setNovoCorteAberto(true),
+        reanalisar: () => setAnaliseAberta(true),
+        refazerTranscricao: dispararRefazerTranscricao,
+        auditar: () => setAuditoriaAberta(true),
+        abrirPasta: pasta.abrir,
+      }),
       // "nada a publicar" nao e alarme: e a live fechada. Pintar de amarelo
       // fazia o estado terminal parecer pendencia.
       estado:
@@ -356,8 +373,9 @@ export function useWorkspaceProjeto() {
       publicados,
       agendados,
       prontidao,
+      pasta.abrindo, refazerTranscricao.isPending,
     ],
   );
 
-  return { abrirPasta, agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararRefazerTranscricao, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, notify, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, refazerTranscricao, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
+  return { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
 }

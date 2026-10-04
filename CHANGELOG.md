@@ -44,6 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **Rare Workspace actions moved to a "Mais" menu.** Reanalisar, refazer
+  transcrição, auditar análise and abrir a pasta were a row of unlabeled
+  icons, each in its own color, in the middle of the screen. They are now
+  labeled items in a "⋯ Mais" menu in the Workspace header, next to "Ver no
+  YouTube" and "Novo corte"; "Auditar análise" explains why it is off when
+  the live has no cuts. Screen headers can declare such a menu on any screen
+  (D-867).
 - **One trail of steps for a live.** A live had three step rulers with
   different names: the strip under the top bar (Workspace · Cortes · Pós ·
   Metadados · Revisão), the Workspace's "Etapas da live" band and its four

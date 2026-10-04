@@ -1,4 +1,5 @@
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { OverflowMenu, type OverflowMenuItem } from '@/components/ui/overflow-menu';
 import type { ProviderIA } from '@/lib/providerIa';
 import { Icon, type IconName } from './Icon';
 
@@ -29,6 +30,9 @@ export type ScreenAction = {
    *  o AcaoDeIa (antes era ignorado, e "Analisar padrões" saía com o brilho
    *  em vez do cérebro — D-858). */
   ia?: { emVoo: ProviderIA | null; onGerar: (provider: ProviderIA) => void };
+  /** D-867: ação que abre um menu — o "Mais" (⋯) das ações raras da tela.
+   *  Com isto, `onClick` é ignorado e o `texto` vira o rótulo do gatilho. */
+  menu?: OverflowMenuItem[];
 };
 
 type ScreenHeaderProps = {
@@ -42,7 +46,9 @@ export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
   return (
     <>
       {acoes.map((a) =>
-        a.ia ? (
+        a.menu ? (
+          <OverflowMenu key={a.texto} items={a.menu} texto={a.texto} align="right" />
+        ) : a.ia ? (
           <AcaoDeIa
             key={a.texto}
             rotulo={a.texto}

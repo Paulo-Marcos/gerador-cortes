@@ -36,7 +36,60 @@ interface Props {
   align?: 'left' | 'right';
   /** Gatilho compacto (26px) para cantos apertados. */
   compact?: boolean;
+  /** D-867: gatilho com rótulo ("⋯ Mais"), da família dos botões do
+   *  cabeçalho. Sem isto, o gatilho é só o ícone. */
+  texto?: string;
   className?: string;
+}
+
+/** O botão que abre o menu: só o ⋯, ou "⋯ Mais" com rótulo (D-867), da
+ *  família dos botões do cabeçalho — aí o texto visível é o nome dele. */
+function Gatilho({
+  texto,
+  label,
+  compact,
+  open,
+  onAlternar,
+}: {
+  texto?: string;
+  label: string;
+  compact: boolean;
+  open: boolean;
+  onAlternar: () => void;
+}) {
+  if (texto) {
+    return (
+      <button
+        type="button"
+        className="btn"
+        onClick={onAlternar}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <Icon name="more-horizontal" />
+        {texto}
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onAlternar}
+      aria-label={label}
+      title={label}
+      aria-haspopup="menu"
+      aria-expanded={open}
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-[7px] font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        compact ? 'h-[26px] w-[26px]' : 'h-7 w-7',
+        open
+          ? 'bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
+          : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+      )}
+    >
+      <Icon name="more-horizontal" />
+    </button>
+  );
 }
 
 export function OverflowMenu({
@@ -44,6 +97,7 @@ export function OverflowMenu({
   label = 'Mais ações',
   align = 'right',
   compact = false,
+  texto,
   className,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -74,23 +128,13 @@ export function OverflowMenu({
       className={cn('relative', className)}
       onClick={(event) => event.stopPropagation()}
     >
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-label={label}
-        title={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className={cn(
-          'flex shrink-0 items-center justify-center rounded-[7px] font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-          compact ? 'h-[26px] w-[26px]' : 'h-7 w-7',
-          open
-            ? 'bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
-            : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-        )}
-      >
-        <Icon name="more-horizontal" />
-      </button>
+      <Gatilho
+        texto={texto}
+        label={label}
+        compact={compact}
+        open={open}
+        onAlternar={() => setOpen((current) => !current)}
+      />
 
       {open && (
         <div
