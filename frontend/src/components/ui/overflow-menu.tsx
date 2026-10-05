@@ -166,6 +166,30 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
   );
 }
 
+/**
+ * Menu aberto fecha com Esc e com clique fora dele. Fora do componente para
+ * ter teste: fechar por aqui também avisa quem pediu (`onAbertoMudou`) — sem
+ * isso a linha do corte ficava com as teclas mudas até reabrir o ⋯ (D-868).
+ */
+export function ouvirFechamento(
+  doc: Pick<Document, 'addEventListener' | 'removeEventListener'>,
+  menu: () => HTMLElement | null,
+  fechar: () => void,
+): () => void {
+  const onPointerDown = (event: MouseEvent) => {
+    if (!menu()?.contains(event.target as Node)) fechar();
+  };
+  const onKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') fechar();
+  };
+  doc.addEventListener('mousedown', onPointerDown);
+  doc.addEventListener('keydown', onKey);
+  return () => {
+    doc.removeEventListener('mousedown', onPointerDown);
+    doc.removeEventListener('keydown', onKey);
+  };
+}
+
 export function OverflowMenu({
   items,
   label = 'Mais ações',
@@ -186,18 +210,7 @@ export function OverflowMenu({
 
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) fechar();
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') fechar();
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKey);
-    };
+    return ouvirFechamento(document, () => wrapRef.current, fechar);
   }, [open]);
 
   return (

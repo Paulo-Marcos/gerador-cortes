@@ -25,6 +25,7 @@ const h = vi.hoisted(() => ({
   pasta: vi.fn(),
   pastaPendente: false,
   janelaLarga: true,
+  limiares: [] as number[],
   primario: undefined as Record<string, () => void> | undefined,
   mais: undefined as
     | { items: OverflowMenuItem[]; label?: string; grande?: boolean; onAbertoMudou?: unknown }
@@ -47,7 +48,10 @@ vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', async (original) => ({
 }));
 vi.mock('@/upgrade/medidas', async (original) => ({
   ...(await original<typeof import('@/upgrade/medidas')>()),
-  useJanelaMin: () => h.janelaLarga,
+  useJanelaMin: (px: number) => {
+    h.limiares.push(px);
+    return h.janelaLarga;
+  },
 }));
 vi.mock('../acoesDaLinha', async (original) => {
   const real = await original<typeof import('../acoesDaLinha')>();
@@ -71,7 +75,40 @@ afterEach(() => {
   vi.clearAllMocks();
   h.pastaPendente = false;
   h.janelaLarga = true;
+  h.limiares = [];
 });
+
+type No = ReactElement<{ children?: unknown; onClick?: () => void; className?: string }>;
+
+/** Os elementos que a linha devolve, descendo pelos `children` (sem
+ *  renderizar os componentes filhos) — é onde moram os onClick da linha. */
+function elementos(raiz: unknown): No[] {
+  if (Array.isArray(raiz)) return raiz.flatMap(elementos);
+  if (!raiz || typeof raiz !== 'object' || !('props' in raiz)) return [];
+  const no = raiz as No;
+  return [no, ...elementos(no.props.children)];
+}
+
+/** O texto que um elemento desenha, juntando o dos filhos. */
+function textoDe(no: unknown): string {
+  if (typeof no === 'string') return no;
+  if (Array.isArray(no)) return no.map(textoDe).join('');
+  if (no && typeof no === 'object' && 'props' in no) return textoDe((no as No).props.children);
+  return '';
+}
+
+function arvoreDaLinha(corte: Partial<Corte> = {}, status: Partial<StatusExportCorte> = {}) {
+  let artigo: No | undefined;
+  function Sonda() {
+    artigo = CorteLinhaAp(propsDaLinha(corte, status)) as No;
+    return artigo;
+  }
+  comProvedores(<Sonda />);
+  return elementos(artigo);
+}
+
+const botao = (arvore: No[], texto: string) =>
+  arvore.find((e) => e.type === 'button' && textoDe(e).trim() === texto)!;
 
 const props = {
   onEnviarYoutube: vi.fn(),
@@ -188,6 +225,22 @@ describe('CorteLinhaAp · o principal faz o que diz (D-868)', () => {
     expect(props.onEnviarYoutube).toHaveBeenCalledOnce();
   });
 
+  it('Editar abre o corte no editor', () => {
+    botao(arvoreDaLinha(), 'Editar').props.onClick!();
+    expect(h.navegar).toHaveBeenCalledWith('/projetos/p1/cortes/c7');
+  });
+
+  it('o principal forte é o do botão primário; Aprovar é o comum', () => {
+    expect(botao(arvoreDaLinha({ status: 'aprovado' }), 'Finalizar').props.className).toBe('btn btn-pri');
+    expect(botao(arvoreDaLinha(), 'Aprovar').props.className).toBe('btn');
+  });
+
+  it('aprovar que falha avisa (D-746)', () => {
+    desenhar({});
+    h.primario!.aprovar();
+    expect(typeof h.aprovar.mock.calls[0][1].onError).toBe('function');
+  });
+
   it('No ar abre o vídeo numa aba nova, sem acesso à janela do app', () => {
     const abrir = vi.fn();
     vi.stubGlobal('window', { open: abrir });
@@ -293,6 +346,14 @@ describe('CorteLinhaAp · a barra e a largura (D-868)', () => {
     const html = linha(desenhar({}));
     expect(html).toContain('grid-template-columns:16px 24px 96px minmax(0, 1fr) 190px auto');
     expect(html).not.toContain('max-width:260px');
+  });
+
+  it('a régua da largura é a de 1200 px, e a barra aparece uma vez só nos dois layouts', () => {
+    desenhar({});
+    expect(h.limiares).toContain(1200);
+    expect(linha(desenhar({})).match(/data-estado="/g)).toHaveLength(8);
+    h.janelaLarga = false;
+    expect(linha(desenhar({})).match(/data-estado="/g)).toHaveLength(8);
   });
 
   it('janela estreita: a barra desce para baixo do título, que não perde espaço', () => {

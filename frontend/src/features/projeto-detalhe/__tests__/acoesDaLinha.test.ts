@@ -110,4 +110,12 @@ describe('maisDaLinha', () => {
     ]);
     expect(montar({ publicado: true }).itens.at(-1)!.icon).toBe('rotate-ccw');
   });
+
+  it('as dicas dos itens dizem o que acontece', () => {
+    const dica = (rotulo: string, extra = {}) =>
+      montar(extra).itens.find((i) => i.label === rotulo)!.title;
+    expect(dica('Metadados do corte')).toBe('Abre aqui, sem sair da lista');
+    expect(dica('Informar a URL publicada')).toMatch(/já publicado no YouTube/);
+    expect(dica('Liberar publicação', { publicado: true })).toBe('Liberar para subir de novo');
+  });
 });

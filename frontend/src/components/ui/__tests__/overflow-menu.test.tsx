@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { Children, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GatilhoDoMenu, ItemDoMenu, OverflowMenu } from '../overflow-menu';
+import { GatilhoDoMenu, ItemDoMenu, OverflowMenu, ouvirFechamento } from '../overflow-menu';
 import { AcoesDaTela } from '@/upgrade/ScreenHeader';
 
 // D-861: desde a D-857 o item do menu recebe o NOME do ícone e o menu o desenha
@@ -238,5 +240,48 @@ describe('GatilhoDoMenu grande (D-868)', () => {
     const base = { label: 'Mais ações', compact: false, open: false, onAlternar: vi.fn() };
     expect(GatilhoDoMenu({ ...base, grande: true }).props.className).toContain('h-8 w-8');
     expect(GatilhoDoMenu(base).props.className).toContain('h-7 w-7');
+  });
+});
+
+describe('ouvirFechamento (D-868)', () => {
+  function montar() {
+    const ouvintes: Record<string, (e: unknown) => void> = {};
+    const doc = {
+      addEventListener: (tipo: string, fn: (e: unknown) => void) => (ouvintes[tipo] = fn),
+      removeEventListener: (tipo: string) => delete ouvintes[tipo],
+    };
+    const dentro = {};
+    const menu = { contains: (n: unknown) => n === dentro } as unknown as HTMLElement;
+    const fechar = vi.fn();
+    const parar = ouvirFechamento(doc as never, () => menu, fechar);
+    return { ouvintes, dentro, fechar, parar };
+  }
+
+  it('Esc fecha; outra tecla não', () => {
+    const { ouvintes, fechar } = montar();
+    ouvintes.keydown({ key: 'k' });
+    expect(fechar).not.toHaveBeenCalled();
+    ouvintes.keydown({ key: 'Escape' });
+    expect(fechar).toHaveBeenCalledOnce();
+  });
+
+  it('clique fora fecha; clique dentro não', () => {
+    const { ouvintes, dentro, fechar } = montar();
+    ouvintes.mousedown({ target: dentro });
+    expect(fechar).not.toHaveBeenCalled();
+    ouvintes.mousedown({ target: {} });
+    expect(fechar).toHaveBeenCalledOnce();
+  });
+
+  it('para de ouvir quando o menu fecha', () => {
+    const { ouvintes, parar } = montar();
+    parar();
+    expect(Object.keys(ouvintes)).toEqual([]);
+  });
+
+  it('o menu liga a escuta ao fechar que avisa quem pediu', () => {
+    const fonte = readFileSync(resolve(__dirname, '../overflow-menu.tsx'), 'utf8');
+    expect(fonte).toContain('return ouvirFechamento(document, () => wrapRef.current, fechar);');
+    expect(fonte).toContain('const fechar = useEffectEvent(() => mudar(false));');
   });
 });

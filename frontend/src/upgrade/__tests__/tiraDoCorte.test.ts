@@ -163,6 +163,9 @@ describe('resumoDaLinha', () => {
     expect(renderToStaticMarkup(createElement(TiraMini, { tira: t }))).toContain(
       'próximo: renderizar overlays',
     );
+    expect(renderToStaticMarkup(createElement(TiraDoCorteAp, { tira: t }))).toContain(
+      'próximo: renderizar overlays',
+    );
   });
 
   it('rejeitado: diz isso, sem próxima etapa', () => {
