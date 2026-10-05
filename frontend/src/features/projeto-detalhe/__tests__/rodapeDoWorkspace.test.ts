@@ -35,6 +35,9 @@ function dados(extra: Partial<DadosDoRodape> = {}): DadosDoRodape {
     statusList: [exportado('a', { video_pronto: true }), exportado('b', { video_pronto: true })],
     prontidao: prontidao(2, true),
     arquivosLimpos: false,
+    carregando: false,
+    analisando: false,
+    statusDoProjeto: 'analisado',
     ...extra,
   };
 }
@@ -42,6 +45,25 @@ function dados(extra: Partial<DadosDoRodape> = {}): DadosDoRodape {
 describe('proximaAcaoDaLive', () => {
   it('live sem cortes: analisar', () => {
     expect(proximaAcaoDaLive(dados({ cortes: [], statusList: [] }))).toEqual({ tipo: 'analisar' });
+  });
+
+  it('carregando, analisando ou preparando a live, nunca oferece analisar (achado da pr-audit)', () => {
+    const vazia = { cortes: [], statusList: [] };
+    expect(proximaAcaoDaLive(dados({ ...vazia, carregando: true }))).toEqual({ tipo: 'carregando' });
+    expect(proximaAcaoDaLive(dados({ ...vazia, analisando: true }))).toEqual({ tipo: 'analisando' });
+    for (const status of ['pendente', 'baixando', 'transcrevendo'])
+      expect(proximaAcaoDaLive(dados({ ...vazia, statusDoProjeto: status }))).toEqual({
+        tipo: 'preparando',
+      });
+    // Carregando vence tudo: com cortes que ainda não chegaram, nada é certo.
+    expect(proximaAcaoDaLive(dados({ carregando: true })).tipo).toBe('carregando');
+  });
+
+  it('um proposto só já pede aprovar', () => {
+    expect(proximaAcaoDaLive(dados({ cortes: [corte('a', 1, 'proposto')] }))).toEqual({
+      tipo: 'aprovar',
+      quantos: 1,
+    });
   });
 
   it('com propostos, o primeiro passo é aprovar os N propostos', () => {
@@ -53,7 +75,8 @@ describe('proximaAcaoDaLive', () => {
 
   it('sem propostos, renderizar o primeiro aprovado sem render, na ordem da live', () => {
     const d = dados({
-      cortes: [corte('a', 1, 'aprovado'), corte('b', 2, 'processado'), corte('c', 3, 'aprovado')],
+      // Fora de ordem de propósito: o passo segue o número, não a lista.
+      cortes: [corte('c', 3, 'aprovado'), corte('b', 2, 'processado'), corte('a', 1, 'aprovado')],
       statusList: [exportado('a', { video_pronto: true }), exportado('b'), exportado('c')],
     });
     expect(proximaAcaoDaLive(d)).toEqual({ tipo: 'renderizar', corteId: 'b', numero: 2 });
@@ -68,9 +91,13 @@ describe('proximaAcaoDaLive', () => {
     expect(proximaAcaoDaLive(d)).toEqual({ tipo: 'no-ar' });
   });
 
-  it('live limpa (encerrada, D-866) não manda renderizar o que teve o vídeo apagado', () => {
-    const d = dados({ statusList: [exportado('a'), exportado('b')], arquivosLimpos: true });
-    expect(proximaAcaoDaLive(d).tipo).toBe('publicar');
+  it('live limpa (encerrada, D-866) não manda renderizar; com pendência, está encerrada', () => {
+    const d = dados({
+      statusList: [exportado('a'), exportado('b')],
+      arquivosLimpos: true,
+      prontidao: prontidao(2, false, 'falta render final'),
+    });
+    expect(proximaAcaoDaLive(d)).toEqual({ tipo: 'encerrada' });
   });
 
   it('tudo renderizado: publicar — liberado ou não, com o motivo', () => {
@@ -99,7 +126,7 @@ describe('barraDoWorkspace', () => {
 
   it('cada passo vira o botão principal do rodapé, com o verbo e a ação certos', () => {
     const fns = h();
-    const p = (acao: Parameters<typeof barraDoWorkspace>[0]) => barraDoWorkspace(acao, fns).primario;
+    const p = (acao: Parameters<typeof barraDoWorkspace>[0]) => barraDoWorkspace(acao, fns)!.primario;
 
     expect(p({ tipo: 'analisar' }).texto).toBe('Analisar com a IA');
     p({ tipo: 'analisar' }).onClick!();
@@ -125,21 +152,38 @@ describe('barraDoWorkspace', () => {
   });
 
   it('publicar ainda não liberado fica visível e apagado, dizendo por quê', () => {
-    const p = barraDoWorkspace({ tipo: 'publicar', total: 1, liberado: false, motivo: 'falta capa' }, h()).primario;
+    const p = barraDoWorkspace({ tipo: 'publicar', total: 1, liberado: false, motivo: 'falta capa' }, h())!.primario;
     expect([p.texto, p.desabilitado, p.motivo]).toEqual(['Publicar 1 corte', true, 'falta capa']);
   });
 
-  it('tudo no ar: o botão fica, apagado, dizendo isso', () => {
-    const p = barraDoWorkspace({ tipo: 'no-ar' }, h()).primario;
-    expect([p.texto, p.desabilitado]).toEqual(['Tudo no ar', true]);
-    expect(p.motivo).toMatch(/nada a publicar/i);
+  it('estados finais sem alarme: apagados e sem motivo (o motivo sai em aviso)', () => {
+    for (const [tipo, texto] of [
+      ['no-ar', 'Tudo no ar'],
+      ['encerrada', 'Live encerrada'],
+    ] as const) {
+      const p = barraDoWorkspace({ tipo }, h())!.primario;
+      expect([p.texto, p.desabilitado, p.motivo]).toEqual([texto, true, undefined]);
+    }
   });
 
-  it('o lote de aprovação pede confirmação, dizendo quantos', () => {
+  it('carregando não tem botão; preparando e analisando ficam apagados, girando', () => {
+    expect(barraDoWorkspace({ tipo: 'carregando' }, h())).toBeUndefined();
+    for (const [tipo, texto] of [
+      ['preparando', 'Preparando a live…'],
+      ['analisando', 'Analisando a live…'],
+    ] as const) {
+      const p = barraDoWorkspace({ tipo }, h())!.primario;
+      expect([p.texto, p.icone, p.desabilitado]).toEqual([texto, 'loader', true]);
+    }
+  });
+
+  it('o lote de aprovação pede confirmação, dizendo quantos e que vale para a live toda', () => {
     expect(pedidoAprovarPropostos(3)).toMatchObject({
       titulo: 'Aprovar os 3 propostos',
       confirmLabel: 'Aprovar 3',
     });
+    expect(pedidoAprovarPropostos(3).descricao).toMatch(/inclusive os que a busca ou o filtro escondem/);
+    expect(pedidoAprovarPropostos(1).titulo).toBe('Aprovar o proposto');
   });
 });
 
@@ -160,35 +204,23 @@ describe('chipDaProntidao', () => {
   });
 });
 
-describe('o Workspace liga o rodapé', () => {
+// A ligação do passo ao hook é testada por comportamento em
+// useWorkspaceProjeto.rodape.test.tsx; aqui fica o que é da TELA.
+describe('a tela do Workspace e o rodapé', () => {
   const hook = readFileSync(resolve(__dirname, '../useWorkspaceProjeto.tsx'), 'utf8');
   const pagina = readFileSync(resolve(__dirname, '../WorkspaceProjetoPage.tsx'), 'utf8');
 
-  it('o passo vem dos dados da live, inclusive a live limpa', () => {
-    expect(hook).toMatch(
-      /proximaAcaoDaLive\(\{\s*cortes,\s*statusList,\s*prontidao,\s*arquivosLimpos: Boolean\(dados\?\.arquivos_limpos\),\s*\}\)/,
-    );
-  });
-
-  it('cada passo chama a ação certa da tela', () => {
-    expect(hook).toContain('analisar: () => setAnaliseAberta(true),');
-    expect(hook).toMatch(
-      /aprovarPropostos: \(n\) =>\s*confirmacao\.executarOuPedir\(pedidoAprovarPropostos\(n\), \(\) => void aplicarEmLote\('aprovar', cortes\)\)/,
-    );
-    expect(hook).toContain('renderizar: (corte) => navigate(`/projetos/${id}/post-production?corte=${corte}`),');
-    expect(hook).toContain('publicar: () => setPublicarAberto(true),');
-  });
-
-  it('aprovar os propostos usa o mesmo lote da seleção, com todos os cortes', () => {
-    expect(hook).toMatch(/async function aplicarEmLote\(\s*acao: 'aprovar' \| 'devolver',\s*alvos = alvosDoLote\(cortes, selecao, linhas\),/);
-  });
-
-  it('o rodapé republica quando o passo muda, por uma chave estável', () => {
-    expect(hook).toContain('JSON.stringify(proxima),');
-  });
-
-  it('o Publicar saiu da faixa: mora no rodapé', () => {
+  it('o Publicar saiu da faixa: mora no rodapé, e o modal abre pelo estado do hook', () => {
     expect(pagina).not.toContain('setPublicarAberto(true)');
     expect(pagina).not.toMatch(/Publicar \$\{prontidao\.total\}/);
+    expect(pagina).toMatch(/<PublicarMassaModal\s+open=\{publicarAberto\}/);
+  });
+
+  it('aprovar a live inteira não mexe na seleção manual; o lote da seleção a limpa, como antes', () => {
+    expect(hook).toContain('if (!falhas && !todos) setSelecionados(new Set());');
+  });
+
+  it('o handler capturado no rodapé se refaz quando os cortes mudam', () => {
+    expect(hook).toMatch(/prontidao,\s*cortes,/);
   });
 });

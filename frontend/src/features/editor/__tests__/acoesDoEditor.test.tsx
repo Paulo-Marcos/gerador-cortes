@@ -32,6 +32,8 @@ describe('acoesDoEditor', () => {
     });
     expect(acoes.map((a) => a.texto)).toEqual(['Mais']);
     expect(mais(acoes)!.menu!.map((i) => i.label)).toEqual(['Gerar bruto', 'Excluir corte']);
+    // Ocioso, a tesoura do bruto; o ícone que gira é só enquanto gera.
+    expect(mais(acoes)!.menu![0].icon).toBe('scissors');
   });
 
   it('bruto pronto vira "Regerar bruto"; ocupado gira; cada item chama a sua ação', () => {
@@ -78,8 +80,8 @@ describe('BancadaChrome publica o Mais no topo do editor', () => {
             fire={false}
             sujo={false}
             salvando={false}
-            brutoPronto={false}
-            brutoOcupado={false}
+            brutoPronto
+            brutoOcupado
             onToggleFire={vi.fn()}
             onAprovar={vi.fn()}
             onGerarBruto={gerar}
@@ -91,7 +93,10 @@ describe('BancadaChrome publica o Mais no topo do editor', () => {
     const acoes = (publicado as Chrome | null)!.acoes!;
     expect(acoes.map((a) => a.texto)).toEqual(['Mais']);
     const itens = acoes[0].menu!;
-    itens.find((i) => i.label === 'Gerar bruto')!.onClick!();
+    // O estado do bruto chega ao Mais: pronto vira "Regerar", ocupado gira.
+    const bruto = itens.find((i) => i.label === 'Regerar bruto')!;
+    expect(bruto.icon).toBe('loader');
+    bruto.onClick!();
     itens.find((i) => i.label === 'Excluir corte')!.onClick!();
     expect(gerar).toHaveBeenCalledOnce();
     expect(excluir).toHaveBeenCalledOnce();

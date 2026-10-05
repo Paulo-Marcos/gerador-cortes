@@ -74,6 +74,40 @@ function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['ve
   );
 }
 
+/**
+ * Por que o principal está desligado, escrito ao lado (D-746). D-870: no
+ * máximo duas linhas, com o texto inteiro no hover — a lista de pendências
+ * de uma live grande fazia a barra crescer a 90 px.
+ */
+function MotivoDoPrimario({ motivo }: { motivo: string }) {
+  return (
+    <span
+      id="motivo-do-primario"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        maxWidth: 320,
+        fontSize: 11.5,
+        color: 'var(--warn)',
+      }}
+    >
+      <Icon name="ban" style={{ flex: 'none' }} />
+      <span
+        title={motivo}
+        style={{
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {motivo}
+      </span>
+    </span>
+  );
+}
+
 export function ActionBar({ barra }: { barra: ChromeBarra }) {
   return (
     <div
@@ -174,20 +208,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       ) : null}
 
       {barra.primario.desabilitado && barra.primario.motivo ? (
-        <span
-          id="motivo-do-primario"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-            maxWidth: 320,
-            fontSize: 11.5,
-            color: 'var(--warn)',
-          }}
-        >
-          <Icon name="ban" style={{ flex: 'none' }} />
-          {barra.primario.motivo}
-        </span>
+        <MotivoDoPrimario motivo={barra.primario.motivo} />
       ) : null}
       <button
         type="button"

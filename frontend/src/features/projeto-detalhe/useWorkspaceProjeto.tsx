@@ -36,7 +36,7 @@ import type { ProviderIA } from '@/lib/providerIa';
 import { resolveThumbUrl } from '@/lib/api';
 import { cortesApi } from '@/features/editor/api/cortes';
 import { formatarDuracao } from '@/lib/utils';
-import type {  DestinoPublicacao, StatusExportCorte } from '@/types/models';
+import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { useCanais } from '@/features/channels/useChannels';
 import { filtroNoArLigado } from '@/upgrade/trilhaDaLive';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
@@ -156,10 +156,10 @@ export function useWorkspaceProjeto() {
       return proximo;
     });
 
-  async function aplicarEmLote(
-    acao: 'aprovar' | 'devolver',
-    alvos = alvosDoLote(cortes, selecao, linhas),
-  ) {
+  /** Sem `todos`, age sobre a seleção visível; com `todos` (o rodapé), sobre a
+   *  live inteira — e aí não mexe na seleção manual (decisão do Paulo). */
+  async function aplicarEmLote(acao: 'aprovar' | 'devolver', todos?: Corte[]) {
+    const alvos = todos ?? alvosDoLote(cortes, selecao, linhas);
     const elegiveis = alvos.filter((c) =>
       acao === 'aprovar' ? c.status === 'proposto' : ['aprovado', 'processado'].includes(c.status),
     );
@@ -190,7 +190,7 @@ export function useWorkspaceProjeto() {
         : `${feitos} corte(s) ${verbo}(s).`,
       { tone: falhas ? 'warning' : 'success' },
     );
-    if (!falhas) setSelecionados(new Set());
+    if (!falhas && !todos) setSelecionados(new Set());
     atualizarTudo();
   }
 
@@ -330,6 +330,9 @@ export function useWorkspaceProjeto() {
     statusList,
     prontidao,
     arquivosLimpos: Boolean(dados?.arquivos_limpos),
+    carregando: !dados || !cortesQuery.data,
+    analisando,
+    statusDoProjeto: dados?.status,
   });
   useDefinirChrome(
     {
@@ -365,15 +368,13 @@ export function useWorkspaceProjeto() {
       }),
     },
     [
-      dados?.titulo_live,
-      dados?.youtube_url,
-      dados?.arquivos_limpos,
+      dados?.titulo_live, dados?.youtube_url, dados?.arquivos_limpos,
       duracao,
       cortes.length,
       fires,
       publicados,
       agendados,
-      prontidao,
+      prontidao, cortes,
       pasta.abrindo, refazerTranscricao.isPending,
       // O passo é recriado a cada render: a chave estável evita republicar
       // a casca sem fim (efeito → casca → render → passo novo → efeito).

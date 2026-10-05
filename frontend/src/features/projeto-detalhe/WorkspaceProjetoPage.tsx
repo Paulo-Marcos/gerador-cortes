@@ -93,7 +93,7 @@ export default function WorkspaceProjetoPage() {
 
         {/* D-867: reanalisar, refazer a transcrição, auditar e abrir a pasta
             foram para o "Mais" do cabeçalho, com rótulo. Ficam aqui o gerar
-            trechos e o TikTok, que são do fluxo (D-870 os leva ao rodapé). */}
+            trechos (fora do rodapé por decisão do Paulo, D-870) e o TikTok. */}
         <span
           style={{
             display: 'inline-flex',
