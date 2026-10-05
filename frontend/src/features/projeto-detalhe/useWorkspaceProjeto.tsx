@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import {
@@ -11,6 +11,12 @@ import {
   subDoWorkspace,
 } from '@/features/projeto-detalhe/cortesDoWorkspace';
 import { acoesDoWorkspace } from '@/features/projeto-detalhe/acoesDoWorkspace';
+import {
+  barraDoWorkspace,
+  chipDaProntidao,
+  pedidoAprovarPropostos,
+  proximaAcaoDaLive,
+} from '@/features/projeto-detalhe/rodapeDoWorkspace';
 import { avaliarProntidaoPublicacao } from '@/features/projeto-detalhe/prontidaoPublicacao';
 import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/features/editor/useCortes';
 import {
@@ -150,8 +156,10 @@ export function useWorkspaceProjeto() {
       return proximo;
     });
 
-  async function aplicarEmLote(acao: 'aprovar' | 'devolver') {
-    const alvos = alvosDoLote(cortes, selecao, linhas);
+  async function aplicarEmLote(
+    acao: 'aprovar' | 'devolver',
+    alvos = alvosDoLote(cortes, selecao, linhas),
+  ) {
     const elegiveis = alvos.filter((c) =>
       acao === 'aprovar' ? c.status === 'proposto' : ['aprovado', 'processado'].includes(c.status),
     );
@@ -316,6 +324,13 @@ export function useWorkspaceProjeto() {
   const analisando = analiseEmVoo || dados?.status === 'analisando';
   const duracao = dados?.duracao_segundos ? formatarDuracao(dados.duracao_segundos) : '—';
 
+  const navigate = useNavigate();
+  const proxima = proximaAcaoDaLive({
+    cortes,
+    statusList,
+    prontidao,
+    arquivosLimpos: Boolean(dados?.arquivos_limpos),
+  });
   useDefinirChrome(
     {
       titulo: dados?.titulo_live || 'Workspace do projeto',
@@ -339,29 +354,15 @@ export function useWorkspaceProjeto() {
         auditar: () => setAuditoriaAberta(true),
         abrirPasta: pasta.abrir,
       }),
-      // "nada a publicar" nao e alarme: e a live fechada. Pintar de amarelo
-      // fazia o estado terminal parecer pendencia.
-      estado:
-        prontidao.total === 0
-          ? {
-              texto: 'nada a publicar',
-              icone: 'circle-check',
-              cor: 'var(--mute)',
-              bg: 'var(--inset)',
-            }
-          : prontidao.liberado
-            ? {
-                texto: 'lote pronto',
-                icone: 'circle-check',
-                cor: 'var(--ok)',
-                bg: 'var(--ok-soft)',
-              }
-            : {
-                texto: prontidao.resumo,
-                icone: 'triangle-alert',
-                cor: 'var(--warn)',
-                bg: 'var(--warn-soft)',
-              },
+      estado: chipDaProntidao(prontidao),
+      // D-870: o próximo passo da live no rodapé, como no editor.
+      barra: barraDoWorkspace(proxima, {
+        analisar: () => setAnaliseAberta(true),
+        aprovarPropostos: (n) =>
+          confirmacao.executarOuPedir(pedidoAprovarPropostos(n), () => void aplicarEmLote('aprovar', cortes)),
+        renderizar: (corte) => navigate(`/projetos/${id}/post-production?corte=${corte}`),
+        publicar: () => setPublicarAberto(true),
+      }),
     },
     [
       dados?.titulo_live,
@@ -374,6 +375,9 @@ export function useWorkspaceProjeto() {
       agendados,
       prontidao,
       pasta.abrindo, refazerTranscricao.isPending,
+      // O passo é recriado a cada render: a chave estável evita republicar
+      // a casca sem fim (efeito → casca → render → passo novo → efeito).
+      JSON.stringify(proxima),
     ],
   );
 

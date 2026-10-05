@@ -124,24 +124,8 @@ export default function WorkspaceProjetoPage() {
             onClick={() => setTiktokAberto(true)}
           />
         </span>
-
-        {/* D-439: o lote só abre com todos prontos. O `title` no invólucro
-            porque botão desabilitado não recebe eventos — sem ele o motivo
-            do bloqueio nunca apareceria. */}
-        <span style={{ display: 'inline-flex' }} title={prontidao.detalhe}>
-          <button
-            type="button"
-            className="btn btn-pri"
-            disabled={!prontidao.liberado}
-            onClick={() => setPublicarAberto(true)}
-            style={prontidao.liberado ? undefined : { opacity: 0.45, cursor: 'not-allowed' }}
-          >
-            <Icon name={ICONE_DO_CONCEITO.publicar} />
-            {prontidao.total === 0
-              ? 'Nada a publicar'
-              : `Publicar ${prontidao.total} ${prontidao.total === 1 ? 'corte' : 'cortes'}`}
-          </button>
-        </span>
+        {/* D-870: o Publicar desceu para o rodapé, onde mora o próximo passo
+            da live (rodapeDoWorkspace). */}
       </div>
 
       {/* D-746: a análise da live só aparecia dentro do modal — fechado, não
