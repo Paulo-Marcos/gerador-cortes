@@ -30,6 +30,13 @@ describe('estadoDaLinha', () => {
     expect(estadoDaLinha(corte('aprovado'), status({ youtube_url_publicado: 'u' }))).toBe('publicado');
     expect(estadoDaLinha(corte('rejeitado'), status())).toBe('rejeitado');
   });
+
+  it('a ordem decide: no ar vence tudo; rejeitado vence pronto; pronto vence aprovado', () => {
+    expect(estadoDaLinha(corte('rejeitado'), status({ youtube_url_publicado: 'u' }))).toBe('publicado');
+    expect(estadoDaLinha(corte('rejeitado'), status({ pronto_publicar: true }))).toBe('rejeitado');
+    expect(estadoDaLinha(corte('proposto'), status({ pronto_publicar: true }))).toBe('pronto');
+    expect(estadoDaLinha(undefined, status())).toBe('proposto');
+  });
 });
 
 describe('primarioDaLinha', () => {
@@ -95,8 +102,12 @@ describe('maisDaLinha', () => {
   it('a pasta fica desligada enquanto abre; ícones pelos conceitos', () => {
     const { itens } = montar({ abrindoPasta: true });
     expect(itens.find((i) => i.label === 'Abrir a pasta do corte')!.disabled).toBe(true);
-    expect(itens.find((i) => i.label === 'Informar a URL publicada')!.icon).toBe(
+    expect(itens.map((i) => i.icon)).toEqual([
+      'clapperboard',
+      'tags',
+      'folder',
       ICONE_DO_CONCEITO.urlPublicada,
-    );
+    ]);
+    expect(montar({ publicado: true }).itens.at(-1)!.icon).toBe('rotate-ccw');
   });
 });

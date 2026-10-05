@@ -41,7 +41,8 @@ describe('montarTira', () => {
     const t = montarTira(status({ raw_pronto: true, cenas_validadas: true }));
     expect(estados(t)).toMatchObject({ BRU: 'feito', CEN: 'feito', GRD: 'agora', FIN: 'falta', YT: 'falta' });
     expect(t.contagem).toBe('2/8');
-    expect(textoDaProxima(t)).toBe('próximo: graded');
+    // D-868: o mesmo verbo da linha do Workspace.
+    expect(textoDaProxima(t)).toBe('próximo: aplicar filtro');
   });
 
   it('renderizado e sem capa aponta a capa, não o YouTube', () => {
@@ -125,7 +126,7 @@ describe('resumoDaLinha', () => {
       .map((p) => p.verbo);
     expect(verbos).toEqual([
       'gerar bruto',
-      'validar cenas',
+      'gerar cenas',
       'aplicar filtro',
       'renderizar overlays',
       'renderizar final',
@@ -144,9 +145,24 @@ describe('resumoDaLinha', () => {
     expect(resumoDaLinha(t)).toBe('3 de 8 · próximo: renderizar overlays');
   });
 
-  it('no ar: não manda fazer nada, mesmo com a mídia limpa', () => {
+  it('no ar: diz só isso — a contagem da mídia limpa ("1 de 8") enganava', () => {
     const t = montarTira(status({ youtube_url_publicado: 'https://youtu.be/x' }));
-    expect(resumoDaLinha(t)).toBe('1 de 8 · no ar');
+    expect(resumoDaLinha(t)).toBe('no ar');
+  });
+
+  it('cenas: gerar quando não existem, validar quando já foram geradas', () => {
+    const verboDasCenas = (patch: Partial<StatusExportCorte>) =>
+      montarTira(status({ raw_pronto: true, ...patch })).proxima?.verbo;
+    expect(verboDasCenas({ cenas_geradas: false })).toBe('gerar cenas');
+    expect(verboDasCenas({ cenas_geradas: true })).toBe('validar cenas');
+  });
+
+  it('a tira da Pós e do modal falam o mesmo verbo da linha', () => {
+    const t = montarTira(status({ raw_pronto: true, cenas_validadas: true, grade_pronta: true }));
+    expect(textoDaProxima(t)).toBe('próximo: renderizar overlays');
+    expect(renderToStaticMarkup(createElement(TiraMini, { tira: t }))).toContain(
+      'próximo: renderizar overlays',
+    );
   });
 
   it('rejeitado: diz isso, sem próxima etapa', () => {

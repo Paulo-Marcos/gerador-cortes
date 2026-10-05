@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAprovar, useAtualizarCorte, useDeletarCorte } from '@/features/editor/useCortes';
@@ -16,6 +16,7 @@ import { SeloDeEstado, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { MetadadosDoCorteModal } from '@/features/metadata/MetadadosDoCorteModal';
 import { BarraDoCorte } from '@/upgrade/BarraDoCorte';
+import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
 import { estadoDaLinha, maisDaLinha, primarioDaLinha } from './acoesDaLinha';
 import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 
@@ -38,24 +39,15 @@ import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 
 const GRADIENTES = [250, 22, 160, 300, 60, 200];
 
-/** O foco saiu da linha (e não só passou de um botão dela para outro)? */
-export function focoSaiuDaLinha(e: Pick<FocusEvent<HTMLElement>, 'currentTarget' | 'relatedTarget'>) {
-  return !e.currentTarget.contains(e.relatedTarget as Node | null);
-}
-
 /**
- * D-868: o vidro (`backdrop-filter`) faz de cada linha um contexto de
- * empilhamento, e a linha de BAIXO pintava por cima do "⋯" aberto da de
- * cima (medido no navegador). A linha com o foco — clicar no ⋯ o põe nela
- * — sobe de camada enquanto o tem.
+ * D-868: as colunas da linha. Com janela larga a barra tem coluna própria;
+ * abaixo de BARRA_EM_COLUNA_MIN_PX ela desce para baixo do título — a
+ * coluna de 190 px tirava o espaço do título, que a 1024 px chegava a 0.
  */
-function useLinhaEmFoco() {
-  const [emFoco, setEmFoco] = useState(false);
-  return {
-    camada: emFoco ? 3 : undefined,
-    onFocus: () => setEmFoco(true),
-    onBlur: (e: FocusEvent<HTMLElement>) => focoSaiuDaLinha(e) && setEmFoco(false),
-  };
+export function colunasDaLinha(comSelecao: boolean, barraEmColuna: boolean): string {
+  return [comSelecao && '16px', '24px', '96px', 'minmax(0, 1fr)', barraEmColuna && '190px', 'auto']
+    .filter(Boolean)
+    .join(' ');
 }
 
 type CorteLinhaApProps = {
@@ -79,7 +71,8 @@ type TriagemPeloTeclado = {
   projetoId: string;
   corte: Corte | undefined;
   status: StatusExportCorte;
-  metaAberto: boolean;
+  /** Modal de metadados ou ⋯ da linha aberto: o teclado é deles. */
+  sobreposicaoAberta: boolean;
   aprovar: ReturnType<typeof useAprovar>;
   atualizar: ReturnType<typeof useAtualizarCorte>;
   avisarFalha: (acao: string) => (erro: unknown) => void;
@@ -96,7 +89,7 @@ function useTriagemPeloTeclado({
   projetoId,
   corte,
   status,
-  metaAberto,
+  sobreposicaoAberta,
   aprovar,
   atualizar,
   avisarFalha,
@@ -113,8 +106,10 @@ function useTriagemPeloTeclado({
     const alvo = e.target as HTMLElement;
     // R4: o modal de metadados é filho JSX desta linha — mesmo saindo por
     // portal, o keydown sobe pela árvore do React até aqui. Sem esta guarda,
-    // `A` aprovava o corte de trás com o modal aberto.
-    if (metaAberto || confirmacao.pedido || alvo.closest('[role="dialog"]')) return;
+    // `A` aprovava o corte de trás com o modal aberto. D-868: o mesmo vale
+    // para o ⋯ da linha — com ele aberto, A aprovava e K levava o foco embora.
+    if (sobreposicaoAberta || confirmacao.pedido || alvo.closest('[role="dialog"], [role="menu"]'))
+      return;
     if (e.metaKey || e.ctrlKey || e.altKey || alvo.closest('input, textarea, select')) return;
     const acao = acaoDaTeclaNaLinha(e.key, corte?.status);
     if (!acao) return;
@@ -198,12 +193,16 @@ export function CorteLinhaAp({
     liberarPublicacao: onLiberarPublicacao,
   });
 
-  const foco = useLinhaEmFoco();
+  // D-868: o vidro de cada linha é um contexto de empilhamento, e a de baixo
+  // pintava por cima do ⋯ aberto. A linha sobe enquanto o SEU ⋯ está aberto
+  // (amarrar ao foco falhava: K ou Tab levavam o foco e o menu ficava aberto).
+  const [maisAberto, setMaisAberto] = useState(false);
+  const barraEmColuna = useJanelaMin(BARRA_EM_COLUNA_MIN_PX);
   const { aoTeclar, confirmacao, cancelar } = useTriagemPeloTeclado({
     projetoId,
     corte,
     status,
-    metaAberto,
+    sobreposicaoAberta: metaAberto || maisAberto,
     aprovar,
     atualizar,
     avisarFalha,
@@ -214,21 +213,17 @@ export function CorteLinhaAp({
       className="card row"
       tabIndex={0}
       onKeyDown={aoTeclar}
-      onFocus={foco.onFocus}
-      onBlur={foco.onBlur}
       aria-label={`Corte #${status.numero} — ${status.titulo}`}
       style={{
         display: 'grid',
-        gridTemplateColumns: onAlternarSelecao
-          ? '16px 24px 96px minmax(0, 1fr) 190px auto'
-          : '24px 96px minmax(0, 1fr) 190px auto',
+        gridTemplateColumns: colunasDaLinha(Boolean(onAlternarSelecao), barraEmColuna),
         gap: 12,
         alignItems: 'center',
         padding: '9px 11px',
         opacity: estado === 'rejeitado' ? 0.72 : 1,
         borderColor: selecionado ? 'var(--sel-line)' : undefined,
         position: 'relative',
-        zIndex: foco.camada,
+        zIndex: maisAberto ? 3 : undefined,
       }}
     >
       {onAlternarSelecao ? (
@@ -363,9 +358,14 @@ export function CorteLinhaAp({
             {corte.inicio_hms} → {corte.fim_hms}
           </span>
         ) : null}
+        {barraEmColuna ? null : (
+          <span style={{ display: 'block', marginTop: 6, maxWidth: 260 }}>
+            <BarraDoCorte tira={tira} />
+          </span>
+        )}
       </span>
 
-      <BarraDoCorte tira={tira} />
+      {barraEmColuna ? <BarraDoCorte tira={tira} /> : null}
 
       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <button type="button" className="btn" style={ALVO} onClick={irEditor}>
@@ -386,6 +386,7 @@ export function CorteLinhaAp({
           items={mais}
           label={`Mais ações do corte ${status.numero}`}
           grande
+          onAbertoMudou={setMaisAberto}
         />
       </span>
       {/* Portal para a `.ap`, como o de metadados: o vidro (`backdrop-filter`)

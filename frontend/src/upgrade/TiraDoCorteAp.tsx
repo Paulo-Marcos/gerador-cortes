@@ -26,7 +26,7 @@ const TOM_DO_PIP: Record<EstadoDoPip, { bg: string; cor: string; filete: string;
 export function TiraMini({ tira }: { tira: Tira }) {
   return (
     <span
-      aria-label={`${tira.contagem} etapas${tira.proxima ? ` · próximo: ${tira.proxima.nome}` : ''}`}
+      aria-label={`${tira.contagem} etapas${tira.proxima ? ` · ${textoDaProxima(tira)}` : ''}`}
       // D-859: os oito pips não cabiam na coluna da lista (145 px) nem a 9 px —
       // passavam 31 px da borda; a 11 px, 60. Quebra entre os grupos, nunca
       // dentro de um: CENAS · RENDER em cima, PUBLICAÇÃO embaixo.

@@ -89,7 +89,12 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
       done: p.done,
       descricao: p.hint,
       sigla: meta?.sigla ?? p.label.slice(0, 3).toUpperCase(),
-      verbo: meta?.verbo ?? p.label.toLowerCase(),
+      // Cenas que nem foram geradas não têm o que validar (achado da
+      // pr-audit da D-868): o verbo segue o que de fato falta.
+      verbo:
+        p.label === 'Cenas' && !status.cenas_geradas
+          ? 'gerar cenas'
+          : (meta?.verbo ?? p.label.toLowerCase()),
       grupo: meta?.grupo ?? ('PUBLICAÇÃO' as GrupoDaTira),
     };
   });
@@ -147,9 +152,11 @@ export function dicaDoPip(p: Pip): string {
   return `${p.nome} — ${estado}${p.descricao ? ' · ' + p.descricao : ''}`;
 }
 
-/** "próximo: overlays" — o rótulo à direita da tira. */
+/** "próximo: renderizar overlays" — o rótulo à direita da tira. D-868: o
+ *  mesmo verbo da linha do Workspace; eram três vocabulários para a mesma
+ *  coisa ("overlays", "Overlays", "renderizar overlays"). */
 export function textoDaProxima(t: Tira): string {
-  if (t.proxima) return `próximo: ${t.proxima.nome.toLowerCase()}`;
+  if (t.proxima) return `próximo: ${t.proxima.verbo}`;
   const noAr = t.grupos.some((g) => g.pips.some((p) => p.nome === 'YouTube' && p.estado === 'feito'));
   return noAr ? 'no ar' : 'nada pendente';
 }
@@ -162,8 +169,10 @@ export function textoDaProxima(t: Tira): string {
 export function resumoDaLinha(t: Tira): string {
   const rejeitado = t.grupos.some((g) => g.pips.some((p) => p.estado === 'rejeitado'));
   if (rejeitado) return 'corte rejeitado';
-  const conta = `${t.feitas} de ${t.total}`;
-  if (t.proxima) return `${conta} · próximo: ${t.proxima.verbo}`;
+  // Corte no ar já passou por tudo: a contagem ("1 de 8", com a mídia limpa)
+  // o fazia parecer no começo. Diz só o que é.
   const noAr = t.grupos.some((g) => g.pips.some((p) => p.nome === 'YouTube' && p.estado === 'feito'));
-  return `${conta} · ${noAr ? 'no ar' : 'nada pendente'}`;
+  if (noAr) return 'no ar';
+  const conta = `${t.feitas} de ${t.total}`;
+  return t.proxima ? `${conta} · ${textoDaProxima(t)}` : `${conta} · nada pendente`;
 }

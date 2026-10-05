@@ -10,12 +10,17 @@ import { dicaDoPip, resumoDaLinha, type EstadoDoPip, type Tira } from './tiraDoC
 // hover de cada passo. A regra continua em `tiraDoCorte`; aqui é só a roupa.
 // ─────────────────────────────────────────────────────────────────
 
-/** As cores da tira (TiraDoCorteAp), no traço cheio de cada passo. */
-const COR: Record<EstadoDoPip, string> = {
-  feito: 'var(--ok)',
-  agora: 'var(--warn)',
-  rejeitado: 'var(--err)',
-  falta: 'var(--line2)',
+/**
+ * Cor E forma, como a tira (D-746: quatro estados, quatro formas) — `--ok` e
+ * `--warn` têm a mesma luminosidade, e só a matiz não basta para quem não
+ * distingue as duas. Feito é cheio; agora é vazado; falta é o traço da
+ * linha (o `--line2` de antes quase sumia); rejeitado é cheio em erro.
+ */
+const PASSO: Record<EstadoDoPip, { background: string; boxShadow?: string }> = {
+  feito: { background: 'var(--ok)' },
+  agora: { background: 'var(--warn-soft)', boxShadow: 'inset 0 0 0 1.5px var(--warn)' },
+  rejeitado: { background: 'var(--err)' },
+  falta: { background: 'var(--line)' },
 };
 
 export function BarraDoCorte({ tira }: { tira: Tira }) {
@@ -36,18 +41,16 @@ export function BarraDoCorte({ tira }: { tira: Tira }) {
             key={p.sigla}
             data-estado={p.estado}
             title={dicaDoPip(p)}
-            style={{ height: 6, borderRadius: 3, background: COR[p.estado] }}
+            style={{ height: 6, borderRadius: 3, ...PASSO[p.estado] }}
           />
         ))}
       </span>
+      {/* A frase quebra em vez de cortar: na coluna da barra, "6 de 8 ·
+          próximo: completar metadados" não cabe numa linha (achado da
+          pr-audit, medido em 213 px). Inteira também no hover. */}
       <span
-        style={{
-          fontSize: 12,
-          color: 'var(--mute)',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
+        title={resumoDaLinha(tira)}
+        style={{ fontSize: 12, lineHeight: 1.3, color: 'var(--mute)' }}
       >
         {resumoDaLinha(tira)}
       </span>

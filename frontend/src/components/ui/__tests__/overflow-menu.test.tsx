@@ -176,27 +176,60 @@ describe('GatilhoDoMenu e ItemDoMenu (D-867)', () => {
 describe('OverflowMenu liga gatilho e itens ao estado aberto (D-867)', () => {
   type Elemento = ReactElement<Record<string, unknown>>;
 
-  it('o gatilho alterna e o item fecha', () => {
+  it('o gatilho alterna, o item fecha, e quem pediu fica sabendo (D-868)', () => {
     abrirMenu = true;
     espiarAberto = true;
+    const avisos: boolean[] = [];
     let arvore: Elemento | undefined;
     function Sonda() {
-      arvore = OverflowMenu({ texto: 'Mais', items: itens }) as Elemento;
+      arvore = OverflowMenu({
+        texto: 'Mais',
+        items: itens,
+        onAbertoMudou: (aberto) => avisos.push(aberto),
+      }) as Elemento;
       return arvore;
     }
     renderToStaticMarkup(<Sonda />);
     const filhos = Children.toArray(arvore!.props.children as ReactNode) as Elemento[];
 
+    // Aberto (abrirMenu), o gatilho fecha — e a linha do corte é avisada.
     const gatilho = filhos.find((e) => e.type === GatilhoDoMenu)!;
     (gatilho.props.onAlternar as () => void)();
-    const alternar = mudancasDoAberto.at(-1) as (aberto: boolean) => boolean;
-    expect([alternar(false), alternar(true)]).toEqual([true, false]);
+    expect(mudancasDoAberto.at(-1)).toBe(false);
+    expect(avisos.at(-1)).toBe(false);
 
     const painel = filhos.find((e) => e.props.role === 'menu')!;
     const [primeiro] = Children.toArray(painel.props.children as ReactNode) as Elemento[];
     expect(primeiro.type).toBe(ItemDoMenu);
     (primeiro.props.onFechar as () => void)();
     expect(mudancasDoAberto.at(-1)).toBe(false);
+    expect(avisos).toEqual([false, false]);
+  });
+
+  it('o menu repassa o tamanho grande ao gatilho (D-868)', () => {
+    let arvore: Elemento | undefined;
+    function Sonda() {
+      arvore = OverflowMenu({ items: itens, grande: true }) as Elemento;
+      return arvore;
+    }
+    renderToStaticMarkup(<Sonda />);
+    const filhos = Children.toArray(arvore!.props.children as ReactNode) as Elemento[];
+    expect(filhos.find((e) => e.type === GatilhoDoMenu)!.props.grande).toBe(true);
+  });
+
+  it('fechado, o gatilho abre e avisa que abriu', () => {
+    espiarAberto = true;
+    const avisos: boolean[] = [];
+    let arvore: Elemento | undefined;
+    function Sonda() {
+      arvore = OverflowMenu({ items: itens, onAbertoMudou: (a) => avisos.push(a) }) as Elemento;
+      return arvore;
+    }
+    renderToStaticMarkup(<Sonda />);
+    const filhos = Children.toArray(arvore!.props.children as ReactNode) as Elemento[];
+    (filhos.find((e) => e.type === GatilhoDoMenu)!.props.onAlternar as () => void)();
+    expect(mudancasDoAberto.at(-1)).toBe(true);
+    expect(avisos).toEqual([true]);
   });
 });
 
