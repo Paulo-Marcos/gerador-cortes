@@ -46,9 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Focus mode on a live's screens.** Entering a live (Workspace, Cortes, Pós,
   Metadados, Revisão), the left rail collapses to icons by itself — the
-  editor's player gains ~150 px. Your manual choice is kept, separately for
-  each place: open the rail inside a live and it stays open in lives;
-  collapse it outside and it stays collapsed outside, as before (D-869).
+  editor's player gains ~150 px. Opening it by hand (Ctrl+B or the button)
+  keeps it open across that live's screens until you leave; the next time
+  you enter a live it collapses again. Outside a live your choice is kept as
+  before (D-869).
 - **Each cut row says its state in words and has one action.** The 11 codes
   (CENAS BRU CEN · RENDER GRD OVL FIN · PUBLICAÇÃO THU MET YT) became an
   8-step bar with a sentence — "3 de 8 · próximo: renderizar overlays", or

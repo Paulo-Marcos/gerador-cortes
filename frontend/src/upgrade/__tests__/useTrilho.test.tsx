@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { comEscolha, trilhoExpandido, useTrilho, TRILHO_FORA, TRILHO_NA_LIVE } from '../useTrilho';
+import { trilhoExpandido, useTrilho, visitaAtual, TRILHO_FORA } from '../useTrilho';
 
 // D-869 (Onda 3, editor, nota 1): modo foco. Nas telas da live o trilho
-// recolhe para ícones sozinho — o player ganha ~150 px —, e a escolha manual
-// é respeitada: cada lugar (dentro e fora da live) lembra a sua.
+// recolhe para ícones sozinho — o player ganha ~150 px. A escolha manual
+// vale até sair da live (decisão do Paulo, 05/10); fora, a de sempre.
 
 function armazenamento(inicial: Record<string, string> = {}) {
   const dados = { ...inicial };
@@ -21,96 +21,93 @@ function armazenamento(inicial: Record<string, string> = {}) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('trilhoExpandido', () => {
-  it('fora da live, aberto por padrão; dentro da live, recolhido por padrão', () => {
-    expect(trilhoExpandido(false, {})).toBe(true);
-    expect(trilhoExpandido(true, {})).toBe(false);
+describe('trilhoExpandido e visitaAtual', () => {
+  const recolhida = (live: string | null) => ({ live, aberto: false });
+
+  it('fora da live, aberto por padrão; a escolha gravada vale', () => {
+    expect(trilhoExpandido(null, recolhida(null))).toBe(true);
+    expect(trilhoExpandido(null, recolhida(null), 'recolhido')).toBe(false);
   });
 
-  it('respeita a escolha manual de cada lugar, sem misturar as duas', () => {
-    expect(trilhoExpandido(true, { live: 'expandido' })).toBe(true);
-    expect(trilhoExpandido(false, { fora: 'recolhido' })).toBe(false);
-    // Recolher fora não mexe na live, e abrir na live não mexe fora.
-    expect(trilhoExpandido(true, { fora: 'expandido' })).toBe(false);
-    expect(trilhoExpandido(false, { live: 'expandido' })).toBe(true);
-  });
-});
-
-describe('comEscolha', () => {
-  it('o clique muda o trilho na hora, só no lugar onde se está', () => {
-    const naLive = comEscolha({ fora: 'expandido' }, true, 'expandido');
-    expect(naLive).toEqual({ fora: 'expandido', live: 'expandido' });
-    expect(trilhoExpandido(true, naLive)).toBe(true);
-    const fora = comEscolha({ live: 'expandido' }, false, 'recolhido');
-    expect(fora).toEqual({ live: 'expandido', fora: 'recolhido' });
-    expect(trilhoExpandido(false, fora)).toBe(false);
+  it('na live, recolhido ao entrar — mesmo para quem deixa o trilho aberto fora', () => {
+    expect(trilhoExpandido('L1', recolhida(null), 'expandido')).toBe(false);
+    expect(trilhoExpandido('L1', recolhida('L1'))).toBe(false);
   });
 
-  it('o hook aplica a escolha ao estado com esta regra', () => {
-    const fonte = readFileSync(resolve(__dirname, '../useTrilho.ts'), 'utf8');
-    expect(fonte).toContain('setEscolhas((atual) => comEscolha(atual, dentroDaLive, escolha));');
+  it('aberto na live, fica aberto pelas telas dela', () => {
+    const aberta = { live: 'L1', aberto: true };
+    expect(visitaAtual(aberta, 'L1')).toBe(aberta);
+    expect(trilhoExpandido('L1', aberta)).toBe(true);
+  });
+
+  it('sair e voltar, ou passar para outra live, recolhe de novo', () => {
+    const aberta = { live: 'L1', aberto: true };
+    expect(visitaAtual(aberta, null)).toEqual({ live: null, aberto: false });
+    expect(visitaAtual(aberta, 'L2')).toEqual({ live: 'L2', aberto: false });
+    expect(trilhoExpandido('L2', aberta)).toBe(false);
   });
 });
 
 describe('useTrilho', () => {
-  function usar(dentroDaLive: boolean, guardado: Record<string, string> = {}) {
+  function usar(live: string | null, guardado: Record<string, string> = {}) {
     const loja = armazenamento(guardado);
     vi.stubGlobal('window', { localStorage: loja });
     let trilho: ReturnType<typeof useTrilho> | undefined;
     function Sonda() {
-      trilho = useTrilho(dentroDaLive);
+      trilho = useTrilho(live);
       return null;
     }
     renderToStaticMarkup(<Sonda />);
     return { trilho: trilho!, loja };
   }
 
-  it('entrar numa live recolhe o trilho; sair devolve a escolha de fora', () => {
-    expect(usar(true).trilho.expandido).toBe(false);
-    expect(usar(false).trilho.expandido).toBe(true);
-    expect(usar(false, { [TRILHO_FORA]: 'recolhido' }).trilho.expandido).toBe(false);
+  it('entrar numa live recolhe; fora, a escolha de sempre', () => {
+    expect(usar('L1').trilho.expandido).toBe(false);
+    expect(usar(null).trilho.expandido).toBe(true);
+    expect(usar(null, { [TRILHO_FORA]: 'recolhido' }).trilho.expandido).toBe(false);
+    // A preferência de fora não abre a live.
+    expect(usar('L1', { [TRILHO_FORA]: 'expandido' }).trilho.expandido).toBe(false);
   });
 
-  it('a escolha feita na live fica lembrada para a live', () => {
-    const { trilho, loja } = usar(true);
+  it('abrir na live não grava nada: a próxima entrada recolhe outra vez', () => {
+    const { trilho, loja } = usar('L1');
     trilho.alternar();
-    expect(loja.dados[TRILHO_NA_LIVE]).toBe('expandido');
-    expect(loja.dados[TRILHO_FORA]).toBeUndefined();
-    expect(usar(true, loja.dados).trilho.expandido).toBe(true);
+    expect(loja.dados).toEqual({});
+    expect(usar('L1', loja.dados).trilho.expandido).toBe(false);
   });
 
-  it('a escolha feita fora fica lembrada para fora, como antes', () => {
-    const { trilho, loja } = usar(false);
+  it('a escolha feita fora fica gravada para fora, na chave de sempre', () => {
+    const { trilho, loja } = usar(null);
     trilho.alternar();
-    expect(loja.dados[TRILHO_FORA]).toBe('recolhido');
-    expect(loja.dados[TRILHO_NA_LIVE]).toBeUndefined();
-  });
-
-  it('a chave de fora é a que já existia: quem tinha recolhido não perde a escolha', () => {
+    expect(loja.dados).toEqual({ [TRILHO_FORA]: 'recolhido' });
     expect(TRILHO_FORA).toBe('upgrade-trilho');
   });
 
-  it('sem localStorage, o padrão de cada lugar vale', () => {
+  it('com o armazenamento bloqueado, ler e gravar não derrubam a casca', () => {
     vi.stubGlobal('window', {
       localStorage: {
         getItem: () => {
+          throw new Error('bloqueado');
+        },
+        setItem: () => {
           throw new Error('bloqueado');
         },
       },
     });
     let trilho: ReturnType<typeof useTrilho> | undefined;
     function Sonda() {
-      trilho = useTrilho(true);
+      trilho = useTrilho(null);
       return null;
     }
     renderToStaticMarkup(<Sonda />);
-    expect(trilho!.expandido).toBe(false);
+    expect(trilho!.expandido).toBe(true);
+    expect(() => trilho!.alternar()).not.toThrow();
   });
 });
 
 describe('a casca usa o modo foco', () => {
-  it('pergunta à tela se está dentro de uma live', () => {
+  it('passa a live da tela (o id), ou null fora dela', () => {
     const casca = readFileSync(resolve(__dirname, '../UpgradeShell.tsx'), 'utf8');
-    expect(casca).toContain('useTrilho(dentroDeUmaLive(tela))');
+    expect(casca).toContain('useTrilho(dentroDeUmaLive(tela) ? projetoId : null)');
   });
 });

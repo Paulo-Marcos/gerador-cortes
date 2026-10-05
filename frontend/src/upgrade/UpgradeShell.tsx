@@ -165,12 +165,12 @@ function Casca({ children, fila }: CascaProps) {
   const { pathname } = useLocation();
   const { theme, toggleTheme, glass } = useUpgradeTheme();
   const tela = telaDaRota(pathname);
-  const { expandido, alternar } = useTrilho(dentroDeUmaLive(tela));
+  const projetoId = projetoDaRota(pathname);
+  const { expandido, alternar } = useTrilho(dentroDeUmaLive(tela) ? projetoId : null);
   const chrome = useChrome();
   const filaGlobal = useWorkbenchQueueOptional();
   const janelaLarga = useJanelaMin(CONTEXTO_MIN_PX);
 
-  const projetoId = projetoDaRota(pathname);
   const menu = useMemo(() => menuDoTrilho(), []);
   const cab = CABECALHO[tela];
 
