@@ -179,6 +179,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `release-vX.Y.Z` branch; after the merge, `-Taguear` finds the release
   commit on `main` and creates the tag only when CI is green on that exact
   commit (D-823).
+- **The Workspace cut row has tests for what it already did.** Mutation tests
+  in the D-868 audits broke six behaviors of the row and no test noticed: the
+  broken cover hiding after a media cleanup, the duration in the thumbnail
+  corner, the faded and struck-through rejected cut, the R key's delete dialog
+  (focus moving to the next row, or back to the row on cancel), the selection
+  border and checkbox, and the thumbnail gradient. Each now has a test, and
+  24 mutations of those rules all fail it. No behavior changed (D-878).
 
 ### Fixed
 - **The theme checks no longer time out on a fresh checkout.** Two tests that
