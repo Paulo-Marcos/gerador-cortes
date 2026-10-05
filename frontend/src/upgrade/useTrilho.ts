@@ -45,7 +45,7 @@ function ler(chave: string): Escolha | undefined {
 /** `live`: o id da live quando a tela é dela; `null` fora de uma live. */
 export function useTrilho(live: string | null) {
   const [fora, setFora] = useState<Escolha | undefined>(() => ler(TRILHO_FORA));
-  const [visita, setVisita] = useState<Visita>({ live, aberto: false });
+  const [visita, setVisita] = useState<Visita>(() => ({ live, aberto: false }));
   // Estado derivado da troca de live, ajustado no próprio render (o padrão
   // do React para "resetar quando a prop muda"), sem efeito e sem piscar.
   const atual = visitaAtual(visita, live);

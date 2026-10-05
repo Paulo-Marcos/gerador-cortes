@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { trilhoExpandido, useTrilho, visitaAtual, TRILHO_FORA } from '../useTrilho';
@@ -102,6 +103,61 @@ describe('useTrilho', () => {
     renderToStaticMarkup(<Sonda />);
     expect(trilho!.expandido).toBe(true);
     expect(() => trilho!.alternar()).not.toThrow();
+  });
+});
+
+// A sequência de telas num render só (sugestão da pr-audit): o renderizador
+// do servidor reaplica as mudanças de estado feitas durante o render, então o
+// estado do hook segue de um passo ao outro — e o clique (Ctrl+B) entra no
+// meio, sem DOM. É o que prova o centro da regra: sair e voltar recolhe.
+describe('useTrilho numa sequência de telas', () => {
+  type Passo = { live: string | null; clicar?: boolean };
+
+  function percorrer(passos: Passo[]): boolean[] {
+    vi.stubGlobal('window', { localStorage: armazenamento() });
+    const vistos: boolean[] = [];
+    const clicados = new Set<number>();
+    function Sonda() {
+      const [n, setN] = useState(0);
+      const trilho = useTrilho(passos[n].live);
+      if (passos[n].clicar && !clicados.has(n)) {
+        clicados.add(n);
+        trilho.alternar();
+        return null;
+      }
+      vistos[n] = trilho.expandido;
+      if (n < passos.length - 1) setN(n + 1);
+      return null;
+    }
+    renderToStaticMarkup(<Sonda />);
+    return vistos;
+  }
+
+  it('aberto na live segue aberto pelas telas dela; sair e voltar recolhe', () => {
+    expect(
+      percorrer([
+        { live: 'L1' },
+        { live: 'L1', clicar: true },
+        { live: 'L1' },
+        { live: null },
+        { live: 'L1' },
+      ]),
+    ).toEqual([false, true, true, true, false]);
+  });
+
+  it('passar direto para outra live recolhe; Ctrl+B de novo recolhe', () => {
+    expect(percorrer([{ live: 'L1', clicar: true }, { live: 'L2' }])).toEqual([true, false]);
+    expect(percorrer([{ live: 'L1', clicar: true }, { live: 'L1', clicar: true }])).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it('fora da live, o clique muda o trilho na hora, nos dois sentidos', () => {
+    expect(percorrer([{ live: null, clicar: true }, { live: null, clicar: true }])).toEqual([
+      false,
+      true,
+    ]);
   });
 });
 
