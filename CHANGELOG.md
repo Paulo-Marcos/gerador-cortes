@@ -194,6 +194,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   24 mutations of those rules all fail it. No behavior changed (D-878).
 
 ### Fixed
+- **The "out of sync" warning no longer covers the top bar.** It floated
+  over the first 31 px of the window, so right after a pull or an update,
+  before the restart, the search, the theme switch, the "Mais" menu and the
+  actions of the dense screens did not take clicks. It now takes its own row
+  and pushes the app down; the footer still fits on screen (D-879).
 - **The theme checks no longer time out on a fresh checkout.** Two tests that
   read every frontend source file (the accent as a selection color, and the
   old StatusChip import) did that reading inside the test, under the 5 s

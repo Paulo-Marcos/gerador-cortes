@@ -244,7 +244,7 @@ function Casca({ children, fila }: CascaProps) {
       style={{
         display: 'grid',
         gridTemplateColumns: `${expandido ? TRILHO_LARGO : TRILHO_ESTREITO} 1fr`,
-        height: '100dvh',
+        height: '100%', // D-879: o que o App lhe dá; o aviso de sincronia pode estar acima
         minHeight: 0,
         overflow: 'hidden',
       }}
