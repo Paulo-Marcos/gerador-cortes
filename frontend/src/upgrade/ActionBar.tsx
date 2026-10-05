@@ -83,6 +83,7 @@ function MotivoDoPrimario({ motivo }: { motivo: string }) {
   return (
     <span
       id="motivo-do-primario"
+      title={motivo}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -94,7 +95,6 @@ function MotivoDoPrimario({ motivo }: { motivo: string }) {
     >
       <Icon name="ban" style={{ flex: 'none' }} />
       <span
-        title={motivo}
         style={{
           display: '-webkit-box',
           WebkitLineClamp: 2,

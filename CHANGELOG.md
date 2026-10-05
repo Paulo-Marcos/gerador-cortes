@@ -46,10 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **The Workspace's main action lives at the bottom right, like the editor's,
   and says the live's next step.** "Analisar com a IA" for a live without
-  cuts; "Aprovar os N propostos", which asks for confirmation; "Renderizar
-  o #N", which opens that cut's Pós (there is no batch render); then
-  "Publicar N cortes" (off, saying why, until everything is ready); "Tudo no
-  ar" when nothing is left. A cleaned-up live never asks to render. The
+  cuts; "Aprovar os N propostos", which asks for confirmation and approves
+  every proposed cut of the live, even those hidden by search or filter,
+  without touching your selection; "Renderizar o #N", which opens that
+  cut's Pós (there is no batch render); then "Publicar N cortes" (off,
+  saying why in at most two lines, until everything is ready); "Tudo no ar"
+  when nothing is left. While the live loads there is no button; while it
+  downloads, transcribes or is being analyzed the button says so and is off.
+  A cleaned-up live never asks to render, and with cuts left behind it says
+  "Live encerrada". Switching lives drops a pending confirmation. The
   Publicar button left the Workspace band; "gerar trechos" stays there. In
   the editor, "Gerar bruto" and "Excluir corte" moved from the top bar into
   its "Mais" menu, with Excluir in red (D-870).

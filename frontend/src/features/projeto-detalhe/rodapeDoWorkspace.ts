@@ -1,5 +1,5 @@
 import { estaAprovado } from '@/lib/statusDoCorte';
-import type { StatusCorte, StatusExportCorte } from '@/types/models';
+import type { StatusCorte, StatusExportCorte, StatusProjeto } from '@/types/models';
 import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import type { ChromeBarra, ChromeEstado } from '@/upgrade/UpgradeChrome';
 
@@ -33,15 +33,16 @@ export type DadosDoRodape = {
   prontidao: { total: number; liberado: boolean; detalhe: string };
   /** Live limpa é live encerrada (D-866): o vídeo apagado não se renderiza. */
   arquivosLimpos: boolean;
-  /** Os dados da live ainda não chegaram: sem eles, "0 cortes" mente. */
+  /** Os dados da live ainda não chegaram (ou são da live anterior, no cache
+   *  da rota): sem eles, "0 cortes" mente e o botão agiria na live errada. */
   carregando: boolean;
   /** A IA está analisando a live agora. */
   analisando: boolean;
-  statusDoProjeto?: string;
+  statusDoProjeto?: StatusProjeto;
 };
 
 /** Antes da transcrição pronta, a análise não tem o que ler. */
-const PREPARANDO = new Set(['pendente', 'baixando', 'transcrevendo']);
+const PREPARANDO = new Set<StatusProjeto | undefined>(['pendente', 'baixando', 'transcrevendo']);
 
 export function proximaAcaoDaLive(d: DadosDoRodape): ProximaAcao {
   // Achado da pr-audit: só com "0 cortes" o rodapé oferecia "Analisar com a
@@ -50,7 +51,7 @@ export function proximaAcaoDaLive(d: DadosDoRodape): ProximaAcao {
   if (d.carregando) return { tipo: 'carregando' };
   if (d.analisando) return { tipo: 'analisando' };
   if (d.cortes.length === 0)
-    return PREPARANDO.has(d.statusDoProjeto ?? '') ? { tipo: 'preparando' } : { tipo: 'analisar' };
+    return PREPARANDO.has(d.statusDoProjeto) ? { tipo: 'preparando' } : { tipo: 'analisar' };
 
   const propostos = d.cortes.filter((c) => c.status === 'proposto').length;
   if (propostos > 0) return { tipo: 'aprovar', quantos: propostos };

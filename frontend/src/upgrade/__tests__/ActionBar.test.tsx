@@ -44,7 +44,12 @@ describe('ActionBar — motivo do principal desligado', () => {
     expect(html).toMatch(/-webkit-line-clamp:2[^>]*>Faltam 8 de 8/);
   });
 
-  it('o texto inteiro fica no hover', () => {
-    expect(html).toContain(`title="${longo}"`);
+  it('o texto inteiro fica no hover, no motivo todo (ícone incluído)', () => {
+    expect(html).toMatch(new RegExp(`<span id="motivo-do-primario" title="${longo.replace(/[()]/g, '\\$&')}"`));
+  });
+
+  it('o botão aponta para o motivo, para o leitor de tela', () => {
+    expect(html).toMatch(/<button[^>]*aria-describedby="motivo-do-primario"/);
+    expect(html).toContain('id="motivo-do-primario"');
   });
 });

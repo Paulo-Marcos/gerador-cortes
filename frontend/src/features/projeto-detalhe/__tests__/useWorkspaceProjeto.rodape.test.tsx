@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +12,7 @@ import type { Chrome } from '@/upgrade/UpgradeChrome';
 // a navegação — são substitutos; a sonda clica no meio do render (o render de
 // servidor reaplica o estado mudado nele) para ver o que o clique faz.
 const h = vi.hoisted(() => ({
+  id: 'p1',
   projeto: undefined as unknown,
   cortes: undefined as unknown,
   exportados: [] as unknown[],
@@ -33,6 +35,8 @@ vi.mock('@/upgrade/UpgradeChrome', async (original) => ({
 vi.mock('react-router-dom', async (original) => ({
   ...(await original<typeof import('react-router-dom')>()),
   useNavigate: () => h.navegar,
+  // A rota vem daqui, para a sonda poder trocar de live no meio do render.
+  useParams: () => ({ id: h.id }),
 }));
 const mutacao = () => ({ mutate: vi.fn(), isPending: false });
 vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', () => ({
@@ -73,6 +77,7 @@ const exportado = (corte_id: string, numero: number, campos: Partial<StatusExpor
 
 afterEach(() => {
   vi.clearAllMocks();
+  h.id = 'p1';
   h.projeto = { id: 'p1', status: 'analisado', arquivos_limpos: false, titulo_live: 'Live' };
   h.cortes = undefined;
   h.exportados = [];
@@ -160,5 +165,64 @@ describe('useWorkspaceProjeto · o rodapé', () => {
     h.exportados = [exportado('a', 1)];
     usar();
     expect([primario()!.texto, primario()!.motivo]).toEqual(['Live encerrada', undefined]);
+  });
+});
+
+describe('useWorkspaceProjeto · o rodapé e a live certa (2ª passada da pr-audit)', () => {
+  it('baixando ou transcrevendo sem cortes, "Preparando a live…" — não oferece analisar', () => {
+    h.projeto = { id: 'p1', status: 'baixando', arquivos_limpos: false, titulo_live: 'Live' };
+    h.cortes = [];
+    usar();
+    expect([primario()!.texto, primario()!.desabilitado]).toEqual(['Preparando a live…', true]);
+  });
+
+  it('análise disparada antes (projeto em "analisando"), o rodapé diz isso', () => {
+    h.projeto = { id: 'p1', status: 'analisando', arquivos_limpos: false, titulo_live: 'Live' };
+    h.cortes = [];
+    usar();
+    expect(primario()!.texto).toBe('Analisando a live…');
+  });
+
+  it('projeto ainda não chegou, mesmo com cortes: sem botão', () => {
+    h.projeto = undefined;
+    h.cortes = [corte('a', 1, 'proposto')];
+    usar();
+    expect((h.chrome as Chrome).barra).toBeUndefined();
+  });
+
+  it('dados da live anterior no cache não viram o botão desta', () => {
+    h.projeto = { id: 'OUTRA', status: 'analisado', arquivos_limpos: false, titulo_live: 'Antiga' };
+    h.cortes = [corte('a', 1, 'proposto')];
+    usar();
+    expect((h.chrome as Chrome).barra).toBeUndefined();
+  });
+
+  it('trocar de live derruba a confirmação aberta na anterior', () => {
+    h.cortes = [corte('a', 1, 'proposto')];
+    h.exportados = [exportado('a', 1)];
+    let abertaNaPrimeira: string | undefined;
+    let depoisDaTroca: unknown = 'não chegou';
+    function Sonda() {
+      const [passo, setPasso] = useState(0);
+      const estado = useWorkspaceProjeto();
+      if (passo === 0) {
+        (h.chrome as Chrome).barra!.primario.onClick!();
+        setPasso(1);
+      } else if (passo === 1) {
+        abertaNaPrimeira = estado.confirmacao.pedido?.titulo;
+        h.id = 'p2';
+        setPasso(2);
+      } else {
+        depoisDaTroca = estado.confirmacao.pedido;
+      }
+      return null;
+    }
+    renderToStaticMarkup(
+      <MemoryRouter>
+        <Sonda />
+      </MemoryRouter>,
+    );
+    expect(abertaNaPrimeira).toBe('Aprovar o proposto');
+    expect(depoisDaTroca).toBeNull();
   });
 });

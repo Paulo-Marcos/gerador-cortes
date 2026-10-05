@@ -62,6 +62,22 @@ function useAbrirPastaDoProjeto(id: string) {
   };
 }
 
+/**
+ * D-870 (achado da pr-audit): o hook é reaproveitado entre as rotas, e uma
+ * confirmação aberta numa live sobrevivia à troca para outra — "Aprovar os 3
+ * propostos" da live A podia ser confirmado já na tela da live B. Trocou de
+ * live, a confirmação pendente cai.
+ */
+function useConfirmacaoDaLive(id: string) {
+  const confirmacao = useConfirmacao();
+  const [daLive, setDaLive] = useState(id);
+  if (daLive !== id) {
+    setDaLive(id);
+    confirmacao.cancelar();
+  }
+  return confirmacao;
+}
+
 export function useWorkspaceProjeto() {
   const { id = '' } = useParams<{ id: string }>();
   const { notify } = useToast();
@@ -75,7 +91,7 @@ export function useWorkspaceProjeto() {
   const pasta = useAbrirPastaDoProjeto(id);
   const refazerTranscricao = useRefazerTranscricao(id);
   const analisarDesviosTodos = useAnalisarDesviosTodos(id);
-  const confirmacao = useConfirmacao();
+  const confirmacao = useConfirmacaoDaLive(id);
   const reordenar = useReordenarCortes(id);
   const uploadYoutube = useUploadYouTube();
   const marcarPublicado = useMarcarPublicadoYouTube();
@@ -330,7 +346,7 @@ export function useWorkspaceProjeto() {
     statusList,
     prontidao,
     arquivosLimpos: Boolean(dados?.arquivos_limpos),
-    carregando: !dados || !cortesQuery.data,
+    carregando: !dados || dados.id !== id || !cortesQuery.data,
     analisando,
     statusDoProjeto: dados?.status,
   });
@@ -368,7 +384,7 @@ export function useWorkspaceProjeto() {
       }),
     },
     [
-      dados?.titulo_live, dados?.youtube_url, dados?.arquivos_limpos,
+      id, dados?.titulo_live, dados?.youtube_url, dados?.arquivos_limpos,
       duracao,
       cortes.length,
       fires,

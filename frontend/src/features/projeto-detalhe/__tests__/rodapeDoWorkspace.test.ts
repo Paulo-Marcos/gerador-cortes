@@ -51,12 +51,14 @@ describe('proximaAcaoDaLive', () => {
     const vazia = { cortes: [], statusList: [] };
     expect(proximaAcaoDaLive(dados({ ...vazia, carregando: true }))).toEqual({ tipo: 'carregando' });
     expect(proximaAcaoDaLive(dados({ ...vazia, analisando: true }))).toEqual({ tipo: 'analisando' });
-    for (const status of ['pendente', 'baixando', 'transcrevendo'])
+    for (const status of ['pendente', 'baixando', 'transcrevendo'] as const)
       expect(proximaAcaoDaLive(dados({ ...vazia, statusDoProjeto: status }))).toEqual({
         tipo: 'preparando',
       });
     // Carregando vence tudo: com cortes que ainda não chegaram, nada é certo.
     expect(proximaAcaoDaLive(dados({ carregando: true })).tipo).toBe('carregando');
+    // Reanalisando uma live que já tem cortes: também não oferece outro passo.
+    expect(proximaAcaoDaLive(dados({ analisando: true })).tipo).toBe('analisando');
   });
 
   it('um proposto só já pede aprovar', () => {
@@ -98,6 +100,8 @@ describe('proximaAcaoDaLive', () => {
       prontidao: prontidao(2, false, 'falta render final'),
     });
     expect(proximaAcaoDaLive(d)).toEqual({ tipo: 'encerrada' });
+    // Com o lote pronto, a live limpa ainda publica: encerrada é só a pendência.
+    expect(proximaAcaoDaLive({ ...d, prontidao: prontidao(2, true) }).tipo).toBe('publicar');
   });
 
   it('tudo renderizado: publicar — liberado ou não, com o motivo', () => {
