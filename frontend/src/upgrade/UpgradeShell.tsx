@@ -23,6 +23,8 @@ import { ScreenHeader } from './ScreenHeader';
 import { TopBar } from './TopBar';
 import { barraComTeclas, overlayAberto, useAtalhosDaCasca } from './useAtalhosDaCasca';
 import { TrilhaDeEtapas } from './TrilhaDeEtapas';
+import { dentroDeUmaLive } from './trilhaDaLive';
+import { useTrilho } from './useTrilho';
 import { useTrilhaDaLive } from './useTrilhaDaLive';
 import {
   UpgradeChromeProvider,
@@ -65,8 +67,6 @@ import { useUpgradeTheme } from './useUpgradeTheme';
 //      não para qualquer botão focado — era o que matava o ↵ depois do
 //      primeiro clique em qualquer lugar da tela.
 // ─────────────────────────────────────────────────────────────────
-
-const TRILHO_KEY = 'upgrade-trilho';
 
 /**
  * O cartao da fila no pe do trilho. Mostra o job que esta ANDANDO; sem
@@ -151,30 +151,6 @@ function usePreferenciaLigada(chave: string): [boolean, () => void] {
   return [ligada, alternar];
 }
 
-function useTrilho() {
-  const [expandido, setExpandido] = useState(() => {
-    try {
-      return window.localStorage.getItem(TRILHO_KEY) !== 'recolhido';
-    } catch {
-      return true;
-    }
-  });
-
-  const alternar = useCallback(() => {
-    setExpandido((atual) => {
-      const proximo = !atual;
-      try {
-        window.localStorage.setItem(TRILHO_KEY, proximo ? 'expandido' : 'recolhido');
-      } catch {
-        // preferência some ao recarregar; não vale derrubar a casca por isso
-      }
-      return proximo;
-    });
-  }, []);
-
-  return { expandido, alternar };
-}
-
 /**
  * A casca em si. `children` existe para as rotas de vitrine; em uso
  * normal ela renderiza o `<Outlet/>` do router.
@@ -188,12 +164,12 @@ type CascaProps = {
 function Casca({ children, fila }: CascaProps) {
   const { pathname } = useLocation();
   const { theme, toggleTheme, glass } = useUpgradeTheme();
-  const { expandido, alternar } = useTrilho();
+  const tela = telaDaRota(pathname);
+  const { expandido, alternar } = useTrilho(dentroDeUmaLive(tela));
   const chrome = useChrome();
   const filaGlobal = useWorkbenchQueueOptional();
   const janelaLarga = useJanelaMin(CONTEXTO_MIN_PX);
 
-  const tela = telaDaRota(pathname);
   const projetoId = projetoDaRota(pathname);
   const menu = useMemo(() => menuDoTrilho(), []);
   const cab = CABECALHO[tela];
