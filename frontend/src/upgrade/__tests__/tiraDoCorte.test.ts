@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { StatusExportCorte } from '@/types/models';
-import { montarTira, textoDaProxima } from '../tiraDoCorte';
+import { montarTira, resumoDaLinha, textoDaProxima } from '../tiraDoCorte';
 import { TiraDoCorteAp, TiraMini } from '../TiraDoCorteAp';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 
@@ -41,7 +41,8 @@ describe('montarTira', () => {
     const t = montarTira(status({ raw_pronto: true, cenas_validadas: true }));
     expect(estados(t)).toMatchObject({ BRU: 'feito', CEN: 'feito', GRD: 'agora', FIN: 'falta', YT: 'falta' });
     expect(t.contagem).toBe('2/8');
-    expect(textoDaProxima(t)).toBe('próximo: graded');
+    // D-868: o mesmo verbo da linha do Workspace.
+    expect(textoDaProxima(t)).toBe('próximo: aplicar filtro');
   });
 
   it('renderizado e sem capa aponta a capa, não o YouTube', () => {
@@ -113,5 +114,61 @@ describe('a tira no piso de 11 px', () => {
     const grupos = resto.filter((s) => !s.includes('data-estado'));
     expect(grupos).toHaveLength(3);
     for (const g of grupos) expect(g).not.toContain('flex-wrap');
+  });
+});
+
+// D-868 (Onda 3, nota 3): estado em palavras. A linha do Workspace troca as
+// 11 siglas por uma barra de 8 passos e "N de 8 · próximo: verbo".
+describe('resumoDaLinha', () => {
+  it('cada etapa tem um verbo, na ordem do fluxo', () => {
+    const verbos = montarTira(status())
+      .grupos.flatMap((g) => g.pips)
+      .map((p) => p.verbo);
+    expect(verbos).toEqual([
+      'gerar bruto',
+      'gerar cenas',
+      'aplicar filtro',
+      'renderizar overlays',
+      'renderizar final',
+      'gerar capa',
+      'completar metadados',
+      'publicar no YouTube',
+    ]);
+  });
+
+  it('nada feito: "0 de 8 · próximo: gerar bruto" (o texto da prancha)', () => {
+    expect(resumoDaLinha(montarTira(status()))).toBe('0 de 8 · próximo: gerar bruto');
+  });
+
+  it('parou no meio: conta as feitas e diz o verbo da próxima', () => {
+    const t = montarTira(status({ raw_pronto: true, cenas_validadas: true, grade_pronta: true }));
+    expect(resumoDaLinha(t)).toBe('3 de 8 · próximo: renderizar overlays');
+  });
+
+  it('no ar: diz só isso — a contagem da mídia limpa ("1 de 8") enganava', () => {
+    const t = montarTira(status({ youtube_url_publicado: 'https://youtu.be/x' }));
+    expect(resumoDaLinha(t)).toBe('no ar');
+  });
+
+  it('cenas: gerar quando não existem, validar quando já foram geradas', () => {
+    const verboDasCenas = (patch: Partial<StatusExportCorte>) =>
+      montarTira(status({ raw_pronto: true, ...patch })).proxima?.verbo;
+    expect(verboDasCenas({ cenas_geradas: false })).toBe('gerar cenas');
+    expect(verboDasCenas({ cenas_geradas: true })).toBe('validar cenas');
+  });
+
+  it('a tira da Pós e do modal falam o mesmo verbo da linha', () => {
+    const t = montarTira(status({ raw_pronto: true, cenas_validadas: true, grade_pronta: true }));
+    expect(textoDaProxima(t)).toBe('próximo: renderizar overlays');
+    expect(renderToStaticMarkup(createElement(TiraMini, { tira: t }))).toContain(
+      'próximo: renderizar overlays',
+    );
+    expect(renderToStaticMarkup(createElement(TiraDoCorteAp, { tira: t }))).toContain(
+      'próximo: renderizar overlays',
+    );
+  });
+
+  it('rejeitado: diz isso, sem próxima etapa', () => {
+    expect(resumoDaLinha(montarTira(status(), 'rejeitado'))).toBe('corte rejeitado');
   });
 });

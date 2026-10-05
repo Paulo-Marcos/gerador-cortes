@@ -44,6 +44,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **Each cut row says its state in words and has one action.** The 11 codes
+  (CENAS BRU CEN · RENDER GRD OVL FIN · PUBLICAÇÃO THU MET YT) became an
+  8-step bar with a sentence — "3 de 8 · próximo: renderizar overlays", or
+  just "no ar" — and each step still explains itself on hover. Steps differ
+  in shape too, not only color (done is solid, current is hollow). In a
+  narrow window the bar moves under the title, so the title keeps its room.
+  The Pós screen and the metadata modal now use the same "próximo: …" verbs.
+  Six icon buttons became "Editar" and the state's main action ("Aprovar",
+  "Finalizar", "Enviar ao YouTube", "No ar", "Voltar") with labels, plus a
+  "⋯" with Pós-produção, Metadados, the cut's folder and the published URL
+  (or "Liberar publicação"). Targets are 32 px. While a row's "⋯" is open it
+  shows above the rows below, and the row's keys (A, R, J, K) wait (D-868).
 - **Rare Workspace actions moved to a "Mais" menu.** Reanalisar, refazer
   transcrição, auditar análise and abrir a pasta were a row of unlabeled
   icons, each in its own color, in the middle of the screen. They are now

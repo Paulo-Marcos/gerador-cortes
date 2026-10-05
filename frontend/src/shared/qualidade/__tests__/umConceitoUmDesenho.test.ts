@@ -362,9 +362,10 @@ describe('um conceito, um desenho (D-858)', () => {
     const doDicionario = new Set<string>(Object.values(ICONE_DO_CONCEITO));
     const comDicionario = acoes.filter((a) => [...a.icones].some((i) => doDicionario.has(i)));
     const rotulosVistos = comDicionario.flatMap((a) => a.rotulos).join(' | ');
-    // Um <Icon name={ICONE_DO_CONCEITO.editar}> (linha do corte) e um
-    // icone={ICONE_DO_CONCEITO.iaGera} (gerar trechos de todos).
-    expect(rotulosVistos).toContain('Editar corte');
+    // Um <Icon name={ICONE_DO_CONCEITO.editar}> (o "Editar" da linha do
+    // corte, rótulo em texto desde a D-868) e um icone={ICONE_DO_CONCEITO.iaGera}
+    // (gerar trechos de todos).
+    expect(comDicionario.some((a) => a.rotulos.includes('Editar'))).toBe(true);
     expect(rotulosVistos).toContain('Gerar trechos de todos os cortes');
   });
 

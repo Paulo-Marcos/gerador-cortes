@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Icon, type IconName } from '@/upgrade/Icon';
 
@@ -36,6 +36,11 @@ interface Props {
   align?: 'left' | 'right';
   /** Gatilho compacto (26px) para cantos apertados. */
   compact?: boolean;
+  /** D-868: gatilho de 32 px, o alvo das ações da linha do corte. */
+  grande?: boolean;
+  /** D-868: avisa quando o menu abre e fecha — a linha do corte sobe de
+   *  camada enquanto o seu ⋯ está aberto. */
+  onAbertoMudou?: (aberto: boolean) => void;
   /** D-867: gatilho com rótulo ("⋯ Mais"), da família dos botões do
    *  cabeçalho. Sem isto, o gatilho é só o ícone. */
   texto?: string;
@@ -48,12 +53,14 @@ export function GatilhoDoMenu({
   texto,
   label,
   compact,
+  grande = false,
   open,
   onAlternar,
 }: {
   texto?: string;
   label: string;
   compact: boolean;
+  grande?: boolean;
   open: boolean;
   onAlternar: () => void;
 }) {
@@ -81,7 +88,7 @@ export function GatilhoDoMenu({
       aria-expanded={open}
       className={cn(
         'flex shrink-0 items-center justify-center rounded-[7px] font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-        compact ? 'h-[26px] w-[26px]' : 'h-7 w-7',
+        compact ? 'h-[26px] w-[26px]' : grande ? 'h-8 w-8' : 'h-7 w-7',
         open
           ? 'bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
           : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
@@ -159,31 +166,51 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
   );
 }
 
+/**
+ * Menu aberto fecha com Esc e com clique fora dele. Fora do componente para
+ * ter teste: fechar por aqui também avisa quem pediu (`onAbertoMudou`) — sem
+ * isso a linha do corte ficava com as teclas mudas até reabrir o ⋯ (D-868).
+ */
+export function ouvirFechamento(
+  doc: Pick<Document, 'addEventListener' | 'removeEventListener'>,
+  menu: () => HTMLElement | null,
+  fechar: () => void,
+): () => void {
+  const onPointerDown = (event: MouseEvent) => {
+    if (!menu()?.contains(event.target as Node)) fechar();
+  };
+  const onKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') fechar();
+  };
+  doc.addEventListener('mousedown', onPointerDown);
+  doc.addEventListener('keydown', onKey);
+  return () => {
+    doc.removeEventListener('mousedown', onPointerDown);
+    doc.removeEventListener('keydown', onKey);
+  };
+}
+
 export function OverflowMenu({
   items,
   label = 'Mais ações',
   align = 'right',
   compact = false,
+  grande,
   texto,
   className,
+  onAbertoMudou,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const mudar = (aberto: boolean) => {
+    setOpen(aberto);
+    onAbertoMudou?.(aberto);
+  };
+  const fechar = useEffectEvent(() => mudar(false));
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKey);
-    };
+    return ouvirFechamento(document, () => wrapRef.current, fechar);
   }, [open]);
 
   return (
@@ -196,8 +223,9 @@ export function OverflowMenu({
         texto={texto}
         label={label}
         compact={compact}
+        grande={grande}
         open={open}
-        onAlternar={() => setOpen((current) => !current)}
+        onAlternar={() => mudar(!open)}
       />
 
       {open && (
@@ -209,7 +237,7 @@ export function OverflowMenu({
           )}
         >
           {items.map((item, idx) => (
-            <ItemDoMenu key={`${item.label}-${idx}`} item={item} onFechar={() => setOpen(false)} />
+            <ItemDoMenu key={`${item.label}-${idx}`} item={item} onFechar={() => mudar(false)} />
           ))}
         </div>
       )}

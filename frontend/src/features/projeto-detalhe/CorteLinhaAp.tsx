@@ -9,12 +9,15 @@ import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
+import { OverflowMenu } from '@/components/ui/overflow-menu';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { SeloDeEstado, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { MetadadosDoCorteModal } from '@/features/metadata/MetadadosDoCorteModal';
-import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
+import { BarraDoCorte } from '@/upgrade/BarraDoCorte';
+import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
+import { estadoDaLinha, maisDaLinha, primarioDaLinha } from './acoesDaLinha';
 import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 
 // ─────────────────────────────────────────────────────────────────
@@ -26,24 +29,25 @@ import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 // baixo; grade obriga a varrer.
 //
 // A leitura vai da esquerda para a direita e termina na decisão:
-// miniatura → identidade → estado → o que falta → o que fazer agora.
+// miniatura → identidade → o que falta → o que fazer agora.
+//
+// D-868 (Onda 3, notas 3 e 4): o "o que falta" eram 11 siglas e virou uma
+// barra de 8 passos com "N de 8 · próximo: verbo"; o "o que fazer" eram seis
+// ícones e virou Editar e o principal, com rótulo, mais um "⋯" com o resto
+// (acoesDaLinha). Alvos de 32 px.
 // ─────────────────────────────────────────────────────────────────
-
-type EstadoLinha = 'proposto' | 'aprovado' | 'pronto' | 'publicado' | 'rejeitado';
 
 const GRADIENTES = [250, 22, 160, 300, 60, 200];
 
 /**
- * O estado que a linha mostra. Não é o enum do banco: `StatusCorte` não
- * sabe se o corte já subiu nem se o render fechou, e são essas duas
- * coisas que decidem o que o botão da direita deve oferecer.
+ * D-868: as colunas da linha. Com janela larga a barra tem coluna própria;
+ * abaixo de BARRA_EM_COLUNA_MIN_PX ela desce para baixo do título — a
+ * coluna de 190 px tirava o espaço do título, que a 1024 px chegava a 0.
  */
-function estadoDaLinha(corte: Corte | undefined, status: StatusExportCorte): EstadoLinha {
-  if (status.youtube_url_publicado) return 'publicado';
-  if (corte?.status === 'rejeitado') return 'rejeitado';
-  if (status.pronto_publicar) return 'pronto';
-  if (corte && corte.status !== 'proposto') return 'aprovado';
-  return 'proposto';
+export function colunasDaLinha(comSelecao: boolean, barraEmColuna: boolean): string {
+  return [comSelecao && '16px', '24px', '96px', 'minmax(0, 1fr)', barraEmColuna && '190px', 'auto']
+    .filter(Boolean)
+    .join(' ');
 }
 
 type CorteLinhaApProps = {
@@ -67,7 +71,8 @@ type TriagemPeloTeclado = {
   projetoId: string;
   corte: Corte | undefined;
   status: StatusExportCorte;
-  metaAberto: boolean;
+  /** Modal de metadados ou ⋯ da linha aberto: o teclado é deles. */
+  sobreposicaoAberta: boolean;
   aprovar: ReturnType<typeof useAprovar>;
   atualizar: ReturnType<typeof useAtualizarCorte>;
   avisarFalha: (acao: string) => (erro: unknown) => void;
@@ -84,7 +89,7 @@ function useTriagemPeloTeclado({
   projetoId,
   corte,
   status,
-  metaAberto,
+  sobreposicaoAberta,
   aprovar,
   atualizar,
   avisarFalha,
@@ -101,8 +106,10 @@ function useTriagemPeloTeclado({
     const alvo = e.target as HTMLElement;
     // R4: o modal de metadados é filho JSX desta linha — mesmo saindo por
     // portal, o keydown sobe pela árvore do React até aqui. Sem esta guarda,
-    // `A` aprovava o corte de trás com o modal aberto.
-    if (metaAberto || confirmacao.pedido || alvo.closest('[role="dialog"]')) return;
+    // `A` aprovava o corte de trás com o modal aberto. D-868: o mesmo vale
+    // para o ⋯ da linha — com ele aberto, A aprovava e K levava o foco embora.
+    if (sobreposicaoAberta || confirmacao.pedido || alvo.closest('[role="dialog"], [role="menu"]'))
+      return;
     if (e.metaKey || e.ctrlKey || e.altKey || alvo.closest('input, textarea, select')) return;
     const acao = acaoDaTeclaNaLinha(e.key, corte?.status);
     if (!acao) return;
@@ -167,49 +174,35 @@ export function CorteLinhaAp({
 
   const irEditor = () => navigate(`/projetos/${projetoId}/cortes/${status.corte_id}`);
 
-  // Cada estado pede UMA coisa. Oferecer "Publicar" num corte sem render
-  // ou "Aprovar" num que já está no ar é convidar ao erro — por isso o
-  // botão da direita muda de nome, de ícone e de peso junto com o estado.
-  const primario: { texto: string; icone: IconName; forte: boolean; acao: () => void } = {
-    publicado: {
-      texto: 'No ar',
-      icone: 'external-link' as IconName,
-      forte: false,
-      acao: () =>
-        window.open(status.youtube_url_publicado ?? '', '_blank', 'noopener,noreferrer'),
-    },
-    rejeitado: {
-      texto: 'Voltar',
-      icone: 'undo-2' as IconName,
-      forte: false,
-      acao: () => atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('voltar') }),
-    },
-    pronto: {
-      // D-746: o verbo do resultado; o clique abre a conferência, não envia.
-      texto: 'Enviar ao YouTube',
-      icone: ICONE_DO_CONCEITO.publicar,
-      forte: true,
-      acao: onEnviarYoutube,
-    },
-    aprovado: {
-      texto: 'Finalizar',
-      icone: 'clapperboard' as IconName,
-      forte: true,
-      acao: () => navigate(`/projetos/${projetoId}/post-production?corte=${status.corte_id}`),
-    },
-    proposto: {
-      texto: 'Aprovar',
-      icone: 'check' as IconName,
-      forte: false,
-      acao: () => aprovar.mutate(undefined, { onError: avisarFalha('aprovar') }),
-    },
-  }[estado];
+  const primario = primarioDaLinha(estado, {
+    aprovar: () => aprovar.mutate(undefined, { onError: avisarFalha('aprovar') }),
+    voltar: () => atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('voltar') }),
+    enviarYoutube: onEnviarYoutube,
+    finalizar: () => navigate(`/projetos/${projetoId}/post-production?corte=${status.corte_id}`),
+    abrirNoYoutube: () =>
+      window.open(status.youtube_url_publicado ?? '', '_blank', 'noopener,noreferrer'),
+  });
+  const mais = maisDaLinha({
+    publicado: Boolean(status.youtube_url_publicado || status.tiktok_publicado_em),
+    abrindoPasta: abrirPasta.isPending,
+    posProducao: () =>
+      navigate(`/projetos/${projetoId}/post-production?corte=${status.corte_id}`),
+    metadados: () => setMetaAberto(true),
+    abrirPasta: () => abrirPasta.mutate(status.corte_id),
+    informarUrl: onInformarUrl,
+    liberarPublicacao: onLiberarPublicacao,
+  });
 
+  // D-868: o vidro de cada linha é um contexto de empilhamento, e a de baixo
+  // pintava por cima do ⋯ aberto. A linha sobe enquanto o SEU ⋯ está aberto
+  // (amarrar ao foco falhava: K ou Tab levavam o foco e o menu ficava aberto).
+  const [maisAberto, setMaisAberto] = useState(false);
+  const barraEmColuna = useJanelaMin(BARRA_EM_COLUNA_MIN_PX);
   const { aoTeclar, confirmacao, cancelar } = useTriagemPeloTeclado({
     projetoId,
     corte,
     status,
-    metaAberto,
+    sobreposicaoAberta: metaAberto || maisAberto,
     aprovar,
     atualizar,
     avisarFalha,
@@ -223,14 +216,14 @@ export function CorteLinhaAp({
       aria-label={`Corte #${status.numero} — ${status.titulo}`}
       style={{
         display: 'grid',
-        gridTemplateColumns: onAlternarSelecao
-          ? '16px 24px 96px minmax(0, 1fr) auto'
-          : '24px 96px minmax(0, 1fr) auto',
+        gridTemplateColumns: colunasDaLinha(Boolean(onAlternarSelecao), barraEmColuna),
         gap: 12,
         alignItems: 'center',
         padding: '9px 11px',
         opacity: estado === 'rejeitado' ? 0.72 : 1,
         borderColor: selecionado ? 'var(--sel-line)' : undefined,
+        position: 'relative',
+        zIndex: maisAberto ? 3 : undefined,
       }}
     >
       {onAlternarSelecao ? (
@@ -352,95 +345,49 @@ export function CorteLinhaAp({
           <SeloDeEstado tom={TOM_DO_CORTE[estado]}>{estado}</SeloDeEstado>
         </span>
 
-        <span
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 6,
-          }}
-        >
-          <TiraDoCorteAp tira={tira} />
-
-          {corte ? (
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)' }}>
-              {corte.inicio_hms} → {corte.fim_hms}
-            </span>
-          ) : null}
-        </span>
+        {corte ? (
+          <span
+            style={{
+              display: 'block',
+              marginTop: 6,
+              fontFamily: 'var(--mono)',
+              fontSize: 11,
+              color: 'var(--dim)',
+            }}
+          >
+            {corte.inicio_hms} → {corte.fim_hms}
+          </span>
+        ) : null}
+        {barraEmColuna ? null : (
+          <span style={{ display: 'block', marginTop: 6, maxWidth: 260 }}>
+            <BarraDoCorte tira={tira} />
+          </span>
+        )}
       </span>
 
-      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <button type="button" className="btn btn-icon" title="Editar corte" onClick={irEditor}>
+      {barraEmColuna ? <BarraDoCorte tira={tira} /> : null}
+
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button type="button" className="btn" style={ALVO} onClick={irEditor}>
           <Icon name={ICONE_DO_CONCEITO.editar} />
+          Editar
         </button>
-        <button
-          type="button"
-          className="btn btn-icon"
-          title="Pós-produção"
-          onClick={() =>
-            navigate(`/projetos/${projetoId}/post-production?corte=${status.corte_id}`)
-          }
-        >
-          <Icon name="clapperboard" />
-        </button>
-        {/* D-746: consultar não é navegar — o { } abre o metadado aqui, e a
-            lista fica onde estava. Destacado porque é a consulta mais
-            frequente da linha. */}
-        <button
-          type="button"
-          className="btn btn-icon"
-          title="Metadados do corte — abre aqui, sem sair da lista"
-          aria-label="Metadados do corte"
-          onClick={() => setMetaAberto(true)}
-          style={{
-            borderColor: 'var(--accent)',
-            color: 'var(--accent)',
-            background: 'var(--accent-soft)',
-          }}
-        >
-          <Icon name="tags" />
-        </button>
-        <button
-          type="button"
-          className="btn btn-icon"
-          title="Abrir a pasta do corte"
-          onClick={() => abrirPasta.mutate(status.corte_id)}
-          disabled={abrirPasta.isPending}
-        >
-          <Icon name="folder" />
-        </button>
-
-        {status.youtube_url_publicado || status.tiktok_publicado_em ? (
-          <button
-            type="button"
-            className="btn btn-icon"
-            title="Liberar publicação (subir de novo)"
-            onClick={onLiberarPublicacao}
-          >
-            <Icon name="rotate-ccw" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-icon"
-            title="Informar a URL de um vídeo já publicado no YouTube"
-            onClick={onInformarUrl}
-          >
-            <Icon name={ICONE_DO_CONCEITO.urlPublicada} />
-          </button>
-        )}
-
         <button
           type="button"
           className={primario.forte ? 'btn btn-pri' : 'btn'}
+          style={ALVO}
           onClick={primario.acao}
           disabled={enviando && estado === 'pronto'}
         >
           <Icon name={enviando && estado === 'pronto' ? 'loader' : primario.icone} />
           {primario.texto}
         </button>
+        <OverflowMenu
+          items={mais}
+          label={`Mais ações do corte ${status.numero}`}
+          grande
+          onAbertoMudou={setMaisAberto}
+        />
       </span>
       {/* Portal para a `.ap`, como o de metadados: o vidro (`backdrop-filter`)
           do card vira a referência do `position: fixed` e prenderia o diálogo
@@ -467,6 +414,9 @@ export function CorteLinhaAp({
     </article>
   );
 }
+
+// D-868: os alvos das ações da linha têm 32 px (o `.btn` tem 30).
+const ALVO = { height: 32 } as const;
 
 // R4: reordenar é o menor alvo da casca e o gesto que erra mais caro — ele
 // muda a LISTA, não o corte. Sobe para o piso de alvo clicável.

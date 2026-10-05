@@ -16,6 +16,11 @@ import { useEffect, useState } from 'react';
 /** A partir daqui cabem trilho + coluna de contexto + miolo. */
 export const CONTEXTO_MIN_PX = 1241;
 
+/** D-868: a partir daqui a barra da linha do corte tem coluna própria;
+ *  abaixo, ela desce para baixo do título — a coluna de 190 px tirava o
+ *  espaço do título, que a 1024 px chegava a 0 (medido na pr-audit). */
+export const BARRA_EM_COLUNA_MIN_PX = 1200;
+
 /** Abaixo daqui a busca da barra superior vira só o ícone: a trilha e o
  *  seletor valem mais que o rótulo "Buscar live, tela ou ação…". */
 export const BUSCA_LARGA_MIN_PX = 1200;
