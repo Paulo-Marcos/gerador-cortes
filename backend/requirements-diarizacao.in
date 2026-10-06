@@ -4,7 +4,9 @@
 #
 # D-819: lock próprio, compilado CONTRA o principal para as versões em comum
 # baterem (a família opentelemetry deu conflito na PROD quando isto era
-# `pip install` solto):
-#   uv pip compile requirements-diarizacao.in -c requirements.txt --universal --python-version 3.11 --generate-hashes -o requirements-diarizacao.txt
+# `pip install` solto). D-892: e contra o de dev também — `-Dev -Diarizacao`
+# instala os três, e com o filelock em versões diferentes um deles sempre
+# perdia. Por isso recompile este por último, depois do principal e do dev:
+#   uv pip compile requirements-diarizacao.in -c requirements.txt -c requirements-dev.txt --universal --python-version 3.11 --generate-hashes -o requirements-diarizacao.txt
 # O código fala a API do 4.x (`token=` e `DiarizeOutput`, infrastructure/diarizacao_client.py).
 pyannote.audio==4.0.7

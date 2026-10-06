@@ -85,7 +85,8 @@ if ($Dev) {
     & $venvPython -m pip install -r (Join-Path $RAIZ "backend\requirements-dev.txt")
     if ($LASTEXITCODE -ne 0) { Parar "falha ao instalar as dependencias de desenvolvimento" }
 }
-# D-819: a diarizacao tem lock proprio, compilado contra o principal; instalar
+# D-819: a diarizacao tem lock proprio, compilado contra o principal e o de
+# dev (D-892), para nao rebaixar nada do -Dev; instalar
 # o pyannote solto trazia versoes que brigavam com as do lock (opentelemetry).
 if ($Diarizacao) {
     & $venvPython -m pip install -r (Join-Path $RAIZ "backend\requirements-diarizacao.txt")
