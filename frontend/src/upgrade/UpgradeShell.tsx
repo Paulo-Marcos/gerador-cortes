@@ -5,6 +5,7 @@ import {
   useWorkbenchQueueOptional,
   type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
+import { overlayAberto } from '@/shared/atalhos/shortcuts';
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { useCanais } from '@/features/channels/useChannels';
@@ -21,7 +22,7 @@ import { CONTEXTO_MIN_PX, useJanelaMin } from './medidas';
 import { PaletaDeComandos } from './PaletaDeComandos';
 import { ScreenHeader } from './ScreenHeader';
 import { TopBar } from './TopBar';
-import { barraComTeclas, overlayAberto, useAtalhosDaCasca } from './useAtalhosDaCasca';
+import { barraComTeclas, useAtalhosDaCasca } from './useAtalhosDaCasca';
 import { TrilhaDeEtapas } from './TrilhaDeEtapas';
 import { dentroDeUmaLive } from './trilhaDaLive';
 import { useTrilho } from './useTrilho';

@@ -235,6 +235,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file, so the next rule fits under the 500-line limit (D-889).
 
 ### Fixed
+- **Editor keys no longer act behind an open dialog.** With the shortcuts
+  help, the metadata or any other dialog or menu over the editor, A still
+  approved the cut behind it, R asked to delete it, F toggled Fire and Space
+  played the video (and swallowed the press on the dialog's own button). Keys
+  without Ctrl now belong to whatever is open, the same rule the shell
+  already used for J, K and Enter; Ctrl+S still saves (D-887).
 - **A console hiccup no longer takes the whole app down.** `dev.ps1` let
   every service inherit its console as input, and the Remotion Studio reads
   it as a keyboard; when that read failed ("read UNKNOWN"), the Studio
