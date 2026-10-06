@@ -31,3 +31,25 @@ describe('ActionBar — alternância com ajuste', () => {
     expect(html).not.toContain('Editar autor e parte');
   });
 });
+
+// D-870: o motivo do principal desabilitado — no Workspace, a lista de
+// pendências de uma live grande fazia a barra crescer a 90 px.
+describe('ActionBar — motivo do principal desligado', () => {
+  const longo = 'Faltam 8 de 8: ' + '#1 (render final) · '.repeat(8);
+  const html = renderToStaticMarkup(
+    <ActionBar barra={{ primario: { texto: 'Publicar 8 cortes', icone: 'upload', desabilitado: true, motivo: longo } }} />,
+  );
+
+  it('no máximo duas linhas na barra', () => {
+    expect(html).toMatch(/-webkit-line-clamp:2[^>]*>Faltam 8 de 8/);
+  });
+
+  it('o texto inteiro fica no hover, no motivo todo (ícone incluído)', () => {
+    expect(html).toContain(`<span id="motivo-do-primario" title="${longo}"`);
+  });
+
+  it('o botão aponta para o motivo, para o leitor de tela', () => {
+    expect(html).toMatch(/<button[^>]*aria-describedby="motivo-do-primario"/);
+    expect(html).toContain('id="motivo-do-primario"');
+  });
+});

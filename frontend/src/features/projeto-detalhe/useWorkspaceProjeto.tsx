@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import {
@@ -11,6 +11,12 @@ import {
   subDoWorkspace,
 } from '@/features/projeto-detalhe/cortesDoWorkspace';
 import { acoesDoWorkspace } from '@/features/projeto-detalhe/acoesDoWorkspace';
+import {
+  barraDoWorkspace,
+  chipDaProntidao,
+  pedidoAprovarPropostos,
+  proximaAcaoDaLive,
+} from '@/features/projeto-detalhe/rodapeDoWorkspace';
 import { avaliarProntidaoPublicacao } from '@/features/projeto-detalhe/prontidaoPublicacao';
 import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/features/editor/useCortes';
 import {
@@ -30,7 +36,7 @@ import type { ProviderIA } from '@/lib/providerIa';
 import { resolveThumbUrl } from '@/lib/api';
 import { cortesApi } from '@/features/editor/api/cortes';
 import { formatarDuracao } from '@/lib/utils';
-import type {  DestinoPublicacao, StatusExportCorte } from '@/types/models';
+import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { useCanais } from '@/features/channels/useChannels';
 import { filtroNoArLigado } from '@/upgrade/trilhaDaLive';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
@@ -56,6 +62,22 @@ function useAbrirPastaDoProjeto(id: string) {
   };
 }
 
+/**
+ * D-870 (achado da pr-audit): o hook é reaproveitado entre as rotas, e uma
+ * confirmação aberta numa live sobrevivia à troca para outra — "Aprovar os 3
+ * propostos" da live A podia ser confirmado já na tela da live B. Trocou de
+ * live, a confirmação pendente cai.
+ */
+function useConfirmacaoDaLive(id: string) {
+  const confirmacao = useConfirmacao();
+  const [daLive, setDaLive] = useState(id);
+  if (daLive !== id) {
+    setDaLive(id);
+    confirmacao.cancelar();
+  }
+  return confirmacao;
+}
+
 export function useWorkspaceProjeto() {
   const { id = '' } = useParams<{ id: string }>();
   const { notify } = useToast();
@@ -69,7 +91,7 @@ export function useWorkspaceProjeto() {
   const pasta = useAbrirPastaDoProjeto(id);
   const refazerTranscricao = useRefazerTranscricao(id);
   const analisarDesviosTodos = useAnalisarDesviosTodos(id);
-  const confirmacao = useConfirmacao();
+  const confirmacao = useConfirmacaoDaLive(id);
   const reordenar = useReordenarCortes(id);
   const uploadYoutube = useUploadYouTube();
   const marcarPublicado = useMarcarPublicadoYouTube();
@@ -150,8 +172,10 @@ export function useWorkspaceProjeto() {
       return proximo;
     });
 
-  async function aplicarEmLote(acao: 'aprovar' | 'devolver') {
-    const alvos = alvosDoLote(cortes, selecao, linhas);
+  /** Sem `todos`, age sobre a seleção visível; com `todos` (o rodapé), sobre a
+   *  live inteira — e aí não mexe na seleção manual (decisão do Paulo). */
+  async function aplicarEmLote(acao: 'aprovar' | 'devolver', todos?: Corte[]) {
+    const alvos = todos ?? alvosDoLote(cortes, selecao, linhas);
     const elegiveis = alvos.filter((c) =>
       acao === 'aprovar' ? c.status === 'proposto' : ['aprovado', 'processado'].includes(c.status),
     );
@@ -182,7 +206,7 @@ export function useWorkspaceProjeto() {
         : `${feitos} corte(s) ${verbo}(s).`,
       { tone: falhas ? 'warning' : 'success' },
     );
-    if (!falhas) setSelecionados(new Set());
+    if (!falhas && !todos) setSelecionados(new Set());
     atualizarTudo();
   }
 
@@ -316,6 +340,16 @@ export function useWorkspaceProjeto() {
   const analisando = analiseEmVoo || dados?.status === 'analisando';
   const duracao = dados?.duracao_segundos ? formatarDuracao(dados.duracao_segundos) : '—';
 
+  const navigate = useNavigate();
+  const proxima = proximaAcaoDaLive({
+    cortes,
+    statusList,
+    prontidao,
+    arquivosLimpos: Boolean(dados?.arquivos_limpos),
+    carregando: !dados || dados.id !== id || !cortesQuery.data,
+    analisando,
+    statusDoProjeto: dados?.status,
+  });
   useDefinirChrome(
     {
       titulo: dados?.titulo_live || 'Workspace do projeto',
@@ -339,41 +373,28 @@ export function useWorkspaceProjeto() {
         auditar: () => setAuditoriaAberta(true),
         abrirPasta: pasta.abrir,
       }),
-      // "nada a publicar" nao e alarme: e a live fechada. Pintar de amarelo
-      // fazia o estado terminal parecer pendencia.
-      estado:
-        prontidao.total === 0
-          ? {
-              texto: 'nada a publicar',
-              icone: 'circle-check',
-              cor: 'var(--mute)',
-              bg: 'var(--inset)',
-            }
-          : prontidao.liberado
-            ? {
-                texto: 'lote pronto',
-                icone: 'circle-check',
-                cor: 'var(--ok)',
-                bg: 'var(--ok-soft)',
-              }
-            : {
-                texto: prontidao.resumo,
-                icone: 'triangle-alert',
-                cor: 'var(--warn)',
-                bg: 'var(--warn-soft)',
-              },
+      estado: chipDaProntidao(prontidao),
+      // D-870: o próximo passo da live no rodapé, como no editor.
+      barra: barraDoWorkspace(proxima, {
+        analisar: () => setAnaliseAberta(true),
+        aprovarPropostos: (n) =>
+          confirmacao.executarOuPedir(pedidoAprovarPropostos(n), () => void aplicarEmLote('aprovar', cortes)),
+        renderizar: (corte) => navigate(`/projetos/${id}/post-production?corte=${corte}`),
+        publicar: () => setPublicarAberto(true),
+      }),
     },
     [
-      dados?.titulo_live,
-      dados?.youtube_url,
-      dados?.arquivos_limpos,
+      id, dados?.titulo_live, dados?.youtube_url, dados?.arquivos_limpos,
       duracao,
       cortes.length,
       fires,
       publicados,
       agendados,
-      prontidao,
+      prontidao, cortes,
       pasta.abrindo, refazerTranscricao.isPending,
+      // O passo é recriado a cada render: a chave estável evita republicar
+      // a casca sem fim (efeito → casca → render → passo novo → efeito).
+      JSON.stringify(proxima),
     ],
   );
 
