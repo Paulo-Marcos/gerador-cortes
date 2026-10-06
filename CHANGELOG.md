@@ -208,6 +208,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   24 mutations of those rules all fail it. No behavior changed (D-878).
 
 ### Fixed
+- **Deleting a cut with an unsaved adjustment no longer traps the editor.**
+  The way out tried to save the adjustment into the deleted cut, got 404,
+  said "Não consegui salvar os ajustes" and stayed on a "Not Found" screen —
+  for good, since nothing cleared the adjustment. Now deleting discards it,
+  and if saving on the way out finds the cut gone (deleted here or on
+  another screen), the editor says so and lets you leave (D-883).
 - **"CI ok" no longer turns green when GitHub cancels the other jobs.** When
   no hosted runner picked up four jobs, GitHub cancelled them and the step
   meant to fail the check was skipped: a step condition without a status

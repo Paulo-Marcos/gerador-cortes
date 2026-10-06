@@ -24,7 +24,7 @@ import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { applyDesvioChange, mergeDirtyPatch, type WaveformWindow } from './editorEditState';
+import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, type WaveformWindow } from './editorEditState';
 import {
   postProductionPath,
   resolveCorteStagePath,
@@ -227,11 +227,11 @@ export function useEditorPage() {
           saida.proceed();
         },
         onError: (erro) => {
-          notifyToast(
-            `Não consegui salvar os ajustes (${erro instanceof Error ? erro.message : 'erro'}). Fiquei no corte — tente Ctrl+S.`,
-            { tone: 'error' },
-          );
-          saida.reset();
+          const desfecho = desfechoDaFalhaAoSalvar(erro);
+          notifyToast(desfecho.mensagem, { tone: desfecho.tom });
+          if (!desfecho.sair) return saida.reset();
+          editHistory.reset({});
+          saida.proceed();
         },
       },
     );
@@ -600,30 +600,30 @@ export function useEditorPage() {
   }
 
   function excluirConfirmado() {
-    {
-      deletarCorte.mutate(undefined, {
-        onSuccess: () => {
-          if (cortes.length > 1) {
-            const index = cortes.findIndex((item) => item.id === corteId);
-            const next = (index + 1) % cortes.length;
-            if (cortes[next].id !== corteId) {
-              const nextCorte = cortes[next];
-              navigate(
-                resolveCorteStagePath({
-                  projetoId,
-                  corte: nextCorte,
-                  status: exportStatusQ.data?.cortes.find(
-                    (status) => status.corte_id === nextCorte.id,
-                  ),
-                }),
-              );
-              return;
-            }
+    deletarCorte.mutate(undefined, {
+      onSuccess: () => {
+        // D-883: o ajuste morre com o corte — a saída o salvaria no excluído (404).
+        editHistory.reset({});
+        if (cortes.length > 1) {
+          const index = cortes.findIndex((item) => item.id === corteId);
+          const next = (index + 1) % cortes.length;
+          if (cortes[next].id !== corteId) {
+            const nextCorte = cortes[next];
+            navigate(
+              resolveCorteStagePath({
+                projetoId,
+                corte: nextCorte,
+                status: exportStatusQ.data?.cortes.find(
+                  (status) => status.corte_id === nextCorte.id,
+                ),
+              }),
+            );
+            return;
           }
-          navigate(`/projetos/${projetoId}`);
-        },
-      });
-    }
+        }
+        navigate(`/projetos/${projetoId}`);
+      },
+    });
   }
 
   // D-394: bindings vêm do registro central (ids bruto.*) — assim TODA
