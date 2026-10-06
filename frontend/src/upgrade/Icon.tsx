@@ -106,7 +106,6 @@ import {
   PanelRightOpen,
   Pause,
   Pen,
-  Pencil,
   Pin,
   Play,
   Plus,
@@ -138,6 +137,7 @@ import {
   Tag,
   Tags,
   Target,
+  TextCursorInput,
   Trash,
   Trash2,
   TrendingUp,
@@ -291,7 +291,6 @@ const ICONS = {
   'panel-right-open': PanelRightOpen,
   pause: Pause,
   pen: Pen,
-  pencil: Pencil,
   pin: Pin,
   play: Play,
   plus: Plus,
@@ -323,6 +322,7 @@ const ICONS = {
   tag: Tag,
   tags: Tags,
   target: Target,
+  'text-cursor-input': TextCursorInput,
   trash: Trash,
   'trash-2': Trash2,
   'trending-up': TrendingUp,
@@ -364,6 +364,9 @@ export const ICONE_DO_CONCEITO = {
   /** Abrir para editar: o corte, a capa. O traço único da prancha — o
    *  `pencil` tem a faixa da borracha, que ela não desenha. */
   editar: 'pen',
+  /** Trocar só o nome (um preset do palco). D-888: era o `pencil`, quase a
+   *  caneta do Editar em 16 px — e renomear não abre nada para editar. */
+  renomear: 'text-cursor-input',
   /** Mandar para fora: YouTube, TikTok, Reels. */
   publicar: 'upload',
   /** O que já pode sair. */

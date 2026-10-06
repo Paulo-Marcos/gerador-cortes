@@ -33,6 +33,7 @@ const REGRAS: { conceito: string; rotulo: RegExp; icone: IconName }[] = [
     icone: ICONE_DO_CONCEITO.publicar,
   },
   { conceito: 'editar', rotulo: /^(editar\b|voltar à edição|ir para a edição)/i, icone: ICONE_DO_CONCEITO.editar },
+  { conceito: 'renomear', rotulo: /^renomear\b/i, icone: ICONE_DO_CONCEITO.renomear }, // D-888: só troca o nome
   { conceito: 'urlPublicada', rotulo: /^informar a url/i, icone: ICONE_DO_CONCEITO.urlPublicada },
   { conceito: 'auditar', rotulo: /^audit(ar\b|oria da análise)/i, icone: ICONE_DO_CONCEITO.auditar },
   {

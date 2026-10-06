@@ -61,6 +61,7 @@ describe('ICONE_DO_CONCEITO', () => {
     expect(ICONE_DO_CONCEITO).toEqual({
       iaGera: 'sparkle',
       editar: 'pen',
+      renomear: 'text-cursor-input',
       publicar: 'upload',
       prontos: 'circle-check',
       urlPublicada: 'link',
@@ -75,6 +76,14 @@ describe('ICONE_DO_CONCEITO', () => {
 
   it('o avião de papel saiu: era Prontos e TikTok ao mesmo tempo', () => {
     expect(NOMES_DE_ICONE).not.toContain('send');
+  });
+
+  // D-888: o lápis do Renomear era quase a caneta do Editar em 16 px.
+  it('o lápis saiu: renomear tem o cursor na caixa de texto, editar a caneta', () => {
+    expect(NOMES_DE_ICONE).not.toContain('pencil');
+    const desenho = (nome: 'pen' | 'text-cursor-input') => svg(renderToStaticMarkup(<Icon name={nome} />));
+    expect(desenho(ICONE_DO_CONCEITO.renomear)).toMatch(/class="lucide lucide-text-cursor-input/);
+    expect(desenho(ICONE_DO_CONCEITO.editar)).toMatch(/class="lucide lucide-pen"/);
   });
 
   it('todo nome da escala desenha um svg do lucide', () => {

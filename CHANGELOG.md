@@ -51,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **Renaming has its own icon.** The "Renomear" buttons of the stage
+  presets (in the positioning dialog and in the shorts presets) used a
+  pencil that, at 16 px, was almost the "Editar" pen; they now show a text
+  cursor in a box, and so does the "Renomear" that confirms the dialog,
+  which had a save icon. The pencil left the icon set (D-888).
 - **The editor's side panel fits, and color is left for state.** The four
   tabs (Trechos · N, Ordem, Transcrição, Avaliação) fit in one row from a
   344 px column — a 1440 screen — where Transcrição and Avaliação used to
