@@ -1,4 +1,4 @@
-import { ErroDaApi } from '@/shared/api/problem';
+import { ErroDaApi } from '@/shared/api';
 import type { Corte } from '@/types/models';
 
 export type WaveformWindow = {

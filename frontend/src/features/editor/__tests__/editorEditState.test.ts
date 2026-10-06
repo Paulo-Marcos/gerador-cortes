@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ErroDaApi } from '@/shared/api/problem';
+import { ErroDaApi } from '@/shared/api';
 import type { Corte } from '@/types/models';
 import {
   applyDesvioChange,
@@ -181,21 +181,29 @@ describe('saída do editor quando salvar falha (D-883)', () => {
   });
 
   // O hook não roda aqui (vitest sem DOM, e o bloqueio vive num efeito): a
-  // regra é pura e testada acima; aqui se confere que o hook a obedece.
-  const hook = readFileSync(resolve(__dirname, '../useEditorPage.tsx'), 'utf8');
+  // regra é pura e testada acima; aqui se confere que o hook a obedece. O fonte
+  // é lido SEM comentários — código comentado não pode passar por ligado.
+  const hook = readFileSync(resolve(__dirname, '../useEditorPage.tsx'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '');
 
-  it('a saída bloqueada segue o desfecho: descarta e sai, ou fica', () => {
+  it('a saída bloqueada segue o desfecho, inteiro e nessa ordem', () => {
     const aoFalhar = hook.match(/onError: \(erro\) => \{(.*?)\n {8}\},/s)![1];
-    expect(aoFalhar).toContain('desfechoDaFalhaAoSalvar(erro)');
     expect(aoFalhar).toMatch(
-      /if \(!desfecho\.sair\) return saida\.reset\(\);\s*editHistory\.reset\(\{\}\);\s*saida\.proceed\(\);/,
+      /^\s*const desfecho = desfechoDaFalhaAoSalvar\(erro\);\s*notifyToast\(desfecho\.mensagem, \{ tone: desfecho\.tom \}\);\s*if \(!desfecho\.sair\) return saida\.reset\(\);\s*editHistory\.reset\(\{\}\);\s*saida\.proceed\(\);\s*$/,
     );
   });
 
-  it('excluir descarta o ajuste antes de sair do corte', () => {
+  // É este ramo que solta o editor depois de excluir: o bloqueio ainda vê o
+  // estado sujo da render anterior, mas o ajuste já foi descartado.
+  it('sem ajuste pendente, a saída bloqueada só segue', () => {
+    expect(hook).toMatch(
+      /const pendentes = editHistory\.getPresent\(\);\s*if \(Object\.keys\(pendentes\)\.length === 0\) \{\s*saida\.proceed\(\);\s*return;\s*\}/,
+    );
+  });
+
+  it('excluir descarta o ajuste antes de tudo, em qualquer caminho', () => {
     const aoExcluir = hook.match(/function excluirConfirmado\(\) \{(.*?)\r?\n {2}\}\r?\n/s)![1];
-    const descarta = aoExcluir.indexOf('editHistory.reset({});');
-    expect(descarta).toBeGreaterThan(-1);
-    expect(descarta).toBeLessThan(aoExcluir.indexOf('navigate('));
+    expect(aoExcluir).toMatch(/onSuccess: \(\) => \{\s*editHistory\.reset\(\{\}\);\s*if \(cortes\.length > 1\)/);
   });
 });
