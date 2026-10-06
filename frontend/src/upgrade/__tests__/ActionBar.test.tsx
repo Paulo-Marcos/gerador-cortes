@@ -45,7 +45,7 @@ describe('ActionBar — motivo do principal desligado', () => {
   });
 
   it('o texto inteiro fica no hover, no motivo todo (ícone incluído)', () => {
-    expect(html).toMatch(new RegExp(`<span id="motivo-do-primario" title="${longo.replace(/[()]/g, '\\$&')}"`));
+    expect(html).toContain(`<span id="motivo-do-primario" title="${longo}"`);
   });
 
   it('o botão aponta para o motivo, para o leitor de tela', () => {
