@@ -11,7 +11,13 @@ import { COR_DO_SELO, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { acoesDoEditor } from './acoesDoEditor';
 import { MetadadosDoCorteModal, statusMinimo } from '@/features/metadata/MetadadosDoCorteModal';
-import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '@/upgrade/UpgradeChrome';
+import {
+  useDefinirChrome,
+  type ChromeBarra,
+  type ChromeEstado,
+  type ItemDeLista,
+} from '@/upgrade/UpgradeChrome';
+import { PorQueNaBancada } from '@/features/porque-do-corte/PorQueNaBancada';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Etapa 4 · a Bancada conversa com a casca.
@@ -164,18 +170,7 @@ export function BancadaChrome({
       // D-610: Fire e Salvar desceram para a barra de ações. D-870: o que
       // sobrava no topo (gerar bruto, excluir) foi para o Mais.
       acoes: acoesDoEditor({ brutoPronto, brutoOcupado, onGerarBruto, onExcluir }),
-      // O chip de estado da barra superior é o que responde "perdi alguma
-      // coisa?" sem exigir olhar para o botão Salvar.
-      estado: salvando
-        ? { texto: 'salvando…', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' }
-        : sujo
-          ? {
-              texto: 'não salvo',
-              icone: 'triangle-alert',
-              cor: 'var(--warn)',
-              bg: 'var(--warn-soft)',
-            }
-          : { texto: 'salvo', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' },
+      estado: estadoDoSalvar(salvando, sujo),
       lista: {
         cabecalho: { titulo: tituloLive, sub: `${cortes.length} cortes · ${prontos} prontos`, thumb: capaDaLive },
         titulo: 'Cortes da live',
@@ -191,7 +186,9 @@ export function BancadaChrome({
         onVerTodos: () => navigate(`/projetos/${projetoId}`),
       },
       barra: {
-        teclas: [{ teclas: ['Space'], texto: 'tocar' }],
+        teclas: [{ teclas: ['Space'], texto: 'tocar' }, { teclas: ['W'], texto: 'por quê' }],
+        // D-886: a nota da IA e o porquê do corte, nas três telas de um corte.
+        extra: <PorQueNaBancada corte={corte} />,
         alternancias: [
           {
             texto: 'Fire',
@@ -299,4 +296,14 @@ export function BancadaChrome({
       ) : null}
     </>
   );
+}
+
+/** O chip de estado da barra superior é o que responde "perdi alguma coisa?"
+ *  sem exigir olhar para o botão Salvar. */
+function estadoDoSalvar(salvando: boolean, sujo: boolean): ChromeEstado {
+  if (salvando)
+    return { texto: 'salvando…', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' };
+  if (sujo)
+    return { texto: 'não salvo', icone: 'triangle-alert', cor: 'var(--warn)', bg: 'var(--warn-soft)' };
+  return { texto: 'salvo', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' };
 }

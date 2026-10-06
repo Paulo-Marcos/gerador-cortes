@@ -8,6 +8,8 @@ import { ToastProvider } from '@/components/ui/toaster';
 import { confirmacaoExcluirCorte } from '@/features/editor/regeracaoConfirmacao';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { PorQueDoCorteModal } from '@/features/porque-do-corte/PorQueDoCorteModal';
+import { SeloDaNota } from '@/features/porque-do-corte/SeloDaNota';
 import { CorteLinhaAp } from '../CorteLinhaAp';
 
 // D-878 · o que a linha do corte já fazia na main sem teste nenhum — as
@@ -20,6 +22,7 @@ import { CorteLinhaAp } from '../CorteLinhaAp';
 // estado novo e os mesmos refs. É assim que `encenar` anda de quadro em quadro.
 const h = vi.hoisted(() => ({
   deletar: vi.fn(),
+  aprovar: vi.fn(),
   portais: [] as { filho: ReactElement<ConfirmDialogProps>; alvo: unknown }[],
 }));
 
@@ -35,7 +38,7 @@ vi.mock('react-dom', async (original) => ({
 }));
 vi.mock('@/features/editor/useCortes', async (original) => ({
   ...(await original<typeof import('@/features/editor/useCortes')>()),
-  useAprovar: () => ({ mutate: vi.fn() }),
+  useAprovar: () => ({ mutate: h.aprovar }),
   useAtualizarCorte: () => ({ mutate: vi.fn() }),
   useDeletarCorte: () => ({ mutate: h.deletar }),
 }));
@@ -261,5 +264,62 @@ describe('CorteLinhaAp · excluir pela tecla R (D-878)', () => {
     expect(h.portais).toHaveLength(1);
     expect(linha.focus).toHaveBeenCalledOnce();
     expect(h.deletar).not.toHaveBeenCalled();
+  });
+});
+
+// D-886 · a nota da IA na linha e o porquê pela tecla W ou pelo selo.
+describe('CorteLinhaAp · a nota e o porquê da IA (D-886)', () => {
+  const SCORE = { hook: 7, flow: 6, value: 8, total: 21 };
+  const teclar = (key: string) => (arvore: No[]) =>
+    (arvore[0].props.onKeyDown as (e: unknown) => void)({
+      key,
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: {},
+      target: { closest: () => null },
+    });
+  const modal = (arvore: No[]) => arvore.find((e) => e.type === PorQueDoCorteModal);
+  const selo = (arvore: No[]) => arvore.find((e) => e.type === SeloDaNota);
+
+  it('o selo da nota fica ao lado do estado, com o score do corte', () => {
+    const { quadros, html } = encenar([], { score: SCORE });
+    expect(selo(quadros[0])!.props.score).toBe(SCORE);
+    expect(html).toMatch(/>proposto<\/span><button type="button" title="Nota da IA 21\/30/);
+  });
+
+  it('sem nota, a linha não ganha selo vazio', () => {
+    expect(desenhar({ score: {} })).not.toContain('Nota da IA');
+  });
+
+  it('W abre o porquê do corte; fechar o tira da tela', () => {
+    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+    const { quadros } = encenar([teclar('w'), (arvore) => (modal(arvore)!.props.aoFechar as () => void)()], {
+      score: SCORE,
+    });
+    expect(quadros).toHaveLength(3);
+    expect(modal(quadros[0])).toBeUndefined();
+    expect(modal(quadros[1])!.props.corte).toMatchObject({ id: 'c7', score: SCORE });
+    expect(modal(quadros[2])).toBeUndefined();
+  });
+
+  it('clicar no selo abre o mesmo porquê', () => {
+    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+    const { quadros } = encenar([(arvore) => (selo(arvore)!.props.onAbrir as () => void)()], { score: SCORE });
+    expect(modal(quadros[1])).toBeDefined();
+  });
+
+  it('com o porquê aberto, o teclado é dele: A não aprova o corte de trás', () => {
+    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+    const { quadros } = encenar([teclar('w'), teclar('a')], { score: SCORE });
+    expect(quadros).toHaveLength(2);
+    expect(h.aprovar).not.toHaveBeenCalled();
+  });
+
+  it('sem corte carregado, W não abre nada', () => {
+    const { quadros } = encenar([teclar('w')], null);
+    expect(quadros).toHaveLength(1);
   });
 });

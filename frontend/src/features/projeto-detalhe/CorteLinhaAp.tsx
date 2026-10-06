@@ -19,6 +19,8 @@ import { BarraDoCorte } from '@/upgrade/BarraDoCorte';
 import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
 import { estadoDaLinha, maisDaLinha, primarioDaLinha } from './acoesDaLinha';
 import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
+import { SeloDaNota } from '@/features/porque-do-corte/SeloDaNota';
+import { PorQueDoCorteModal } from '@/features/porque-do-corte/PorQueDoCorteModal';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A linha do corte no Workspace.
@@ -76,6 +78,8 @@ type TriagemPeloTeclado = {
   aprovar: ReturnType<typeof useAprovar>;
   atualizar: ReturnType<typeof useAtualizarCorte>;
   avisarFalha: (acao: string) => (erro: unknown) => void;
+  /** D-886: W abre o porquê da IA. */
+  explicar: () => void;
 };
 
 /**
@@ -93,6 +97,7 @@ function useTriagemPeloTeclado({
   aprovar,
   atualizar,
   avisarFalha,
+  explicar,
 }: TriagemPeloTeclado) {
   const deletar = useDeletarCorte(status.corte_id, projetoId);
   const confirmacao = useConfirmacao();
@@ -118,6 +123,7 @@ function useTriagemPeloTeclado({
     if (acao === 'aprovar') aprovar.mutate(undefined, { onError: avisarFalha('aprovar') });
     else if (acao === 'devolver')
       atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('devolver') });
+    else if (acao === 'explicar') explicar();
     else if (acao === 'excluir') {
       linhaQuePediu.current = linha;
       confirmacao.executarOuPedir(confirmacaoExcluirCorte(status.numero, status.titulo ?? ''), () => {
@@ -167,6 +173,7 @@ export function CorteLinhaAp({
   const capa = resolveThumbUrl(projetoId, status.thumbnail_path);
   const [capaErro, setCapaErro] = useState(false);
   const [metaAberto, setMetaAberto] = useState(false);
+  const [porQueAberto, setPorQueAberto] = useState(false);
   const fecharMeta = useCallback(() => setMetaAberto(false), []);
   const hue = GRADIENTES[status.numero % GRADIENTES.length];
   const tira = montarTira(status, corte?.status);
@@ -202,10 +209,11 @@ export function CorteLinhaAp({
     projetoId,
     corte,
     status,
-    sobreposicaoAberta: metaAberto || maisAberto,
+    sobreposicaoAberta: metaAberto || maisAberto || porQueAberto,
     aprovar,
     atualizar,
     avisarFalha,
+    explicar: () => setPorQueAberto(true),
   });
 
   return (
@@ -292,20 +300,7 @@ export function CorteLinhaAp({
           />
         ) : null}
         {durSeg > 0 ? (
-          <span
-            style={{
-              position: 'absolute',
-              bottom: 3,
-              right: 4,
-              zIndex: 1,
-              fontFamily: 'var(--mono)',
-              fontSize: 9.5,
-              color: '#fff',
-              textShadow: '0 1px 2px rgb(0 0 0/.8)',
-            }}
-          >
-            {formatarDuracaoHMS(durSeg)}
-          </span>
+          <span style={DURACAO_NA_MINIATURA}>{formatarDuracaoHMS(durSeg)}</span>
         ) : null}
       </MolduraDeVideo>
 
@@ -343,6 +338,7 @@ export function CorteLinhaAp({
             </span>
           ) : null}
           <SeloDeEstado tom={TOM_DO_CORTE[estado]}>{estado}</SeloDeEstado>
+          <SeloDaNota score={corte?.score} onAbrir={() => setPorQueAberto(true)} />
         </span>
 
         {corte ? (
@@ -402,6 +398,9 @@ export function CorteLinhaAp({
             document.querySelector('.ap') ?? document.body,
           )
         : null}
+      {porQueAberto && corte ? (
+        <PorQueDoCorteModal corte={corte} aoFechar={() => setPorQueAberto(false)} />
+      ) : null}
       {metaAberto ? (
         <MetadadosDoCorteModal
           projetoId={projetoId}
@@ -414,6 +413,17 @@ export function CorteLinhaAp({
     </article>
   );
 }
+
+const DURACAO_NA_MINIATURA = {
+  position: 'absolute',
+  bottom: 3,
+  right: 4,
+  zIndex: 1,
+  fontFamily: 'var(--mono)',
+  fontSize: 9.5,
+  color: '#fff',
+  textShadow: '0 1px 2px rgb(0 0 0/.8)',
+} as const;
 
 // D-868: os alvos das ações da linha têm 32 px (o `.btn` tem 30).
 const ALVO = { height: 32 } as const;

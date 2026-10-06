@@ -403,6 +403,6 @@ describe('CorteLinhaAp · teclado (D-868)', () => {
   });
 
   it('com o ⋯ da linha aberto, as teclas da linha se calam', () => {
-    expect(fonte).toContain('sobreposicaoAberta: metaAberto || maisAberto,');
+    expect(fonte).toContain('sobreposicaoAberta: metaAberto || maisAberto || porQueAberto,');
   });
 });

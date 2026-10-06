@@ -38,7 +38,7 @@ export function mesclarCortesComExport(
   });
 }
 
-export type AcaoDaTecla = 'aprovar' | 'devolver' | 'excluir' | 'descer' | 'subir';
+export type AcaoDaTecla = 'aprovar' | 'devolver' | 'excluir' | 'descer' | 'subir' | 'explicar';
 
 /**
  * A triagem pelo teclado na linha focada do Workspace (D-746, D-842).
@@ -46,7 +46,8 @@ export type AcaoDaTecla = 'aprovar' | 'devolver' | 'excluir' | 'descer' | 'subir
  * A alterna: aprova o proposto e devolve a proposto o aprovado. R exclui o
  * corte de vez — quem chama pede confirmação antes, porque é a confirmação,
  * e não a tecla, que impede o irreversível num toque só. J/K andam entre as
- * linhas. Sem corte carregado (`status` indefinido), só a navegação vale.
+ * linhas. W abre o porquê da IA e a nota dela (D-886). Sem corte carregado
+ * (`status` indefinido), só a navegação vale.
  */
 export function acaoDaTeclaNaLinha(
   tecla: string,
@@ -64,6 +65,8 @@ export function acaoDaTeclaNaLinha(
       return null;
     case 'r':
       return status ? 'excluir' : null;
+    case 'w':
+      return status ? 'explicar' : null;
     default:
       return null;
   }
