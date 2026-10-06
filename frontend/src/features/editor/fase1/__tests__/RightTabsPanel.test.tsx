@@ -67,11 +67,61 @@ describe('RightTabsPanel — header', () => {
     expect(html).not.toContain('Mais ações');
   });
 
-  it('mantém a busca na transcrição e o "Influenciar a capa" como estão (não movidos)', () => {
-    const html = render();
+  // D-871: a capa se decide em Metadados (que tem o mesmo editor — ver
+  // MetadataCardModal.test); no editor ele empurrava as abas para baixo.
+  it('não traz mais o "Influenciar a capa"', () => {
+    expect(render()).not.toContain('Influenciar');
+  });
+});
 
-    // ThumbnailHintsEditor continua sempre visível no topo do painel.
-    expect(html).toContain('Influenciar');
+// D-871 (canvas do Editor, nota 3 "Painel que cabe"): as quatro abas cabiam
+// numa faixa rolável que deixava Transcrição e Avaliação fora da tela.
+describe('RightTabsPanel — as quatro abas cabem (D-871)', () => {
+  const desvios: Desvio[] = [
+    { inicio_hms: '00:00:10', fim_hms: '00:00:14', motivo: 'repete', origem: 'claude', categoria: 'repeticao' },
+    { inicio_hms: '00:00:20', fim_hms: '00:00:22', motivo: 'muleta', origem: 'manual' },
+  ];
+  const tablist = (html: string) =>
+    html.match(/<div role="tablist" aria-label="Painel do corte"[^>]*>(.*?)<\/div>/)!;
+  const abas = (html: string) => [...tablist(html)[1].matchAll(/<button[^>]*>([^<]*)<\/button>/g)];
+
+  it('um seletor com as quatro, na ordem, e o contador no rótulo dos trechos', () => {
+    const html = render(desvios);
+    expect(abas(html).map((a) => a[1])).toEqual(['Trechos · 2', 'Ordem', 'Transcrição', 'Avaliação']);
+    for (const [aba] of abas(html)) expect(aba).toContain('role="tab"');
+    expect(abas(html)[0][0]).toContain('aria-selected="true"');
+    expect(abas(html)[1][0]).toContain('aria-selected="false"');
+  });
+
+  it('não rolam para fora: sem espaço, quebram em outra fileira', () => {
+    const html = render(desvios);
+    expect(tablist(html)[0]).toContain('flex-wrap:wrap');
+    expect(html).not.toContain('overflow-x-auto');
+    // Uma aba sozinha mais larga que a coluna ainda encolhe, sem vazar.
+    for (const [aba] of abas(html)) {
+      expect(aba).toContain('max-width:100%');
+      expect(aba).toContain('text-overflow:ellipsis');
+    }
+  });
+
+  it('ter trechos a remover não é erro: nada de vermelho nas abas', () => {
+    expect(tablist(render(desvios))[0]).not.toContain('err');
+  });
+
+  it('a IA dos trechos diz os dois provedores pelo nome, lado a lado', () => {
+    const html = render();
+    const grupo = html.match(/<div role="group" aria-label="Gerar trechos a remover".*?<\/div>/s)![0];
+    expect(grupo).toMatch(/<span class="truncate">Claude<\/span>.*<span class="truncate">Gemini<\/span>/s);
+  });
+
+  it('o Manual continua no painel, como ícone', () => {
+    expect(render()).toContain('aria-label="Importar trechos manualmente"');
+  });
+
+  it('o tempo que cada trecho tira sai em cinza, não em vermelho', () => {
+    const tempo = render(desvios).match(/<span class="([^"]*)"[^>]*>−4\.0s<\/span>/)!;
+    expect(tempo[1]).toContain('text-[var(--wb-text-mute)]');
+    expect(tempo[1]).not.toContain('err');
   });
 });
 

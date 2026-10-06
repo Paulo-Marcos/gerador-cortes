@@ -148,6 +148,12 @@ describe('MetadataCard — corpo do modal', () => {
     expect(markup).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>[^<]*YouTube/);
     expect(markup).toMatch(/role="tab"[^>]*aria-selected="false"[^>]*>[^<]*TikTok/);
   });
+
+  // D-871: o "Influenciar a capa" saiu do editor de cortes porque a capa se
+  // decide aqui — então aqui ele não pode faltar, no modal nem no cartão.
+  it.each(['modal', 'card'] as const)('no %s, oferece influenciar a capa', (variant) => {
+    expect(render(metadado(), variant)).toContain('Influenciar a capa');
+  });
 });
 
 describe('ModalChip', () => {

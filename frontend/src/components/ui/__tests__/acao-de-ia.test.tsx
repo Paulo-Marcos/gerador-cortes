@@ -69,6 +69,27 @@ describe('AcaoDeIa', () => {
   });
 });
 
+// D-871: no painel do editor, os provedores pelo nome — o ícone sozinho pedia
+// passar o mouse para saber qual dos dois gerava.
+describe('AcaoDeIa comNome', () => {
+  it('escreve Claude e Gemini nos botões, que dividem a largura', () => {
+    const [claude, gemini] = (render({ comNome: true }).match(/<button[^>]*>.*?<\/button>/g) ?? []);
+    expect(claude).toContain('<span class="truncate">Claude</span>');
+    expect(gemini).toContain('<span class="truncate">Gemini</span>');
+    for (const botao of [claude, gemini]) expect(botao).toMatch(/^<button[^>]*class="[^"]*flex-1/);
+  });
+
+  it('o texto é neutro; a cor da marca fica só no ícone', () => {
+    const [claude] = render({ comNome: true }).match(/<button[^>]*>.*?<\/button>/g) ?? [];
+    expect(claude).toMatch(/^<button[^>]*style="color:var\(--wb-text\)"/);
+    expect(claude).toMatch(/<span class="flex flex-none" style="color:#[0-9a-fA-F]{6}"><svg/);
+  });
+
+  it('sem comNome, continua só com os ícones', () => {
+    expect(render()).not.toContain('>Claude<');
+  });
+});
+
 describe('MenuDeIa', () => {
   it('fechado, mostra só o ícone da ação com o nome acessível', () => {
     const html = renderToStaticMarkup(

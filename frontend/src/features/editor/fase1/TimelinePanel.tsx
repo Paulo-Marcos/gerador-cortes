@@ -783,7 +783,8 @@ function SpeedDisplay({
   onAlternar?: () => void;
 }) {
   const classes =
-    'flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 font-code text-[11px] font-bold text-[var(--wb-warn)]';
+    // D-871: sem âmbar — velocidade é um ajuste, não um aviso.
+    'flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 font-code text-[11px] font-bold text-[var(--wb-text)]';
   const numero = { fontVariantNumeric: 'tabular-nums' } as const;
   const rotulo = <><Icon name="gauge" />{playbackRate.toFixed(2)}×</>;
 
@@ -811,7 +812,7 @@ function SpeedDisplay({
         type="button"
         onClick={onAlternar}
         aria-label="Alternar velocidade"
-        className={cn(classes, 'transition-colors hover:border-[var(--wb-warn)]')}
+        className={cn(classes, 'transition-colors hover:border-[var(--wb-border)]')}
         style={numero}
       >
         {rotulo}
@@ -1315,30 +1316,29 @@ export function TimelinePanel({
 
         <TransportGroup onSkipStart={irParaInicio} onPlay={alternarPlay} onSkipEnd={irParaFim} />
 
-        {/* Workbench 1c.dc.html:223-224 - pilulas com rotulo (nao icone
-            puro): fundo --wb-ok-soft/--wb-err-soft, texto --wb-ok-ink/--wb-err. */}
-        <Tooltip label="Marcar inicio aqui ( [ )" side="bottom">
+        {/* D-871: neutros, com a tecla no rótulo — só marcam um ponto. */}
+        <Tooltip label="Marcar o início do corte aqui ( [ )" side="bottom">
           <button
             type="button"
             onClick={onSetInicioAqui}
             disabled={!onSetInicioAqui}
             aria-label="Marcar inicio aqui"
-            className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-ok-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-ok-ink)] transition-colors disabled:opacity-40"
+            className="flex h-7 flex-none items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2.5 text-[12px] font-medium text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-40"
           >
-            <Icon name="flag" />
-            In
+            <span className="font-code font-semibold">[</span>
+            Início aqui
           </button>
         </Tooltip>
-        <Tooltip label="Marcar fim aqui ( ] )" side="bottom">
+        <Tooltip label="Marcar o fim do corte aqui ( ] )" side="bottom">
           <button
             type="button"
             onClick={onSetFimAqui}
             disabled={!onSetFimAqui}
             aria-label="Marcar fim aqui"
-            className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-err-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-err)] transition-colors disabled:opacity-40"
+            className="flex h-7 flex-none items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2.5 text-[12px] font-medium text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-40"
           >
-            <Icon name="flag" style={{ transform: 'scaleX(-1)' }} />
-            Out
+            Fim aqui
+            <span className="font-code font-semibold">]</span>
           </button>
         </Tooltip>
 

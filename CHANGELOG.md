@@ -44,6 +44,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **The editor's side panel fits, and color is left for state.** The four
+  tabs (Trechos · N, Ordem, Transcrição, Avaliação) fit in one row from a
+  344 px column — a 1440 screen — where Transcrição and Avaliação used to
+  scroll out of view; narrower, they wrap to a second row. Trechos are generated with "Claude" and
+  "Gemini" written side by side; Manual became an icon. "Influenciar a capa"
+  left the editor: it stays in Metadados, where the cover is decided. The
+  start and end buttons read "[ Início aqui" and "Fim aqui ]" in neutral
+  instead of green and red, the speed is no longer amber and the time each
+  trecho removes is gray, not red (D-871).
 - **The Workspace's main action lives at the bottom right, like the editor's,
   and says the live's next step.** "Analisar com a IA" for a live without
   cuts; "Aprovar os N propostos", which asks for confirmation and approves

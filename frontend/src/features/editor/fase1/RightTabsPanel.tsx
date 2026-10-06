@@ -5,8 +5,6 @@ import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import type { ProviderIA } from '@/lib/providerIa';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
-import { cortesApi } from '@/features/editor/api/cortes';
 import { cn } from '@/lib/utils';
 import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
 import { BlocosTab } from './BlocosTab';
@@ -32,17 +30,15 @@ import { Icon } from '@/upgrade/Icon';
 //     escondê-la atrás de um rodapé fechado por padrão pioraria o fluxo
 //     comum, então a etapa pediu "só mover se fizer sentido" e aqui não
 //     fez.
-//   - "⭐ Influenciar a capa" (ThumbnailHintsEditor) não é tocado — mover
-//     o trigger sem virar uma ação por-trecho mudaria o comportamento
-//     (hoje é um editor sempre visível), fora do escopo desta etapa.
+//   - "Influenciar a capa" saiu do editor (D-871): a capa se decide em
+//     Metadados, que já tem o mesmo editor, e aqui ele empurrava as abas
+//     para baixo em toda troca de corte.
 //   - "⤓ Exportar transcrição (SRT)" não existe (sem hook/endpoint) —
 //     decisão já tomada fora desta etapa: não construir agora.
 // ─────────────────────────────────────────────────────────────
 
 interface RightTabsPanelProps {
-  // F-058: influência manual do editor no prompt da thumbnail.
   corteId: string;
-  hintsThumbnail?: string;
   // Trechos
   desvios: Desvio[];
   selectedDesvioIdx: number | null;
@@ -92,7 +88,6 @@ function mmssDecimo(hms: string): string {
 
 export function RightTabsPanel({
   corteId,
-  hintsThumbnail,
   desvios,
   selectedDesvioIdx,
   onSeek,
@@ -149,19 +144,14 @@ export function RightTabsPanel({
     <section
       className="card flex h-full flex-col overflow-hidden"
     >
-      {/* F-058: influência manual do editor no prompt da thumbnail. */}
-      <div className="flex-shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <ThumbnailHintsEditor
-          corteId={corteId}
-          initialValue={hintsThumbnail}
-          salvar={(hints) => cortesApi.atualizarCorte(corteId, { hints_thumbnail: hints })}
-        />
-      </div>
-      {/* Tabs planas com sublinhado (DE-PARA-v3 §3): sem caixa e sem sombra,
-          alinhadas ao TabStrip fino do shell. O fundo `inset` saiu junto —
-          a faixa agora só tem a divisória inferior. */}
+      {/* D-871: as quatro abas num seletor só — numa coluna de 360 px, a
+          faixa rolável deixava Transcrição e Avaliação fora da tela. Os
+          respiros são os mínimos para caberem numa fileira, com até 99
+          trechos, a partir de 344 px (a coluna numa tela de 1440); mais
+          estreita, quebram em duas fileiras, legíveis — reticências viravam
+          quatro "Tr…". Os dois ícones ficam: 26 px é o piso da casca. */}
       <header
-        className="flex flex-shrink-0 items-center gap-0.5 overflow-x-auto border-b border-[var(--line2)] px-[11px] pt-[9px]"
+        className="flex flex-shrink-0 items-center gap-0.5 border-b border-[var(--line2)] px-2 py-2"
       >
         {/* Primeiro da faixa: com quatro abas numa coluna estreita, no fim ele
             ficava fora de vista. */}
@@ -178,34 +168,33 @@ export function RightTabsPanel({
             </IconButton>
           </Tooltip>
         ) : null}
-        <TabButton
-          id="trechos"
-          active={tab === 'trechos'}
-          onClick={() => setTab('trechos')}
-          label="Trechos a remover"
-          count={desvios.length}
-          countTone="err"
-        />
-        <TabButton
-          id="ordem"
-          active={tab === 'ordem'}
-          onClick={() => setTab('ordem')}
-          label="Ordem"
-        />
-        <TabButton
-          id="transcricao"
-          active={tab === 'transcricao'}
-          onClick={() => setTab('transcricao')}
-          label="Transcrição"
-          count={transcricao?.length ?? 0}
-        />
-        <TabButton
-          id="avaliacao"
-          active={tab === 'avaliacao'}
-          onClick={() => setTab('avaliacao')}
-          label="Avaliação"
-        />
-        <div className="flex-1" />
+        <div
+          role="tablist"
+          aria-label="Painel do corte"
+          style={{
+            flex: '1 1 0',
+            minWidth: 0,
+            display: 'flex',
+            flexWrap: 'wrap',
+            padding: 2,
+            borderRadius: 6,
+            background: 'var(--wb-bg-inset)',
+          }}
+        >
+          <TabButton
+            active={tab === 'trechos'}
+            onClick={() => setTab('trechos')}
+            label="Trechos"
+            count={desvios.length}
+          />
+          <TabButton active={tab === 'ordem'} onClick={() => setTab('ordem')} label="Ordem" />
+          <TabButton
+            active={tab === 'transcricao'}
+            onClick={() => setTab('transcricao')}
+            label="Transcrição"
+          />
+          <TabButton active={tab === 'avaliacao'} onClick={() => setTab('avaliacao')} label="Avaliação" />
+        </div>
         <Tooltip label={refreshTitle} side="bottom">
           <IconButton
             type="button"
@@ -256,64 +245,49 @@ export function RightTabsPanel({
 }
 
 /**
- * Aba plana com sublinhado (DE-PARA-v3 §3). Antes era uma caixa com borda,
- * fundo próprio e `shadow-sm` — visual de tab antigo, destoando do TabStrip
- * fino e plano do resto do shell. Agora: só rótulo + contador, ativo marcado
- * por `border-bottom: 2px var(--wb-accent)`. Sem caixa, sem sombra.
+ * Uma aba do seletor (D-871, canvas "Painel que cabe"): a ativa é a peça
+ * clara sobre o fundo `inset`. O contador dos trechos vai no rótulo
+ * ("Trechos · 7"), sem pílula vermelha — cor fica para estado, e ter trechos
+ * a remover não é um problema.
  */
 function TabButton({
   active,
   onClick,
   label,
   count,
-  countTone,
 }: {
-  id: TabId;
   active: boolean;
   onClick: () => void;
   label: string;
-  /** Ausente = aba sem contador (a de Avaliação não conta itens). */
+  /** Ausente = aba sem contador. */
   count?: number;
-  countTone?: 'err';
 }) {
+  const texto = count === undefined ? label : `${label} · ${count}`;
   return (
     <button
       type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
-      aria-current={active ? 'page' : undefined}
+      title={texto}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        height: 30,
-        padding: '0 9px',
+        maxWidth: '100%',
+        height: 28,
+        padding: '0 5px',
         border: 0,
-        borderBottom: `2px solid ${active ? 'var(--sel-ink)' : 'transparent'}`,
-        marginBottom: -1,
-        background: 'none',
-        color: active ? 'var(--sel-ink)' : 'var(--mute)',
-        fontSize: 12.5,
-        fontWeight: 600,
+        borderRadius: 4,
+        background: active ? 'var(--wb-bg-card)' : 'transparent',
+        boxShadow: active ? 'var(--shadow-sm)' : 'none',
+        color: active ? 'var(--wb-text)' : 'var(--mute)',
+        fontSize: 12,
+        fontWeight: active ? 600 : 500,
         whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
         cursor: 'pointer',
       }}
     >
-      {label}
-      {count !== undefined ? (
-        <span
-          className="chip"
-          style={{
-            height: 18,
-            padding: '0 6px',
-            fontFamily: 'var(--mono)',
-            fontSize: 10,
-            background: countTone === 'err' ? 'var(--err-soft)' : 'var(--inset)',
-            color: countTone === 'err' ? 'var(--err)' : 'var(--mute)',
-          }}
-        >
-          {count}
-        </span>
-      ) : null}
+      {texto}
     </button>
   );
 }
@@ -380,34 +354,32 @@ const TrechosList = memo(function TrechosList({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Sub-barra compacta do protótipo v3: AI|Manual num segmented pequeno
-          (antes eram dois botões de altura cheia, que pesavam mais que as
-          próprias linhas de trecho) e o ＋ em acento suave, 30×30. */}
+      {/* D-871: "Gerar | Claude | Gemini", os provedores pelo nome e dividindo
+          a largura. O Manual (colar o JSON de uma IA externa) é raro e virou
+          ícone: com o rótulo, os nomes não cabiam numa coluna de 344 px. */}
       <div className="flex flex-shrink-0 items-center gap-1.5 px-3 pb-2 pt-2">
-        <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
-          <AcaoDeIa
-            rotulo="Gerar"
-            descricao="Gerar trechos a remover"
-            emVoo={
-              pending.claude?.isPending
-                ? ((pending.claude.provider as ProviderIA | undefined) ?? 'claude')
-                : null
-            }
-            onGerar={onGerarTrechosIA}
-            className="h-[26px] border-0 bg-transparent"
-          />
-          <Tooltip label="Importar trechos manualmente (cola JSON da IA)" side="bottom">
-            <button
-              type="button"
-              onClick={onGerarManual}
-              className="inline-flex h-[26px] items-center gap-1.5 rounded-[6px] px-3 text-[10.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]"
-            >
-              <Icon name="wand-sparkles" />
-              Manual
-            </button>
-          </Tooltip>
-        </div>
-        <div className="flex-1" />
+        <AcaoDeIa
+          rotulo="Gerar"
+          descricao="Gerar trechos a remover"
+          emVoo={
+            pending.claude?.isPending
+              ? ((pending.claude.provider as ProviderIA | undefined) ?? 'claude')
+              : null
+          }
+          onGerar={onGerarTrechosIA}
+          comNome
+          className="h-[30px] min-w-0 flex-1"
+        />
+        <Tooltip label="Importar trechos manualmente (cola JSON da IA)" side="bottom">
+          <button
+            type="button"
+            onClick={onGerarManual}
+            aria-label="Importar trechos manualmente"
+            className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[8px] border border-[var(--wb-border)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+          >
+            <Icon name="wand-sparkles" size={16} />
+          </button>
+        </Tooltip>
         <Tooltip label="Adicionar trecho" side="bottom">
           <button
             type="button"
@@ -479,8 +451,10 @@ const TrechosList = memo(function TrechosList({
                     >
                       {badge.label}
                     </span>
+                    {/* D-871: o tempo que sai é informação, não alarme — em
+                        cinza, como no canvas ("cor fica para estado"). */}
                     <span
-                      className="font-code text-[10px] font-semibold text-[var(--wb-err-ink)]"
+                      className="font-code text-[11px] font-semibold text-[var(--wb-text-mute)]"
                       style={{ fontVariantNumeric: 'tabular-nums' }}
                     >
                       −{delta.toFixed(1)}s

@@ -55,6 +55,12 @@ interface AcaoDeIaProps {
    * rótulo ao lado viraria reticências: quem usa põe a legenda acima.
    */
   apenasProvedores?: boolean;
+  /**
+   * D-871: os provedores pelo NOME, lado a lado e dividindo a largura. Para o
+   * painel onde a IA é a ação da coluna: o ícone sozinho pedia passar o mouse
+   * para saber qual dos dois gerava.
+   */
+  comNome?: boolean;
   className?: string;
 }
 
@@ -69,6 +75,7 @@ export function AcaoDeIa({
   tamanho = 'sm',
   icone = ICONE_DO_CONCEITO.iaGera,
   apenasProvedores = false,
+  comNome = false,
   className,
 }: AcaoDeIaProps) {
   const t = TAMANHOS[tamanho];
@@ -89,7 +96,9 @@ export function AcaoDeIa({
           className={cn(
             // min-w-0: numa coluna estreita é o TEXTO que encolhe (com reticências),
             // nunca os botões dos provedores — sem eles a ação não existe.
-            'flex min-w-0 flex-1 items-center gap-1.5 whitespace-nowrap px-2.5 font-semibold',
+            'flex min-w-0 items-center gap-1.5 whitespace-nowrap px-2.5 font-semibold',
+            // Com os nomes, são eles que dividem a largura; o verbo fica no tamanho dele.
+            comNome ? 'flex-none' : 'flex-1',
             t.texto,
             destaque ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text)]',
           )}
@@ -119,20 +128,28 @@ export function AcaoDeIa({
             'grid shrink-0 place-items-center transition-colors',
             // Sem rótulo, o primeiro botão abre o grupo: a divisória fica só entre eles.
             (!apenasProvedores || indice > 0) && 'border-l border-[var(--wb-border-soft)]',
-            apenasProvedores && 'flex-1',
+            (apenasProvedores || comNome) && 'flex-1',
+            comNome && cn('flex min-w-0 items-center justify-center gap-1.5 px-2 font-medium', t.texto),
             'hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
             // Só o que NÃO está gerando esmaece: o que gira precisa ficar legível.
             'disabled:cursor-not-allowed',
             travado && emVoo !== id && 'opacity-40',
-            t.botao,
+            !comNome && t.botao,
           )}
-          style={{ color: cor }}
+          // Com o nome escrito, a marca fica só no ícone: o texto é neutro (D-871,
+          // a cor do painel fica para estado).
+          style={{ color: comNome ? 'var(--wb-text)' : cor }}
         >
           {emVoo === id ? (
             <Icon name="loader-2" size={t.icone} className="animate-spin" />
+          ) : comNome ? (
+            <span className="flex flex-none" style={{ color: cor }}>
+              <Icone size={t.icone} />
+            </span>
           ) : (
             <Icone size={t.icone} />
           )}
+          {comNome ? <span className="truncate">{nome}</span> : null}
         </button>
       ))}
     </div>
