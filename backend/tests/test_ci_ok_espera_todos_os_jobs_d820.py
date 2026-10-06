@@ -49,8 +49,10 @@ def test_nome_do_check_exigido_nao_muda():
 # D-881: na run 37366735893 (PR #131, tentativa 1) o GitHub cancelou quatro
 # jobs sem rodar um passo ("not acquired by Runner") e o "CI ok" ficou verde.
 # O passo que reprovava tinha `if` sem função de status: ganhou um `success()`
-# implícito, que dá falso com a run cancelada, e foi pulado. Agora o passo roda
-# sempre e só aprova quando todos os jobs do `needs` terminaram em success.
+# implícito, que deu falso, e foi pulado. Cancelar a run à mão não repete isso
+# (o passo rodou e reprovou); o `always()` tira o success() da conta em
+# qualquer caso. Agora o passo roda sempre e só aprova quando todos os jobs do
+# `needs` terminaram em success.
 NEEDS_DA_RUN_37366735893 = {
     "secret-scan": "cancelled",
     "backend": "success",
@@ -75,7 +77,7 @@ def _julgar(resultados: dict[str, str]) -> int:
     return feito.returncode
 
 
-def test_passo_que_julga_roda_mesmo_com_a_run_cancelada():
+def test_passo_que_julga_nao_depende_do_success_implicito():
     passo = _passo_que_julga()
     assert passo["if"] == "always()", "sem função de status o passo herda success() e é pulado"
     assert passo["shell"] == "python"

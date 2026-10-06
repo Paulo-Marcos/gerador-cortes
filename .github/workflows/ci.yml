@@ -284,10 +284,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # D-881: o passo roda SEMPRE e só aprova com todos os jobs em success.
-      # Antes ele rodava só para reprovar, com `if` sem função de status: o
-      # GitHub põe um success() implícito, que dá falso com a run cancelada, e
-      # na run 37366735893 quatro jobs cancelados sem rodar deixaram o CI ok
-      # verde. Exigir success de cada um pega também resultado que surgir.
+      # Antes ele rodava só para reprovar, com `if` sem função de status, e o
+      # GitHub põe um success() implícito. Na run 37366735893 o GitHub cancelou
+      # quatro jobs por falta de runner, esse success() deu falso, o passo foi
+      # pulado e o CI ok ficou verde. Com always() o success() não entra na
+      # conta; exigir success de cada job pega também resultado que surgir.
       - name: Todos os jobs passaram
         if: always()
         shell: python
