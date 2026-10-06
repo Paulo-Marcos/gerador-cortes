@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useShortcuts } from '@/shared/atalhos/shortcuts';
+import { overlayAberto, useShortcuts } from '@/shared/atalhos/shortcuts';
 import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import type { Corte } from '@/types/models';
 import { SeloDaNota } from './SeloDaNota';
@@ -12,7 +12,20 @@ import { PorQueDoCorteModal } from './PorQueDoCorteModal';
  */
 export function PorQueNaBancada({ corte }: { corte: Corte }) {
   const [aberto, setAberto] = useState(false);
-  const atalho = useMemo(() => [shortcutFromRegistry('corte.porQue', () => setAberto((v) => !v))], []);
+  // D-887: com modal aberto o editor cala as teclas sem Ctrl; o W segue vivo
+  // para fechar o próprio porquê, mas não o abre por cima de outro diálogo.
+  const atalho = useMemo(
+    () => [
+      {
+        ...shortcutFromRegistry('corte.porQue', () => {
+          const outroDialogo = overlayAberto();
+          setAberto((v) => (v ? false : !outroDialogo));
+        }),
+        valeComModal: true,
+      },
+    ],
+    [],
+  );
   useShortcuts(atalho);
   return (
     <>

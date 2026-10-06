@@ -13,6 +13,22 @@ export interface ShortcutBinding {
    * undo, Ctrl+Y redo etc.) e que devem ceder ao browser dentro de campos.
    */
   skipInEditable?: boolean;
+  /**
+   * D-887: com diálogo, menu ou popover aberto, a tecla sem Ctrl/Meta é dele
+   * e o atalho se cala. `true` o mantém vivo — só para o atalho que abre e
+   * fecha o PRÓPRIO modal; a ação decide o que fazer diante de outro overlay.
+   */
+  valeComModal?: boolean;
+}
+
+/**
+ * Há um diálogo, menu ou popover aberto? Nesse caso o teclado é dele, não de
+ * quem está por trás. `[role="dialog"]` e `[role="menu"]` entram além do
+ * `aria-modal`: os popovers da régua e os menus "⋯" não são modais, mas uma
+ * tecla agindo por trás de uma decisão aberta é o mesmo erro.
+ */
+export function overlayAberto(): boolean {
+  return document.querySelector('[aria-modal="true"], [role="dialog"], [role="menu"]') !== null;
 }
 
 function matches(e: KeyboardEvent, b: ShortcutBinding): boolean {
@@ -45,13 +61,19 @@ export function useShortcuts(bindings: ShortcutBinding[], enabled = true) {
     if (!enabled) return;
     const handler = (e: KeyboardEvent) => {
       const editable = isEditableTarget(e.target);
+      const comando = e.ctrlKey || e.metaKey;
       // Ctrl+S ainda pode disparar (salvar) mesmo em input — Ctrl/Meta override
-      if (editable && !(e.ctrlKey || e.metaKey)) return;
+      if (editable && !comando) return;
       const found = bindings.find((b) => matches(e, b));
       if (!found) return;
       // I-029 v2: combos como Ctrl+Z cedem ao browser dentro de inputs
       // (undo de texto), evitando comer o atalho nativo do campo.
       if (editable && found.skipInEditable) return;
+      // D-887: com overlay aberto, a tecla sem Ctrl/Meta é dele — como num
+      // campo. Sem esta guarda, A aprovava o corte de trás com o porquê
+      // aberto e o espaço num botão do modal tocava o vídeo. O comando
+      // (Ctrl+S) segue: o modificador já diz que a tecla não é do modal.
+      if (!comando && !found.valeComModal && overlayAberto()) return;
       e.preventDefault();
       found.action();
     };

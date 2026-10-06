@@ -1,20 +1,11 @@
 import { useEffect } from 'react';
+import { overlayAberto } from '@/shared/atalhos/shortcuts';
 import { acaoDaTecla } from './teclasDaCasca';
 import { listaDoChrome, type Chrome, type ChromeBarra } from './UpgradeChrome';
 
 // D-806: os atalhos de teclado da casca saíram do UpgradeShell (que passou
 // de 500 linhas na D-798). A DECISÃO de cada tecla segue pura e testada em
 // `teclasDaCasca`; aqui fica o lado que lê o DOM e executa.
-
-/**
- * Há um diálogo, menu ou popover aberto? Nesse caso o teclado é dele, não da
- * casca. `[role="dialog"]` e `[role="menu"]` entram além do `aria-modal`: os
- * popovers da régua e os menus "⋯" não são modais, mas J/K trocando o corte
- * por trás de uma decisão aberta é o mesmo erro.
- */
-export function overlayAberto(): boolean {
-  return document.querySelector('[aria-modal="true"], [role="dialog"], [role="menu"]') !== null;
-}
 
 /**
  * O foco está num controle que TAMBÉM decide? Só esses engolem o Enter.
