@@ -96,9 +96,10 @@ export function AcaoDeIa({
           className={cn(
             // min-w-0: numa coluna estreita é o TEXTO que encolhe (com reticências),
             // nunca os botões dos provedores — sem eles a ação não existe.
-            'flex min-w-0 items-center gap-1.5 whitespace-nowrap px-2.5 font-semibold',
-            // Com os nomes, são eles que dividem a largura; o verbo fica no tamanho dele.
-            comNome ? 'flex-none' : 'flex-1',
+            'flex min-w-0 items-center gap-1.5 whitespace-nowrap font-semibold',
+            // Com os nomes, o verbo cede primeiro (shrink 1000 contra 1): numa
+            // coluna de notebook ele vira só o ícone e "Claude"/"Gemini" ficam.
+            comNome ? 'flex-[0_1000_auto] px-2' : 'flex-1 px-2.5',
             t.texto,
             destaque ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text)]',
           )}
@@ -128,8 +129,10 @@ export function AcaoDeIa({
             'grid shrink-0 place-items-center transition-colors',
             // Sem rótulo, o primeiro botão abre o grupo: a divisória fica só entre eles.
             (!apenasProvedores || indice > 0) && 'border-l border-[var(--wb-border-soft)]',
-            (apenasProvedores || comNome) && 'flex-1',
-            comNome && cn('flex min-w-0 items-center justify-center gap-1.5 px-2 font-medium', t.texto),
+            apenasProvedores && 'flex-1',
+            // Partem da largura natural (auto, não 0): só assim falta espaço e o
+            // verbo, e não o nome, é quem encolhe.
+            comNome && cn('flex min-w-0 flex-[1_1_auto] items-center justify-center gap-1.5 px-1.5 font-medium', t.texto),
             'hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
             // Só o que NÃO está gerando esmaece: o que gira precisa ficar legível.
             'disabled:cursor-not-allowed',

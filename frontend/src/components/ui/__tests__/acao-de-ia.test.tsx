@@ -1,3 +1,4 @@
+import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { AcaoDeIa, MenuDeIa } from '../acao-de-ia';
@@ -76,7 +77,7 @@ describe('AcaoDeIa comNome', () => {
     const [claude, gemini] = (render({ comNome: true }).match(/<button[^>]*>.*?<\/button>/g) ?? []);
     expect(claude).toContain('<span class="truncate">Claude</span>');
     expect(gemini).toContain('<span class="truncate">Gemini</span>');
-    for (const botao of [claude, gemini]) expect(botao).toMatch(/^<button[^>]*class="[^"]*flex-1/);
+    for (const botao of [claude, gemini]) expect(botao).toMatch(/^<button[^>]*class="[^"]*flex-\[1_1_auto\]/);
   });
 
   it('o texto é neutro; a cor da marca fica só no ícone', () => {
@@ -88,7 +89,43 @@ describe('AcaoDeIa comNome', () => {
   it('sem comNome, continua só com os ícones', () => {
     expect(render()).not.toContain('>Claude<');
   });
+
+  // Numa coluna estreita é o verbo que cede (até virar só o ícone), não os
+  // nomes: os botões partem da largura natural e o verbo encolhe mil vezes mais.
+  it('com nome, o verbo cede antes dos provedores', () => {
+    const html = render({ comNome: true });
+    expect(html).toMatch(/<span class="[^"]*flex-\[0_1000_auto\][^"]*"/);
+    for (const botao of botoes(html)) expect(botao).toContain('flex-[1_1_auto]');
+  });
+
+  // D-871 mexeu nas linhas do layout de sempre: quem não passa comNome (capa,
+  // metadados, TikTok) tem de continuar igual — verbo largo, ícones de 28 px.
+  it('sem comNome, o desenho de antes: verbo ocupa o espaço, botões de ícone fixos', () => {
+    const html = render();
+    expect(html).toMatch(/<span class="[^"]*flex-1[^"]*px-2\.5/);
+    for (const botao of botoes(html)) {
+      expect(botao).toContain('w-7');
+      expect(botao).not.toContain('flex-1');
+    }
+  });
+
+  it.each([false, true])('comNome=%s: cada botão gera com o seu provedor', (comNome) => {
+    const onGerar = vi.fn();
+    const arvore = elementos(AcaoDeIa({ rotulo: 'Gerar', emVoo: null, onGerar, comNome }));
+    const [claude, gemini] = arvore.filter((e) => e.type === 'button');
+    (claude.props.onClick as () => void)();
+    (gemini.props.onClick as () => void)();
+    expect(onGerar.mock.calls).toEqual([['claude'], ['gemini']]);
+  });
 });
+
+type Elemento = ReactElement<Record<string, unknown>>;
+function elementos(no: ReactNode): Elemento[] {
+  if (Array.isArray(no)) return no.flatMap(elementos);
+  if (!isValidElement(no)) return [];
+  const el = no as Elemento;
+  return [el, ...elementos(el.props.children as ReactNode)];
+}
 
 describe('MenuDeIa', () => {
   it('fechado, mostra só o ícone da ação com o nome acessível', () => {

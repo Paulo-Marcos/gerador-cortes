@@ -1,3 +1,4 @@
+import { isValidElement, useState, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
@@ -88,9 +89,15 @@ describe('RightTabsPanel — as quatro abas cabem (D-871)', () => {
   it('um seletor com as quatro, na ordem, e o contador no rótulo dos trechos', () => {
     const html = render(desvios);
     expect(abas(html).map((a) => a[1])).toEqual(['Trechos · 2', 'Ordem', 'Transcrição', 'Avaliação']);
-    for (const [aba] of abas(html)) expect(aba).toContain('role="tab"');
+    for (const [aba] of abas(html)) {
+      expect(aba).toContain('role="tab"');
+      expect(aba).toContain('white-space:nowrap');
+    }
+    // A ativa é a peça clara sobre o fundo do seletor; as outras, sem fundo.
     expect(abas(html)[0][0]).toContain('aria-selected="true"');
+    expect(abas(html)[0][0]).toContain('background:var(--wb-bg-card)');
     expect(abas(html)[1][0]).toContain('aria-selected="false"');
+    expect(abas(html)[1][0]).toContain('background:transparent');
   });
 
   it('não rolam para fora: sem espaço, quebram em outra fileira', () => {
@@ -179,5 +186,80 @@ describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-4
 
     expect(html).toContain('>manual<');
     expect(html).toContain('>silencio<');
+  });
+});
+
+// O vitest roda sem DOM: para clicar, a sonda chama o painel como função dentro
+// de um render e aciona os onClick da árvore de elementos que ele devolve.
+type Elemento = ReactElement<Record<string, unknown>>;
+function elementos(no: ReactNode): Elemento[] {
+  if (Array.isArray(no)) return no.flatMap(elementos);
+  if (!isValidElement(no)) return [];
+  const el = no as Elemento;
+  return [el, ...elementos(el.props.children as ReactNode)];
+}
+// O esbuild pode sufixar o nome para evitar colisão ("TrechosList2").
+const nomeDoTipo = (el: Elemento) =>
+  (typeof el.type === 'function'
+    ? el.type.name
+    : typeof el.type === 'object'
+      ? ((el.type as { type?: { name?: string } }).type?.name ?? '')
+      : el.type
+  ).replace(/\d+$/, '');
+const PAINEIS = ['TrechosList', 'BlocosTab', 'TranscriptList', 'AvaliacaoBrutoPanel'];
+
+function renderSonda(Sonda: () => null) {
+  renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <ToastProvider>
+        <TooltipProvider>
+          <Sonda />
+        </TooltipProvider>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('RightTabsPanel — os controles fazem o que dizem (D-871)', () => {
+  it.each([
+    ['Ordem', 'BlocosTab'],
+    ['Transcrição', 'TranscriptList'],
+    ['Avaliação', 'AvaliacaoBrutoPanel'],
+  ])('clicar em %s abre o painel dela e só ela fica ativa', (rotulo, painelEsperado) => {
+    let ativas: string[] = [];
+    let painel: string | undefined;
+    function Sonda() {
+      const [clicou, setClicou] = useState(false);
+      const arvore = elementos(RightTabsPanel(baseProps()));
+      const abas = arvore.filter((e) => nomeDoTipo(e) === 'TabButton');
+      if (!clicou) {
+        (abas.find((a) => a.props.label === rotulo)!.props.onClick as () => void)();
+        setClicou(true);
+      } else {
+        ativas = abas.filter((a) => a.props.active).map((a) => a.props.label as string);
+        painel = arvore.map(nomeDoTipo).find((n) => PAINEIS.includes(n as string)) as string;
+      }
+      return null;
+    }
+    renderSonda(Sonda);
+    expect(ativas).toEqual([rotulo]);
+    expect(painel).toBe(painelEsperado);
+  });
+
+  it('o ícone do Manual importa os trechos, e o Gerar chama a IA escolhida', () => {
+    const gerarManual = vi.fn();
+    const gerarIA = vi.fn();
+    let arvore: Elemento[] = [];
+    function Sonda() {
+      const props = { ...baseProps(), onGerarManual: gerarManual, onGerarTrechosIA: gerarIA };
+      const lista = elementos(RightTabsPanel(props)).find((e) => nomeDoTipo(e) === 'TrechosList')!;
+      arvore = elementos((lista.type as unknown as { type: (p: unknown) => ReactNode }).type(lista.props));
+      return null;
+    }
+    renderSonda(Sonda);
+    (arvore.find((e) => e.props['aria-label'] === 'Importar trechos manualmente')!.props.onClick as () => void)();
+    expect(gerarManual).toHaveBeenCalledOnce();
+    (arvore.find((e) => nomeDoTipo(e) === 'AcaoDeIa')!.props.onGerar as (p: string) => void)('gemini');
+    expect(gerarIA).toHaveBeenCalledWith('gemini');
   });
 });
