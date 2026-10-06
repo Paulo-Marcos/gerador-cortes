@@ -380,6 +380,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the backend lock. It now has its own lock, compiled against the main one and
   seeded with the versions already known to work:
   `bin\bootstrap.ps1 -Diarizacao` (D-819).
+- **Diarization and the dev tools install side by side.** The diarization
+  lock was compiled only against the main one and pinned `filelock` 3.32.4
+  while the dev lock pins 4.0.5, so `bin\bootstrap.ps1 -Dev -Diarizacao`
+  downgraded it and the lock check of the test suite could never pass. The
+  diarization lock is now compiled against the dev lock too, and a test fails
+  if any two locks pin a shared package differently (D-892).
 - **The YouTube re-authorization script runs again.** `dev-utils/auth_youtube.py`,
   the one the backend tells you to run when the token is missing or lacks the
   analytics scope, still imported the channel paths from their old place and

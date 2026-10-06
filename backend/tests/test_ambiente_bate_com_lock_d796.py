@@ -74,6 +74,25 @@ def test_com_a_diarizacao_instalada_o_lock_dela_tambem_vale():
     assert "requirements-diarizacao.txt" not in _locks_do_ambiente({"fastapi": "1"})
 
 
+def test_os_locks_concordam_em_todo_pacote_em_comum():
+    # D-892: o teste acima cobra os locks juntos, então dois deles fixando o
+    # mesmo pacote em versões diferentes o fazem falhar para sempre — o pip
+    # instala uma e a outra sobra. Foi o filelock: 4.0.5 no dev, 3.32.4 na
+    # diarização, que era compilada só contra o principal.
+    versoes: dict[str, dict[str, str]] = {}
+    for lock in (*LOCKS, LOCK_DA_DIARIZACAO):
+        for nome, versao in _fixados((BACKEND / lock).read_text(encoding="utf-8")).items():
+            versoes.setdefault(nome, {})[lock] = versao
+
+    divergentes = {
+        nome: por_lock for nome, por_lock in versoes.items() if len(set(por_lock.values())) > 1
+    }
+
+    assert not divergentes, (
+        f"Locks discordam — recompile a diarização com -c requirements-dev.txt: {divergentes}"
+    )
+
+
 def test_o_leitor_do_lock_respeita_os_marcadores():
     lock = (
         "uvloop==0.22.1 ; sys_platform == 'nunca' \\\n"

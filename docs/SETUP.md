@@ -186,7 +186,7 @@ powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1 -Diarizacao
 ```
 
 O `-Diarizacao` instala o `backend\requirements-diarizacao.txt`, compilado contra o
-lock principal. Não use `pip install pyannote.audio` solto: ele traz versões que
+lock principal e o de desenvolvimento, para combinar com `-Dev`. Não use `pip install pyannote.audio` solto: ele traz versões que
 brigam com as do lock (foi o conflito do `opentelemetry`, D-819).
 
 2. Crie um token **gratuito** em huggingface.co/settings/tokens — de preferência um token
