@@ -214,6 +214,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   function gets an implicit `success()`, and in that run it was false. The
   step now always runs and passes only when every job it waits for ended in
   success (D-881).
+- **Switching lives no longer shows the new list under the old live's title
+  and footer.** The screen handed its title and footer to the app frame only
+  after the browser had painted, so for a frame or more the Workspace of the
+  new live showed the previous one's title and its "Aprovar os 6 propostos"
+  (measured on 10 of 10 switches). Every screen now hands them over in the
+  same render, so the frame and the screen arrive together (D-880).
 - **The "out of sync" warning no longer covers the top bar.** It floated
   over the first 31 px of the window, so right after a pull or an update,
   before the restart, the search, the theme switch, the "Mais" menu and the
