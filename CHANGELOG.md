@@ -208,6 +208,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   24 mutations of those rules all fail it. No behavior changed (D-878).
 
 ### Fixed
+- **"CI ok" no longer turns green when GitHub cancels the other jobs.** When
+  no hosted runner picked up four jobs, GitHub cancelled them and the step
+  meant to fail the check was skipped: a step condition without a status
+  function gets an implicit `success()`, and in that run it was false. The
+  step now always runs and passes only when every job it waits for ended in
+  success (D-881).
 - **The "out of sync" warning no longer covers the top bar.** It floated
   over the first 31 px of the window, so right after a pull or an update,
   before the restart, the search, the theme switch, the "Mais" menu and the

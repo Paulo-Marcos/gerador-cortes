@@ -277,12 +277,30 @@ jobs:
     # nenhum PR fecharia mais. Este job espera todos; mudar nome ou matriz não
     # mexe na proteção. Job novo entra no `needs` (o teste d820 cobra).
     # `always()`: sem ele o job é pulado quando outro falha, e check pulado
-    # conta como aprovado na proteção.
+    # conta como aprovado na proteção. O passo abaixo precisa do mesmo cuidado.
     name: CI ok
     if: always()
     needs: [secret-scan, backend, frontend, video-renderer, windows]
     runs-on: ubuntu-latest
     steps:
+      # D-881: o passo roda SEMPRE e só aprova com todos os jobs em success.
+      # Antes ele rodava só para reprovar, com `if` sem função de status, e o
+      # GitHub põe um success() implícito. Na run 37366735893 o GitHub cancelou
+      # quatro jobs por falta de runner, esse success() deu falso, o passo foi
+      # pulado e o CI ok ficou verde. Com always() o success() não entra na
+      # conta; exigir success de cada job pega também resultado que surgir.
       - name: Todos os jobs passaram
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
-        run: exit 1
+        if: always()
+        shell: python
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          import json, os, sys
+
+          resultados = {job: dado["result"] for job, dado in json.loads(os.environ["NEEDS"]).items()}
+          for job, resultado in resultados.items():
+              print(f"{job}: {resultado}")
+          reprovados = [job for job, resultado in resultados.items() if resultado != "success"]
+          if reprovados or not resultados:
+              print(f"::error::Jobs que não terminaram em success: {', '.join(reprovados) or 'nenhum job para julgar'}")
+              sys.exit(1)
