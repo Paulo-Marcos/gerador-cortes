@@ -227,6 +227,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (focus moving to the next row, or back to the row on cancel), the selection
   border and checkbox, and the thumbnail gradient. Each now has a test, and
   24 mutations of those rules all fail it. No behavior changed (D-878).
+- **Every rule of the "one concept, one icon" check proves it can fail.** A
+  broken rule pattern (one extra letter, a lost case flag) matched nothing and
+  passed in silence. Each rule now names one real app label per path of its
+  pattern, and a test requires each label to exist and to match: 30 broken
+  patterns all fail it. The check moved its rules and code reader to a helper
+  file, so the next rule fits under the 500-line limit (D-889).
 
 ### Fixed
 - **A console hiccup no longer takes the whole app down.** `dev.ps1` let
