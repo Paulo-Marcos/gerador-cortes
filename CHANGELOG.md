@@ -208,6 +208,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   24 mutations of those rules all fail it. No behavior changed (D-878).
 
 ### Fixed
+- **A console hiccup no longer takes the whole app down.** `dev.ps1` let
+  every service inherit its console as input, and the Remotion Studio reads
+  it as a keyboard; when that read failed ("read UNKNOWN"), the Studio
+  crashed and the launcher, which stops everything when one service dies,
+  took the backend, the frontend and the worker with it. The services now
+  get a silent pipe from the launcher instead of the console (D-885).
 - **Deleting a cut with an unsaved adjustment no longer traps the editor.**
   The way out tried to save the adjustment into the deleted cut, got 404,
   said "Não consegui salvar os ajustes" and stayed on a "Not Found" screen —
