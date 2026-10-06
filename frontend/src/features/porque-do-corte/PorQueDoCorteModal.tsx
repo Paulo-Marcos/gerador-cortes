@@ -55,8 +55,9 @@ export function PorQueDoCorteModal({ corte, aoFechar }: { corte: Corte; aoFechar
 }
 
 export function ConteudoDoPorQue({ corte, nota }: { corte: Corte; nota: NotaDoCorte | null }) {
+  const justificativa = corte.justificativa?.trim();
   const gancho = corte.frase_gancho_texto?.trim();
-  if (!nota && !corte.justificativa?.trim() && !gancho) {
+  if (!nota && !justificativa && !gancho) {
     return (
       <ModalText>
         A IA não deixou justificativa nem nota para este corte — ele foi criado à mão ou veio de
@@ -67,9 +68,7 @@ export function ConteudoDoPorQue({ corte, nota }: { corte: Corte; nota: NotaDoCo
   return (
     <>
       {nota ? <BlocoDaNota nota={nota} /> : null}
-      {corte.justificativa?.trim() ? (
-        <Bloco titulo="Por que virou corte">{corte.justificativa}</Bloco>
-      ) : null}
+      {justificativa ? <Bloco titulo="Por que virou corte">{justificativa}</Bloco> : null}
       {gancho ? (
         <Bloco titulo={`Frase-gancho${corte.frase_gancho_hms ? ` · ${corte.frase_gancho_hms}` : ''}`}>
           “{gancho}”
