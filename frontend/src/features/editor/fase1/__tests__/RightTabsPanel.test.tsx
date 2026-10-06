@@ -222,6 +222,7 @@ function renderSonda(Sonda: () => null) {
 
 describe('RightTabsPanel — os controles fazem o que dizem (D-871)', () => {
   it.each([
+    ['Trechos', 'TrechosList'],
     ['Ordem', 'BlocosTab'],
     ['Transcrição', 'TranscriptList'],
     ['Avaliação', 'AvaliacaoBrutoPanel'],

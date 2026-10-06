@@ -33,13 +33,20 @@ function render() {
 
 const botao = (html: string, rotulo: string) =>
   html.match(new RegExp(`<button[^>]*aria-label="${rotulo}"[^>]*>(.*?)</button>`))!;
-const semTags = (html: string) => html.replace(/<[^>]+>/g, '');
+// O texto que o botão mostra, lido da árvore de elementos (e não do HTML).
+function textoDe(no: ReactNode): string {
+  if (typeof no === 'string' || typeof no === 'number') return String(no);
+  if (Array.isArray(no)) return no.map(textoDe).join('');
+  return isValidElement(no) ? textoDe((no as Elemento).props.children as ReactNode) : '';
+}
 
 describe('TimelinePanel — cor fica para estado (D-871)', () => {
   it('início e fim com a própria tecla no rótulo: "[ Início aqui" e "Fim aqui ]"', () => {
-    const html = render();
-    expect(semTags(botao(html, 'Marcar inicio aqui')[1])).toBe('[Início aqui');
-    expect(semTags(botao(html, 'Marcar fim aqui')[1])).toBe('Fim aqui]');
+    const arvore = arvoreDaTimeline({ inicio: vi.fn(), fim: vi.fn() });
+    const rotulo = (r: string) =>
+      textoDe(arvore.find((e) => e.props['aria-label'] === r)!.props.children as ReactNode);
+    expect(rotulo('Marcar inicio aqui')).toBe('[Início aqui');
+    expect(rotulo('Marcar fim aqui')).toBe('Fim aqui]');
   });
 
   it('os dois são neutros e iguais: sem o verde e o vermelho de antes', () => {
@@ -52,7 +59,7 @@ describe('TimelinePanel — cor fica para estado (D-871)', () => {
 
   it('a velocidade sai sem âmbar', () => {
     const velocidade = botao(render(), 'Alternar velocidade')[0];
-    expect(semTags(velocidade)).toBe('1.50×');
+    expect(velocidade).toMatch(/<\/svg>1\.50(?:<!-- -->)?×<\/button>$/);
     expect(velocidade).not.toContain('warn');
     expect(velocidade).toContain('text-[var(--wb-text)]');
   });
