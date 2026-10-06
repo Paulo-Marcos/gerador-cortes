@@ -252,7 +252,6 @@ export function EditorFase1({
             <RightTabsPanel
               onRecolher={alternarTrechos}
               corteId={corte.id}
-              hintsThumbnail={corte.hints_thumbnail}
               desvios={corte.desvios ?? []}
               selectedDesvioIdx={selectedDesvioIdx}
               onSeek={onSeek}
