@@ -235,6 +235,33 @@ function Confirm-RemotionReady {
 }
 
 # Cria processo SEM event handlers — a saida e lida pela BombaDeSaida
+# D-885: a ENTRADA de cada servico tambem e um pipe do lancador, nunca o
+# console dele. Herdado, o console virava o teclado do Remotion Studio, que o
+# le em modo TTY para os atalhos; uma falha nessa leitura ("read UNKNOWN",
+# errno -4094) era um erro nao tratado no Node: o Studio caia e, pela regra do
+# laco abaixo (um servico morto encerra todos), levava o app inteiro junto.
+# Nenhum servico pede nada pelo teclado, entao o pipe fica aberto e mudo.
+function New-DevStartInfo {
+    param(
+        [string]$FileName,
+        [string]$Arguments,
+        [string]$WorkingDirectory
+    )
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $FileName
+    $startInfo.Arguments = $Arguments
+    $startInfo.WorkingDirectory = $WorkingDirectory
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardInput = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.CreateNoWindow = $true
+    $startInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+    $startInfo.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+    return $startInfo
+}
+
 function Start-DevProcess {
     param(
         [string]$Name,
@@ -246,19 +273,8 @@ function Start-DevProcess {
         [hashtable]$EnvVars = @{}
     )
 
-    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-    $startInfo.FileName = $FileName
-    $startInfo.Arguments = $Arguments
-    $startInfo.WorkingDirectory = $WorkingDirectory
-    $startInfo.UseShellExecute = $false
-    $startInfo.RedirectStandardOutput = $true
-    $startInfo.RedirectStandardError = $true
-    $startInfo.CreateNoWindow = $true
-    $startInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
-    $startInfo.StandardErrorEncoding = [System.Text.Encoding]::UTF8
-
     $process = [System.Diagnostics.Process]::new()
-    $process.StartInfo = $startInfo
+    $process.StartInfo = New-DevStartInfo -FileName $FileName -Arguments $Arguments -WorkingDirectory $WorkingDirectory
 
     foreach ($key in $EnvVars.Keys) {
         [Environment]::SetEnvironmentVariable($key, $EnvVars[$key], "Process")
