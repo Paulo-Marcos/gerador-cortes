@@ -10,8 +10,12 @@ import { Icon } from '@/upgrade/Icon';
 //
 // Fica em `App`, acima dos dois shells (workbench e legado), e não numa tela:
 // a dessincronização não é de uma tela só, e quem está numa tela quebrada não
-// vai procurar o aviso noutro lugar. Flutua sobre o topo para não precisar
-// mexer no layout de nenhum shell — o do workbench está travado.
+// vai procurar o aviso noutro lugar.
+//
+// D-879: ocupa o próprio espaço, no topo da coluna que `App` monta, e empurra
+// a casca para baixo. Flutuando (`fixed`, z-50) ele cobria os 31 px de cima da
+// barra superior: o "Mais" do editor, a busca e o tema não recebiam clique
+// justo depois de um pull, quando o aviso aparece.
 
 /** Um minuto: rápido o bastante para pegar um restart, raro o bastante para sumir do radar. */
 const INTERVALO_MS = 60_000;
@@ -32,7 +36,7 @@ export function AvisoSincronizacao() {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--wb-warn-ink)] bg-[var(--wb-warn-soft)] px-4 py-1.5 text-[12px] text-[var(--wb-warn-ink)] shadow-sm"
+      className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--wb-warn-ink)] bg-[var(--wb-warn-soft)] px-4 py-1.5 text-[12px] text-[var(--wb-warn-ink)] shadow-sm"
     >
       <Icon name="triangle-alert" className="flex-none" />
       <span className="font-bold">Fora de sincronia.</span>
