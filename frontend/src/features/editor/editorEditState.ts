@@ -1,3 +1,4 @@
+import { ErroDaApi } from '@/shared/api';
 import type { Corte } from '@/types/models';
 
 export type WaveformWindow = {
@@ -79,5 +80,27 @@ export function resolveWaveformWindow({
     version: `${startSec}_${endSec}_${refreshKey}`,
     preloadBeforeSec,
     preloadAfterSec,
+  };
+}
+
+/**
+ * D-883: o que fazer quando salvar os ajustes na saída do corte falha. 404 é o
+ * corte que não existe mais (excluído aqui ou em outra tela): não há onde
+ * salvar, e segurar o editor numa tela sem corte não protege nada — descarta o
+ * ajuste e sai. Qualquer outra falha pode passar: fica, para ele não se perder.
+ */
+export function desfechoDaFalhaAoSalvar(erro: unknown): {
+  sair: boolean;
+  mensagem: string;
+  tom: 'info' | 'error';
+} {
+  if (erro instanceof ErroDaApi && erro.status === 404) {
+    return { sair: true, mensagem: 'Este corte não existe mais; os ajustes dele foram descartados.', tom: 'info' };
+  }
+  const motivo = erro instanceof Error ? erro.message : 'erro';
+  return {
+    sair: false,
+    mensagem: `Não consegui salvar os ajustes (${motivo}). Fiquei no corte — tente Ctrl+S.`,
+    tom: 'error',
   };
 }

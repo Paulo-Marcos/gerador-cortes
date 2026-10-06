@@ -1,6 +1,14 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { ErroDaApi } from '@/shared/api';
 import type { Corte } from '@/types/models';
-import { applyDesvioChange, mergeDirtyPatch, resolveWaveformWindow } from '../editorEditState';
+import {
+  applyDesvioChange,
+  desfechoDaFalhaAoSalvar,
+  mergeDirtyPatch,
+  resolveWaveformWindow,
+} from '../editorEditState';
 
 type DesvioDoCorte = Corte['desvios'][number];
 
@@ -145,5 +153,57 @@ describe('janela incremental da waveform', () => {
 
     expect(next).not.toBe(initial);
     expect(next.version).toBe('40_500_123');
+  });
+});
+
+// D-883: excluir o corte com um ajuste pendente prendia o editor. A saída
+// tentava salvar o ajuste no corte excluído, recebia 404, avisava "não
+// consegui salvar" e ficava — para sempre, porque nada mais limpava o ajuste.
+describe('saída do editor quando salvar falha (D-883)', () => {
+  it('404: o corte não existe mais — descarta o ajuste e deixa sair', () => {
+    const desfecho = desfechoDaFalhaAoSalvar(new ErroDaApi(404, '{"detail":"Corte não encontrado"}', 'Not Found'));
+    expect(desfecho.sair).toBe(true);
+    expect(desfecho.tom).toBe('info');
+    expect(desfecho.mensagem).toBe('Este corte não existe mais; os ajustes dele foram descartados.');
+  });
+
+  it.each([
+    ['erro do servidor', new ErroDaApi(500, '', 'Internal Server Error')],
+    ['conflito', new ErroDaApi(409, '', 'Conflict')],
+    ['rede fora', new TypeError('Failed to fetch')],
+  ])('%s: fica no corte, para o ajuste não se perder', (_caso, erro) => {
+    const desfecho = desfechoDaFalhaAoSalvar(erro);
+    expect(desfecho.sair).toBe(false);
+    expect(desfecho.tom).toBe('error');
+    expect(desfecho.mensagem).toBe(
+      `Não consegui salvar os ajustes (${erro.message}). Fiquei no corte — tente Ctrl+S.`,
+    );
+  });
+
+  // O hook não roda aqui (vitest sem DOM, e o bloqueio vive num efeito): a
+  // regra é pura e testada acima; aqui se confere que o hook a obedece. O fonte
+  // é lido SEM comentários — código comentado não pode passar por ligado.
+  const hook = readFileSync(resolve(__dirname, '../useEditorPage.tsx'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '');
+
+  it('a saída bloqueada segue o desfecho, inteiro e nessa ordem', () => {
+    const aoFalhar = hook.match(/onError: \(erro\) => \{(.*?)\n {8}\},/s)![1];
+    expect(aoFalhar).toMatch(
+      /^\s*const desfecho = desfechoDaFalhaAoSalvar\(erro\);\s*notifyToast\(desfecho\.mensagem, \{ tone: desfecho\.tom \}\);\s*if \(!desfecho\.sair\) return saida\.reset\(\);\s*editHistory\.reset\(\{\}\);\s*saida\.proceed\(\);\s*$/,
+    );
+  });
+
+  // É este ramo que solta o editor depois de excluir: o bloqueio ainda vê o
+  // estado sujo da render anterior, mas o ajuste já foi descartado.
+  it('sem ajuste pendente, a saída bloqueada só segue', () => {
+    expect(hook).toMatch(
+      /const pendentes = editHistory\.getPresent\(\);\s*if \(Object\.keys\(pendentes\)\.length === 0\) \{\s*saida\.proceed\(\);\s*return;\s*\}/,
+    );
+  });
+
+  it('excluir descarta o ajuste antes de tudo, em qualquer caminho', () => {
+    const aoExcluir = hook.match(/function excluirConfirmado\(\) \{(.*?)\r?\n {2}\}\r?\n/s)![1];
+    expect(aoExcluir).toMatch(/onSuccess: \(\) => \{\s*editHistory\.reset\(\{\}\);\s*if \(cortes\.length > 1\)/);
   });
 });
