@@ -1,4 +1,4 @@
-fastapi==0.141.1
+fastapi==0.142.2
 uvicorn[standard]==0.54.0
 sqlalchemy[asyncio]==2.1.1
 aiosqlite==0.22.1
@@ -27,8 +27,8 @@ google-genai>=2.25.0
 # conflito com o httpx fixado acima.
 anthropic>=1.8,<2
 google-api-python-client==2.200.0
-google-auth-oauthlib==1.4.1
-google-auth-httplib2==0.4.2
+google-auth-oauthlib==1.5.0
+google-auth-httplib2==0.4.4
 Pillow==12.3.0
 # A 0.7.1 tirou o extra [opencv]; o opencv ja e declarado abaixo, com versao nossa.
 scenedetect==0.7.1
