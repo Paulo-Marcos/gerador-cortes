@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **See the AI's score and why it chose each cut.** Every row in the live's
+  cut list shows an "IA 22/30" badge (hook + flow + value, 0–10 each), and so
+  does the action bar of the editor, Pós and review. Click the badge or press
+  **W** to open a short "why": the score with its three bars, the
+  justification, the hook sentence and the topic. "Dar a minha nota" opens your
+  own quality vote, so you can compare. The score ranks the cuts of one live; it
+  is not an absolute grade. Cuts without a score show no badge (D-886).
 - **The ChatGPT cover robot attaches a photo of each real person in the
   cover.** The thumbnail prompt now names them in a `referencias` tag, by
   their full Wikipedia title ("Lula" alone is the squid). Their photos come

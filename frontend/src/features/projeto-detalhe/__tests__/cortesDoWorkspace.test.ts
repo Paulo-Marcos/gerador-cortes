@@ -116,9 +116,19 @@ describe('acaoDaTeclaNaLinha', () => {
     expect(acaoDaTeclaNaLinha('K', 'aprovado')).toBe('descer');
   });
 
+  // D-886: W de "why" — o porquê da IA vale em qualquer estado do corte.
+  it.each(['proposto', 'aprovado', 'processado', 'rejeitado'] as const)(
+    'W abre o porquê do corte %s',
+    (status) => {
+      expect(acaoDaTeclaNaLinha('w', status)).toBe('explicar');
+      expect(acaoDaTeclaNaLinha('W', status)).toBe('explicar');
+    },
+  );
+
   it('sem corte carregado, só a navegação vale', () => {
     expect(acaoDaTeclaNaLinha('a', undefined)).toBeNull();
     expect(acaoDaTeclaNaLinha('r', undefined)).toBeNull();
+    expect(acaoDaTeclaNaLinha('w', undefined)).toBeNull();
     expect(acaoDaTeclaNaLinha('j', undefined)).toBe('subir');
   });
 

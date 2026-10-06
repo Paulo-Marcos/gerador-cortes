@@ -191,7 +191,7 @@ export default function WorkspaceProjetoPage() {
         <div style={{ flex: 1 }} />
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--dim)' }}>
           <kbd>A</kbd> aprova/devolve · <kbd>R</kbd> exclui · <kbd>J</kbd>
-          <kbd>K</kbd> anda
+          <kbd>K</kbd> anda · <kbd>W</kbd> por quê
         </span>
         <label className="fld" style={{ width: 200 }}>
           <Icon name="search" style={{ color: 'var(--dim)' }} />

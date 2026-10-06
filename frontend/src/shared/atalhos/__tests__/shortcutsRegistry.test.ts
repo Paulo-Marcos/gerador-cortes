@@ -68,4 +68,31 @@ describe('shortcutsRegistry', () => {
     expect(descricao('bruto.aprovar')).toBe('Aprovar / devolver a proposto');
     expect(descricao('bruto.rejeitar')).toBe('Excluir corte (pede confirmação)');
   });
+
+  // D-886: W abre o porquê da IA em toda tela de um corte, sem modificador.
+  it('W é o porquê do corte, global e sem colidir com nada', () => {
+    const spec = SHORTCUTS_REGISTRY.find((s) => s.id === 'corte.porQue');
+    expect(spec).toMatchObject({ screen: 'global', key: 'w', group: 'global' });
+    expect(spec?.mod).toBeUndefined();
+    expect(shortcutsForScreen('bruto').some((s) => s.id === 'corte.porQue')).toBe(true);
+    expect(shortcutsForScreen('pos').some((s) => s.id === 'corte.porQue')).toBe(true);
+  });
+
+  // D-886: os atalhos dos shorts saíram para atalhosDosShorts (teto de
+  // tamanho) e continuam no registro, na tela deles.
+  it('os atalhos dos shorts seguem no registro', () => {
+    const ids = shortcutsForScreen('shorts').map((s) => s.id);
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'shorts.seekBack5s',
+        'shorts.seekFwd5s',
+        'shorts.speedDown',
+        'shorts.speedUp',
+        'shorts.alternarVelocidade',
+        'shorts.undo',
+        'shorts.redo',
+        'shorts.salvar',
+      ]),
+    );
+  });
 });
