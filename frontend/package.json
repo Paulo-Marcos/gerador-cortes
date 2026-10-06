@@ -26,7 +26,7 @@
     "openapi-fetch": "^0.17.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-resizable-panels": "^2.1.9",
+    "react-resizable-panels": "^4.14.2",
     "react-router-dom": "^7.18.4",
     "remotion": "4.0.529",
     "tailwind-merge": "^2.5.4",
