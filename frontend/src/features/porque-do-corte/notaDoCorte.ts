@@ -4,9 +4,9 @@ import type { TomDoSelo } from '@/upgrade/SeloDeEstado';
 // D-886 · A nota que a IA deu ao corte, lida para a tela.
 //
 // O `score` da proposta (D-302) traz três notas de 0 a 10 — gancho, fluxo e
-// valor — e o `total`, que é a soma delas (346 de 346 cortes na PROD em
-// 05/10/2026). A tela mostra "22/30" e não uma média: é o número que a IA
-// escreveu, e o operador compara com o que ele acha sem fazer conta.
+// valor — e um `total`. A skill não diz que o total é a soma (embora a IA some:
+// 346 de 346 cortes na PROD em 05/10/2026), então a tela soma as três ela mesma
+// e mostra "22/30": o operador compara com o que ele acha sem fazer conta.
 //
 // A nota é um RANKING RELATIVO entre os cortes da mesma análise, não uma nota
 // absoluta de qualidade (a skill `cortes` diz isso). O modal repete o aviso.
