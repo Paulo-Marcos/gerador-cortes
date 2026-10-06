@@ -240,7 +240,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   approved the cut behind it, R asked to delete it, F toggled Fire and Space
   played the video (and swallowed the press on the dialog's own button). Keys
   without Ctrl now belong to whatever is open, the same rule the shell
-  already used for J, K and Enter; Ctrl+S still saves (D-887).
+  already used for J, K and Enter; Ctrl+S still saves, and W still closes
+  the "why" dialog it opened, but no longer opens it on top of another one
+  (D-887).
 - **A console hiccup no longer takes the whole app down.** `dev.ps1` let
   every service inherit its console as input, and the Remotion Studio reads
   it as a keyboard; when that read failed ("read UNKNOWN"), the Studio

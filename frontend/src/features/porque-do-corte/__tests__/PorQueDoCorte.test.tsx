@@ -182,8 +182,11 @@ describe('PorQueNaBancada', () => {
   type Filhos = { props: { children: ReactElement<Record<string, unknown>>[] } };
   const pecas = (saida: ReactElement) => (saida as unknown as Filhos).props.children;
 
+  // D-887: o W lê se há outro diálogo na tela; só a casca responde aqui.
+  const soACasca = { querySelector: (s: string) => (s === '.ap' ? casca : null), body: corpo };
+
   it('W (do registro) abre e fecha o porquê; o selo também abre', () => {
-    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+    vi.stubGlobal('document', soACasca);
     const { quadros } = encenar(PorQueNaBancada, { corte: corte() }, [
       () => h.atalhos[0][0].action(),
       (saida) => (pecas(saida)[1].props.aoFechar as () => void)(),
@@ -204,12 +207,28 @@ describe('PorQueNaBancada', () => {
   });
 
   it('o W alterna: com o porquê aberto, fecha', () => {
-    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+    vi.stubGlobal('document', soACasca);
     const { quadros } = encenar(PorQueNaBancada, { corte: corte() }, [
       () => h.atalhos[0][0].action(),
       () => h.atalhos[0][0].action(),
     ]);
     expect(quadros).toHaveLength(3);
     expect(pecas(quadros[2])[1]).toBeNull();
+  });
+
+  // D-887: com modal aberto o editor cala as teclas sem Ctrl. O W é a exceção
+  // — ele fecha o próprio porquê —, mas não abre por cima de outro diálogo.
+  it('o W vale com modal aberto, para fechar o próprio porquê', () => {
+    vi.stubGlobal('document', soACasca);
+    encenar(PorQueNaBancada, { corte: corte() }, []);
+    expect(h.atalhos[0][0].valeComModal).toBe(true);
+  });
+
+  it('com outro diálogo aberto (os metadados), o W não empilha o porquê', () => {
+    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+    const { quadros } = encenar(PorQueNaBancada, { corte: corte() }, [
+      () => h.atalhos[0][0].action(),
+    ]);
+    expect(pecas(quadros.at(-1)!)[1]).toBeNull();
   });
 });
