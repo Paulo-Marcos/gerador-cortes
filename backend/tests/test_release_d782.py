@@ -185,10 +185,67 @@ def test_commit_da_release_e_achado_pelo_assunto_na_main():
         release.sha_do_commit_da_release(log, "0.7.0")
 
 
+def test_commit_da_release_e_achado_com_o_numero_do_pr_do_squash():
+    # D-891: o squash do GitHub põe " (#N)" no fim do assunto (57 de 57 merges
+    # desde a v0.5.0); sem aceitar o sufixo, o -Taguear recusava a release.
+    log = (
+        "c3\x00✨ feat(D-900): algo que entrou depois (#151)\n"
+        f"b2\x00{release.assunto_do_commit('0.6.0')} (#150)\n"
+    )
+
+    assert release.sha_do_commit_da_release(log, "0.6.0") == "b2"
+
+
+@pytest.mark.parametrize(
+    "sufixo",
+    ["(#150)", " (#150) extra", " (#)", " (#15a)", " #150", ".1 (#150)", "0 (#150)"],
+)
+def test_assunto_parecido_com_o_da_release_nao_e_aceito(sufixo):
+    log = f"b2\x00{release.assunto_do_commit('0.6.0')}{sufixo}\n"
+
+    with pytest.raises(release.ErroDeRelease, match="PR da release"):
+        release.sha_do_commit_da_release(log, "0.6.0")
+
+
 def test_resumo_da_tag_sai_do_corpo_do_commit():
     corpo = "o que a versão entrega\n\n[unlock:x] motivo: y\n\nCo-Authored-By: z\n"
 
-    assert release.resumo_do_commit(corpo) == "o que a versão entrega"
+    assert release.resumo_do_commit(corpo, "0.6.0") == "o que a versão entrega"
+
+
+def test_resumo_pula_a_bala_do_corpo_padrao_do_squash():
+    # D-891: com mais de um commit no PR, o corpo padrão do squash lista cada
+    # commit como "* <assunto>\n\n<corpo>"; o resumo é o corpo do da release.
+    corpo = (
+        f"* {release.assunto_do_commit('0.6.0')}\n\n"
+        "o que a versão entrega\n\n[unlock:x] motivo: y\n\n"
+        "* 🐛 fix(D-900): acertar o CHANGELOG\n\nCo-authored-by: z\n"
+    )
+
+    assert release.resumo_do_commit(corpo, "0.6.0") == "o que a versão entrega"
+
+
+@pytest.mark.parametrize(
+    "corpo",
+    [
+        "",
+        "[unlock:x] motivo: y\n\nCo-Authored-By: z\n",
+        "Co-authored-by: z\n",
+        "* 🐛 fix(D-900): outro commit\n\no corpo dele\n",
+    ],
+)
+def test_corpo_sem_resumo_recusa_a_tag_e_ensina_o_resumo(corpo):
+    with pytest.raises(release.ErroDeRelease, match="-Resumo"):
+        release.resumo_do_commit(corpo, "0.6.0")
+
+
+def test_resumo_informado_ao_taguear_vence_o_do_commit(monkeypatch):
+    chamadas = []
+    monkeypatch.setattr(release, "taguear", lambda *args: chamadas.append(args))
+
+    assert release.main(["0.6.0", "--taguear", "--resumo", " o que entrega "]) == 0
+    assert release.main(["0.6.0", "--taguear"]) == 0
+    assert chamadas == [("0.6.0", "o que entrega"), ("0.6.0", None)]
 
 
 @pytest.mark.parametrize(

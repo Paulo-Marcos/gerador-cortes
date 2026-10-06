@@ -62,7 +62,11 @@ está bom". O `bin\release.ps1` faz em dois atos, com o PR no meio (D-823):
    `.\bin\release.ps1 X.Y.Z -Resumo "..."` roda o portão, sobe a versão, fecha o
    `[Unreleased]` e commita. O PR segue o fluxo acima.
 2. Depois do merge: `.\bin\release.ps1 X.Y.Z -Taguear` acha o commit da release
-   na `origin/main` e cria a tag anotada **só com o CI verde naquele SHA**.
+   na `origin/main` pelo assunto, com ou sem o ` (#N)` que o squash acrescenta
+   (D-891), e cria a tag anotada **só com o CI verde naquele SHA**. O resumo da
+   tag é o primeiro parágrafo do corpo: faça o merge com o `--body-file` da
+   mensagem do commit, como nos outros PRs. Se o corpo não começar pelo resumo,
+   a tag é recusada; `-Taguear -Resumo "..."` o informa à mão.
    O push da tag dispara o `release.yml`, que cria o rascunho da release.
 
 A última tag é o ponto estável de volta: `backup-prod.py` antes de todo pull na
