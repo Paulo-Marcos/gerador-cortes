@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CabecalhoDeLista,
@@ -6,12 +6,14 @@ import {
   IdentidadeDaLive,
   LinhaDeLista,
 } from './ContextColumn';
+import { ESPACADOR_MIN_PX, juntarNoMais, pecasNoAperto, useApertoDaBarra } from './apertoDaBarra';
 import { Icon } from './Icon';
-import { BUSCA_LARGA_MIN_PX, useJanelaMin } from './medidas';
+import { BUSCA_LARGA_MIN_PX, SELETOR_MAX_PX, useJanelaMin } from './medidas';
+import { PontaDaBarra } from './PontaDaBarra';
 import { AcoesDaTela, type ScreenAction } from './ScreenHeader';
 import type { ChromeAtual, ChromeEstado, ChromeLista } from './UpgradeChrome';
 import type { Migalha } from './upgradeRoutes';
-import { temaEscuro, type UpgradeTheme } from './useUpgradeTheme';
+import type { UpgradeTheme } from './useUpgradeTheme';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A barra superior.
@@ -75,9 +77,10 @@ type TopBarProps = {
   };
 };
 
-function Trilha({ itens }: { itens: Migalha[] }) {
+function Trilha({ itens, ref }: { itens: Migalha[]; ref?: Ref<HTMLElement> }) {
   return (
     <nav
+      ref={ref}
       aria-label="Trilha"
       style={{
         display: 'flex',
@@ -234,7 +237,7 @@ function Seletor({
             border: '1px solid var(--line)',
             borderRadius: 'var(--r2)',
             background: 'var(--inset)',
-            maxWidth: 240,
+            maxWidth: SELETOR_MAX_PX,
           }}
         >
           {rotulo}
@@ -246,7 +249,7 @@ function Seletor({
           onClick={() => setAberto((v) => !v)}
           aria-expanded={aberto}
           aria-haspopup="true"
-          style={{ borderColor: aberto ? 'var(--accent)' : 'var(--line)', minWidth: 190 }}
+          style={{ borderColor: aberto ? 'var(--accent)' : 'var(--line)', minWidth: 190, maxWidth: SELETOR_MAX_PX }}
         >
           {rotulo}
           <Icon name="chevron-down" style={{ color: 'var(--dim)' }} />
@@ -372,9 +375,22 @@ export function TopBar({
   // Com o cabeçalho fundido, as ações da tela também disputam a linha: a
   // busca cede primeiro, porque tem atalho (⌘K) e a ação da tela não.
   const buscaLarga = cabeBusca && !cabecalho?.acoes?.length;
+  // D-877: o resto cede em degraus, medindo a barra (`apertoDaBarra`).
+  const chave = [
+    ...trilha.map((m) => m.texto),
+    ...(cabecalho?.acoes ?? []).map((a) => a.texto),
+    cabecalho?.sub,
+    atual?.titulo,
+    canal?.nome,
+    estado?.texto,
+  ].join('|');
+  const aperto = useApertoDaBarra(chave);
+  const pecas = pecasNoAperto(aperto.nivel);
+  const acoes = cabecalho?.acoes ?? [];
 
   return (
     <header
+      ref={aperto.barra}
       className="gl"
       style={{
         display: 'flex',
@@ -394,39 +410,12 @@ export function TopBar({
         zIndex: 30,
       }}
     >
-      {historico ? (
-        <span style={{ display: 'flex', gap: 3, flex: 'none' }}>
-          <button
-            type="button"
-            className="btn btn-icon"
-            style={{ width: 26, height: 26 }}
-            disabled={!historico.podeVoltar}
-            onClick={historico.onVoltar}
-            aria-label="Voltar"
-            aria-keyshortcuts="Meta+BracketLeft"
-            title={historico.anterior ? `Voltar para ${historico.anterior} (⌘[)` : 'Nada para trás'}
-          >
-            <Icon name="arrow-left" />
-          </button>
-          <button
-            type="button"
-            className="btn btn-icon"
-            style={{ width: 26, height: 26 }}
-            disabled={!historico.podeAvancar}
-            onClick={historico.onAvancar}
-            aria-label="Avançar"
-            aria-keyshortcuts="Meta+BracketRight"
-            title={historico.proximo ? `Avançar para ${historico.proximo} (⌘])` : 'Nada à frente'}
-          >
-            <Icon name="arrow-right" />
-          </button>
-        </span>
-      ) : null}
+      {historico ? <BotoesDoHistorico historico={historico} /> : null}
 
-      <Trilha itens={trilha} />
+      <Trilha itens={trilha} ref={aperto.trilha} />
 
       {/* O subtítulo da tela densa: mesma linha, tom de instrumento. */}
-      {cabecalho?.sub && cabeBusca ? (
+      {cabecalho?.sub && cabeBusca && pecas.subtitulo ? (
         <span
           style={{
             minWidth: 0,
@@ -442,113 +431,57 @@ export function TopBar({
         </span>
       ) : null}
 
-      <div style={{ flex: 1, minWidth: 8 }} />
+      <div ref={aperto.espacador} style={{ flex: 1, minWidth: ESPACADOR_MIN_PX }} />
 
       {atual ? (
         <Seletor atual={atual} compacto={seletorCompacto} lista={listaNoPainel} />
       ) : null}
 
-      {cabecalho?.acoes?.length ? <AcoesDaTela acoes={cabecalho.acoes} /> : null}
+      {acoes.length ? <AcoesDaTela acoes={pecas.acoesNoMais ? juntarNoMais(acoes) : acoes} /> : null}
 
-      {buscaLarga ? (
-        <button
-          type="button"
-          className="fld campo"
-          onClick={onAbrirBusca}
-          style={{
-            width: 240,
-            flex: 'none',
-            color: 'var(--dim)',
-            background: 'var(--panel)',
-            backdropFilter: 'var(--glass)',
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <Icon name="command" />
-          Buscar live, tela ou ação…
-          <span style={{ flex: 1 }} />
-          <kbd>⌘K</kbd>
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="btn btn-icon"
-          title="Buscar live, tela ou ação · ⌘K"
-          aria-label="Buscar live, tela ou ação"
-          aria-keyshortcuts="Meta+K"
-          onClick={onAbrirBusca}
-        >
-          <Icon name="search" />
-        </button>
-      )}
-
-      {canal ? (
-        <Link
-          to="/canais"
-          className="chip"
-          title={`Canal ativo: ${canal.nome} (${canal.handle}) — é para ele que os cortes são publicados. Trocar em Canais.`}
-          style={{ flex: 'none', height: 24, maxWidth: 180, color: 'var(--ink)', textDecoration: 'none' }}
-        >
-          <Icon name="radio" style={{ flex: 'none', color: 'var(--mute)' }} />
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {buscaLarga ? canal.nome : canal.handle}
-          </span>
-        </Link>
-      ) : null}
-
-      {estado ? (
-        <span
-          className="chip"
-          title={estado.texto}
-          style={{ background: estado.bg, color: estado.cor, flex: 'none' }}
-        >
-          <Icon name={estado.icone} />
-          {buscaLarga ? estado.texto : null}
-        </span>
-      ) : null}
-
-      <button
-        type="button"
-        className="btn btn-icon"
-        title={
-          avisoDeErro
-            ? 'Um job falhou — abrir a fila (⌘J)'
-            : avisosAtivos > 0
-              ? `${avisosAtivos} job(s) rodando — abrir a fila (⌘J)`
-              : 'Abrir a fila (⌘J)'
-        }
-        aria-label="Abrir a fila"
-        onClick={onAbrirAvisos}
-        style={{ position: 'relative', flex: 'none' }}
-      >
-        <Icon name="bell" />
-        {avisosAtivos > 0 || avisoDeErro ? (
-          <span
-            aria-hidden
-            style={{
-              position: 'absolute',
-              top: 5,
-              right: 5,
-              width: 7,
-              height: 7,
-              borderRadius: 99,
-              // Estado, não ação: info rodando, erro quando algo falhou.
-              background: avisoDeErro ? 'var(--err)' : 'var(--info)',
-            }}
-          />
-        ) : null}
-      </button>
-      <button
-        type="button"
-        className="btn btn-icon"
-        onClick={onAlternarTema}
-        title={temaEscuro(tema) ? 'Tema claro' : 'Tema escuro'}
-        aria-label={temaEscuro(tema) ? 'Tema claro' : 'Tema escuro'}
-        style={{ flex: 'none' }}
-      >
-        <Icon name={temaEscuro(tema) ? 'sun' : 'moon'} />
-      </button>
+      <PontaDaBarra
+        buscaLarga={buscaLarga}
+        canalComTexto={pecas.canalComTexto}
+        canal={canal}
+        estado={estado}
+        tema={tema}
+        onAlternarTema={onAlternarTema}
+        onAbrirBusca={onAbrirBusca}
+        onAbrirAvisos={onAbrirAvisos}
+        avisosAtivos={avisosAtivos}
+        avisoDeErro={avisoDeErro}
+      />
     </header>
+  );
+}
+
+function BotoesDoHistorico({ historico }: { historico: NonNullable<TopBarProps['historico']> }) {
+  return (
+    <span style={{ display: 'flex', gap: 3, flex: 'none' }}>
+      <button
+        type="button"
+        className="btn btn-icon"
+        style={{ width: 26, height: 26 }}
+        disabled={!historico.podeVoltar}
+        onClick={historico.onVoltar}
+        aria-label="Voltar"
+        aria-keyshortcuts="Meta+BracketLeft"
+        title={historico.anterior ? `Voltar para ${historico.anterior} (⌘[)` : 'Nada para trás'}
+      >
+        <Icon name="arrow-left" />
+      </button>
+      <button
+        type="button"
+        className="btn btn-icon"
+        style={{ width: 26, height: 26 }}
+        disabled={!historico.podeAvancar}
+        onClick={historico.onAvancar}
+        aria-label="Avançar"
+        aria-keyshortcuts="Meta+BracketRight"
+        title={historico.proximo ? `Avançar para ${historico.proximo} (⌘])` : 'Nada à frente'}
+      >
+        <Icon name="arrow-right" />
+      </button>
+    </span>
   );
 }

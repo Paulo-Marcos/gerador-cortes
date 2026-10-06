@@ -283,6 +283,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whatever hung below its 44 px, so the list was there but invisible. The bar
   now trims only sideways (its row is wider than the bar and must not
   scroll), and menus opened from it show in full (D-876).
+- **The top bar of the dense screens keeps every button within reach.** On
+  the editor, Pós and Revisão the screen's actions move up into the top bar,
+  and at 1100 px the row was wider than the bar: the trail shrank to nothing,
+  "Excluir corte" was cut and the search, queue and theme buttons sat off
+  screen (keyboard focus landed there too). The cut switcher now has a
+  maximum width, and when the bar is still short it gives way in steps,
+  measuring itself: first the subtitle, then the channel name (the icon
+  stays), then the screen's actions fold into a "⋯ Mais" menu. Search, status,
+  queue and theme never leave (D-877).
 - **J and K go the same way on every screen that switches cuts: J is the
   previous cut, K the next.** The editor already worked that way, but the app frame (Metadados,
   Pós), the top switcher and the Workspace list went the other way, and the

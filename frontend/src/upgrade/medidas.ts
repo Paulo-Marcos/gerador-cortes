@@ -25,6 +25,14 @@ export const BARRA_EM_COLUNA_MIN_PX = 1200;
  *  seletor valem mais que o rótulo "Buscar live, tela ou ação…". */
 export const BUSCA_LARGA_MIN_PX = 1200;
 
+/** Teto do seletor de corte na barra superior. Sem ele o botão crescia com o
+ *  título do corte: 442 px de 888 na Bancada a 1100 px (D-877). */
+export const SELETOR_MAX_PX = 240;
+
+/** Abaixo daqui a trilha está espremida demais para dizer "onde estou", e a
+ *  barra cede a próxima peça (D-877). Antes ela ia a 0 px sem ninguém ceder. */
+export const TRILHA_MIN_PX = 160;
+
 /**
  * `true` enquanto a janela tiver ao menos `px` de largura.
  *

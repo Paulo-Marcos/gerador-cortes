@@ -32,8 +32,9 @@ export type ScreenAction = {
   ia?: { emVoo: ProviderIA | null; onGerar: (provider: ProviderIA) => void };
   /** D-867: ação que abre um menu — o "Mais" (⋯) das ações raras da tela.
    *  Com isto, `onClick` é ignorado e o `texto` vira o rótulo do gatilho.
-   *  Serve também às telas densas: a barra superior, para onde as ações
-   *  sobem, corta só de lado e deixa o painel descer inteiro (D-876). */
+   *  Nas telas densas é a própria barra superior que junta as ações simples
+   *  num Mais quando aperta (D-877, `juntarNoMais`); o painel desce porque
+   *  a barra corta só de lado (D-876). */
   menu?: OverflowMenuItem[];
 };
 
