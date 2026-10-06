@@ -332,6 +332,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   what the cut card's ribbon reads (D-862).
 
 ### Security
+- **source-map-js 1.2.2.** Closes GHSA-68fv-2mgg-jv7q (high): crafted
+  source-map section offsets could stall the event loop. It comes in only at
+  build time, in the frontend and the renderer, and the new advisory had
+  turned `main` red through the npm audit gate (D-882).
 - **The CI npm audit accepts only dated exceptions.** GHSA-vfj7-8cjw-p6xm
   (`braces`, high) has no fixed version and failed every PR; it comes in
   through Tailwind 3, which only reads its own config globs at build time.
