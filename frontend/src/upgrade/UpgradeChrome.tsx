@@ -2,7 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -304,10 +304,19 @@ export function useChrome(): Chrome {
  * a barra de ações da tela anterior sobreviveria à navegação — e um
  * botão "Renderizar final" órfão numa tela de lista é pior do que
  * botão nenhum.
+ *
+ * D-880: publica em `useLayoutEffect`, antes da pintura. Com `useEffect` a
+ * tela nova pintava um quadro com a casca da anterior — ao trocar de live
+ * no Workspace, a lista da live nova sob o título e o "Aprovar os 6
+ * propostos" da outra. O `setState` de um efeito de layout é aplicado no
+ * mesmo commit, então tela e casca chegam juntas à tela. Não há render a
+ * mais: em tecla e clique o React já rodava o efeito antes de pintar (o
+ * editor e o Pós fazem os mesmos commits nas duas versões); só a navegação
+ * e a chegada de dados deixam de pintar o quadro intermediário.
  */
 export function useDefinirChrome(chrome: Chrome, deps: unknown[]) {
   const store = useContext(ChromeContext);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!store) return;
     store.definir(chrome);
     return () => store.definir(null);
