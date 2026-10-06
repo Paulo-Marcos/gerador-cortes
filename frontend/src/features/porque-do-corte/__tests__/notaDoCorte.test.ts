@@ -18,6 +18,17 @@ describe('lerNotaDoCorte', () => {
     });
   });
 
+  // A skill pede "três notas de 0 a 10 e o total" sem dizer que o total é a
+  // soma. Com as três partes, a soma manda: o selo "/30" não pode desmentir
+  // as barras logo abaixo dele se a IA um dia escrever a média.
+  it('com as três partes, o total é a soma delas, não o que a IA escreveu', () => {
+    expect(lerNotaDoCorte({ hook: 7, flow: 8, value: 9, total: 8 })).toMatchObject({
+      total: 24,
+      texto: '24/30',
+      tom: 'ok',
+    });
+  });
+
   it('sem o total, soma as partes que vieram', () => {
     expect(lerNotaDoCorte({ hook: 9, flow: 8 })?.total).toBe(17);
   });

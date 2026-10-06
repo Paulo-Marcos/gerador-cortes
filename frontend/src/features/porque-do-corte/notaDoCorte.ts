@@ -31,8 +31,12 @@ export type NotaDoCorte = {
 
 /**
  * Lê o `score` do corte. Sem nenhuma nota numérica (corte manual, análise
- * anterior à D-302) não há nota — e a tela não desenha selo vazio. Sem o
- * `total`, ele é a soma das partes que vieram.
+ * anterior à D-302) não há nota — e a tela não desenha selo vazio.
+ *
+ * Com as três partes, o total é a soma delas: a skill pede "o total" sem dizer
+ * que é a soma, e o "/30" do selo não pode desmentir as barras se a IA um dia
+ * escrever a média. Faltando parte, vale o `total` da IA; sem ele, a soma do
+ * que veio.
  */
 export function lerNotaDoCorte(score: Record<string, number> | undefined): NotaDoCorte | null {
   if (!score) return null;
@@ -42,8 +46,9 @@ export function lerNotaDoCorte(score: Record<string, number> | undefined): NotaD
     valor: score[p.chave],
   }));
   if (partes.length === 0 && typeof score.total !== 'number') return null;
+  const soma = partes.reduce((acc, p) => acc + p.valor, 0);
   const total =
-    typeof score.total === 'number' ? score.total : partes.reduce((soma, p) => soma + p.valor, 0);
+    partes.length === PARTES.length || typeof score.total !== 'number' ? soma : score.total;
   return { total, texto: `${total}/${NOTA_MAXIMA}`, partes, tom: tomDaNota(total) };
 }
 
