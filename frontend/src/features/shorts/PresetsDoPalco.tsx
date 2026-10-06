@@ -8,7 +8,7 @@ import {
   useUpdateLayoutPreset,
 } from '@/shared/palco/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
-import { Icon } from '@/upgrade/Icon';
+import { ICONE_DO_CONCEITO, Icon } from '@/upgrade/Icon';
 
 // D-567: o CRUD de presets sai de dentro do modal do palco.
 //
@@ -145,7 +145,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
                     setNomeEditado(preset.nome);
                   }}
                 >
-                  <Icon name="pencil" />
+                  <Icon name={ICONE_DO_CONCEITO.renomear} />
                 </Button>
                 <Button
                   size="sm"

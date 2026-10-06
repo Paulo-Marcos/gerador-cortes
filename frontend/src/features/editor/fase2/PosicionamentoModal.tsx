@@ -56,7 +56,7 @@ import {
 } from '@/shared/palco/youtubeLayout';
 import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/shared/palco/youtubeBackgrounds';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
-import { Icon } from '@/upgrade/Icon';
+import { ICONE_DO_CONCEITO, Icon } from '@/upgrade/Icon';
 
 /** Resultado da confirmação do modal (F-060: inclui fundo e placa). */
 export interface PosicionamentoModalResult {
@@ -442,7 +442,7 @@ export function PosicionamentoModal({
                       disabled={!presetSelecionado || updatePreset.isPending}
                       aria-label="Renomear preset selecionado"
                     >
-                      <Icon name="pencil" />
+                      <Icon name={ICONE_DO_CONCEITO.renomear} />
                     </Button>
                   </span>
                 </Tooltip>
@@ -764,7 +764,7 @@ export function PosicionamentoModal({
                   onClick={handleRenomearPreset}
                   disabled={!nomeRenomear.trim() || updatePreset.isPending}
                 >
-                  {updatePreset.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
+                  {updatePreset.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.renomear} />}
                   Renomear
                 </Button>
               </div>
