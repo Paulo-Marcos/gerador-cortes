@@ -16,6 +16,7 @@ Uso (pelo bin\\release.ps1, que usa o Python do backend\\.venv):
     python bin/release.py 0.6.0 --resumo "o que esta versão entrega"
     python bin/release.py 0.6.0 --resumo "..." --verificar   # só confere
     python bin/release.py 0.6.0 --taguear                    # depois do merge
+    python bin/release.py 0.6.0 --taguear --resumo "..."     # corpo sem o resumo
 """
 
 import argparse
@@ -155,18 +156,33 @@ def conferir_ramo(ramo: str, versao: str) -> None:
 def sha_do_commit_da_release(log: str, versao: str) -> str:
     """No `git log --format=%H%x00%s` da origin/main, o commit da versão.
 
-    O squash troca o SHA, mas mantém o assunto (o merge o passa em --subject)."""
+    O squash troca o SHA e o GitHub acrescenta " (#N)" ao assunto (D-891):
+    aceita esse sufixo e nada além dele."""
     assunto = assunto_do_commit(versao)
+    exato = re.compile(rf"{re.escape(assunto)}(\s\(#\d+\))?")
     for linha in log.splitlines():
         sha, _, texto = linha.partition("\x00")
-        if texto == assunto:
+        if exato.fullmatch(texto):
             return sha
     raise ErroDeRelease(f"a origin/main não tem '{assunto}': o PR da release já foi mergeado?")
 
 
-def resumo_do_commit(corpo: str) -> str:
-    """O primeiro parágrafo do corpo, que o `preparar` gravou como resumo."""
-    return corpo.strip().split("\n\n", 1)[0].strip()
+def resumo_do_commit(corpo: str, versao: str) -> str:
+    """O primeiro parágrafo do corpo, que o `preparar` gravou como resumo.
+
+    Com mais de um commit no PR, o corpo padrão do squash abre com a bala
+    "* <assunto>" de cada commit (D-891): a do commit da release é pulada.
+    Trailer ou bala de outro commit no lugar do resumo recusa a tag, em vez
+    de publicá-la com o resumo errado."""
+    bala = f"* {assunto_do_commit(versao)}"
+    paragrafos = [p.strip() for p in corpo.split("\n\n") if p.strip() and p.strip() != bala]
+    primeiro = paragrafos[0] if paragrafos else ""
+    if not primeiro or re.match(r"\* |\[unlock:|[\w-]+-by: ", primeiro, re.I):
+        raise ErroDeRelease(
+            "o corpo do commit da release não começa pelo resumo: "
+            f'.\\bin\\release.ps1 {versao} -Taguear -Resumo "o que esta versão entrega"'
+        )
+    return primeiro
 
 
 def conferir_ci_verde(runs_json: str, sha: str) -> None:
@@ -323,7 +339,8 @@ Pronto: commit {sha[:10]} na branch {ramo}, só nesta máquina. Sem tag ainda.
 Próximos passos (nesta ordem):
   1. git push -u origin {ramo}
   2. gh pr create --base main --title "{assunto_do_commit(versao)}" --body "<o resumo>"
-  3. pr-audit e merge por squash, com --subject igual ao título
+  3. pr-audit e merge por squash: --subject "<título> (#N)" --body-file com a
+     mensagem do commit (o resumo é o primeiro parágrafo)
   4. .\\bin\\release.ps1 {versao} -Taguear      # tag no commit da main, com o CI verde
 
 Desistir antes do push: apague a branch e o worktree.
@@ -331,7 +348,7 @@ Desistir antes do push: apague a branch e o worktree.
     )
 
 
-def taguear(versao: str) -> None:
+def taguear(versao: str, resumo_informado: str | None = None) -> None:
     conferir_tag_nova(versao)
     rodar(["git", "fetch", "origin", "main"])
     log = rodar(["git", "log", "origin/main", "-200", "--format=%H%x00%s"])
@@ -344,7 +361,9 @@ def taguear(versao: str) -> None:
          "--limit", "1", "--json", "status,conclusion"]
     )  # fmt: skip
     conferir_ci_verde(runs, sha)
-    resumo = resumo_do_commit(rodar(["git", "log", "-1", "--format=%b", sha]))
+    resumo = resumo_informado or resumo_do_commit(
+        rodar(["git", "log", "-1", "--format=%b", sha]), versao
+    )
     notas = notas_da_versao(rodar(["git", "show", f"{sha}:CHANGELOG.md"]), versao)
     criar_tag(versao, resumo, notas, sha)
     print(
@@ -387,7 +406,9 @@ def main(argv: list[str] | None = None) -> int:
         fluxo.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("versao", help="a nova versão, X.Y.Z")
-    parser.add_argument("--resumo", help="uma linha: o que a versão entrega (ao preparar)")
+    parser.add_argument(
+        "--resumo", help="uma linha: o que a versão entrega (ao taguear, troca o do commit)"
+    )
     parser.add_argument("--verificar", action="store_true", help="só confere; não altera nada")
     parser.add_argument(
         "--taguear", action="store_true", help="depois do merge: tag no commit da origin/main"
@@ -397,7 +418,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--resumo é obrigatório ao preparar")
     try:
         if args.taguear:
-            taguear(args.versao)
+            taguear(args.versao, (args.resumo or "").strip() or None)
         else:
             preparar(args.versao, args.resumo.strip(), args.verificar)
     except ErroDeRelease as erro:

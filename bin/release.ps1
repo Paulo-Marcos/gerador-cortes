@@ -15,6 +15,7 @@
   .\bin\release.ps1 0.6.0 -Resumo "o que esta versão entrega" -Verificar
   .\bin\release.ps1 0.6.0 -Resumo "o que esta versão entrega"
   .\bin\release.ps1 0.6.0 -Taguear
+  .\bin\release.ps1 0.6.0 -Taguear -Resumo "o que esta versão entrega"
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Versao,

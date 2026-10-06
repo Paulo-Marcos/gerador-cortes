@@ -235,6 +235,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file, so the next rule fits under the 500-line limit (D-889).
 
 ### Fixed
+- **Tagging a release finds the squash-merged release commit.** GitHub's
+  squash merge ends the subject with " (#N)", so `release.ps1 -Taguear` never
+  found the release commit on `main` and refused to tag. It now accepts that
+  suffix (and nothing else after the subject). The tag summary also skips the
+  "* <subject>" line GitHub puts first in a multi-commit squash body, refuses
+  a body that starts with a trailer instead of tagging with a wrong summary,
+  and `-Taguear -Resumo "..."` sets the summary by hand (D-891).
 - **Editor keys no longer act behind an open dialog.** With the shortcuts
   help, the metadata or any other dialog or menu over the editor, A still
   approved the cut behind it, R asked to delete it, F toggled Fire and Space
