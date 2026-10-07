@@ -39,6 +39,7 @@ from app.database import AsyncSessionLocal
 from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma
 from app.domain.publicacao.ritmo_publicacao import (
+    ESTADOS_DO_OPERADOR,
     ESTADOS_FORA_DA_RAIA,
     Cadencia,
     EstadoItem,
@@ -51,18 +52,19 @@ from app.services import (
     destinos_shorts,  # noqa: F401 — registra os destinos
     publicacao_destinos,
     publicacao_no_tiktok,
+    registro_do_lote,
 )
 from app.services.publicacao_destinos import Destino
 from app.services.registro_do_lote import (  # noqa: F401 — historico: o router lê por aqui
     ALVO_CORTE,
     ALVO_SHORT,
+    CONFIRMADO_A_MAO,
     historico_do_corte,
 )
 from app.services.registro_do_lote import ja_publicados as _ja_publicados
 from app.services.registro_do_lote import publicados_hoje as _publicados_hoje
 from app.services.registro_do_lote import rotulos_dos_alvos as _rotulos_dos_alvos
 from app.services.tasks import fire_and_forget
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +75,16 @@ NAO_DEU_PARA_CONFIRMAR = (
     "nao consegui confirmar a publicacao (a aba pode ter sido fechada); "
     "marque aqui se voce publicou"
 )
-CONFIRMADO_A_MAO = "voce marcou como publicado"
+NAO_DEU_PARA_CONFERIR = (
+    "o robo clicou em Publicar e nao consegui confirmar se o post saiu; "
+    "confira no perfil e marque aqui se ele esta no ar"
+)
+CONFERINDO_O_ANTERIOR = "conferindo a aba do envio anterior — o post pode ter saido"
+
+# D-894: (alvo, plataforma) cuja aba está sendo conferida depois do clique em
+# Publicar. Enquanto a vigília dura, um lote novo pula o alvo: subi-lo de novo
+# seria o post duplicado.
+_conferindo: set[tuple[str, Plataforma]] = set()
 
 
 @dataclass(frozen=True)
@@ -228,14 +239,16 @@ async def criar(
     for alvo_tipo, alvo_id in alvos:
         for plataforma in plataformas:
             ja_foi = plataforma.value in publicados.get(alvo_id, set())
+            conferindo = (alvo_id, plataforma) in _conferindo
+            pulado = CONFERINDO_O_ANTERIOR if conferindo else "ja publicado antes" if ja_foi else ""
             item = ItemDoLote(
                 alvo_tipo=alvo_tipo,
                 alvo_id=alvo_id,
                 plataforma=plataforma,
                 rotulo=rotulos.get(alvo_id, alvo_id[:8]),
                 registro_id=str(uuid.uuid4()),
-                estado=EstadoItem.PULADO if ja_foi else EstadoItem.AGUARDANDO,
-                detalhe="ja publicado antes" if ja_foi else "",
+                estado=EstadoItem.PULADO if pulado else EstadoItem.AGUARDANDO,
+                detalhe=pulado,
             )
             lote.itens.append(item)
 
@@ -260,7 +273,8 @@ async def cancelar() -> Lote | None:
     Agora os que esperam viram CANCELADO no ato, e o item em curso recebe o
     sinal de largar a vigília. A aba que o robô preparou continua aberta — e o
     item fica em SUA_VEZ, com o "publiquei" à mão, porque o operador pode ter
-    publicado antes de cancelar.
+    publicado antes de cancelar. O item em CONFERIR segue vigiado (D-894):
+    cancelar a fila não diz que o post não saiu.
     """
     lote = _lote_atual
     if lote is None or lote.terminou:
@@ -270,7 +284,7 @@ async def cancelar() -> Lote | None:
     for item in lote.itens:
         if item.estado is EstadoItem.AGUARDANDO:
             await _mudar(item, EstadoItem.CANCELADO, detalhe="lote cancelado")
-        else:
+        elif item.estado is not EstadoItem.CONFERIR:
             item.espera.set()
     logger.info("[Lote] cancelado a pedido do operador")
     return lote
@@ -300,11 +314,14 @@ async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
 
         if final is EstadoItem.PUBLICADO:
             saldo += 1
-        elif final is EstadoItem.ERRO and destino.modo is ModoPublicacao.ASSISTIDO:
-            # O robô tropeçou. A causa é quase sempre COMPARTILHADA — sessão
-            # caída, layout novo, Chrome fechado — e insistir só abriria mais
-            # cinco janelas para falhar do mesmo jeito. Parar aqui deixa a fila
-            # intacta para quando o motivo for resolvido.
+        elif (
+            final in (EstadoItem.ERRO, EstadoItem.CONFERIR)
+            and destino.modo is ModoPublicacao.ASSISTIDO
+        ):
+            # O robô tropeçou. A causa é quase sempre COMPARTILHADA — sessão caída,
+            # layout novo, Chrome fechado, o aviso que segurou o Publicar (D-894) — e
+            # insistir só abriria mais cinco janelas para falhar do mesmo jeito. Parar
+            # aqui deixa a fila intacta para quando o motivo for resolvido.
             lote.avisos[plataforma.value] = f"{item.detalhe} Os que faltam ficaram esperando."
             break
 
@@ -313,7 +330,7 @@ async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
 
 async def _mostrar_se_for_a_vez(itens: list[ItemDoLote], destino: Destino | None) -> None:
     """D-799: com as abas prontas, a janela do robô volta à tela, sem pular na frente."""
-    esperando = any(i.estado is EstadoItem.SUA_VEZ for i in itens)
+    esperando = any(i.estado in ESTADOS_DO_OPERADOR for i in itens)
     if esperando and isinstance(destino, destinos_assistidos.DestinoAssistido):
         await destino.mostrar_janela()
 
@@ -386,6 +403,12 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
     try:
         contexto = await _montar_contexto(item)
         resultado = await destino.publicar(await destino.preparar(contexto))
+    except destinos_assistidos.ConferirNaAba as exc:
+        _conferindo.add((item.alvo_id, item.plataforma))  # antes: CONFERIR já termina o lote
+        await _mudar(item, EstadoItem.CONFERIR, detalhe=str(exc))
+        vigilia = _vigiar(item, exc.destino, exc.marca, EstadoItem.CONFERIR, NAO_DEU_PARA_CONFERIR)
+        fire_and_forget(vigilia, name="conferir-aba")
+        return EstadoItem.CONFERIR
     except Exception as exc:  # noqa: BLE001 — a raia reporta e decide se segue
         logger.warning("[Lote] %s em %s falhou: %s", item.alvo_id[:8], item.plataforma.value, exc)
         await _mudar(item, EstadoItem.ERRO, detalhe=str(exc))
@@ -408,7 +431,9 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
     if destino.modo is ModoPublicacao.ASSISTIDO:
         if resultado.get("marca") and isinstance(destino, destinos_assistidos.DestinoAssistido):
             # Já está em SUA_VEZ (`ao_ficar_pronta`); a raia segue, a vigília fica.
-            fire_and_forget(_vigiar(item, destino, resultado["marca"], avisos), name="vigiar-aba")
+            recado = _com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos)
+            vigilia = _vigiar(item, destino, resultado["marca"], EstadoItem.SUA_VEZ, recado)
+            fire_and_forget(vigilia, name="vigiar-aba")
             return EstadoItem.SUA_VEZ
         if resultado.get("publicado"):
             await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
@@ -428,15 +453,25 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
 
 
 async def _vigiar(
-    item: ItemDoLote, destino: destinos_assistidos.DestinoAssistido, marca: str, avisos
+    item: ItemDoLote,
+    destino: destinos_assistidos.DestinoAssistido,
+    marca: str,
+    espera: EstadoItem,
+    recado: str,
 ) -> None:
-    """A vigília de UMA aba, em segundo plano, enquanto a raia sobe as outras (D-799)."""
-    publicado = await destino.aguardar(marca)
-    if publicado:
-        await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
-    elif item.estado is EstadoItem.SUA_VEZ:
-        # "Não sei", e não "não publicou" — o botão "publiquei" continua à mão.
-        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos))
+    """A vigília de UMA aba, em segundo plano, enquanto a raia sobe as outras (D-799).
+
+    `espera` é onde o item aguarda o operador: SUA_VEZ, ou CONFERIR depois do
+    clique do robô em Publicar (D-894), que libera o alvo para um lote novo no fim.
+    """
+    try:
+        if await destino.aguardar(marca):
+            await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
+        elif item.estado is espera:
+            # "Não sei", e não "não publicou" — o botão "publiquei" continua à mão.
+            await _mudar(item, espera, detalhe=recado)
+    finally:
+        _conferindo.discard((item.alvo_id, item.plataforma))
 
 
 def _recado_do_pacote(resultado: dict, ritmo: Cadencia) -> str:
@@ -544,45 +579,10 @@ async def confirmar(
     True sem gravar de novo. Uma linha duplicada com `publicado_em` inflaria a
     cota do dia, que é contada exatamente por esse campo.
     """
-    async with AsyncSessionLocal() as db:
-        registro = (
-            (
-                await db.execute(
-                    select(PublicacaoShort)
-                    .where(
-                        PublicacaoShort.alvo_id == alvo_id,
-                        PublicacaoShort.plataforma == plataforma.value,
-                    )
-                    .order_by(
-                        PublicacaoShort.publicado_em.is_(None).desc(),
-                        PublicacaoShort.criado_em.desc(),
-                    )
-                )
-            )
-            .scalars()
-            .first()
-        )
-        if registro is not None and registro.publicado_em is not None:
-            if url and not registro.url:
-                registro.url = url
-                await db.commit()
-            return True
-        if registro is None:
-            registro = PublicacaoShort(
-                id=str(uuid.uuid4()),
-                alvo_tipo=alvo_tipo,
-                alvo_id=alvo_id,
-                plataforma=plataforma.value,
-            )
-            db.add(registro)
-        registro.estado = EstadoItem.PUBLICADO.value
-        registro.detalhe = CONFIRMADO_A_MAO
-        if url:
-            registro.url = url
-        registro.publicado_em = datetime.utcnow()
-        await db.commit()
-    # O tipo gravado no lote manda: o "publiquei" do painel chega sem ele.
-    await _marcar_corte_no_tiktok(registro.alvo_tipo or alvo_tipo, alvo_id, plataforma)
+    tipo_gravado = await registro_do_lote.gravar_confirmacao(alvo_id, plataforma, alvo_tipo, url)
+    if tipo_gravado is None:
+        return True
+    await _marcar_corte_no_tiktok(tipo_gravado, alvo_id, plataforma)
 
     if _lote_atual is not None:
         for item in _lote_atual.itens:

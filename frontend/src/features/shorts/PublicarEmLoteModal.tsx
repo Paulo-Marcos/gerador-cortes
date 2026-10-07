@@ -29,6 +29,7 @@ import {
   alternar,
   contarEnvios,
   contarRepublicacoes,
+  marcacaoAMao,
   montarAlvos,
   plataformasJaPublicadas,
   podeMarcarAMao,
@@ -594,14 +595,10 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
             type="button"
             className="flex-none text-[11px] font-semibold text-[var(--wb-accent)]"
             disabled={confirmar.isPending}
-            title={
-              item.estado === 'sua_vez'
-                ? 'marcar que voce publicou'
-                : 'ja publiquei este na mao, fora do app'
-            }
+            title={marcacaoAMao(item.estado).titulo}
             onClick={() => confirmar.mutate({ alvoId: item.alvo_id, plataforma: item.plataforma })}
           >
-            {item.estado === 'sua_vez' ? 'publiquei' : 'ja publiquei'}
+            {marcacaoAMao(item.estado).rotulo}
           </button>
         )}
         {item.url && (
@@ -633,6 +630,9 @@ function Icone({ estado }: { estado: EstadoItemLote }) {
   }
   if (estado === 'sua_vez') {
     return <Icon name="hand" className="flex-none text-[var(--wb-accent)]" />;
+  }
+  if (estado === 'conferir') {
+    return <Icon name="eye" className="flex-none text-[var(--wb-warn-ink,var(--wb-accent))]" />;
   }
   if (estado === 'erro') {
     return <Icon name="triangle-alert" className="flex-none text-[var(--wb-text-dim)]" />;

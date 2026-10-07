@@ -235,6 +235,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file, so the next rule fits under the 500-line limit (D-889).
 
 ### Fixed
+- **The batch no longer publishes the same video twice when TikTok does not
+  confirm.** When the robot clicked Publish and the page did not leave the
+  upload screen, the batch marked the item as an error: nobody watched the
+  tab, the robot's window stayed hidden and the cut was never marked, so the
+  next "Subir todos" with "Publicar sozinho" posted it again. The item now
+  reads "conferir" (with a "saiu no ar" button), its own tab is watched and the
+  cut marks itself once the post shows up, the window comes back on screen,
+  and a new batch skips that cut while the tab is being checked. Cancelling
+  the batch no longer stops that check (D-894).
 - **Tagging a release finds the squash-merged release commit.** GitHub's
   squash merge ends the subject with " (#N)", so `release.ps1 -Taguear` never
   found the release commit on `main` and refused to tag. It now accepts that

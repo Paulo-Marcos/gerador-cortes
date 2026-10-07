@@ -114,7 +114,11 @@ def test_o_item_na_vez_do_operador_ainda_pode_mudar():
 
 
 def test_a_maquina_ja_largou_o_item_na_vez_do_operador():
-    """D-762: é o que deixa o lote terminar sem esperar um clique (D-591)."""
-    assert ESTADOS_FORA_DA_RAIA == ESTADOS_TERMINAIS | {EstadoItem.SUA_VEZ}
+    """D-762: é o que deixa o lote terminar sem esperar um clique (D-591).
+
+    D-894: CONFERIR também — o robô já clicou, e o que resta é o operador olhar.
+    """
+    assert ESTADOS_FORA_DA_RAIA == ESTADOS_TERMINAIS | {EstadoItem.SUA_VEZ, EstadoItem.CONFERIR}
+    assert EstadoItem.CONFERIR not in ESTADOS_TERMINAIS
     assert EstadoItem.AGUARDANDO not in ESTADOS_FORA_DA_RAIA
     assert EstadoItem.PREPARANDO not in ESTADOS_FORA_DA_RAIA

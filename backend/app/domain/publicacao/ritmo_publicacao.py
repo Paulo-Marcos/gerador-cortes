@@ -43,11 +43,16 @@ class EstadoItem(StrEnum):
     trabalho da máquina acabou e o do humano começou. Sem ele a tela teria de
     escolher entre mentir ("publicado") e assustar ("erro") — e nenhum dos dois
     descreve uma aba aberta esperando um clique.
+
+    `CONFERIR` é o primo dele, do lado de lá do clique (D-894): o robô apertou
+    Publicar e a página não confirmou. O post pode ter saído — e por isso não é
+    `ERRO`, que convida a subir de novo e duplicaria o vídeo no perfil.
     """
 
     AGUARDANDO = "aguardando"
     PREPARANDO = "preparando"
     SUA_VEZ = "sua_vez"
+    CONFERIR = "conferir"
     PUBLICADO = "publicado"
     ERRO = "erro"
     PULADO = "pulado"
@@ -65,8 +70,9 @@ ESTADOS_TERMINAIS: frozenset[EstadoItem] = frozenset(
 # o trabalho que resta é do operador. É o que decide se o lote terminou — e se
 # um novo pode começar (D-564, D-591): um lote não fica preso esperando um
 # clique que talvez nunca venha. O item em `SUA_VEZ` ainda pode virar
-# `PUBLICADO`; só não depende mais da raia.
-ESTADOS_FORA_DA_RAIA: frozenset[EstadoItem] = ESTADOS_TERMINAIS | {EstadoItem.SUA_VEZ}
+# `PUBLICADO`; só não depende mais da raia. `CONFERIR` também (D-894).
+ESTADOS_DO_OPERADOR: frozenset[EstadoItem] = frozenset({EstadoItem.SUA_VEZ, EstadoItem.CONFERIR})
+ESTADOS_FORA_DA_RAIA: frozenset[EstadoItem] = ESTADOS_TERMINAIS | ESTADOS_DO_OPERADOR
 
 
 @dataclass(frozen=True)
