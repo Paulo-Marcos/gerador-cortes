@@ -3480,11 +3480,12 @@
         "type": "object"
       },
       "EstadoItem": {
-        "description": "Onde um item do lote está.\n\n`SUA_VEZ` é o estado que só existe por causa do TikTok e do Instagram: o\ntrabalho da máquina acabou e o do humano começou. Sem ele a tela teria de\nescolher entre mentir (\"publicado\") e assustar (\"erro\") — e nenhum dos dois\ndescreve uma aba aberta esperando um clique.",
+        "description": "Onde um item do lote está.\n\n`SUA_VEZ` é o estado que só existe por causa do TikTok e do Instagram: o\ntrabalho da máquina acabou e o do humano começou. Sem ele a tela teria de\nescolher entre mentir (\"publicado\") e assustar (\"erro\") — e nenhum dos dois\ndescreve uma aba aberta esperando um clique.\n\n`CONFERIR` é o primo dele, do lado de lá do clique (D-894): o robô apertou\nPublicar e a página não confirmou. O post pode ter saído — e por isso não é\n`ERRO`, que convida a subir de novo e duplicaria o vídeo no perfil.",
         "enum": [
           "aguardando",
           "preparando",
           "sua_vez",
+          "conferir",
           "publicado",
           "erro",
           "pulado",

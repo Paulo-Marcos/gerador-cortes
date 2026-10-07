@@ -6,6 +6,7 @@ import {
   contarRepublicacoes,
   montarAlvos,
   plataformasJaPublicadas,
+  marcacaoAMao,
   podeMarcarAMao,
   shortsPublicaveis,
 } from '../selecaoDoLote';
@@ -120,6 +121,10 @@ describe('podeMarcarAMao', () => {
     expect(podeMarcarAMao('cancelado')).toBe(true);
   });
 
+  it('D-894: deixa marcar o que o robô publicou sem a página confirmar', () => {
+    expect(podeMarcarAMao('conferir')).toBe(true);
+  });
+
   it('não deixa marcar o que a raia ainda vai subir: viraria vídeo duplicado', () => {
     expect(podeMarcarAMao('aguardando')).toBe(false);
     expect(podeMarcarAMao('preparando')).toBe(false);
@@ -128,5 +133,22 @@ describe('podeMarcarAMao', () => {
   it('não oferece marca no que já está publicado', () => {
     expect(podeMarcarAMao('publicado')).toBe(false);
     expect(podeMarcarAMao('pulado')).toBe(false);
+  });
+});
+
+describe('marcacaoAMao (D-894)', () => {
+  it('na vez do operador, é o "publiquei" de sempre', () => {
+    expect(marcacaoAMao('sua_vez').rotulo).toBe('publiquei');
+  });
+
+  it('depois do clique do robô em Publicar, pede para conferir se o post saiu', () => {
+    const { rotulo, titulo } = marcacaoAMao('conferir');
+    expect(rotulo).toBe('saiu no ar');
+    expect(titulo).toContain('confira no perfil');
+  });
+
+  it('no que falhou ou foi cancelado, é o "já publiquei" feito fora do app', () => {
+    expect(marcacaoAMao('erro').rotulo).toBe('ja publiquei');
+    expect(marcacaoAMao('cancelado').rotulo).toBe('ja publiquei');
   });
 });

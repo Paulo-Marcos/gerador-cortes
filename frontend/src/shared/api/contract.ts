@@ -5890,9 +5890,13 @@ export interface components {
          *     trabalho da máquina acabou e o do humano começou. Sem ele a tela teria de
          *     escolher entre mentir ("publicado") e assustar ("erro") — e nenhum dos dois
          *     descreve uma aba aberta esperando um clique.
+         *
+         *     `CONFERIR` é o primo dele, do lado de lá do clique (D-894): o robô apertou
+         *     Publicar e a página não confirmou. O post pode ter saído — e por isso não é
+         *     `ERRO`, que convida a subir de novo e duplicaria o vídeo no perfil.
          * @enum {string}
          */
-        EstadoItem: "aguardando" | "preparando" | "sua_vez" | "publicado" | "erro" | "pulado" | "cancelado";
+        EstadoItem: "aguardando" | "preparando" | "sua_vez" | "conferir" | "publicado" | "erro" | "pulado" | "cancelado";
         /**
          * FabricaDaLiveResponse
          * @description O que o clique disparou: quantos cortes entram e se a live será baixada.

@@ -97,7 +97,8 @@ export function alternar(selecionados: string[], id: string): string[] {
  *
  * `erro` e `cancelado` entram porque são exatamente o caso que faltava: o robô
  * quebrou no meio e o operador terminou no app da rede — o vídeo está no ar e o
- * app não tem como saber. `sua_vez` já era o caso previsto.
+ * app não tem como saber. `sua_vez` já era o caso previsto, e `conferir`
+ * também (D-894): o robô clicou em Publicar e a página não confirmou.
  *
  * `aguardando` e `preparando` ficam de FORA, e não por pudor: a raia ainda vai
  * tentar subir esses dois. Marcar antes não cancelaria o envio — produziria um
@@ -106,10 +107,23 @@ export function alternar(selecionados: string[], id: string): string[] {
  */
 const MARCAVEIS: ReadonlySet<EstadoItemLote> = new Set<EstadoItemLote>([
   'sua_vez',
+  'conferir',
   'erro',
   'cancelado',
 ]);
 
 export function podeMarcarAMao(estado: EstadoItemLote): boolean {
   return MARCAVEIS.has(estado);
+}
+
+/** O botão de marcar à mão diz o que o operador está confirmando (D-603, D-894). */
+export function marcacaoAMao(estado: EstadoItemLote): { rotulo: string; titulo: string } {
+  if (estado === 'sua_vez') return { rotulo: 'publiquei', titulo: 'marcar que voce publicou' };
+  if (estado === 'conferir') {
+    return {
+      rotulo: 'saiu no ar',
+      titulo: 'o robo clicou em Publicar: confira no perfil e marque se o post saiu',
+    };
+  }
+  return { rotulo: 'ja publiquei', titulo: 'ja publiquei este na mao, fora do app' };
 }

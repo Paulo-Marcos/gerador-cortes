@@ -138,6 +138,8 @@ async def ambiente(monkeypatch, tmp_path):
     raias: list = []
     monkeypatch.setattr(lote_svc, "fire_and_forget", lambda coro, name=None: raias.append(coro))
     monkeypatch.setattr(lote_svc, "_lote_atual", None)
+    # D-894: o guarda das abas em conferência é do módulo; cada teste nasce sem ele.
+    monkeypatch.setattr(lote_svc, "_conferindo", set())
 
     registro_original = dict(destinos._REGISTRO)
     yield factory, raias
@@ -500,10 +502,14 @@ class TestRaiaAssistidaDoTikTok:
         ):
             eventos.append(f"subiu:{Path(video).parent.name}")
             estado["agendamento"] = agendamento
+            estado.setdefault("marcas", []).append(marca)
             if estado.get("portao") is not None:
                 await estado["portao"].wait()
             if estado["explode"]:
                 raise RoteiroInterrompido(Passo.SESSAO, "este Chrome nao esta logado no TikTok")
+            if estado.get("para_no_publicar"):
+                # D-894: o `_publicar_agora` real — clicou, e a página não saiu do upload.
+                raise RoteiroInterrompido(Passo.PUBLICAR, "a pagina nao saiu do upload em 120s")
             estado["sozinho"] = publicar_sozinho
             return {
                 "passos": [],
@@ -514,6 +520,9 @@ class TestRaiaAssistidaDoTikTok:
 
         async def _aguardar(*, marca="", segundos=None, parar=None):
             eventos.append(f"esperou:{marca[:16]}")
+            estado.setdefault("vigiadas", []).append(marca)
+            if estado.get("vigilia") is not None:
+                await estado["vigilia"].wait()
             if estado.get("segura"):
                 # D-591: imita a vigília real — só sai quando o lote dá o sinal.
                 await _esperar_ate(lambda: parar is not None and parar.is_set())
@@ -755,6 +764,102 @@ class TestRaiaAssistidaDoTikTok:
         assert lote.itens[0].estado is EstadoItem.ERRO
         assert lote.itens[1].estado is EstadoItem.AGUARDANDO
         assert "ficaram esperando" in lote.avisos[Plataforma.TIKTOK.value]
+
+    @pytest.mark.asyncio
+    async def test_parar_no_publicar_vigia_a_aba_do_item_e_marca_o_corte(
+        self, ambiente, robo, monkeypatch, tmp_path
+    ):
+        """D-894: parar no PUBLICAR é parar DEPOIS do clique — o post pode ter saído.
+
+        Antes o item virava ERRO: ninguém vigiava a aba, a janela seguia fora da
+        tela e o corte não se marcava; o próximo "Subir todos" publicava de novo.
+        """
+        factory, raias = ambiente
+        _, estado = robo
+        estado["para_no_publicar"] = True
+        mostradas: list = []
+        monkeypatch.setattr(janela_do_robo, "mostrar", mostradas.append)
+        monkeypatch.setattr(destinos, "projetos_dir", lambda: tmp_path)
+        video = tmp_path / "p1" / "cortes" / "c1" / "upload_ready" / "video.mp4"
+        video.parent.mkdir(parents=True)
+        video.write_bytes(b"video")
+
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_CORTE, "c1")],
+            plataformas=[Plataforma.TIKTOK_HORIZONTAL],
+            opcoes=lote_svc.OpcoesDoLote(tiktok_assistido=True, publicar_sozinho=True),
+        )
+        await _rodar(raias)
+
+        # A vigília procurou a aba DESTE item, pela marca que o robô pôs nela.
+        assert estado["vigiadas"] == estado["marcas"] and estado["marcas"][0]
+        assert len(mostradas) == 1
+        assert lote.itens[0].estado is EstadoItem.PUBLICADO
+        async with factory() as db:
+            assert (await db.get(Corte, "c1")).tiktok_publicado_em is not None
+
+    @pytest.mark.asyncio
+    async def test_conferindo_a_aba_o_item_fica_fora_de_um_novo_lote(self, ambiente, robo):
+        """D-894: enquanto a vigília dura, "Subir todos" de novo não publica o
+        mesmo vídeo uma segunda vez. Acabou sem ver o post, ele volta à fila."""
+        factory, raias = ambiente
+        _, estado = robo
+        estado.update(para_no_publicar=True, publica=False, vigilia=asyncio.Event())
+        opcoes = lote_svc.OpcoesDoLote(tiktok_assistido=True, publicar_sozinho=True)
+        alvos = [(lote_svc.ALVO_SHORT, "s1")]
+
+        lote = await lote_svc.criar(alvos=alvos, plataformas=[Plataforma.TIKTOK], opcoes=opcoes)
+        tarefa = asyncio.create_task(_rodar(raias))
+        item = lote.itens[0]
+        await _esperar_ate(lambda: item.estado is EstadoItem.CONFERIR)
+        assert "Confira na aba" in item.detalhe
+
+        outro = await lote_svc.criar(alvos=alvos, plataformas=[Plataforma.TIKTOK], opcoes=opcoes)
+        assert outro.itens[0].estado is EstadoItem.PULADO
+        assert "conferindo" in outro.itens[0].detalhe
+
+        estado["vigilia"].set()
+        await asyncio.wait_for(tarefa, timeout=2)
+        assert item.estado is EstadoItem.CONFERIR and "marque aqui" in item.detalhe
+        async with factory() as db:
+            assert (await db.get(PublicacaoShort, item.registro_id)).estado == "conferir"
+
+        de_novo = await lote_svc.criar(alvos=alvos, plataformas=[Plataforma.TIKTOK], opcoes=opcoes)
+        assert de_novo.itens[0].estado is EstadoItem.AGUARDANDO
+        await _rodar(raias)
+
+    @pytest.mark.asyncio
+    async def test_parar_no_publicar_para_a_raia_e_cancelar_nao_solta_a_vigilia(
+        self, ambiente, robo
+    ):
+        """D-894: o que fez a página não sair do upload pode valer para o próximo
+        também; e cancelar a fila não é dizer que o post não saiu."""
+        _, raias = ambiente
+        _, estado = robo
+        estado.update(para_no_publicar=True, publica=False, vigilia=asyncio.Event())
+        opcoes = lote_svc.OpcoesDoLote(tiktok_assistido=True, publicar_sozinho=True)
+
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
+            plataformas=[Plataforma.TIKTOK],
+            opcoes=opcoes,
+        )
+        tarefa = asyncio.create_task(_rodar(raias))
+        primeiro, segundo = lote.itens
+        await _esperar_ate(lambda: primeiro.estado is EstadoItem.CONFERIR)
+        await _esperar_ate(lambda: Plataforma.TIKTOK.value in lote.avisos)
+        assert segundo.estado is EstadoItem.AGUARDANDO
+        assert "ficaram esperando" in lote.avisos[Plataforma.TIKTOK.value]
+
+        assert await lote_svc.cancelar() is lote
+        assert not primeiro.espera.is_set()
+        outro = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1")], plataformas=[Plataforma.TIKTOK], opcoes=opcoes
+        )
+        assert outro.itens[0].estado is EstadoItem.PULADO
+
+        estado["vigilia"].set()
+        await asyncio.wait_for(tarefa, timeout=2)
 
     @pytest.mark.asyncio
     async def test_sem_o_interruptor_o_tiktok_continua_so_montando_a_pasta(self, ambiente, robo):

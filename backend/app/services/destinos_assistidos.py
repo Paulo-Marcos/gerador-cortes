@@ -37,11 +37,25 @@ from uuid import uuid4
 
 from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.publicacao import ModoPublicacao, Plataforma, legenda_unica
-from app.domain.publicacao.tiktok_studio import marca_da_aba
+from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido, marca_da_aba
 from app.services import janela_do_robo
 from app.services.destinos_shorts import DestinoManual
 from app.services.navegador_assistido import sessao_no_chrome
 from app.services.publicacao_destinos import PacotePublicacao
+
+
+class ConferirNaAba(RuntimeError):
+    """O robô clicou em Publicar e a página não confirmou (D-894).
+
+    Carrega a MARCA da aba, e o destino que sabe vigiá-la, porque o post pode
+    ter saído: quem chama vigia aquela aba, e não "a que está em /upload" —
+    num lote há várias.
+    """
+
+    def __init__(self, destino: DestinoAssistido, marca: str, orientacao: str) -> None:
+        self.destino = destino
+        self.marca = marca
+        super().__init__(orientacao)
 
 
 class DestinoAssistido(DestinoManual):
@@ -94,7 +108,12 @@ class DestinoAssistido(DestinoManual):
         # A marca é por ITEM, e não por lote: é ela que diz qual das abas
         # abertas é esta, e duas abas do mesmo lote precisam de nomes diferentes.
         marca = marca_da_aba(uuid4().hex[:12])
-        relatorio = await self._subir(pronto, marca)
+        try:
+            relatorio = await self._subir(pronto, marca)
+        except RoteiroInterrompido as exc:
+            if exc.passo == Passo.PUBLICAR:
+                raise ConferirNaAba(self, marca, str(exc)) from exc
+            raise
 
         if relatorio.get("publicado"):
             return {**pronto, **relatorio, "modo": self.modo.value}
