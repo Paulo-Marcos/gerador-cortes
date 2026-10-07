@@ -178,7 +178,7 @@ def navegador(monkeypatch):
         return {"passos": ["arquivo", "legenda"]}
 
     monkeypatch.setattr(tiktok_studio, "subir_assistido", subir)
-    monkeypatch.setattr(*_VIGILIA_EM, vigiados.append)
+    monkeypatch.setattr(*_VIGILIA_EM, lambda corte_id, _marca="": vigiados.append(corte_id))
     return pedidos, vigiados
 
 
@@ -307,3 +307,42 @@ async def test_sem_capa_o_robo_nao_publica_e_a_aba_fica_vigiada(fabrica, navegad
         corte = await db.get(Corte, "c1")
     assert corte.tiktok_publicado_em is None
     assert resultado["vigiando"] is True and vigiados == ["c1"]
+
+
+# ─── D-893: etiqueta da aba e um envio por vez ───────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_o_envio_avulso_etiqueta_a_aba_e_a_vigilia_procura_essa_etiqueta(
+    monkeypatch, navegador
+):
+    """Como o lote (D-564): sem etiqueta, a vigília olhava a PRIMEIRA aba de
+    upload — a de outro corte — e marcava este sem ele ter saído (D-512)."""
+    pedidos, _ = navegador
+    vigias = []
+    monkeypatch.setattr(*_VIGILIA_EM, lambda corte_id, marca="": vigias.append((corte_id, marca)))
+
+    await assistir_no_tiktok({"titulo": "T", "video": "v.mp4"}, corte_id="c1")
+    await assistir_no_tiktok({"titulo": "T", "video": "v.mp4"}, corte_id="c2")
+
+    marcas = [p["marca"] for p in pedidos]
+    assert all(m.startswith("cortadorlive-") for m in marcas) and marcas[0] != marcas[1]
+    assert vigias == [("c1", marcas[0]), ("c2", marcas[1])]
+
+
+@pytest.mark.asyncio
+async def test_corte_com_vigilia_em_curso_nao_e_enviado_de_novo(monkeypatch, navegador):
+    """Fechar e reabrir o modal esquece o erro na tela; quem recusa é o servidor."""
+    from app.domain.compartilhado.erros import PedidoInvalido
+
+    monkeypatch.setattr(publicacao_no_tiktok, "_VIGIADOS", {"c1"})
+
+    with pytest.raises(PedidoInvalido, match="esperando a publica"):
+        await publicacao_no_tiktok.publicar_assistido(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+        )
+
+    assert navegador[0] == [], "o robô nem foi chamado"
+    # Outro corte segue livre.
+    await publicacao_no_tiktok.publicar_assistido({"titulo": "T", "video": "v.mp4"}, corte_id="c2")
+    assert len(navegador[0]) == 1

@@ -82,6 +82,27 @@ export function paramosNoPublicar(erro: unknown): boolean {
 }
 
 /**
+ * O que a linha diz quando o envio falha (D-893): a orientação, não o JSON cru
+ * do erro. Parado no Publicar, diz que a aba voltou e que o app marca sozinho.
+ */
+export function mensagemDoEnvio(erro: unknown): string {
+  if (paramosNoPublicar(erro)) {
+    return 'O robô clicou em Publicar e a página não confirmou. A aba voltou para a tela: confira lá — o app marca o corte sozinho quando o post aparecer.';
+  }
+  if (erro instanceof ErroDaApi) {
+    try {
+      const detalhe = (JSON.parse(erro.corpo) as { detail?: unknown }).detail;
+      if (typeof detalhe === 'string') return detalhe;
+      const mensagem = (detalhe as { mensagem?: unknown } | undefined)?.mensagem;
+      if (typeof mensagem === 'string') return mensagem;
+    } catch {
+      // corpo que não é JSON: fica a mensagem do erro
+    }
+  }
+  return erro instanceof Error ? erro.message : 'não consegui subir';
+}
+
+/**
  * A linha espera a publicação (e pergunta ao servidor) quando a aba ficou
  * vigiada OU quando o roteiro parou depois do clique em Publicar (D-893).
  */
@@ -399,7 +420,7 @@ function LinhaDoCorte({
       )}
       {assistido.isError && (
         <span className="w-full text-[11px] leading-relaxed text-[var(--wb-warn-ink)]">
-          {(assistido.error as Error)?.message ?? 'não consegui subir'}
+          {mensagemDoEnvio(assistido.error)}
         </span>
       )}
       {abrir.isSuccess && abrir.data?.erro_ao_abrir && (

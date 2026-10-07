@@ -18,7 +18,7 @@ from app.services import publicacao_no_tiktok, tasks
 async def test_a_vigilia_fica_com_dono_e_sobrevive_ao_coletor(monkeypatch):
     comecou = asyncio.Event()
 
-    async def vigilia_longa(_corte_id: str) -> None:
+    async def vigilia_longa(_corte_id: str, _marca: str = "") -> None:
         comecou.set()
         await asyncio.sleep(5)
 
@@ -36,7 +36,7 @@ async def test_a_vigilia_fica_com_dono_e_sobrevive_ao_coletor(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_falha_na_vigilia_nao_derruba_nada_e_solta_a_referencia(monkeypatch, caplog):
-    async def vigilia_que_falha(_corte_id: str) -> None:
+    async def vigilia_que_falha(_corte_id: str, _marca: str = "") -> None:
         raise RuntimeError("aba fechada no meio")
 
     monkeypatch.setattr(publicacao_no_tiktok, "_marcar_quando_publicar", vigilia_que_falha)
@@ -47,3 +47,44 @@ async def test_falha_na_vigilia_nao_derruba_nada_e_solta_a_referencia(monkeypatc
 
     assert tarefa.done()
     assert tarefa not in tasks._background_tasks, "task terminada não pode vazar no registro"
+
+
+# ─── D-893: a vigília acha ESTA aba e o corte não é enviado duas vezes ──────
+
+
+@pytest.mark.asyncio
+async def test_a_vigilia_procura_a_aba_pela_etiqueta_e_solta_o_corte_ao_terminar(monkeypatch):
+    from app.services import tiktok_studio
+
+    pedidas = []
+
+    async def aguardar(**kwargs):
+        pedidas.append(kwargs.get("marca"))
+        return False
+
+    monkeypatch.setattr(tiktok_studio, "aguardar_publicacao", aguardar)
+
+    tarefa = publicacao_no_tiktok.vigiar_publicacao("corte-123456789", "cortadorlive-abc")
+    assert "corte-123456789" in publicacao_no_tiktok._VIGIADOS
+    await tarefa
+
+    assert pedidas == ["cortadorlive-abc"], (
+        "sem a etiqueta, a vigília olha a primeira aba de upload"
+    )
+    assert "corte-123456789" not in publicacao_no_tiktok._VIGIADOS, (
+        "vigília terminada solta o corte"
+    )
+
+
+@pytest.mark.asyncio
+async def test_falha_na_vigilia_tambem_solta_o_corte(monkeypatch):
+    from app.services import tiktok_studio
+
+    async def quebra(**_kwargs):
+        raise RuntimeError("Chrome fechado")
+
+    monkeypatch.setattr(tiktok_studio, "aguardar_publicacao", quebra)
+
+    await publicacao_no_tiktok.vigiar_publicacao("corte-987654321", "cortadorlive-x")
+
+    assert "corte-987654321" not in publicacao_no_tiktok._VIGIADOS
