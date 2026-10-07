@@ -235,6 +235,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file, so the next rule fits under the 500-line limit (D-889).
 
 ### Fixed
+- **"Publicar sozinho" on TikTok no longer publishes by surprise.** The
+  switch now turns off whenever the TikTok dialog closes — it used to stay on,
+  and each cut's "Assistido" button, which always stopped before publishing,
+  then published without saying so. While it is on, that button reads
+  "Publicar com o robô". If the robot clicked Publish and the page did not
+  confirm, the tab now comes back on screen and stays watched (the cut marks
+  itself once the post shows up), and the row says so instead of a raw error.
+  While a cut's tab is being watched, sending it again is refused by the
+  server, so a second click cannot post the same video twice. Each single
+  send now tags its tab, as the batch does: the watch looks at that tab only,
+  and can no longer mark a cut from someone else's upload tab (D-893).
 - **The batch no longer publishes the same video twice when TikTok does not
   confirm.** When the robot clicked Publish and the page did not leave the
   upload screen, the batch marked the item as an error: nobody watched the

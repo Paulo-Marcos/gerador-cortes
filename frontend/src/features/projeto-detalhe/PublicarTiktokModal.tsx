@@ -15,7 +15,8 @@ import { shortsApi, type EnvioAssistido } from '@/features/shorts/shortsApi';
 import type { StatusExportCorte } from '@/types/models';
 import { pendentesNoTiktok } from './listasDePublicacao';
 import { LoteDoTiktokHorizontal } from './LoteDoTiktokHorizontal';
-import { Icon } from '@/upgrade/Icon';
+import { ICONE_DO_CONCEITO, Icon } from '@/upgrade/Icon';
+import { ErroDaApi } from '@/shared/api';
 
 // D-510/D-516/D-517: o TikTok horizontal, no workspace do projeto.
 //
@@ -49,6 +50,70 @@ import { Icon } from '@/upgrade/Icon';
 // QUAL imagem vai subir antes de abrir o explorador, e saber quando não há
 // nenhuma.
 
+/**
+ * D-893: o "publicar sozinho" vale pela ABERTURA do modal. Ele fica montado (o
+ * Workspace só o esconde), e o interruptor sobrevivia a fechar e reabrir — o
+ * botão de cada corte, que sempre parou antes de publicar, publicava sem que
+ * nada na linha dissesse isso. Fechou, volta desligado.
+ */
+export function useInterruptorDaAbertura(open: boolean) {
+  const [ligado, setLigado] = useState(false);
+  const [aberto, setAberto] = useState(open);
+  if (aberto !== open) {
+    setAberto(open);
+    if (!open) setLigado(false);
+  }
+  // Fechado é sempre desligado, já no render que fecha (o reset só vale no próximo).
+  return [open && ligado, setLigado] as const;
+}
+
+/**
+ * D-893: o roteiro parou DEPOIS do clique em Publicar (passo "publicar") — o
+ * post pode ter saído. O backend vigia a aba e marca o corte; a linha segura o
+ * botão e continua perguntando, para um segundo clique não publicar de novo.
+ */
+export function paramosNoPublicar(erro: unknown): boolean {
+  if (!(erro instanceof ErroDaApi) || erro.status !== 422) return false;
+  try {
+    return (JSON.parse(erro.corpo) as { detail?: { passo?: string } }).detail?.passo === 'publicar';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * O que a linha diz quando o envio falha (D-893): a orientação, não o JSON cru
+ * do erro. Parado no Publicar, diz que a aba voltou e que o app marca sozinho.
+ */
+export function mensagemDoEnvio(erro: unknown): string {
+  if (paramosNoPublicar(erro)) {
+    return 'O robô clicou em Publicar e a página não confirmou. A aba voltou para a tela: confira lá — o app marca o corte sozinho quando o post aparecer.';
+  }
+  if (erro instanceof ErroDaApi) {
+    try {
+      const detalhe = (JSON.parse(erro.corpo) as { detail?: unknown }).detail;
+      if (typeof detalhe === 'string') return detalhe;
+      const mensagem = (detalhe as { mensagem?: unknown } | undefined)?.mensagem;
+      if (typeof mensagem === 'string') return mensagem;
+    } catch {
+      // corpo que não é JSON: fica a mensagem do erro
+    }
+  }
+  return erro instanceof Error ? erro.message : 'não consegui subir';
+}
+
+/**
+ * A linha espera a publicação (e pergunta ao servidor) quando a aba ficou
+ * vigiada OU quando o roteiro parou depois do clique em Publicar (D-893).
+ */
+export function esperaPelaPublicacao(
+  envio: { isSuccess: boolean; data?: { vigiando?: boolean }; error: unknown },
+  publicado: boolean,
+) {
+  const conferindo = paramosNoPublicar(envio.error) && !publicado;
+  return { conferindo, esperando: ((envio.isSuccess && Boolean(envio.data?.vigiando)) || conferindo) && !publicado };
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -68,7 +133,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
   // campo por linha seria a mesma data digitada N vezes.
   const [agendarPara, setAgendarPara] = useState('');
   // D-834: o "publicar sozinho" era só do lote; agora vale para cada corte também.
-  const [publicarSozinho, setPublicarSozinho] = useState(false);
+  const [publicarSozinho, setPublicarSozinho] = useInterruptorDaAbertura(open);
   const envio = { agendarPara, publicarSozinho };
 
   const pendentes = useMemo(() => pendentesNoTiktok(cortes), [cortes]);
@@ -185,12 +250,11 @@ function LinhaDoCorte({
   });
 
   // D-546: depois que a aba fica pronta, o backend continua de olho nela. Aqui
-  // só perguntamos ao servidor de tempos em tempos se ele já viu a publicação.
-  //
-  // Perguntar é mais simples que ser avisado, e o custo é uma requisição a cada
-  // cinco segundos enquanto UMA linha espera. Um canal de tempo real para isso
-  // seria infra nova para transportar um booleano que muda uma vez.
-  const esperandoPublicar = assistido.isSuccess && assistido.data.vigiando && !publicado;
+  // só perguntamos ao servidor de tempos em tempos se ele já viu a publicação —
+  // uma requisição a cada cinco segundos enquanto UMA linha espera; um canal de
+  // tempo real seria infra nova para um booleano que muda uma vez. D-893: idem
+  // quando o roteiro parou depois do clique em Publicar.
+  const { conferindo, esperando: esperandoPublicar } = esperaPelaPublicacao(assistido, publicado);
   const cliente = useQueryClient();
   useEffect(() => {
     if (!esperandoPublicar) return;
@@ -292,12 +356,12 @@ function LinhaDoCorte({
               que continua funcionando. */}
           <Button
             size="sm"
-            disabled={assistido.isPending || abrir.isPending}
+            disabled={assistido.isPending || abrir.isPending || conferindo}
             onClick={() => assistido.mutate()}
-            title="Sobe o vídeo, escreve a legenda e põe a capa no navegador do robô. Só publica com “Publicar sozinho” ligado."
+            title={envio.publicarSozinho ? 'Sobe, escreve a legenda, põe a capa e APERTA Publicar (só se a capa entrou).' : 'Sobe o vídeo, escreve a legenda e põe a capa no navegador do robô, e para antes de publicar.'}
           >
-            {assistido.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="bot" />}
-            {assistido.isPending ? 'subindo…' : 'Assistido'}
+            {assistido.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={envio.publicarSozinho ? ICONE_DO_CONCEITO.publicar : 'bot'} />}
+            {assistido.isPending ? 'subindo…' : envio.publicarSozinho ? 'Publicar com o robô' : 'Assistido'}
           </Button>
           <Button
             variant="outline"
@@ -356,7 +420,7 @@ function LinhaDoCorte({
       )}
       {assistido.isError && (
         <span className="w-full text-[11px] leading-relaxed text-[var(--wb-warn-ink)]">
-          {(assistido.error as Error)?.message ?? 'não consegui subir'}
+          {mensagemDoEnvio(assistido.error)}
         </span>
       )}
       {abrir.isSuccess && abrir.data?.erro_ao_abrir && (

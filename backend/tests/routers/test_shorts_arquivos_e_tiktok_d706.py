@@ -34,6 +34,14 @@ _VIGILIA_EM = (publicacao_no_tiktok, "vigiar_publicacao")
 
 
 @pytest.fixture(autouse=True)
+def sem_vigias_de_outro_teste():
+    """D-893: o registro de cortes vigiados é do processo; cada teste parte do zero."""
+    publicacao_no_tiktok._VIGIADOS.clear()
+    yield
+    publicacao_no_tiktok._VIGIADOS.clear()
+
+
+@pytest.fixture(autouse=True)
 def sem_janela_do_robo(monkeypatch):
     """D-799: a aba pronta traz a janela do robô para a tela; aqui não há Chrome."""
     monkeypatch.setattr(janela_do_robo, "mostrar", lambda perfil: True)
@@ -178,7 +186,12 @@ def navegador(monkeypatch):
         return {"passos": ["arquivo", "legenda"]}
 
     monkeypatch.setattr(tiktok_studio, "subir_assistido", subir)
-    monkeypatch.setattr(*_VIGILIA_EM, vigiados.append)
+
+    def vigia_que_termina_na_hora(corte_id, _marca=""):
+        vigiados.append(corte_id)
+        publicacao_no_tiktok._VIGIADOS.discard(corte_id)  # como a vigília real, ao terminar
+
+    monkeypatch.setattr(*_VIGILIA_EM, vigia_que_termina_na_hora)
     return pedidos, vigiados
 
 
@@ -269,6 +282,32 @@ async def test_publicado_pelo_robo_marca_o_corte_sem_vigiar(fabrica, navegador, 
 
 
 @pytest.mark.asyncio
+async def test_falha_depois_do_publicar_mostra_a_aba_e_vigia(monkeypatch, navegador):
+    """D-893: parar no passo PUBLICAR é parar depois do clique — o post pode ter saído.
+
+    O 422 manda "conferir na aba que ficou aberta"; antes, a janela continuava
+    fora da tela (D-799) e ninguém marcava o corte, então o botão voltava a
+    publicar o mesmo vídeo. Agora a aba volta para a tela e fica vigiada.
+    """
+    _, vigiados = navegador
+    mostradas = []
+    monkeypatch.setattr(janela_do_robo, "mostrar", mostradas.append)
+
+    async def para_no_publicar(**_kwargs):
+        raise RoteiroInterrompido(Passo.PUBLICAR, "a pagina nao saiu do upload em 120s")
+
+    monkeypatch.setattr(tiktok_studio, "subir_assistido", para_no_publicar)
+
+    with pytest.raises(HTTPException) as exc:
+        await assistir_no_tiktok(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1", publicar_sozinho=True
+        )
+
+    assert exc.value.status_code == 422 and exc.value.detail["passo"] == "publicar"
+    assert vigiados == ["c1"] and len(mostradas) == 1
+
+
+@pytest.mark.asyncio
 async def test_sem_capa_o_robo_nao_publica_e_a_aba_fica_vigiada(fabrica, navegador):
     """RN-26: pedido de publicar sozinho não passa por cima da capa que faltou."""
     _, vigiados = navegador
@@ -281,3 +320,146 @@ async def test_sem_capa_o_robo_nao_publica_e_a_aba_fica_vigiada(fabrica, navegad
         corte = await db.get(Corte, "c1")
     assert corte.tiktok_publicado_em is None
     assert resultado["vigiando"] is True and vigiados == ["c1"]
+
+
+# ─── D-893: etiqueta da aba e um envio por vez ───────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_o_envio_avulso_etiqueta_a_aba_e_a_vigilia_procura_essa_etiqueta(
+    monkeypatch, navegador
+):
+    """Como o lote (D-564): sem etiqueta, a vigília olhava a PRIMEIRA aba de
+    upload — a de outro corte — e marcava este sem ele ter saído (D-512)."""
+    pedidos, _ = navegador
+    vigias = []
+    monkeypatch.setattr(*_VIGILIA_EM, lambda corte_id, marca="": vigias.append((corte_id, marca)))
+
+    await assistir_no_tiktok({"titulo": "T", "video": "v.mp4"}, corte_id="c1")
+    await assistir_no_tiktok({"titulo": "T", "video": "v.mp4"}, corte_id="c2")
+
+    marcas = [p["marca"] for p in pedidos]
+    assert all(m.startswith("cortadorlive-") for m in marcas) and marcas[0] != marcas[1]
+    assert vigias == [("c1", marcas[0]), ("c2", marcas[1])]
+
+
+@pytest.mark.asyncio
+async def test_corte_com_vigilia_em_curso_nao_e_enviado_de_novo(monkeypatch, navegador):
+    """Fechar e reabrir o modal esquece o erro na tela; quem recusa é o servidor."""
+    from app.domain.compartilhado.erros import PedidoInvalido
+
+    monkeypatch.setattr(publicacao_no_tiktok, "_VIGIADOS", {"c1"})
+
+    with pytest.raises(PedidoInvalido, match="esperando a publica"):
+        await publicacao_no_tiktok.publicar_assistido(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+        )
+
+    assert navegador[0] == [], "o robô nem foi chamado"
+    # Outro corte segue livre.
+    await publicacao_no_tiktok.publicar_assistido({"titulo": "T", "video": "v.mp4"}, corte_id="c2")
+    assert len(navegador[0]) == 1
+
+
+@pytest.mark.asyncio
+async def test_um_segundo_envio_no_meio_do_upload_e_recusado(monkeypatch, navegador):
+    """2ª pr-audit: o upload leva minutos; o corte já conta como em curso."""
+    import asyncio
+
+    from app.domain.compartilhado.erros import PedidoInvalido
+
+    solta = asyncio.Event()
+
+    async def upload_demorado(**_kwargs):
+        await solta.wait()
+        return {"passos": ["arquivo"]}
+
+    monkeypatch.setattr(tiktok_studio, "subir_assistido", upload_demorado)
+    primeiro = asyncio.ensure_future(
+        publicacao_no_tiktok.publicar_assistido({"titulo": "T", "video": "v.mp4"}, corte_id="c1")
+    )
+    await asyncio.sleep(0)
+
+    # Sem a recusa, o segundo envio esperaria o mesmo upload para sempre: o
+    # limite transforma a regressão em falha, não em teste travado.
+    with pytest.raises(PedidoInvalido):
+        await asyncio.wait_for(
+            publicacao_no_tiktok.publicar_assistido(
+                {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+            ),
+            timeout=2,
+        )
+
+    solta.set()
+    assert (await primeiro)["vigiando"] is True
+
+
+@pytest.mark.asyncio
+async def test_roteiro_que_para_antes_do_publicar_solta_o_corte(monkeypatch, navegador):
+    """Sem aba entregue não há vigília para soltar o corte: o envio solta."""
+
+    async def para(**_kwargs):
+        raise RoteiroInterrompido(Passo.SESSAO, "faça login")
+
+    monkeypatch.setattr(tiktok_studio, "subir_assistido", para)
+
+    with pytest.raises(RoteiroInterrompido):
+        await publicacao_no_tiktok.publicar_assistido(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+        )
+
+    assert "c1" not in publicacao_no_tiktok._VIGIADOS
+
+
+@pytest.mark.asyncio
+async def test_publicado_pelo_robo_solta_o_corte(fabrica, monkeypatch, navegador):
+    async def publica(**_kwargs):
+        return {"passos": ["publicar"], "publicado": True}
+
+    monkeypatch.setattr(tiktok_studio, "subir_assistido", publica)
+
+    await publicacao_no_tiktok.publicar_assistido(
+        {"titulo": "T", "video": "v.mp4"}, corte_id="c1", publicar_sozinho=True
+    )
+
+    assert "c1" not in publicacao_no_tiktok._VIGIADOS
+
+
+@pytest.mark.asyncio
+async def test_parado_no_publicar_o_corte_fica_com_a_vigilia(monkeypatch):
+    """A aba foi entregue: quem solta o corte é a vigília, não o envio."""
+    monkeypatch.setattr(*_VIGILIA_EM, lambda corte_id, _marca="": None)
+
+    async def para_no_publicar(**_kwargs):
+        raise RoteiroInterrompido(Passo.PUBLICAR, "a pagina nao saiu do upload")
+
+    monkeypatch.setattr(tiktok_studio, "subir_assistido", para_no_publicar)
+
+    with pytest.raises(RoteiroInterrompido):
+        await publicacao_no_tiktok.publicar_assistido(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+        )
+
+    assert "c1" in publicacao_no_tiktok._VIGIADOS
+
+
+@pytest.mark.asyncio
+async def test_aba_entregue_prende_o_corte_e_o_segundo_envio_e_recusado(monkeypatch, navegador):
+    """3ª pr-audit: o caminho mais comum — o robô sobe, para antes de publicar e
+    entrega a aba. Com a vigília ainda em andamento, o corte segue preso."""
+    from app.domain.compartilhado.erros import PedidoInvalido
+
+    pedidos, _ = navegador
+    monkeypatch.setattr(*_VIGILIA_EM, lambda corte_id, _marca="": None)  # vigília em andamento
+
+    resultado = await publicacao_no_tiktok.publicar_assistido(
+        {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+    )
+
+    assert resultado["vigiando"] is True
+    assert "c1" in publicacao_no_tiktok._VIGIADOS
+    with pytest.raises(PedidoInvalido):
+        await publicacao_no_tiktok.publicar_assistido(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+        )
+    assert len(pedidos) == 1, "o segundo envio não chegou ao robô"
