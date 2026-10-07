@@ -53,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **Dependencies brought up to date, in batches.** Remotion 4.0.532 in the
+  frontend and the renderer (not 4.0.533, which is missing packages on the
+  registry); vitest and @vitest/ui 5; fastapi 0.142.2, anthropic 1.11,
+  google-auth-oauthlib 1.5 and google-auth-httplib2 0.4.4; Radix, React Query,
+  typescript-eslint, PostCSS and Vite 6.4.4 patches; mako and multidict in the
+  diarization lock. The Python lock is regenerated from `requirements.in`,
+  keeping its per-platform markers (D-890). Earlier in the cycle: sqlalchemy
+  2.1.1, uvicorn 0.54, zod 4.6.5 and `@types/node` 24 (D-824). Tailwind 4 and
+  react-resizable-panels 4 stay for their own demands (D-764, D-827).
 - **Renaming has its own icon.** The "Renomear" buttons of the stage
   presets (in the positioning dialog and in the shorts presets) used a
   pencil that, at 16 px, was almost the "Editar" pen; they now show a text
