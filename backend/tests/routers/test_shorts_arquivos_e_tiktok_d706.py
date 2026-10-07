@@ -441,3 +441,25 @@ async def test_parado_no_publicar_o_corte_fica_com_a_vigilia(monkeypatch):
         )
 
     assert "c1" in publicacao_no_tiktok._VIGIADOS
+
+
+@pytest.mark.asyncio
+async def test_aba_entregue_prende_o_corte_e_o_segundo_envio_e_recusado(monkeypatch, navegador):
+    """3ª pr-audit: o caminho mais comum — o robô sobe, para antes de publicar e
+    entrega a aba. Com a vigília ainda em andamento, o corte segue preso."""
+    from app.domain.compartilhado.erros import PedidoInvalido
+
+    pedidos, _ = navegador
+    monkeypatch.setattr(*_VIGILIA_EM, lambda corte_id, _marca="": None)  # vigília em andamento
+
+    resultado = await publicacao_no_tiktok.publicar_assistido(
+        {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+    )
+
+    assert resultado["vigiando"] is True
+    assert "c1" in publicacao_no_tiktok._VIGIADOS
+    with pytest.raises(PedidoInvalido):
+        await publicacao_no_tiktok.publicar_assistido(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1"
+        )
+    assert len(pedidos) == 1, "o segundo envio não chegou ao robô"
