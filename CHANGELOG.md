@@ -246,8 +246,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   server, so a second click cannot post the same video twice. Each single
   send now tags its tab, as the batch does: the watch looks at that tab only,
   and can no longer mark a cut from someone else's upload tab (D-893).
-  itself once the post shows up); the button stays locked meanwhile, so a
-  second click cannot post the same video twice (D-893).
 - **The batch no longer publishes the same video twice when TikTok does not
   confirm.** When the robot clicked Publish and the page did not leave the
   upload screen, the batch marked the item as an error: nobody watched the
