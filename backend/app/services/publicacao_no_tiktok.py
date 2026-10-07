@@ -16,6 +16,7 @@ from pathlib import Path
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.publicacao.publicacao import legenda_unica
+from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido
 from app.models import Corte
 from app.services import janela_do_robo, tiktok_studio
 from app.services.navegador_assistido import sessao_no_chrome
@@ -40,13 +41,21 @@ async def publicar_assistido(
     legenda = legenda_unica(pacote.get("titulo", ""), pacote.get("descricao", ""))
     capa = pacote.get("capa") or ""
 
-    relatorio = await tiktok_studio.subir_assistido(
-        video=Path(pacote["video"]),
-        legenda=legenda,
-        capa=Path(capa) if capa else None,
-        agendamento=agendamento,
-        publicar_sozinho=publicar_sozinho,
-    )
+    try:
+        relatorio = await tiktok_studio.subir_assistido(
+            video=Path(pacote["video"]),
+            legenda=legenda,
+            capa=Path(capa) if capa else None,
+            agendamento=agendamento,
+            publicar_sozinho=publicar_sozinho,
+        )
+    except RoteiroInterrompido as exc:
+        # D-893: parar no PUBLICAR é parar depois do clique — o post pode ter
+        # saído. A orientação manda conferir na aba; ela precisa estar na tela
+        # e vigiada, senão o corte não se marca e o botão publica de novo.
+        if exc.passo == Passo.PUBLICAR:
+            await _entregar_a_aba_ao_operador(corte_id)
+        raise
 
     if relatorio.get("publicado"):
         # Quem apertou Publicar foi o robô: não há aba a vigiar nem janela a
@@ -55,21 +64,26 @@ async def publicar_assistido(
             await marcar_corte_publicado(corte_id)
         return {**pacote, **relatorio, "legenda": legenda, "vigiando": False}
 
-    # D-546: a partir daqui o app FICA DE OLHO na aba. Quando o operador
-    # publicar, o corte se marca sozinho — ele nao precisa voltar aqui para
-    # clicar em "publiquei".
-    #
-    # Fire-and-forget porque a espera e de minutos e a requisicao ja tem o que
-    # devolver: a aba esta pronta. Prender o HTTP ate ele decidir publicar
-    # seguraria uma conexao por meia hora para nao entregar nada de novo.
+    await _entregar_a_aba_ao_operador(corte_id)
+    return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
+
+
+async def _entregar_a_aba_ao_operador(corte_id: str) -> None:
+    """A aba é a vez do operador: fica vigiada e a janela volta para a tela.
+
+    D-546: a partir daqui o app FICA DE OLHO na aba. Quando o operador
+    publicar, o corte se marca sozinho — ele nao precisa voltar aqui para
+    clicar em "publiquei". Fire-and-forget porque a espera e de minutos e a
+    requisicao ja tem o que devolver: prender o HTTP ate ele decidir publicar
+    seguraria uma conexao por meia hora para nao entregar nada de novo.
+
+    D-799: o Chrome do robô trabalha fora da tela; a janela volta para a tela
+    — sem pular na frente dele.
+    """
     if corte_id:
         vigiar_publicacao(corte_id)
-    # D-799: o Chrome do robô trabalha fora da tela; a aba pronta é a vez do
-    # operador, e a janela volta para a tela — sem pular na frente dele.
     conexao = sessao_no_chrome(tiktok_studio.perfil_do_chrome())
     await asyncio.to_thread(janela_do_robo.mostrar, conexao)
-
-    return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
 
 
 async def marcar_corte_publicado(corte_id: str) -> datetime:

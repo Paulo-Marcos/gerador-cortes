@@ -269,6 +269,32 @@ async def test_publicado_pelo_robo_marca_o_corte_sem_vigiar(fabrica, navegador, 
 
 
 @pytest.mark.asyncio
+async def test_falha_depois_do_publicar_mostra_a_aba_e_vigia(monkeypatch, navegador):
+    """D-893: parar no passo PUBLICAR é parar depois do clique — o post pode ter saído.
+
+    O 422 manda "conferir na aba que ficou aberta"; antes, a janela continuava
+    fora da tela (D-799) e ninguém marcava o corte, então o botão voltava a
+    publicar o mesmo vídeo. Agora a aba volta para a tela e fica vigiada.
+    """
+    _, vigiados = navegador
+    mostradas = []
+    monkeypatch.setattr(janela_do_robo, "mostrar", mostradas.append)
+
+    async def para_no_publicar(**_kwargs):
+        raise RoteiroInterrompido(Passo.PUBLICAR, "a pagina nao saiu do upload em 120s")
+
+    monkeypatch.setattr(tiktok_studio, "subir_assistido", para_no_publicar)
+
+    with pytest.raises(HTTPException) as exc:
+        await assistir_no_tiktok(
+            {"titulo": "T", "video": "v.mp4"}, corte_id="c1", publicar_sozinho=True
+        )
+
+    assert exc.value.status_code == 422 and exc.value.detail["passo"] == "publicar"
+    assert vigiados == ["c1"] and len(mostradas) == 1
+
+
+@pytest.mark.asyncio
 async def test_sem_capa_o_robo_nao_publica_e_a_aba_fica_vigiada(fabrica, navegador):
     """RN-26: pedido de publicar sozinho não passa por cima da capa que faltou."""
     _, vigiados = navegador
