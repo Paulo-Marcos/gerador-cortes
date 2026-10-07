@@ -138,6 +138,8 @@ async def ambiente(monkeypatch, tmp_path):
     raias: list = []
     monkeypatch.setattr(lote_svc, "fire_and_forget", lambda coro, name=None: raias.append(coro))
     monkeypatch.setattr(lote_svc, "_lote_atual", None)
+    # D-894: o guarda das abas em conferência é do módulo; cada teste nasce sem ele.
+    monkeypatch.setattr(lote_svc, "_conferindo", set())
 
     registro_original = dict(destinos._REGISTRO)
     yield factory, raias
