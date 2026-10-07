@@ -49,6 +49,29 @@ async def publicar_assistido(
             "Este corte já está numa aba do robô, esperando a publicação. Publique ou "
             "feche aquela aba — o app marca o corte sozinho quando o post aparecer."
         )
+    # 2ª pr-audit: em curso desde JÁ — o upload leva minutos, e fechar e reabrir
+    # o modal no meio dele não pode abrir outra aba do mesmo vídeo. Solta no fim
+    # se nenhuma aba foi entregue; entregue, quem solta é a vigília.
+    if corte_id:
+        _VIGIADOS.add(corte_id)
+    entregue = False
+    try:
+        resultado, entregue = await _subir_e_entregar(
+            pacote, corte_id, agendamento, publicar_sozinho
+        )
+    except RoteiroInterrompido as exc:
+        entregue = exc.passo == Passo.PUBLICAR
+        raise
+    finally:
+        if not entregue:
+            _VIGIADOS.discard(corte_id)
+    return resultado
+
+
+async def _subir_e_entregar(
+    pacote: dict, corte_id: str, agendamento, publicar_sozinho: bool
+) -> tuple[dict, bool]:
+    """O roteiro e a entrega da aba. Devolve o resultado e se a aba ficou vigiada."""
     legenda = legenda_unica(pacote.get("titulo", ""), pacote.get("descricao", ""))
     capa = pacote.get("capa") or ""
     # D-893: a etiqueta da aba, como no lote (D-564). Sem ela a vigília olhava a
@@ -78,10 +101,10 @@ async def publicar_assistido(
         # mostrar, e a marca vem já — como o lote faz com o mesmo veredito.
         if corte_id:
             await marcar_corte_publicado(corte_id)
-        return {**pacote, **relatorio, "legenda": legenda, "vigiando": False}
+        return {**pacote, **relatorio, "legenda": legenda, "vigiando": False}, False
 
     await _entregar_a_aba_ao_operador(corte_id, marca)
-    return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
+    return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}, True
 
 
 async def _entregar_a_aba_ao_operador(corte_id: str, marca: str) -> None:

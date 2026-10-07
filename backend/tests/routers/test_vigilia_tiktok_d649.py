@@ -14,6 +14,14 @@ import pytest
 from app.services import publicacao_no_tiktok, tasks
 
 
+@pytest.fixture(autouse=True)
+def sem_vigias_de_outro_teste():
+    """D-893: o registro de cortes vigiados é do processo; cada teste parte do zero."""
+    publicacao_no_tiktok._VIGIADOS.clear()
+    yield
+    publicacao_no_tiktok._VIGIADOS.clear()
+
+
 @pytest.mark.asyncio
 async def test_a_vigilia_fica_com_dono_e_sobrevive_ao_coletor(monkeypatch):
     comecou = asyncio.Event()
