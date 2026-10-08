@@ -14,12 +14,15 @@ function renderizar(
   prompt?: string,
   elenco?: PessoaDaCapa[],
   pedido?: Partial<PedidoCapaChatgpt>,
+  promptDoPedido = prompt?.trim() ?? '',
 ) {
   const qc = new QueryClient();
   const config: ConfiguracaoCapaChatgpt = { projeto_url: projetoUrl, fichas: [], maximo_de_fichas: 10 };
   qc.setQueryData(['capa-chatgpt', 'configuracao'], config);
   if (pedido) {
-    qc.setQueryData(['capa-chatgpt', 'pedido', 'youtube', 'c1'], {
+    // A chave por extenso, e não por `pedidoKey`: montada pela mesma função
+    // que o componente usa, o teste não pegaria o prompt sumir dela.
+    qc.setQueryData(['capa-chatgpt', 'pedido', 'youtube', 'c1', promptDoPedido], {
       id: 'p1', destino: 'youtube', alvo_id: 'c1', corte_id: 'c1', etapa: '', erro: '', estado: 'aguardando',
       ...pedido,
     });
@@ -66,6 +69,18 @@ describe('GerarNoChatGPT', () => {
     });
     expect(html).toContain('Cancelado na fila');
     expect(html).not.toContain('janela do Edge');
+    expect(html).not.toContain('disabled');
+  });
+
+  // D-899: "Gerar prompt" põe a imagem na fila pelo backend; o que a tela sabia
+  // do prompt anterior não vale para o novo — ela relê em vez de mostrar.
+  it('prompt novo não herda o andamento do prompt anterior', () => {
+    const parada = { estado: 'erro', erro: 'parou no antigo' } as const;
+    // O mesmo prompt: o andamento dele aparece.
+    expect(renderizar(PROJETO, 'o antigo', undefined, parada, 'o antigo')).toContain('parou no antigo');
+    // Prompt refeito: a tela relê no backend em vez de mostrar o do anterior.
+    const html = renderizar(PROJETO, 'o prompt novo', undefined, parada, 'o antigo');
+    expect(html).not.toContain('parou no antigo');
     expect(html).not.toContain('disabled');
   });
 

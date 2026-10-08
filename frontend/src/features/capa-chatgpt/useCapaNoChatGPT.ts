@@ -35,8 +35,10 @@ export const useGravarProjetoChatgpt = () => useAlterarConfiguracao(capaChatgptA
 export const useSubirFichaChatgpt = () => useAlterarConfiguracao(capaChatgptApi.subirFicha);
 export const useRemoverFichaChatgpt = () => useAlterarConfiguracao(capaChatgptApi.removerFicha);
 
-const pedidoKey = (destino: DestinoDaCapa, alvoId: string) =>
-  ['capa-chatgpt', 'pedido', destino, alvoId] as const;
+// D-899: o prompt entra na chave porque "Gerar prompt" já põe a imagem na fila
+// pelo backend — prompt novo é pedido possivelmente novo, e a leitura refaz-se só.
+export const pedidoKey = (destino: DestinoDaCapa, alvoId: string, prompt: string) =>
+  ['capa-chatgpt', 'pedido', destino, alvoId, prompt] as const;
 
 // O robô leva cerca de um minuto; dois segundos mostram cada passo sem martelar.
 const INTERVALO_DO_PEDIDO_MS = 2000;
@@ -60,9 +62,14 @@ export const terminouAgora = (
  * `aoConcluir` roda quando ESTA tela vê o pedido terminar bem (`terminouAgora`)
  * — é a deixa para reler a capa, que o backend acabou de salvar.
  */
-export function usePedidoDaCapa(destino: DestinoDaCapa, alvoId: string, aoConcluir?: () => void) {
+export function usePedidoDaCapa(
+  destino: DestinoDaCapa,
+  alvoId: string,
+  prompt: string,
+  aoConcluir?: () => void,
+) {
   const pedido = useQuery({
-    queryKey: pedidoKey(destino, alvoId),
+    queryKey: pedidoKey(destino, alvoId, prompt),
     queryFn: () => capaChatgptApi.pedido(destino, alvoId),
     enabled: Boolean(alvoId),
     refetchInterval: (query) => (pedidoEmVoo(query.state.data) ? INTERVALO_DO_PEDIDO_MS : false),
@@ -83,7 +90,7 @@ export function usePedirNoChatGPT(destino: DestinoDaCapa, alvoId: string) {
   return useMutation({
     mutationFn: ({ prompt, pessoas }: { prompt: string; pessoas?: string[] }) =>
       capaChatgptApi.pedir(destino, alvoId, prompt, pessoas),
-    onSuccess: (pedido) => qc.setQueryData(pedidoKey(destino, alvoId), pedido),
+    onSuccess: (pedido, { prompt }) => qc.setQueryData(pedidoKey(destino, alvoId, prompt), pedido),
   });
 }
 

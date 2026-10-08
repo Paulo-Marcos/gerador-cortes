@@ -31,6 +31,9 @@ import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 // fechou o modal, o erro sumia — e a aba do robô ficava aberta sem explicação.
 // O andamento também aparece na Fila global.
 //
+// D-899: "Gerar prompt" já põe a imagem na fila pelo backend; este botão fica
+// para pedir outra versão. Por isso a leitura do pedido segue o prompt.
+//
 // A janela do Edge fica aberta de propósito: se a imagem não agradar, o
 // operador pede outra versão ali mesmo e cola do jeito antigo.
 //
@@ -68,10 +71,10 @@ export function GerarNoChatGPT({
 }: Props) {
   const config = useConfiguracaoCapaChatgpt();
   const pedir = usePedirNoChatGPT(destino, alvoId);
-  const pedido = usePedidoDaCapa(destino, alvoId, aoConcluir).data;
-  const ocupado = pedir.isPending || pedidoEmVoo(pedido);
   const configurado = Boolean(config.data?.projeto_url);
   const texto = prompt?.trim() ?? '';
+  const pedido = usePedidoDaCapa(destino, alvoId, texto, aoConcluir).data;
+  const ocupado = pedir.isPending || pedidoEmVoo(pedido);
   const elenco = useElencoConferido((promptDoElenco ?? prompt)?.trim() ?? '', configurado);
 
   const motivo = !configurado

@@ -19284,7 +19284,7 @@
     },
     "/api/shorts/corte/{corte_id}/capa-tiktok/prompt": {
       "post": {
-        "description": "Escreve o prompt da ARTE da capa e o guarda no metadado (D-524).\n\nO app para aqui de proposito: quem desenha e o operador, no agente capista\ndele. E o mesmo fluxo manual do horizontal — copiar o prompt, gerar a\nimagem, trazer de volta.",
+        "description": "Escreve o prompt da ARTE da capa e o guarda no metadado (D-524).\n\nD-899: e o gesto que ja pede a arte ao robo do ChatGPT, como no horizontal.",
         "operationId": "gerar_prompt_da_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_prompt_post",
         "parameters": [
           {
@@ -20946,7 +20946,7 @@
         ]
       },
       "post": {
-        "description": "Escreve o prompt de imagem da capa deste short (D-581).\n\nO app nao desenha: ele entrega o prompt, o operador gera a imagem no agente\ncapista dele e sobe a arte de volta em `/capa/arte`. Mesma divisao da capa\ndo TikTok (D-524) — gerador de imagem dentro da esteira seria custo e\nimprevisibilidade num passo que se julga com o olho.",
+        "description": "Escreve o prompt de imagem da capa deste short (D-581).\n\nD-899: e o gesto que ja pede a imagem ao robo do ChatGPT (quieto se a\nintegracao esta desligada); a arte volta sozinha para `/capa/arte`.",
         "operationId": "gerar_prompt_da_capa_api_shorts__short_id__capa_prompt_post",
         "parameters": [
           {

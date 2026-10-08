@@ -35,6 +35,7 @@ from app.services.claude_ia import (
     registrar_skill_usada,
     sem_cercas_de_codigo,
 )
+from app.services.pedidos_capa_chatgpt import pedir_sozinho
 from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import select
@@ -470,15 +471,11 @@ class MetadadosService:
 
         await MetadadosService.importar_prompt_thumbnail(corte_id, prompt_thumbnail)
         logger.info("[ClaudeIA] Prompt de thumbnail gerado via Claude p/ corte %s", corte_id[:8])
-
-        # D-525: a capa do TikTok herda deste prompt — mascote, paleta, luz. Só
-        # agora ela TEM base, então é aqui que o encadeamento pertence: encostado
-        # na gravação, e não num botão que o operador pode clicar antes da hora.
-        #
-        # Em background porque é acessório: o prompt do YouTube é a entrega desta
-        # chamada, e fazer o operador esperar mais uma volta de modelo por causa
-        # de uma etiqueta de TikTok inverteria as prioridades. Falhar aqui só
-        # custa um clique no botão da capa depois.
+        await pedir_sozinho("youtube", corte_id, prompt_thumbnail)  # D-899: já pede a imagem
+        # D-525: a capa do TikTok herda deste prompt (mascote, paleta, luz), então o
+        # encadeamento mora aqui, encostado na gravação. Em background porque é
+        # acessório: esperar outra volta de modelo pela etiqueta do TikTok inverteria
+        # as prioridades; falhar só custa um clique no botão da capa depois.
         fire_and_forget(
             MetadadosService._encadear_prompt_da_capa_tiktok(corte_id),
             name=f"capa-tiktok-prompt-{corte_id[:8]}",
@@ -487,11 +484,12 @@ class MetadadosService:
 
     @staticmethod
     async def _encadear_prompt_da_capa_tiktok(corte_id: str) -> None:
-        """Escreve o prompt da capa do TikTok logo depois do prompt do YouTube."""
+        """Escreve o prompt da capa do TikTok logo depois do do YouTube, e pede a arte (D-899)."""
         from app.services import capa_tiktok
 
         try:
-            await capa_tiktok.gerar_prompt_da_arte(corte_id)
+            prompt = await capa_tiktok.gerar_prompt_da_arte(corte_id)
+            await pedir_sozinho("tiktok", corte_id, prompt)
             logger.info("[ClaudeIA] Prompt da capa do TikTok encadeado p/ %s", corte_id[:8])
         except Exception:
             logger.exception(

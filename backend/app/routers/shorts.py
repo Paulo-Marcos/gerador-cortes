@@ -640,15 +640,15 @@ async def obter_prompt_da_capa(short_id: str):
 async def gerar_prompt_da_capa(short_id: str, provider: ProviderIA = "claude"):
     """Escreve o prompt de imagem da capa deste short (D-581).
 
-    O app nao desenha: ele entrega o prompt, o operador gera a imagem no agente
-    capista dele e sobe a arte de volta em `/capa/arte`. Mesma divisao da capa
-    do TikTok (D-524) — gerador de imagem dentro da esteira seria custo e
-    imprevisibilidade num passo que se julga com o olho.
+    D-899: e o gesto que ja pede a imagem ao robo do ChatGPT (quieto se a
+    integracao esta desligada); a arte volta sozinha para `/capa/arte`.
     """
-    from app.services import capa_short
+    from app.services import capa_short, pedidos_capa_chatgpt
 
     try:
-        return {"prompt": await capa_short.gerar_prompt(short_id, provider)}
+        prompt = await capa_short.gerar_prompt(short_id, provider)
+        await pedidos_capa_chatgpt.pedir_sozinho("short", short_id, prompt)
+        return {"prompt": prompt}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except capa_short.CapaShortError as exc:
@@ -971,17 +971,15 @@ async def gerar_capa_tiktok(
 async def gerar_prompt_da_capa_tiktok(corte_id: str, provider: ProviderIA = "claude"):
     """Escreve o prompt da ARTE da capa e o guarda no metadado (D-524).
 
-    O app para aqui de proposito: quem desenha e o operador, no agente capista
-    dele. E o mesmo fluxo manual do horizontal — copiar o prompt, gerar a
-    imagem, trazer de volta.
+    D-899: e o gesto que ja pede a arte ao robo do ChatGPT, como no horizontal.
     """
-    from app.services import capa_tiktok
+    from app.services import capa_tiktok, pedidos_capa_chatgpt
 
     try:
         prompt = await capa_tiktok.gerar_prompt_da_arte(corte_id, provider)
     except capa_tiktok.CapaTikTokError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-
+    await pedidos_capa_chatgpt.pedir_sozinho("tiktok", corte_id, prompt)
     return {"prompt": prompt}
 
 

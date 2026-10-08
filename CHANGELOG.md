@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its turn can be cancelled from the Fila; one already being drawn keeps going
   (close the robot's tab to stop it). Before, the reason died with the modal
   and the robot's tab stayed open with no explanation (D-898, D-896).
+- **"Gerar prompt" already asks the ChatGPT robot for the image.** Writing
+  the YouTube thumbnail prompt puts the thumbnail in the ChatGPT queue, and
+  the chained TikTok art prompt does the same for the art; the short's "Gerar
+  prompt" does it for the short cover. No second click — "Gerar no ChatGPT"
+  stays for asking another version. Redoing the prompt while the robot is
+  still drawing is not lost: the newest prompt is drawn next. Nothing happens
+  when the channel has no ChatGPT project set (D-899).
 
 ## [0.6.0] - 2026-10-07
 
