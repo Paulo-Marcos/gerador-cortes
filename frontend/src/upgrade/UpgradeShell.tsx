@@ -3,12 +3,12 @@ import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-route
 import {
   WorkbenchQueueProvider,
   useWorkbenchQueueOptional,
-  type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { overlayAberto } from '@/shared/atalhos/shortcuts';
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { useCanais } from '@/features/channels/useChannels';
+import { filaDoTrilho, resumoDoLote } from './cartaoDaFila';
 import { GavetaDaFila } from './GavetaDaFila';
 import { GlobalRail, TRILHO_ESTREITO, TRILHO_LARGO, type FilaDoTrilho } from './GlobalRail';
 import {
@@ -18,6 +18,7 @@ import {
   visitarPeloNavegador,
 } from './historicoDaCasca';
 import { Icon } from './Icon';
+import { useLoteDaFila } from './LoteNaFila';
 import { CONTEXTO_MIN_PX, useJanelaMin } from './medidas';
 import { PaletaDeComandos } from './PaletaDeComandos';
 import { ScreenHeader } from './ScreenHeader';
@@ -25,6 +26,7 @@ import { TopBar } from './TopBar';
 import { barraComTeclas, useAtalhosDaCasca } from './useAtalhosDaCasca';
 import { TrilhaDeEtapas } from './TrilhaDeEtapas';
 import { dentroDeUmaLive } from './trilhaDaLive';
+import { useGavetaDaFila } from './useGavetaDaFila';
 import { useTrilho } from './useTrilho';
 import { useTrilhaDaLive } from './useTrilhaDaLive';
 import {
@@ -68,34 +70,6 @@ import { useUpgradeTheme } from './useUpgradeTheme';
 //      não para qualquer botão focado — era o que matava o ↵ depois do
 //      primeiro clique em qualquer lugar da tela.
 // ─────────────────────────────────────────────────────────────────
-
-/**
- * O cartao da fila no pe do trilho. Mostra o job que esta ANDANDO; sem
- * nenhum ativo, o cartao some — um anel parado em 0% ocuparia espaco para
- * dizer "nada acontecendo", que e justamente o que o silencio ja diz.
- *
- * Excecao: estando NA tela da Fila, o cartao fica em estado quieto, para a
- * rota ter representacao no trilho.
- */
-function filaDoTrilho(
-  jobs: QueueJob[],
-  naFila: boolean,
-  onAbrir?: () => void,
-): FilaDoTrilho | undefined {
-  const ativos = jobs.filter((j) => j.estado === 'rodando' || j.estado === 'aguardando');
-  if (ativos.length === 0) {
-    return naFila
-      ? { titulo: 'Fila', sub: jobs.length > 0 ? 'nada rodando' : 'vazia', progresso: 0, to: '/fila' }
-      : undefined;
-  }
-  const rodando = ativos.find((j) => j.estado === 'rodando') ?? ativos[0];
-  return {
-    titulo: `Fila · ${ativos.length} job${ativos.length === 1 ? '' : 's'}`,
-    sub: `${rodando.rotuloTipo} ${Math.round(rodando.progresso)}%`,
-    progresso: rodando.progresso,
-    onAbrir,
-  };
-}
 
 /**
  * D-746: o nome de um lugar no histórico. A última migalha de um corte é só
@@ -179,18 +153,9 @@ function Casca({ children, fila }: CascaProps) {
   const [buscaAberta, setBuscaAberta] = useState(false);
   const abrirBusca = useCallback(() => setBuscaAberta(true), []);
 
-  // D-746: a fila é consulta, não destino — gaveta sobre a tela atual.
-  const [filaAberta, setFilaAberta] = useState(false);
-  const abrirFila = useCallback(() => setFilaAberta(true), []);
-  const fecharFila = useCallback(() => setFilaAberta(false), []);
-  const filaEmTelaCheia = useCallback(() => {
-    setFilaAberta(false);
-    navigate('/fila');
-  }, [navigate]);
-  // Trocou de tela (⌘[, "Onde eu estava", link): a gaveta não viaja junto.
-  useEffect(() => setFilaAberta(false), [pathname]);
-
-  useAtalhosDaCasca(alternar, abrirBusca, abrirFila, chrome);
+  const gaveta = useGavetaDaFila(pathname);
+  const lote = useLoteDaFila();
+  useAtalhosDaCasca(alternar, abrirBusca, gaveta.abrir, chrome);
   const jobsRodando = (filaGlobal?.jobs ?? []).filter((j) => j.estado === 'rodando').length;
   const canais = useCanais();
   const canalAtivo = canais.data?.canais.find((c) => c.ativo);
@@ -255,7 +220,7 @@ function Casca({ children, fila }: CascaProps) {
         onAlternar={alternar}
         telaAtual={tela}
         menu={menu}
-        fila={fila ?? filaDoTrilho(filaGlobal?.jobs ?? [], tela === 'fila', abrirFila)}
+        fila={fila ?? filaDoTrilho(filaGlobal?.jobs ?? [], tela === 'fila', gaveta.abrir, lote && resumoDoLote(lote))}
         filaAtiva={tela === 'fila'}
         lugares={lugaresAnteriores}
       />
@@ -272,7 +237,7 @@ function Casca({ children, fila }: CascaProps) {
           tema={theme}
           onAlternarTema={toggleTheme}
           onAbrirBusca={abrirBusca}
-          onAbrirAvisos={abrirFila}
+          onAbrirAvisos={gaveta.abrir}
           avisosAtivos={jobsRodando}
           avisoDeErro={jobComErro}
           canal={canalAtivo ? { nome: canalAtivo.nome, handle: canalAtivo.handle } : undefined}
@@ -293,11 +258,7 @@ function Casca({ children, fila }: CascaProps) {
         />
         <PaletaDeComandos aberta={buscaAberta} onFechar={() => setBuscaAberta(false)} />
         {filaGlobal ? (
-          <GavetaDaFila
-            aberta={filaAberta}
-            aoFechar={fecharFila}
-            aoAbrirTelaCheia={filaEmTelaCheia}
-          />
+          <GavetaDaFila aberta={gaveta.aberta} aoFechar={gaveta.fechar} aoAbrirTelaCheia={gaveta.telaCheia} />
         ) : null}
 
         <TrilhaDeEtapas etapas={etapasDaLive} />

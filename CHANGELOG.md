@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Batch publishing is followed in the queue drawer, not in a modal.** When
+  you start a batch (YouTube Shorts, TikTok, Instagram Reels, the "Subir
+  todos" of horizontal TikTok, or "Publicar em massa" on YouTube), the modal
+  closes and the queue drawer opens. The batch sits at the top of the drawer,
+  with one lane per platform, the "publiquei" and "saiu no ar" buttons and
+  "cancel". The rail card counts it too ("Fila · lote, 1/6 publicados · 2 com
+  você"), so the reference stays when you move to another project. A finished
+  batch stays listed until you remove it (D-897).
+
 ## [0.6.0] - 2026-10-07
 
 ### Added

@@ -83,7 +83,7 @@ EXCECOES = {
     "frontend/src/features/shorts/DefinirPalcoModal.tsx": 795,
     "frontend/src/features/shorts/FireDetalhePage.tsx": 538,
     "frontend/src/features/shorts/GanchoModal.tsx": 680,
-    "frontend/src/features/shorts/PublicarEmLoteModal.tsx": 648,
+    "frontend/src/features/shorts/PublicarEmLoteModal.tsx": 562,
     "frontend/src/features/shorts/ReguaDeOnda.tsx": 582,
     "frontend/src/features/shorts/ShortsPage.tsx": 576,
     "frontend/src/features/shorts/useShortsDoCorte.ts": 658,

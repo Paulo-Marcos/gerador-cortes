@@ -8,6 +8,7 @@ import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusExportCorte } from '@/types/models';
 import { publicacaoApi, type BulkYoutubeRequest } from '@/features/publicacao/api';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
+import { pedirGavetaDaFila } from '@/upgrade/useGavetaDaFila';
 
 interface Props {
   open: boolean;
@@ -33,6 +34,10 @@ function nowPlusOneHourLocal(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours(),
   )}:${pad(d.getMinutes())}`;
+}
+
+function fmtHora(iso: string): string {
+  return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
 type BulkYoutubePayload = BulkYoutubeRequest & { scheduled_dates: Array<string | null> };
@@ -97,17 +102,15 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
         prev.map((r) => ({ ...r, status: 'enfileirado', mensagem: res.message })),
       );
       void qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
+      // D-897: os uploads já são jobs da fila; o modal sai da frente e a gaveta mostra o andamento.
+      onClose();
+      pedirGavetaDaFila();
     } catch (err) {
       setResultados((prev) =>
         prev.map((r) => ({ ...r, status: 'erro', mensagem: (err as Error).message })),
       );
     }
     setEnviando(false);
-  };
-
-  const fmtHora = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
   };
 
   return (

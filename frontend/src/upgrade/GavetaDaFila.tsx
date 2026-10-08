@@ -7,7 +7,9 @@ import {
   type MarcoJob,
   type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
+import { resumoDaGaveta } from './cartaoDaFila';
 import { Icon } from './Icon';
+import { LoteNaFila, useLoteDaFila } from './LoteNaFila';
 import { SeloDeEstado, type TomDoSelo } from './SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────
@@ -238,6 +240,25 @@ function LinhaDaFila({ grupo }: { grupo: GrupoFila }) {
   );
 }
 
+/** D-897: o lote de publicação no topo, os jobs embaixo. "Nada rodando" só sem nenhum dos dois. */
+function ConteudoDaFila({ grupos }: { grupos: GrupoFila[] }) {
+  // Lido aqui, e não recebido da gaveta: este conteúdo monta a cada abertura,
+  // e é essa montagem que pergunta de novo ao backend (lote disparado em outra aba).
+  const lote = useLoteDaFila();
+  return (
+    <>
+      <LoteNaFila lote={lote} />
+      {grupos.length === 0 && !lote ? (
+        <p style={{ margin: 0, padding: '28px 12px', textAlign: 'center', fontSize: 12, color: 'var(--mute)' }}>
+          Nada rodando agora.
+        </p>
+      ) : (
+        grupos.map((g) => <LinhaDaFila key={g.chave} grupo={g} />)
+      )}
+    </>
+  );
+}
+
 export function GavetaDaFila({
   aberta,
   aoFechar,
@@ -253,6 +274,7 @@ export function GavetaDaFila({
   const painel = useRef<HTMLElement>(null);
   const gatilho = useRef<Element | null>(null);
   const { grupos, jobs } = useWorkbenchQueue();
+  const lote = useLoteDaFila();
 
   useEffect(() => {
     if (!aberta) return;
@@ -300,11 +322,7 @@ export function GavetaDaFila({
 
   if (!aberta) return null;
 
-  const ativos = jobs.filter((j) => ehAtivo(j.estado)).length;
-  const resumo =
-    jobs.length === 0
-      ? 'vazia'
-      : `${ativos} ativo${ativos === 1 ? '' : 's'} · ${jobs.length} na lista`;
+  const resumo = resumoDaGaveta(jobs, Boolean(lote));
 
   // Sem portal: montada dentro da `.ap`, a gaveta herda tema, vidro e
   // paleta. Num portal para o <body> ela sairia branca no tema escuro.
@@ -354,14 +372,7 @@ export function GavetaDaFila({
         </header>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 11, flex: 1, minHeight: 0, overflow: 'auto' }}>
-          {children ??
-            (grupos.length === 0 ? (
-              <p style={{ margin: 0, padding: '28px 12px', textAlign: 'center', fontSize: 12, color: 'var(--mute)' }}>
-                Nada rodando agora.
-              </p>
-            ) : (
-              grupos.map((g) => <LinhaDaFila key={g.chave} grupo={g} />)
-            ))}
+          {children ?? <ConteudoDaFila grupos={grupos} />}
         </div>
 
         <footer style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderTop: '1px solid var(--line)', fontSize: 11, color: 'var(--mute)' }}>

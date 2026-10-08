@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { exportStatusKey } from '@/shared/chavesDeCache';
-import { PainelDoLote } from '@/features/shorts/PublicarEmLoteModal';
+import { PainelDoLote } from '@/features/shorts/PainelDoLote';
 import { motivoDoErro, shortsApi, type EnvioAssistido } from '@/features/shorts/shortsApi';
 import { useCancelarLote, useCriarLote, useLoteAtual } from '@/features/shorts/useLotePublicacao';
 import type { StatusExportCorte } from '@/types/models';
@@ -36,9 +36,11 @@ interface Props {
   /** D-834: data e "publicar sozinho" vêm do modal, que vale também para cada corte. */
   envio: EnvioAssistido;
   onPreparado: (corteId: string) => void;
+  /** D-897: o lote começou — quem abriu o modal fecha e leva o operador à gaveta da fila. */
+  onDisparado?: () => void;
 }
 
-export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparado }: Props) {
+export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparado, onDisparado }: Props) {
   const [quantidade, setQuantidade] = useState(0);
   const alvos = alvosDoLoteNoTiktok(pendentes, quantidade);
 
@@ -68,7 +70,7 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
         ...envio,
         republicar: false,
       },
-    });
+    }, { onSuccess: onDisparado });
   }
 
   return (

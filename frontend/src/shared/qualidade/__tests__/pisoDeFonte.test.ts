@@ -118,7 +118,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/shorts/PresetDoGanchoModal.tsx": 1,
   "src/features/shorts/PresetsDoPalco.tsx": 1,
   "src/features/shorts/ProgressoRenderPanel.tsx": 5,
-  "src/features/shorts/PublicarEmLoteModal.tsx": 2,
+  "src/features/shorts/PublicarEmLoteModal.tsx": 1,
   "src/features/shorts/ReguaDeOnda.tsx": 1,
   "src/features/shorts/ShortsPage.tsx": 3,
   "src/features/shorts/ShortsProntosPage.tsx": 2,
