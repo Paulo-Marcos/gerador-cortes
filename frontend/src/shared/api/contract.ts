@@ -7237,7 +7237,7 @@ export interface components {
              * Estado
              * @enum {string}
              */
-            estado: "aguardando" | "rodando" | "concluido" | "erro";
+            estado: "aguardando" | "rodando" | "concluido" | "erro" | "cancelado";
             /** Etapa */
             etapa: string;
             /** Id */

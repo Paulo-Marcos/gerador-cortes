@@ -36,9 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   TikTok art, short cover) and shows its step in the Fila — "capa YouTube no
   ChatGPT", "arte TikTok no ChatGPT", "capa do short no ChatGPT" — with the
   timeline in the row detail. If it stops, the Fila and the button say where
-  and why, even after you close and reopen the modal. Before, the reason died
-  with the modal and the robot's tab stayed open with no explanation (D-898,
-  D-896).
+  and why, even after you close and reopen the modal. A cover still waiting
+  its turn can be cancelled from the Fila; one already being drawn keeps going
+  (close the robot's tab to stop it). Before, the reason died with the modal
+  and the robot's tab stayed open with no explanation (D-898, D-896).
 
 ## [0.6.0] - 2026-10-07
 

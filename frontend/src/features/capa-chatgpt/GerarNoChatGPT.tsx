@@ -117,9 +117,11 @@ function AndamentoDoPedido({ pedido }: { pedido?: PedidoCapaChatgpt | null }) {
   const texto =
     pedido.estado === 'concluido'
       ? 'Capa pronta, salva pelo robô.'
-      : pedido.estado === 'aguardando'
-        ? 'Na fila do ChatGPT — a Fila mostra a ordem.'
-        : `${pedido.etapa} — acompanhe na janela do Edge.`;
+      : pedido.estado === 'cancelado'
+        ? 'Cancelado na fila — peça de novo quando quiser.'
+        : pedido.estado === 'aguardando'
+          ? 'Na fila do ChatGPT — a Fila mostra a ordem.'
+          : `${pedido.etapa} — acompanhe na janela do Edge.`;
   return (
     <span aria-live="polite" className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
       {texto}

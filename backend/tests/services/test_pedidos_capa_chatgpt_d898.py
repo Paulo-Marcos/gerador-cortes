@@ -275,3 +275,83 @@ class TestRotas:
 
     def test_capa_nunca_pedida_responde_sem_pedido(self, cliente):
         assert cliente.get("/api/capa-chatgpt/pedidos/youtube/c9").json() == {"pedido": None}
+
+
+class TestAchadosDaAuditoria:
+    """pr-audit do #153: a corrida em `enfileirar` e o cancelar da Fila."""
+
+    def test_dois_pedidos_simultaneos_da_mesma_capa_viram_um(self, monkeypatch, entregas):
+        robo = RoboFalso(monkeypatch)
+
+        async def corte_com_espera(_destino, _alvo):
+            await asyncio.sleep(0)  # a consulta ao banco que abria a janela da corrida
+            return "c1"
+
+        monkeypatch.setattr(pedidos_capa_chatgpt, "_corte_do_alvo", corte_com_espera)
+
+        async def cenario():
+            a, b = await asyncio.gather(
+                pedidos_capa_chatgpt.enfileirar("short", "s1", "p"),
+                pedidos_capa_chatgpt.enfileirar("short", "s1", "p"),
+            )
+            await _ate_terminar(a, b)
+            return a, b
+
+        a, b = _rodar(cenario())
+
+        assert a is b
+        assert len(robo.pedidos) == 1
+
+    def test_cancelar_na_espera_tira_da_fila_e_o_robo_nao_desenha(self, monkeypatch, entregas):
+        from app.services.cancelamento_jobs import cancelar_job
+
+        robo = RoboFalso(monkeypatch)
+
+        async def cenario():
+            robo.liberar = asyncio.Event()
+            primeiro = await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "p1")
+            segundo = await pedidos_capa_chatgpt.enfileirar("tiktok", "c1", "p2")
+            for _ in range(20):
+                await asyncio.sleep(0)
+            jobs_globais.JobsGlobais.coletar()  # a Fila já viu o pedido esperando
+            resposta = cancelar_job(f"chatgpt:{segundo.id}")
+            na_fila = {j.tipo: j.estado for j in jobs_globais.JobsGlobais.coletar()}
+            robo.liberar.set()
+            await _ate_terminar(primeiro, segundo)
+            for _ in range(20):
+                await asyncio.sleep(0)
+            return resposta, na_fila, primeiro, segundo
+
+        resposta, na_fila, primeiro, segundo = _rodar(cenario())
+
+        assert resposta["cancelado"] is True
+        assert na_fila["chatgpt_tiktok"] == "cancelado"
+        assert (primeiro.estado, segundo.estado) == ("concluido", "cancelado")
+        assert [p[0] for p in robo.pedidos] == ["p1"]
+        assert ("tiktok-arte", "c1", PNG, "chatgpt.png") not in entregas
+
+    def test_rodando_nao_para_e_diz_como_parar(self, monkeypatch, entregas):
+        from app.services.cancelamento_jobs import CancelamentoNaoSuportado, cancelar_job
+
+        robo = RoboFalso(monkeypatch)
+
+        async def cenario():
+            robo.liberar = asyncio.Event()
+            pedido = await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "p1")
+            for _ in range(20):
+                await asyncio.sleep(0)
+            try:
+                with pytest.raises(CancelamentoNaoSuportado, match="feche a aba"):
+                    cancelar_job(f"chatgpt:{pedido.id}")
+            finally:
+                robo.liberar.set()
+                await _ate_terminar(pedido)
+            return pedido
+
+        assert _rodar(cenario()).estado == "concluido"
+
+    def test_pedido_que_nao_existe_nao_esta_em_voo(self):
+        from app.services.cancelamento_jobs import JobNaoEstaEmVoo, cancelar_job
+
+        with pytest.raises(JobNaoEstaEmVoo):
+            cancelar_job("chatgpt:nao-existe")

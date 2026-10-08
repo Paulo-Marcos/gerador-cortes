@@ -45,7 +45,7 @@ class PedidoCapaChatgpt(RespostaApi):
     destino: DestinoDaCapa
     alvo_id: str
     corte_id: str
-    estado: Literal["aguardando", "rodando", "concluido", "erro"]
+    estado: Literal["aguardando", "rodando", "concluido", "erro", "cancelado"]
     # O passo em que o robô está, ou o último em que esteve.
     etapa: str
     erro: str

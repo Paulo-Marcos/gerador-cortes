@@ -6699,7 +6699,8 @@
               "aguardando",
               "rodando",
               "concluido",
-              "erro"
+              "erro",
+              "cancelado"
             ],
             "title": "Estado",
             "type": "string"

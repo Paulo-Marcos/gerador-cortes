@@ -57,6 +57,18 @@ describe('GerarNoChatGPT', () => {
     expect(html).toContain('Gerando no ChatGPT');
   });
 
+  // pr-audit do #153: o pedido tirado da fila pela Fila global não pode
+  // continuar dizendo "acompanhe na janela do Edge".
+  it('pedido cancelado na fila diz isso e libera o botão', () => {
+    const html = renderizar(PROJETO, 'o sapo aponta', undefined, {
+      estado: 'cancelado',
+      etapa: 'Cancelado na fila',
+    });
+    expect(html).toContain('Cancelado na fila');
+    expect(html).not.toContain('janela do Edge');
+    expect(html).not.toContain('disabled');
+  });
+
   it('pedido que parou mostra onde e por quê, e deixa pedir de novo', () => {
     const html = renderizar(PROJETO, 'o sapo aponta', undefined, {
       estado: 'erro',

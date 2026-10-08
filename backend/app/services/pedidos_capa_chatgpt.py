@@ -31,7 +31,7 @@ from app.services.thumbnail import ThumbnailService
 logger = logging.getLogger(__name__)
 
 Destino = Literal["youtube", "tiktok", "short"]
-EstadoDoPedido = Literal["aguardando", "rodando", "concluido", "erro"]
+EstadoDoPedido = Literal["aguardando", "rodando", "concluido", "erro", "cancelado"]
 
 # Cada capa pede um quadro: a thumbnail é deitada, a arte do TikTok vai na faixa
 # 4:5 da capa montada, e a capa do short ocupa a tela inteira.
@@ -47,6 +47,7 @@ _PROGRESSO: dict[EstadoDoPedido, int] = {
     "aguardando": 0,
     "rodando": 50,
     "concluido": 100,
+    "cancelado": 0,
     "erro": 0,
 }
 
@@ -111,20 +112,21 @@ async def enfileirar(
     destino: Destino, alvo_id: str, prompt: str, pessoas: list[str] | None = None
 ) -> PedidoDeCapa:
     """Põe a capa na fila e devolve a ficha; pedir de novo a mesma capa não duplica."""
-    em_voo = pedido_da_capa(destino, alvo_id)
-    if em_voo and em_voo.ativo:
-        return em_voo
     # O que só o operador resolve volta na hora, em vez de virar um item da
     # fila que nasce condenado.
     if not prompt.strip():
         raise PedidoInvalido("Gere o prompt da capa primeiro.")
     if not capa_no_chatgpt.ler_configuracao()["projeto_url"]:
         raise PedidoInvalido("Configure o link do projeto do ChatGPT em Canais → Capas no ChatGPT.")
+    # O corte ANTES de conferir a fila: conferir e registrar não podem ter um
+    # `await` no meio, senão dois pedidos da mesma capa passam juntos pela
+    # conferência e o robô desenha duas vezes (achado da pr-audit do #153).
+    corte_id = await _corte_do_alvo(destino, alvo_id)
+    em_voo = pedido_da_capa(destino, alvo_id)
+    if em_voo and em_voo.ativo:
+        return em_voo
     pedido = PedidoDeCapa(
-        id=uuid.uuid4().hex[:12],
-        destino=destino,
-        alvo_id=alvo_id,
-        corte_id=await _corte_do_alvo(destino, alvo_id),
+        id=uuid.uuid4().hex[:12], destino=destino, alvo_id=alvo_id, corte_id=corte_id
     )
     _pedidos[(destino, alvo_id)] = pedido
     fire_and_forget(_atender(pedido, prompt, pessoas), name=f"capa-chatgpt-{pedido.id}")
@@ -141,8 +143,27 @@ async def _corte_do_alvo(destino: Destino, alvo_id: str) -> str:
     return short.corte_id
 
 
+def cancelar(pedido_id: str) -> EstadoDoPedido | None:
+    """Tira da fila o pedido que ainda espera a vez; diz em que estado ele estava.
+
+    O que já está rodando não para: o robô está no meio de uma conversa no
+    ChatGPT, numa thread do navegador — quem para é o operador, fechando a aba.
+    `None` quando o pedido não existe mais.
+    """
+    pedido = next((p for p in _pedidos.values() if p.id == pedido_id), None)
+    if pedido is None:
+        return None
+    estado = pedido.estado
+    if estado == "aguardando":
+        pedido.estado = "cancelado"
+        pedido.etapa = "Cancelado na fila"
+    return estado
+
+
 async def _atender(pedido: PedidoDeCapa, prompt: str, pessoas: list[str] | None) -> None:
     async with _vez:
+        if pedido.estado == "cancelado":
+            return
         pedido.estado = "rodando"
 
         def anunciar(etapa: str) -> None:
