@@ -16,6 +16,7 @@ import type { StatusExportCorte } from '@/types/models';
 import { pendentesNoTiktok } from './listasDePublicacao';
 import { LoteDoTiktokHorizontal } from './LoteDoTiktokHorizontal';
 import { ICONE_DO_CONCEITO, Icon } from '@/upgrade/Icon';
+import { pedirGavetaDaFila } from '@/upgrade/useGavetaDaFila';
 import { ErroDaApi } from '@/shared/api';
 
 // D-510/D-516/D-517: o TikTok horizontal, no workspace do projeto.
@@ -195,6 +196,10 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
               pendentes={pendentes}
               envio={envio}
               onPreparado={marcarPreparado}
+              onDisparado={() => {
+                onClose();
+                pedirGavetaDaFila();
+              }}
             />
 
             <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
