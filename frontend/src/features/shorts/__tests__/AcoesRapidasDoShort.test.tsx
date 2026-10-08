@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { pedidoKey } from '@/features/capa-chatgpt/useCapaNoChatGPT';
 import { AcoesRapidasDoShort, GerarCapaComIA, ganchoParaGravar } from '../AcoesRapidasDoShort';
+import { CapaModal } from '../CapaModal';
 import type { ShortSugerido } from '../shortsApi';
 import { promptDaCapaKey } from '../useShortsDoCorte';
 
@@ -83,5 +84,23 @@ describe('o gancho que a IA grava', () => {
 
   it('nada aproveitável, nada gravado', () => {
     expect(ganchoParaGravar(undefined, [])).toBeNull();
+  });
+});
+
+// pr-audit do #157: abrir na arte é o pedido ("deixa a geração da imagem sendo
+// a tela principal, e não a que diz que vai pegar um frame"), e sem este teste
+// voltar a abrir no quadro não derrubava nada.
+describe('modal da capa do short', () => {
+  it('abre na aba da arte, e ela vem primeiro', () => {
+    const html = renderizar(
+      <CapaModal open onClose={() => undefined} short={{ id: 's1', titulo: 'T' }} />,
+    );
+    const abas = [...html.matchAll(/aria-pressed="(true|false)"[^>]*>([^<]+)</g)].map(
+      ([, pressionada, rotulo]) => [rotulo, pressionada],
+    );
+    expect(abas.slice(0, 2)).toEqual([
+      ['Arte desenhada', 'true'],
+      ['Quadro do vídeo', 'false'],
+    ]);
   });
 });
