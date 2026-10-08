@@ -58,16 +58,16 @@ import { Icon } from '@/upgrade/Icon';
 // um arquivo só, e mantê-los em paralelo obrigaria a tela a perguntar qual vale
 // na hora de subir. O que muda é a origem, e as abas dizem qual é.
 //
-// O app não desenha: ele escreve o prompt, o operador gera no agente capista
-// dele e sobe a arte de volta. Mesma divisão da capa do TikTok (D-524).
+// D-804/D-899: o prompt escrito já pede a arte ao robô do ChatGPT, que a grava
+// aqui; subir uma feita por fora continua valendo. D-900: a arte é a aba de abertura.
 
 
 /** D-581: de onde a capa vem. Duas origens, um só arquivo no fim. */
 type Origem = 'quadro' | 'arte';
 
 const ABAS: { id: Origem; rotulo: string; nota: string }[] = [
+  { id: 'arte', rotulo: 'Arte desenhada', nota: 'gere com a IA ou suba a imagem' },
   { id: 'quadro', rotulo: 'Quadro do vídeo', nota: 'escolha um instante do short' },
-  { id: 'arte', rotulo: 'Arte desenhada', nota: 'gere o prompt e suba a imagem' },
 ];
 
 interface Props {
@@ -84,7 +84,7 @@ export function CapaModal({ open, onClose, short }: Props) {
   const subir = useSubirArteDaCapa(short.id);
   const video = useRef<HTMLVideoElement>(null);
   const [seg, setSeg] = useState(0);
-  const [origem, setOrigem] = useState<Origem>('quadro');
+  const [origem, setOrigem] = useState<Origem>('arte');
   const { mutate: subirArte } = subir;
 
   // D-586: Ctrl+V com uma imagem vira a arte da capa. Escuta a janela porque o

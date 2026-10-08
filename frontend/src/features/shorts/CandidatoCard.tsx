@@ -17,6 +17,7 @@ import {
   useProgressoRender,
 } from './useShortsDoCorte';
 import { useFechoDoShort } from './useFechoDoShort';
+import { AcoesRapidasDoShort } from './AcoesRapidasDoShort';
 import { Icon } from '@/upgrade/Icon';
 
 // D-492: o card de um candidato, reorganizado.
@@ -489,23 +490,15 @@ export function CandidatoCard({
         />
       )}
 
-      {/* D-585: a capa que ficou para trás.
-          Quando o render termina DEPOIS de o operador fechar o post, a corrente
-          se quebra — e sem isto a pendência ficaria só na memória dele. A linha
-          some sozinha assim que a capa existe. */}
-      {temArquivo && capa.data && !capa.data.tem_capa && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            fecho.abrirCapa();
-          }}
-          className="flex w-full items-center gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-2 text-left text-[11.5px] text-[var(--wb-warn-ink)] transition-colors hover:bg-[var(--wb-bg-inset)]"
-        >
-          <Icon name="image" className="flex-none" />
-          Falta escolher a capa — sem ela a plataforma pega um quadro qualquer.
-        </button>
-      )}
+      {/* D-900: capa e gancho a um clique. D-585: o lembrete da capa que ficou
+          para trás (render que termina depois do post) mora junto, e some
+          sozinho assim que a capa existe. */}
+      <AcoesRapidasDoShort
+        short={short}
+        corteId={corteId}
+        faltaCapa={temArquivo && capa.data?.tem_capa === false}
+        onAbrirCapa={fecho.abrirCapa}
+      />
 
       {fecho.modais}
     </article>

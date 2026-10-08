@@ -42,6 +42,7 @@ import { PublicarEmLoteModal } from './PublicarEmLoteModal';
 import { alternar } from './selecaoDoLote';
 import { capaImagemUrl, shortVideoUrl, type ShortPronto } from './shortsApi';
 import { useFechoDoShort } from './useFechoDoShort';
+import { GerarCapaComIA } from './AcoesRapidasDoShort';
 import { useLoteAtual } from './useLotePublicacao';
 import { PRONTOS_KEY, useShortsProntos } from './useShortsProntos';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
@@ -347,7 +348,7 @@ function CartaoDaCentral({
           falta={!pronto.capa.tem_capa}
           onClick={fecho.abrirCapa}
         />
-
+        <GerarCapaComIA shortId={pronto.id} aoConcluir={() => void cliente.invalidateQueries({ queryKey: PRONTOS_KEY })} />
         <Button variant="outline" size="sm" onClick={() => setKitAberto(true)}>
           <Icon name="clipboard-list" />
           Kit de publicação

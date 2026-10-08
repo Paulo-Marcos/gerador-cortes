@@ -53,6 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stays for asking another version. Redoing the prompt while the robot is
   still drawing is not lost: the newest prompt is drawn next. Nothing happens
   when the channel has no ChatGPT project set (D-899).
+- **Cover and hook in one click from the shorts list.** Each approved clip
+  card shows "Gerar capa com IA" (writes the short cover prompt; the robot
+  draws it and saves it as the cover, with its step shown under the button)
+  and, while the clip has no hook, "Gerar gancho" (the AI writes it with the
+  clip's or the channel's default look; the other suggestions stay in the
+  hook modal). The "Prontos" cards get the cover button too, and the short
+  cover modal now opens on "Arte desenhada" instead of the video frame
+  (D-900).
 
 ## [0.6.0] - 2026-10-07
 
