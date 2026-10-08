@@ -16,6 +16,7 @@
 // vai fazer.
 
 import type { CSSProperties } from 'react';
+import type { GanchoPadrao } from './shortsApi';
 
 /** Espelha `PALAVRAS_MIN` em `backend/app/domain/short/gancho_short.py`. */
 export const PALAVRAS_MIN = 4;
@@ -371,3 +372,13 @@ export function resumoDaAparenciaPadrao(
     .filter(Boolean)
     .join(' · ');
 }
+
+/**
+ * D-901: a aparência que o modal do gancho mostra como "do padrão" — a do
+ * preset do corte ou, herdada, a do padrão do canal. O backend já resolve qual
+ * vale (`descrever_gancho_padrao`); `nome` vazio quer dizer que nenhum vale.
+ * Antes o critério era o corte ter preset próprio, e o corte que herda o do
+ * canal abria o modal como se não houvesse padrão.
+ */
+export const aparenciaDoPadrao = (padrao?: GanchoPadrao | null) =>
+  padrao?.nome ? padrao.payload : null;

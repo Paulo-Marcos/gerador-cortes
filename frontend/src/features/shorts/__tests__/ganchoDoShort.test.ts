@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  aparenciaDoPadrao,
   contarPalavras,
   DURACAO_MAX_SEG,
   DURACAO_MIN_SEG,
@@ -310,5 +311,31 @@ describe('ganchoVisivelEm', () => {
 
   it('antes do início do trecho não há gancho', () => {
     expect(ganchoVisivelEm(-1, 2.5, 30)).toBe(false);
+  });
+});
+
+// D-901 (pr-audit do #158): o modal do gancho recebe a aparência que vale no
+// corte — a do preset dele ou a herdada do canal. O critério antigo (o corte ter
+// preset próprio) abria o modal sem padrão justamente no corte que segue o canal.
+describe('aparência do padrão que o modal do gancho mostra', () => {
+  const padrao = (gancho_padrao: string, nome: string) => ({
+    gancho_padrao,
+    nome,
+    payload: { cor: '#facc15' },
+    disponiveis: [],
+    customizados: 0,
+  });
+
+  it('corte que herda o do canal: a aparência do canal', () => {
+    expect(aparenciaDoPadrao(padrao('', 'Amarelo do canal'))).toEqual({ cor: '#facc15' });
+  });
+
+  it('corte com preset próprio: a aparência dele', () => {
+    expect(aparenciaDoPadrao(padrao('g2', 'Rosa'))).toEqual({ cor: '#facc15' });
+  });
+
+  it('nenhum padrão valendo, ou ainda carregando: nada', () => {
+    expect(aparenciaDoPadrao(padrao('', ''))).toBeNull();
+    expect(aparenciaDoPadrao(undefined)).toBeNull();
   });
 });
