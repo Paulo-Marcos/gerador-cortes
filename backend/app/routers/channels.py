@@ -17,7 +17,7 @@ from app.domain.canal import theme_library
 from app.domain.canal.identidade import Canal, IdCanalInvalido
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
-from app.services import navegador_do_robo
+from app.services import navegador_do_robo, studio_youtube
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -105,6 +105,30 @@ async def obter_navegador_do_robo():
 @router.put("/ativo/navegador-do-robo", response_model=NavegadorDoRobo)
 async def escolher_navegador_do_robo(body: NavegadorDoRobo):
     return NavegadorDoRobo(navegador=navegador_do_robo.escolher_navegador(body.navegador))
+
+
+# --------------------------------------------------------------------------- #
+# Robô do YouTube Studio, no canal ativo (D-895)
+# --------------------------------------------------------------------------- #
+
+
+class RoboDoStudio(BaseModel):
+    monetizar: bool
+    relacionar_short: bool
+
+
+@router.get("/ativo/robo-do-studio", response_model=RoboDoStudio)
+async def obter_robo_do_studio():
+    return RoboDoStudio(**studio_youtube.ler_configuracao())
+
+
+@router.put("/ativo/robo-do-studio", response_model=RoboDoStudio)
+async def gravar_robo_do_studio(body: RoboDoStudio):
+    return RoboDoStudio(
+        **studio_youtube.gravar_configuracao(
+            monetizar=body.monetizar, relacionar_short=body.relacionar_short
+        )
+    )
 
 
 class PaletaModel(BaseModel):

@@ -9,6 +9,7 @@ import { api, dados, type Schema } from '@/shared/api';
 export type AtualizarSettingsBody = Schema<'UpdateAppSettingsRequest'>;
 export type LayoutCapaTiktok = Schema<'LayoutCapaTiktokResponse'>;
 export type Navegador = Schema<'NavegadorDoRobo'>['navegador'];
+export type RoboDoStudio = Schema<'RoboDoStudio'>;
 
 export const settingsApi = {
   obterSettings: () => dados(api.GET('/api/settings')),
@@ -28,4 +29,9 @@ export const settingsApi = {
   obterNavegadorDoRobo: () => dados(api.GET('/api/channels/ativo/navegador-do-robo')),
   escolherNavegadorDoRobo: (navegador: Navegador) =>
     dados(api.PUT('/api/channels/ativo/navegador-do-robo', { body: { navegador } })),
+
+  /** D-895: o que o robô do YouTube Studio faz depois do upload, no canal ativo. */
+  obterRoboDoStudio: () => dados(api.GET('/api/channels/ativo/robo-do-studio')),
+  gravarRoboDoStudio: (body: RoboDoStudio) =>
+    dados(api.PUT('/api/channels/ativo/robo-do-studio', { body })),
 };

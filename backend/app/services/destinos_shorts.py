@@ -25,8 +25,9 @@ from pathlib import Path
 from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
 from app.domain.publicacao.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
+from app.domain.publicacao.studio_youtube import id_do_video
 from app.infrastructure import youtube_api
-from app.services import instagram_api
+from app.services import instagram_api, studio_youtube
 from app.services.publicacao_destinos import (
     Destino,
     PacotePublicacao,
@@ -83,6 +84,9 @@ class DestinoYouTubeShorts(Destino):
         logger.info("[Publicacao] short no YouTube: %s", url)
 
         aviso = await self._enviar_capa(creds, video_id, pacote.capa)
+        # D-895: monetização e vídeo relacionado não existem na API; o robô do
+        # Studio faz depois, se o canal pediu.
+        studio_youtube.agendar(video_id, relacionado=id_do_video(pacote.url_video_longo))
         return {
             "plataforma": self.plataforma.value,
             "video_id": video_id,
