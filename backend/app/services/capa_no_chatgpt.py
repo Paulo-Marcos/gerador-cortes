@@ -64,6 +64,14 @@ RESPIRO_ANTES_DE_BAIXAR = 2
 
 PLATAFORMA = "chatgpt"
 
+# Quem acompanha o robô (a fila, D-898) recebe o passo em que ele está.
+Anunciar = Callable[[str], None]
+
+
+def _calado(_etapa: str) -> None:
+    """O `Anunciar` de quem não acompanha."""
+
+
 # Uma geração por vez: duas abas disputando o mesmo perfil e a mesma cota do
 # plano não ganham nada, e o operador perderia de vista qual aba é de qual capa.
 _UMA_POR_VEZ = threading.Lock()
@@ -219,12 +227,14 @@ def executar_roteiro(
     fichas: list[Path],
     dormir: Callable[[float], None] = time.sleep,
     agora: Callable[[], float] = time.monotonic,
+    anunciar: Anunciar = _calado,
 ) -> bytes:
     """Chat novo no projeto → fichas → pedido → enviar → esperar → baixar.
 
     Cada falha diz ao operador o que fazer, porque é ele quem está olhando a
     janela: o texto chega inteiro à tela.
     """
+    anunciar("Abrindo o projeto no ChatGPT")
     pagina.abrir(projeto_url, segundos=PRAZO_PARA_ABRIR)
     if TRECHO_DA_TELA_DE_LOGIN in pagina.url_atual():
         raise ServicoExternoFalhou(
@@ -237,6 +247,7 @@ def executar_roteiro(
             "projeto abriu; se a tela do ChatGPT mudou, o robô precisa de ajuste."
         )
 
+    anunciar("Anexando as fichas e escrevendo o pedido")
     if fichas:
         pagina.enviar_arquivos("anexo_de_fotos", fichas, segundos=PRAZO_PARA_O_CAMPO)
     pagina.escrever("campo_do_prompt", pedido, segundos=PRAZO_PARA_O_CAMPO)
@@ -250,8 +261,10 @@ def executar_roteiro(
         ) from exc
     pagina.clicar("enviar", segundos=PRAZO_PARA_O_CAMPO)
 
+    anunciar("Esperando o ChatGPT desenhar")
     _esperar_a_imagem(pagina, dormir=dormir, agora=agora)
     dormir(RESPIRO_ANTES_DE_BAIXAR)
+    anunciar("Baixando a imagem")
     imagem = pagina.baixar_imagem("imagem_gerada")
     if not imagem:
         raise ServicoExternoFalhou(
@@ -297,7 +310,9 @@ def _esperar_a_imagem(
     )
 
 
-def _gerar_no_navegador(projeto_url: str, pedido: str, fichas: list[Path]) -> bytes:
+def _gerar_no_navegador(
+    projeto_url: str, pedido: str, fichas: list[Path], anunciar: Anunciar = _calado
+) -> bytes:
     """A parte síncrona: Playwright sync numa thread (o async quebra no uvicorn/Windows, D-369)."""
     perfil = navegador_assistido.perfil_do_canal(PLATAFORMA)
     with _UMA_POR_VEZ:
@@ -315,7 +330,7 @@ def _gerar_no_navegador(projeto_url: str, pedido: str, fichas: list[Path]) -> by
                 aba.bring_to_front()
                 pagina = PaginaDoPlaywrightNoChatGPT(aba, SELETORES, escapar_apos_escrever=False)
                 return executar_roteiro(
-                    pagina, projeto_url=projeto_url, pedido=pedido, fichas=fichas
+                    pagina, projeto_url=projeto_url, pedido=pedido, fichas=fichas, anunciar=anunciar
                 )
         except (
             navegador_assistido.NavegadorIndisponivel,
@@ -380,7 +395,10 @@ async def elenco_do_prompt(prompt: str) -> list[dict]:
 
 
 async def gerar_imagem(
-    prompt: str, proporcao: str, pessoas: list[str] | None = None
+    prompt: str,
+    proporcao: str,
+    pessoas: list[str] | None = None,
+    anunciar: Anunciar = _calado,
 ) -> tuple[bytes, str]:
     """A imagem gerada no ChatGPT e o tipo dela (`image/png`, ...).
 
@@ -404,7 +422,7 @@ async def gerar_imagem(
         len(anexos),
         len(fotos),
     )
-    imagem = await asyncio.to_thread(_gerar_no_navegador, projeto_url, pedido, anexos)
+    imagem = await asyncio.to_thread(_gerar_no_navegador, projeto_url, pedido, anexos, anunciar)
     tipo = tipo_da_imagem(imagem)
     if not tipo:
         raise ServicoExternoFalhou("O ChatGPT devolveu um arquivo que não é imagem.")

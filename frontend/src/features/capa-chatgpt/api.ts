@@ -5,7 +5,16 @@ import { mensagemErro } from '@/lib/mensagemErro';
 // D-804: a capa gerada no ChatGPT do operador, pelo navegador dele.
 
 export type ConfiguracaoCapaChatgpt = Schema<'ConfiguracaoCapaChatgptResponse'>;
-export type ProporcaoDaCapa = Schema<'GerarCapaChatgptRequest'>['proporcao'];
+/** D-898: a capa que recebe a imagem — o corte (youtube, tiktok) ou o short. */
+export type DestinoDaCapa = Schema<'PedirCapaChatgptRequest'>['destino'];
+export type PedidoCapaChatgpt = Schema<'PedidoCapaChatgpt'>;
+
+/** O quadro de cada capa — o backend decide; aqui só para dizer ao operador. */
+export const PROPORCAO_DO_DESTINO: Record<DestinoDaCapa, string> = {
+  youtube: '16:9',
+  tiktok: '4:5',
+  short: '9:16',
+};
 /** D-840: uma pessoa real da capa e a foto dela no banco de retratos (`slug`). */
 export type PessoaDaCapa = Schema<'PessoaDaCapa'>;
 
@@ -30,19 +39,26 @@ export const capaChatgptApi = {
     dados(api.DELETE('/api/capa-chatgpt/fichas/{nome}', { params: { path: { nome } } })),
 
   /**
-   * A imagem gerada, já como `File` — pronta para o upload que o Ctrl+V usa.
-   * `pessoas` é o elenco conferido na tela; sem ele, o backend o lê do prompt.
+   * D-898: põe a capa na fila do robô e devolve a ficha na hora. Quem salva a
+   * imagem é o backend; `pessoas` é o elenco conferido na tela (sem ele, o
+   * backend o lê do prompt).
    */
-  gerar: async (prompt: string, proporcao: ProporcaoDaCapa, pessoas?: string[]): Promise<File> => {
-    const blob = await dados(
-      api.POST('/api/capa-chatgpt/gerar', {
-        body: { prompt, proporcao, pessoas },
-        parseAs: 'blob',
+  pedir: (destino: DestinoDaCapa, alvoId: string, prompt: string, pessoas?: string[]) =>
+    dados(
+      api.POST('/api/capa-chatgpt/pedidos', {
+        body: { destino, alvo_id: alvoId, prompt, pessoas },
       }),
-    );
-    const extensao = blob.type.split('/')[1] || 'png';
-    return new File([blob], `chatgpt.${extensao}`, { type: blob.type || 'image/png' });
-  },
+    ),
+
+  /** O último pedido desta capa: em que passo está, ou por que parou. */
+  pedido: async (destino: DestinoDaCapa, alvoId: string) =>
+    (
+      await dados(
+        api.GET('/api/capa-chatgpt/pedidos/{destino}/{alvo_id}', {
+          params: { path: { destino, alvo_id: alvoId } },
+        }),
+      )
+    ).pedido,
 };
 
 /** As pessoas reais que o prompt desenha, cada uma com a foto que irá junto. */

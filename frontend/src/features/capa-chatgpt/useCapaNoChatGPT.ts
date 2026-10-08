@@ -1,4 +1,5 @@
 // D-804: camada de I/O (react-query) da capa gerada no ChatGPT.
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   capaChatgptApi,
@@ -6,7 +7,8 @@ import {
   fotoDaPessoa,
   subirFotoDaPessoa,
   type ConfiguracaoCapaChatgpt,
-  type ProporcaoDaCapa,
+  type DestinoDaCapa,
+  type PedidoCapaChatgpt,
 } from './api';
 
 const CONFIGURACAO_KEY = ['capa-chatgpt', 'configuracao'] as const;
@@ -33,18 +35,55 @@ export const useGravarProjetoChatgpt = () => useAlterarConfiguracao(capaChatgptA
 export const useSubirFichaChatgpt = () => useAlterarConfiguracao(capaChatgptApi.subirFicha);
 export const useRemoverFichaChatgpt = () => useAlterarConfiguracao(capaChatgptApi.removerFicha);
 
+const pedidoKey = (destino: DestinoDaCapa, alvoId: string) =>
+  ['capa-chatgpt', 'pedido', destino, alvoId] as const;
+
+// O robô leva cerca de um minuto; dois segundos mostram cada passo sem martelar.
+const INTERVALO_DO_PEDIDO_MS = 2000;
+
+export const pedidoEmVoo = (pedido?: PedidoCapaChatgpt | null) =>
+  pedido?.estado === 'aguardando' || pedido?.estado === 'rodando';
+
 /**
- * Gera no ChatGPT e entrega a imagem a `entregar` — o mesmo upload que o
- * Ctrl+V daquela capa usa. O robô não salva nada: quem sabe o que fazer com a
- * imagem é a capa que pediu.
+ * O pedido terminou bem ENTRE duas leituras desta tela. Um pedido que já chegou
+ * pronto não conta: a capa dele já está na tela.
  */
-export function useGerarNoChatGPT(
-  proporcao: ProporcaoDaCapa,
-  entregar: (arquivo: File) => Promise<unknown>,
-) {
+export const terminouAgora = (
+  antes: PedidoCapaChatgpt | null | undefined,
+  atual: PedidoCapaChatgpt | null | undefined,
+) => atual?.estado === 'concluido' && pedidoEmVoo(antes) && antes?.id === atual.id;
+
+/**
+ * D-898: o pedido desta capa na fila do robô, relido enquanto anda. O estado
+ * mora no backend: fechar o modal não perde o passo nem o motivo de uma parada.
+ *
+ * `aoConcluir` roda quando ESTA tela vê o pedido terminar bem (`terminouAgora`)
+ * — é a deixa para reler a capa, que o backend acabou de salvar.
+ */
+export function usePedidoDaCapa(destino: DestinoDaCapa, alvoId: string, aoConcluir?: () => void) {
+  const pedido = useQuery({
+    queryKey: pedidoKey(destino, alvoId),
+    queryFn: () => capaChatgptApi.pedido(destino, alvoId),
+    enabled: Boolean(alvoId),
+    refetchInterval: (query) => (pedidoEmVoo(query.state.data) ? INTERVALO_DO_PEDIDO_MS : false),
+  });
+  const visto = useRef<PedidoCapaChatgpt | null | undefined>(undefined);
+  const atual = pedido.data;
+  useEffect(() => {
+    const antes = visto.current;
+    visto.current = atual;
+    if (terminouAgora(antes, atual)) aoConcluir?.();
+  }, [atual, aoConcluir]);
+  return pedido;
+}
+
+/** Põe a capa na fila; a resposta já é o pedido, e a leitura passa a acompanhá-lo. */
+export function usePedirNoChatGPT(destino: DestinoDaCapa, alvoId: string) {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ prompt, pessoas }: { prompt: string; pessoas?: string[] }) =>
-      entregar(await capaChatgptApi.gerar(prompt, proporcao, pessoas)),
+    mutationFn: ({ prompt, pessoas }: { prompt: string; pessoas?: string[] }) =>
+      capaChatgptApi.pedir(destino, alvoId, prompt, pessoas),
+    onSuccess: (pedido) => qc.setQueryData(pedidoKey(destino, alvoId), pedido),
   });
 }
 

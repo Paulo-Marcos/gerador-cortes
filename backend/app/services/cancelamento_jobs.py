@@ -24,6 +24,7 @@ import logging
 from app.core.trabalhos_em_voo import RegistroDeTrabalhos
 from app.infrastructure import processos_em_voo
 from app.infrastructure.worker_queue import cancelar_owner
+from app.services import pedidos_capa_chatgpt
 
 logger = logging.getLogger(__name__)
 
@@ -89,9 +90,24 @@ def cancelar_job(job_id: str) -> dict:
 
     if tipo == "pos":
         return _cancelar_item_da_pos(referencia)
+    if tipo == "chatgpt":
+        return _cancelar_capa_no_chatgpt(job_id, referencia)
 
     avisados = TrabalhoEmVoo.cancelar(job_id)
     return {"job_id": job_id, "cancelado": True, "jobs_worker_avisados": avisados}
+
+
+def _cancelar_capa_no_chatgpt(job_id: str, pedido_id: str) -> dict:
+    """D-898: o pedido de capa sai da fila enquanto espera; rodando, não para."""
+    estado = pedidos_capa_chatgpt.cancelar(pedido_id)
+    if estado == "aguardando":
+        return {"job_id": job_id, "cancelado": True, "jobs_worker_avisados": 0}
+    if estado == "rodando":
+        raise CancelamentoNaoSuportado(
+            "O robô já está desenhando no ChatGPT e não para no meio. "
+            "Para interromper, feche a aba do robô."
+        )
+    raise JobNaoEstaEmVoo(f"O pedido {pedido_id} já terminou.")
 
 
 def _cancelar_item_da_pos(corte_id: str) -> dict:

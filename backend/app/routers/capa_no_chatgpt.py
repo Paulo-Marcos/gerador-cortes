@@ -1,7 +1,8 @@
-"""Capa gerada no ChatGPT do operador (D-804): configuração do canal e geração.
+"""Capa gerada no ChatGPT do operador (D-804): configuração do canal e pedidos.
 
-A geração devolve a IMAGEM, não um caminho: quem pediu a entrega ao mesmo
-upload que o Ctrl+V usa em cada capa (ver `services/capa_no_chatgpt`).
+Desde a D-898 o pedido entra numa fila do backend e responde na hora; o robô
+salva a imagem na capa e a Fila global mostra o andamento
+(ver `services/pedidos_capa_chatgpt`).
 """
 
 from __future__ import annotations
@@ -9,9 +10,9 @@ from __future__ import annotations
 from typing import Literal
 
 from app.routers.resposta_api import RespostaApi
-from app.services import capa_no_chatgpt
+from app.services import capa_no_chatgpt, pedidos_capa_chatgpt
 from fastapi import APIRouter, File, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -27,11 +28,32 @@ class ProjetoChatgptRequest(BaseModel):
     projeto_url: str
 
 
-class GerarCapaChatgptRequest(BaseModel):
+DestinoDaCapa = Literal["youtube", "tiktok", "short"]
+
+
+class PedirCapaChatgptRequest(BaseModel):
+    destino: DestinoDaCapa
+    # O corte (youtube, tiktok) ou o short (short) que recebe a imagem.
+    alvo_id: str
     prompt: str
-    proporcao: Literal["16:9", "4:5", "9:16"]
     # D-840: o elenco conferido na tela; ausente, o backend o lê do prompt.
     pessoas: list[str] | None = None
+
+
+class PedidoCapaChatgpt(RespostaApi):
+    id: str
+    destino: DestinoDaCapa
+    alvo_id: str
+    corte_id: str
+    estado: Literal["aguardando", "rodando", "concluido", "erro", "cancelado"]
+    # O passo em que o robô está, ou o último em que esteve.
+    etapa: str
+    erro: str
+
+
+class PedidoDaCapaResponse(RespostaApi):
+    # None: esta capa não foi pedida desde que o backend subiu.
+    pedido: PedidoCapaChatgpt | None
 
 
 class ElencoDaCapaRequest(BaseModel):
@@ -83,10 +105,17 @@ async def elenco_da_capa(pedido: ElencoDaCapaRequest):
     return {"pessoas": await capa_no_chatgpt.elenco_do_prompt(pedido.prompt)}
 
 
-@router.post("/gerar", response_class=Response)
-async def gerar_capa(pedido: GerarCapaChatgptRequest):
-    """Gera a imagem no ChatGPT e a devolve (PNG, JPEG ou WEBP). Leva cerca de um minuto."""
-    imagem, tipo = await capa_no_chatgpt.gerar_imagem(
-        pedido.prompt, pedido.proporcao, pedido.pessoas
+@router.post("/pedidos", response_model=PedidoCapaChatgpt, status_code=202)
+async def pedir_capa(pedido: PedirCapaChatgptRequest):
+    """Põe a capa na fila do robô e responde na hora; a mesma capa em voo não duplica."""
+    enfileirado = await pedidos_capa_chatgpt.enfileirar(
+        pedido.destino, pedido.alvo_id, pedido.prompt, pedido.pessoas
     )
-    return Response(content=imagem, media_type=tipo)
+    return enfileirado.to_dict()
+
+
+@router.get("/pedidos/{destino}/{alvo_id}", response_model=PedidoDaCapaResponse)
+async def pedido_da_capa(destino: DestinoDaCapa, alvo_id: str):
+    """O último pedido desta capa: em que passo está, ou por que parou."""
+    pedido = pedidos_capa_chatgpt.pedido_da_capa(destino, alvo_id)
+    return {"pedido": pedido.to_dict() if pedido else None}

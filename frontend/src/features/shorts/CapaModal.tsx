@@ -437,7 +437,7 @@ function ArteDaCapa({
         )}
       </section>
 
-      <PassoDesenharCapa prompt={texto} entregar={subir.mutateAsync} ocupado={subir.isPending} />
+      <PassoDesenharCapa shortId={short.id} prompt={texto} ocupado={subir.isPending} />
 
       {/* Passo 3 — a volta. */}
       <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">

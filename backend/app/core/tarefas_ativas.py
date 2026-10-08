@@ -45,6 +45,11 @@ TIPOS: dict[str, tuple[str, str]] = {
     "thumbnail": (FAMILIA_IA, "capa"),
     "ranking": (FAMILIA_IA, "ranking"),
     "ia": (FAMILIA_IA, "IA"),
+    # D-898: a imagem da capa feita pelo robô no ChatGPT, uma por capa — o
+    # rótulo é o que deixa ver na Fila se já saiu a do YouTube e a do TikTok.
+    "chatgpt_youtube": (FAMILIA_IA, "capa YouTube no ChatGPT"),
+    "chatgpt_tiktok": (FAMILIA_IA, "arte TikTok no ChatGPT"),
+    "chatgpt_short": (FAMILIA_IA, "capa do short no ChatGPT"),
 }
 
 TIPO_DESCONHECIDO = ("ia", "Consultando IA")

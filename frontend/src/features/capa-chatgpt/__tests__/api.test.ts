@@ -1,9 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// D-804: cada função bate na rota certa, e a imagem gerada volta como `File` —
-// o formato que o upload do Ctrl+V de cada capa já aceita.
+// D-804: cada função bate na rota certa. D-898: o pedido entra na fila do
+// backend, e a ficha do pedido volta na hora.
 
-const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+const PEDIDO = {
+  id: 'p1',
+  destino: 'tiktok',
+  alvo_id: 'c1',
+  corte_id: 'c1',
+  estado: 'aguardando',
+  etapa: 'Na fila do ChatGPT',
+  erro: '',
+};
 let chamadas: Request[] = [];
 
 beforeEach(() => {
@@ -14,8 +22,11 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (pedido: Request) => {
       chamadas.push(pedido);
-      if (pedido.url.endsWith('/gerar')) {
-        return new Response(PNG, { status: 200, headers: { 'Content-Type': 'image/png' } });
+      if (pedido.url.includes('/pedidos/')) {
+        return Response.json({ pedido: PEDIDO });
+      }
+      if (pedido.url.endsWith('/pedidos')) {
+        return Response.json(PEDIDO, { status: 202 });
       }
       return new Response('{"projeto_url":"","fichas":[],"maximo_de_fichas":10}', { status: 200 });
     }),
@@ -40,15 +51,25 @@ describe('capaChatgptApi', () => {
     expect(new URL(chamadas[0].url).pathname).toBe(caminho);
   });
 
-  it('gerar manda prompt e proporção e devolve a imagem como File', async () => {
+  it('pedir manda a capa, o alvo, o prompt e o elenco, e devolve a ficha', async () => {
     const { capaChatgptApi } = await modulo();
 
-    const arquivo = await capaChatgptApi.gerar('o sapo aponta', '4:5');
+    const pedido = await capaChatgptApi.pedir('tiktok', 'c1', 'o sapo aponta', ['Neymar']);
 
-    expect(await chamadas[0].clone().json()).toEqual({ prompt: 'o sapo aponta', proporcao: '4:5' });
-    expect(arquivo).toBeInstanceOf(File);
-    expect(arquivo.type).toBe('image/png');
-    expect(arquivo.name).toBe('chatgpt.png');
-    expect(new Uint8Array(await arquivo.arrayBuffer())).toEqual(PNG);
+    expect(chamadas[0].method).toBe('POST');
+    expect(await chamadas[0].clone().json()).toEqual({
+      destino: 'tiktok',
+      alvo_id: 'c1',
+      prompt: 'o sapo aponta',
+      pessoas: ['Neymar'],
+    });
+    expect(pedido).toEqual(PEDIDO);
+  });
+
+  it('pedido lê o último pedido da capa', async () => {
+    const { capaChatgptApi } = await modulo();
+
+    expect(await capaChatgptApi.pedido('short', 's 1')).toEqual(PEDIDO);
+    expect(new URL(chamadas[0].url).pathname).toBe('/api/capa-chatgpt/pedidos/short/s%201');
   });
 });

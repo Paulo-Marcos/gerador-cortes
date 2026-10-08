@@ -200,11 +200,12 @@ export function useMetadataCard({
       }),
   });
 
+  // Capa nova no disco (Ctrl+V, moldura, robô do ChatGPT): fura o cache da imagem.
+  const capaChegou = () => { invalidate(); setVersaoDaCapa((atual) => atual + 1); };
   const uploadThumbnail = useMutation({
     mutationFn: (file: File) => metadadosApi.uploadThumbnail(cut.id, file),
     onSuccess: () => {
-      invalidate();
-      setVersaoDaCapa((atual) => atual + 1);
+      capaChegou();
       notify('Thumbnail enviada.', { tone: 'success' });
     },
     onError: (error) =>
@@ -219,8 +220,7 @@ export function useMetadataCard({
   const applyFrame = useMutation({
     mutationFn: () => metadadosApi.aplicarMolduraThumbnail(cut.id),
     onSuccess: (res) => {
-      invalidate();
-      setVersaoDaCapa((atual) => atual + 1);
+      capaChegou();
       notify(res.message || 'Moldura aplicada.', { tone: 'success' });
     },
     onError: (error) =>
@@ -232,8 +232,7 @@ export function useMetadataCard({
   const compressThumbnail = useMutation({
     mutationFn: () => metadadosApi.comprimirThumbnail(cut.id),
     onSuccess: (res) => {
-      invalidate();
-      setVersaoDaCapa((atual) => atual + 1);
+      capaChegou();
       notify(res.message || 'Thumbnail comprimida.', { tone: 'success' });
     },
     onError: (error) =>
@@ -331,5 +330,5 @@ export function useMetadataCard({
     }
   };
 
-  return { applyFrame, capaAmpliada, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
+  return { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
 }

@@ -313,6 +313,15 @@ def _jobs_youtube() -> list[JobGlobal]:
     return jobs
 
 
+# ── Capa no ChatGPT (D-898): sem "quanto falta", o progresso é o passo. ──────
+
+
+def _jobs_capa_chatgpt() -> list[JobGlobal]:
+    from app.services import pedidos_capa_chatgpt
+
+    return [JobGlobal(**pedido.para_a_fila()) for pedido in pedidos_capa_chatgpt.listar()]
+
+
 # ── IA e demais tarefas pesadas ─────────────────────────────────────────────
 # `TarefasAtivas` cobre o que não tem store próprio: as consultas de IA (que
 # rodam síncronas no request) e as background tasks mapeadas (ingestão, render
@@ -356,6 +365,7 @@ class JobsGlobais:
             + _jobs_render()
             + _jobs_shorts()
             + _jobs_youtube()
+            + _jobs_capa_chatgpt()
             + _jobs_tarefas()
         )
         publicaveis = [job for job in candidatos if cls._publicavel(job, instante)]

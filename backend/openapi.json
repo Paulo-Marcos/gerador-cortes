@@ -4171,43 +4171,6 @@
         "title": "GerarBrutoRequest",
         "type": "object"
       },
-      "GerarCapaChatgptRequest": {
-        "properties": {
-          "pessoas": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pessoas"
-          },
-          "prompt": {
-            "title": "Prompt",
-            "type": "string"
-          },
-          "proporcao": {
-            "enum": [
-              "16:9",
-              "4:5",
-              "9:16"
-            ],
-            "title": "Proporcao",
-            "type": "string"
-          }
-        },
-        "required": [
-          "prompt",
-          "proporcao"
-        ],
-        "title": "GerarCapaChatgptRequest",
-        "type": "object"
-      },
       "GerarCapaRequest": {
         "description": "Onde tirar o quadro. Ausente usa o padrao — o meio do gancho, ou o terco.",
         "properties": {
@@ -6706,6 +6669,122 @@
           "dir_path"
         ],
         "title": "PastaAbertaResponse",
+        "type": "object"
+      },
+      "PedidoCapaChatgpt": {
+        "properties": {
+          "alvo_id": {
+            "title": "Alvo Id",
+            "type": "string"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "destino": {
+            "enum": [
+              "youtube",
+              "tiktok",
+              "short"
+            ],
+            "title": "Destino",
+            "type": "string"
+          },
+          "erro": {
+            "title": "Erro",
+            "type": "string"
+          },
+          "estado": {
+            "enum": [
+              "aguardando",
+              "rodando",
+              "concluido",
+              "erro",
+              "cancelado"
+            ],
+            "title": "Estado",
+            "type": "string"
+          },
+          "etapa": {
+            "title": "Etapa",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "destino",
+          "alvo_id",
+          "corte_id",
+          "estado",
+          "etapa",
+          "erro"
+        ],
+        "title": "PedidoCapaChatgpt",
+        "type": "object"
+      },
+      "PedidoDaCapaResponse": {
+        "properties": {
+          "pedido": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PedidoCapaChatgpt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "pedido"
+        ],
+        "title": "PedidoDaCapaResponse",
+        "type": "object"
+      },
+      "PedirCapaChatgptRequest": {
+        "properties": {
+          "alvo_id": {
+            "title": "Alvo Id",
+            "type": "string"
+          },
+          "destino": {
+            "enum": [
+              "youtube",
+              "tiktok",
+              "short"
+            ],
+            "title": "Destino",
+            "type": "string"
+          },
+          "pessoas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pessoas"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destino",
+          "alvo_id",
+          "prompt"
+        ],
+        "title": "PedirCapaChatgptRequest",
         "type": "object"
       },
       "PessoaDaCapa": {
@@ -11806,22 +11885,29 @@
         ]
       }
     },
-    "/api/capa-chatgpt/gerar": {
+    "/api/capa-chatgpt/pedidos": {
       "post": {
-        "description": "Gera a imagem no ChatGPT e a devolve (PNG, JPEG ou WEBP). Leva cerca de um minuto.",
-        "operationId": "gerar_capa_api_capa_chatgpt_gerar_post",
+        "description": "Põe a capa na fila do robô e responde na hora; a mesma capa em voo não duplica.",
+        "operationId": "pedir_capa_api_capa_chatgpt_pedidos_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GerarCapaChatgptRequest"
+                "$ref": "#/components/schemas/PedirCapaChatgptRequest"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "200": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoCapaChatgpt"
+                }
+              }
+            },
             "description": "Successful Response"
           },
           "422": {
@@ -11835,7 +11921,64 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Gerar Capa",
+        "summary": "Pedir Capa",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/pedidos/{destino}/{alvo_id}": {
+      "get": {
+        "description": "O último pedido desta capa: em que passo está, ou por que parou.",
+        "operationId": "pedido_da_capa_api_capa_chatgpt_pedidos__destino___alvo_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "destino",
+            "required": true,
+            "schema": {
+              "enum": [
+                "youtube",
+                "tiktok",
+                "short"
+              ],
+              "title": "Destino",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "alvo_id",
+            "required": true,
+            "schema": {
+              "title": "Alvo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoDaCapaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pedido Da Capa",
         "tags": [
           "Capa no ChatGPT"
         ]

@@ -65,8 +65,9 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
       <Passo titulo="2 · Imagem">
         <GerarNoChatGPT
           prompt={meta?.prompt_thumbnail}
-          proporcao="16:9"
-          entregar={card.uploadThumbnail.mutateAsync}
+          destino="youtube"
+          alvoId={cut.id}
+          aoConcluir={card.capaChegou}
         />
         <div className="grid grid-cols-2 gap-2">
           <Button
