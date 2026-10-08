@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them all. A short is linked to the cut it came from, only when that cut is
   already on YouTube. Log in to the channel in the robot's window the first
   time (D-895).
+- **A default hook look for the whole channel.** Next to the "gancho" selector
+  of a Fire, the star button makes the chosen preset the channel default
+  ("padrão do canal"). Every clip that does not pick its own hook preset now
+  follows it — the empty option reads "padrão do canal (Name)" — and changing
+  it changes every clip that follows, since nothing is copied. A clip can still
+  pick another preset; deleting the default preset clears it (D-901).
 
 ### Changed
 - **Batch publishing is followed in the queue drawer, not in a modal.** When

@@ -450,7 +450,7 @@ export default function FireDetalhePage() {
           video={video}
           palavras={transcricao.data?.palavras ?? []}
           ocupado={edicao.ocupado}
-          padrao={ganchoPadrao.data?.gancho_padrao ? ganchoPadrao.data.payload : null}
+          padrao={ganchoPadrao.data?.nome ? ganchoPadrao.data.payload : null}
           onGravar={({ texto, ateSeg, cor, realce, x, y, largura }) => {
             edicao.gravar(emQuadro.id, {
               gancho_tela: texto,

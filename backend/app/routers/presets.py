@@ -41,6 +41,7 @@ from app.domain.corte.youtube_layout import (
 from app.domain.short import gancho_short, legenda_short
 from app.models import LayoutPreset
 from app.routers.resposta_api import RespostaApi
+from app.services import gancho_padrao_do_canal
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -270,4 +271,28 @@ async def deletar_preset(
     if preset is None:
         raise HTTPException(status_code=404, detail="Preset nao encontrado")
     await db.delete(preset)
+    # D-901: o padrão do canal não pode apontar para um preset que não existe.
+    if preset_id == gancho_padrao_do_canal.ler():
+        await gancho_padrao_do_canal.escolher("")
     return Response(status_code=204)
+
+
+class GanchoPadraoDoCanalResponse(RespostaApi):
+    # "" = o canal não tem padrão: cada corte escolhe o seu.
+    preset_id: str
+
+
+class GanchoPadraoDoCanalRequest(BaseModel):
+    preset_id: str = ""
+
+
+@router.get("/gancho/padrao-do-canal", response_model=GanchoPadraoDoCanalResponse)
+async def ler_gancho_padrao_do_canal():
+    """D-901: o preset de gancho com que todo corte do canal nasce."""
+    return {"preset_id": gancho_padrao_do_canal.ler()}
+
+
+@router.put("/gancho/padrao-do-canal", response_model=GanchoPadraoDoCanalResponse)
+async def escolher_gancho_padrao_do_canal(body: GanchoPadraoDoCanalRequest):
+    """D-901: aponta o padrão do canal; "" tira. O corte que escolheu o seu não muda."""
+    return await gancho_padrao_do_canal.escolher(body.preset_id)

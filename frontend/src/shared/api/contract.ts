@@ -2371,6 +2371,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/presets/gancho/padrao-do-canal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ler Gancho Padrao Do Canal
+         * @description D-901: o preset de gancho com que todo corte do canal nasce.
+         */
+        get: operations["ler_gancho_padrao_do_canal_api_presets_gancho_padrao_do_canal_get"];
+        /**
+         * Escolher Gancho Padrao Do Canal
+         * @description D-901: aponta o padrão do canal; "" tira. O corte que escolheu o seu não muda.
+         */
+        put: operations["escolher_gancho_padrao_do_canal_api_presets_gancho_padrao_do_canal_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/presets/layout": {
         parameters: {
             query?: never;
@@ -6164,6 +6188,19 @@ export interface components {
         FundosResponse: {
             /** Fundos */
             fundos: components["schemas"]["FundoDoCanal"][];
+        };
+        /** GanchoPadraoDoCanalRequest */
+        GanchoPadraoDoCanalRequest: {
+            /**
+             * Preset Id
+             * @default
+             */
+            preset_id: string;
+        };
+        /** GanchoPadraoDoCanalResponse */
+        GanchoPadraoDoCanalResponse: {
+            /** Preset Id */
+            preset_id: string;
         };
         /** GanchoPadraoRequest */
         GanchoPadraoRequest: {
@@ -13045,6 +13082,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CorteResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ler_gancho_padrao_do_canal_api_presets_gancho_padrao_do_canal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GanchoPadraoDoCanalResponse"];
+                };
+            };
+        };
+    };
+    escolher_gancho_padrao_do_canal_api_presets_gancho_padrao_do_canal_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GanchoPadraoDoCanalRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GanchoPadraoDoCanalResponse"];
                 };
             };
             /** @description Validation Error */

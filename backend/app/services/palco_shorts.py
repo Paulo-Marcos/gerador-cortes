@@ -43,6 +43,7 @@ from app.domain.short.moldura_short import COR_PADRAO, faixas
 from app.domain.short.palco_short import CANVAS, montar_plano, regioes_do_layout
 from app.infrastructure.channel_assets_sync import cor_do_tema, paleta_do_tema
 from app.models import Corte, LayoutPreset, Short
+from app.services.gancho_padrao_do_canal import TIPO_GANCHO, gancho_efetivo
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -61,7 +62,6 @@ ORIGEM_RECORTE_DO_SHORT = "recorte_do_short"
 ORIGEM_PALCO_PADRAO = "palco_padrao_do_corte"
 
 TIPO_PALCO = "palco_short"
-TIPO_GANCHO = "gancho_short"
 
 
 def catalogo_arranjos(regioes: dict | None = None) -> list[dict]:
@@ -512,7 +512,7 @@ def _tem_aparencia_propria(short: Short) -> bool:
 
 
 async def descrever_gancho_padrao(corte_id: str) -> dict:
-    """Qual gancho o corte usa, os que existem, e quantos trechos fogem dele.
+    """O gancho que vale no corte (o dele ou, D-901, o do canal), os presets e quem foge.
 
     `customizados` existe porque, antes da D-594, gravar o gancho carimbava o
     veu e os 2,5s no trecho — e um trecho carimbado nao segue padrao nenhum. A
@@ -528,7 +528,7 @@ async def descrever_gancho_padrao(corte_id: str) -> dict:
         shorts = (await db.scalars(select(Short).where(Short.corte_id == corte_id))).all()
         escolhido = corte.gancho_padrao
 
-    preset = next((p for p in presets if p.id == escolhido), None)
+    preset = next((p for p in presets if p.id == gancho_efetivo(escolhido)), None)
     return {
         "gancho_padrao": escolhido,
         "nome": preset.nome if preset else "",
@@ -629,7 +629,7 @@ async def resolver_para_render(
                 "y": short.gancho_y,
                 "largura": short.gancho_largura,
             },
-            _payload_do_preset(presets, corte.gancho_padrao, TIPO_GANCHO),
+            _payload_do_preset(presets, gancho_efetivo(corte.gancho_padrao), TIPO_GANCHO),
         )
         # D-499: o recorte DESTE short vence o do preset, região a região. O
         # preset segue sendo o atalho que preenche tudo — quem não quer mexer
