@@ -225,7 +225,7 @@ export function CapaTikTokSlot({
           <GerarArteNoChatGPT
             corteId={corteId}
             prompt={promptArte}
-            entregar={subirArte.mutateAsync}
+            aoConcluir={aoTerminar}
             desabilitado={ocupado}
           />
 
@@ -371,7 +371,7 @@ function SubirCapaPronta({
 function GerarArteNoChatGPT({
   corteId,
   ...props
-}: { corteId: string } & Omit<ComponentProps<typeof GerarNoChatGPT>, 'proporcao'>) {
+}: { corteId: string } & Omit<ComponentProps<typeof GerarNoChatGPT>, 'destino' | 'alvoId'>) {
   const metadado = useQuery({
     queryKey: metadataKey(corteId),
     queryFn: () => metadadosApi.obterMetadado(corteId),
@@ -379,7 +379,8 @@ function GerarArteNoChatGPT({
   return (
     <GerarNoChatGPT
       {...props}
-      proporcao="4:5"
+      destino="tiktok"
+      alvoId={corteId}
       promptDoElenco={metadado.data?.prompt_thumbnail ?? ''}
     />
   );

@@ -263,7 +263,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/capa-chatgpt/gerar": {
+    "/api/capa-chatgpt/pedidos": {
         parameters: {
             query?: never;
             header?: never;
@@ -273,10 +273,30 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Gerar Capa
-         * @description Gera a imagem no ChatGPT e a devolve (PNG, JPEG ou WEBP). Leva cerca de um minuto.
+         * Pedir Capa
+         * @description Põe a capa na fila do robô e responde na hora; a mesma capa em voo não duplica.
          */
-        post: operations["gerar_capa_api_capa_chatgpt_gerar_post"];
+        post: operations["pedir_capa_api_capa_chatgpt_pedidos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-chatgpt/pedidos/{destino}/{alvo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pedido Da Capa
+         * @description O último pedido desta capa: em que passo está, ou por que parou.
+         */
+        get: operations["pedido_da_capa_api_capa_chatgpt_pedidos__destino___alvo_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6198,18 +6218,6 @@ export interface components {
              */
             refazer_transcricao: boolean;
         };
-        /** GerarCapaChatgptRequest */
-        GerarCapaChatgptRequest: {
-            /** Pessoas */
-            pessoas?: string[] | null;
-            /** Prompt */
-            prompt: string;
-            /**
-             * Proporcao
-             * @enum {string}
-             */
-            proporcao: "16:9" | "4:5" | "9:16";
-        };
         /**
          * GerarCapaRequest
          * @description Onde tirar o quadro. Ausente usa o padrao — o meio do gancho, ou o terco.
@@ -7211,6 +7219,47 @@ export interface components {
             dir_path: string;
             /** Status */
             status: string;
+        };
+        /** PedidoCapaChatgpt */
+        PedidoCapaChatgpt: {
+            /** Alvo Id */
+            alvo_id: string;
+            /** Corte Id */
+            corte_id: string;
+            /**
+             * Destino
+             * @enum {string}
+             */
+            destino: "youtube" | "tiktok" | "short";
+            /** Erro */
+            erro: string;
+            /**
+             * Estado
+             * @enum {string}
+             */
+            estado: "aguardando" | "rodando" | "concluido" | "erro";
+            /** Etapa */
+            etapa: string;
+            /** Id */
+            id: string;
+        };
+        /** PedidoDaCapaResponse */
+        PedidoDaCapaResponse: {
+            pedido: components["schemas"]["PedidoCapaChatgpt"] | null;
+        };
+        /** PedirCapaChatgptRequest */
+        PedirCapaChatgptRequest: {
+            /** Alvo Id */
+            alvo_id: string;
+            /**
+             * Destino
+             * @enum {string}
+             */
+            destino: "youtube" | "tiktok" | "short";
+            /** Pessoas */
+            pessoas?: string[] | null;
+            /** Prompt */
+            prompt: string;
         };
         /** PessoaDaCapa */
         PessoaDaCapa: {
@@ -9452,7 +9501,7 @@ export interface operations {
             };
         };
     };
-    gerar_capa_api_capa_chatgpt_gerar_post: {
+    pedir_capa_api_capa_chatgpt_pedidos_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -9461,16 +9510,50 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GerarCapaChatgptRequest"];
+                "application/json": components["schemas"]["PedirCapaChatgptRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PedidoCapaChatgpt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pedido_da_capa_api_capa_chatgpt_pedidos__destino___alvo_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                destino: "youtube" | "tiktok" | "short";
+                alvo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PedidoDaCapaResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

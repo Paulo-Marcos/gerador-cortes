@@ -9,8 +9,8 @@ import { Icon } from '@/upgrade/Icon';
 // cabeçalho junto com o raro. Frequência de uso, não quantidade de botões,
 // decide o que fica à vista.
 //
-// D-804: o robô faz o mesmo caminho sem sair do app, e a imagem volta pelo
-// upload do Ctrl+V (`entregar`) — moldura inclusa. Os dois moram juntos porque
+// D-804: o robô faz o mesmo caminho sem sair do app; desde a D-898 é o backend
+// que salva a imagem (moldura inclusa) e `aoConcluir` relê a capa. Os dois moram juntos porque
 // são duas formas do mesmo passo, e saíram do MetadataCard para ele não crescer.
 
 interface Props {
@@ -19,7 +19,7 @@ interface Props {
   promptReady: boolean;
   promptCopiado: boolean;
   onCopiar: () => void;
-  entregar: (arquivo: File) => Promise<unknown>;
+  aoConcluir: () => void;
 }
 
 export function AcoesDoPromptDaCapa({
@@ -28,7 +28,7 @@ export function AcoesDoPromptDaCapa({
   promptReady,
   promptCopiado,
   onCopiar,
-  entregar,
+  aoConcluir,
 }: Props) {
   const motivoId = `motivo-prompt-${corteId}`;
   return (
@@ -44,7 +44,7 @@ export function AcoesDoPromptDaCapa({
         {promptCopiado ? <Icon name="check" /> : <Icon name="clipboard" />}
         {promptCopiado ? 'Copiado' : 'Copiar prompt da capa'}
       </Button>
-      <GerarNoChatGPT prompt={prompt} proporcao="16:9" entregar={entregar} />
+      <GerarNoChatGPT prompt={prompt} destino="youtube" alvoId={corteId} aoConcluir={aoConcluir} />
       {!promptReady && (
         <p id={motivoId} className="-mt-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]">
           Gere o prompt da capa primeiro — ainda não há o que copiar.

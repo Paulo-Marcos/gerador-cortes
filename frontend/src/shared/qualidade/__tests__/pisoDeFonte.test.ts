@@ -57,7 +57,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/analises/YoutubeDesempenhoTab.tsx": 3,
   "src/features/atalhos/AtalhosPage.tsx": 5,
   "src/features/capa-chatgpt/CapaChatgptSection.tsx": 1,
-  "src/features/capa-chatgpt/GerarNoChatGPT.tsx": 4,
+  "src/features/capa-chatgpt/GerarNoChatGPT.tsx": 3,
   "src/features/channels/ChannelCard.tsx": 1,
   "src/features/channels/ChannelThemeSection.tsx": 1,
   "src/features/channels/ChannelsPage.tsx": 1,

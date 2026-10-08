@@ -175,6 +175,28 @@ class TestRoteiro:
             _rodar(pagina, relogio)
         assert relogio.agora() < capa_no_chatgpt.PRAZO_PARA_GERAR
 
+    def test_anuncia_cada_passo_para_a_fila(self):
+        # D-898: a Fila mostra onde o robô está — e onde parou, quando parar.
+        relogio = RelogioFalso()
+        etapas: list[str] = []
+
+        capa_no_chatgpt.executar_roteiro(
+            PaginaFalsa(relogio),
+            projeto_url=PROJETO,
+            pedido="o pedido",
+            fichas=[],
+            dormir=relogio.dormir,
+            agora=relogio.agora,
+            anunciar=etapas.append,
+        )
+
+        assert etapas == [
+            "Abrindo o projeto no ChatGPT",
+            "Anexando as fichas e escrevendo o pedido",
+            "Esperando o ChatGPT desenhar",
+            "Baixando a imagem",
+        ]
+
     def test_imagem_que_nao_baixa_vira_erro_com_saida(self):
         relogio = RelogioFalso()
         pagina = PaginaFalsa(relogio, imagem=b"")
@@ -402,7 +424,7 @@ class TestElenco:
         capa_no_chatgpt.gravar_projeto(PROJETO)
         chamadas: list[tuple[str, list]] = []
 
-        def gerar(_projeto, pedido, anexos):
+        def gerar(_projeto, pedido, anexos, _anunciar):
             chamadas.append((pedido, anexos))
             return PNG
 

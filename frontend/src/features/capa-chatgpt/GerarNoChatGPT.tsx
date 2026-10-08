@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { mensagemDoRobo, retratoUrl, type PessoaDaCapa, type ProporcaoDaCapa } from './api';
 import {
+  mensagemDoRobo,
+  PROPORCAO_DO_DESTINO,
+  retratoUrl,
+  type DestinoDaCapa,
+  type PedidoCapaChatgpt,
+  type PessoaDaCapa,
+} from './api';
+import {
+  pedidoEmVoo,
   useConfiguracaoCapaChatgpt,
   useElencoDaCapa,
   useFotoDaPessoa,
-  useGerarNoChatGPT,
+  usePedidoDaCapa,
+  usePedirNoChatGPT,
   useSubirFotoDaPessoa,
 } from './useCapaNoChatGPT';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
@@ -14,9 +23,13 @@ import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 // D-804: o botão que troca o copiar-colar-no-ChatGPT por um clique.
 //
 // O robô abre o projeto do ChatGPT no Edge do operador, anexa as fichas, cola o
-// prompt, espera e traz a imagem. Quem recebe a imagem é `entregar` — o mesmo
-// upload do Ctrl+V desta capa —, então moldura, montagem e o que mais a capa
-// fizer continuam onde sempre estiveram.
+// prompt, espera e traz a imagem.
+//
+// D-898: o clique põe a capa na FILA do backend, que salva a imagem pelo mesmo
+// caminho do Ctrl+V desta capa (moldura, montagem) e guarda o passo e o motivo
+// de uma parada. Antes o modal esperava a imagem e era ele quem a salvava:
+// fechou o modal, o erro sumia — e a aba do robô ficava aberta sem explicação.
+// O andamento também aparece na Fila global.
 //
 // A janela do Edge fica aberta de propósito: se a imagem não agradar, o
 // operador pede outra versão ali mesmo e cola do jeito antigo.
@@ -34,8 +47,11 @@ interface Props {
    * capa do short nascem do prompt da thumbnail, que é quem traz as tags.
    */
   promptDoElenco?: string;
-  proporcao: ProporcaoDaCapa;
-  entregar: (arquivo: File) => Promise<unknown>;
+  destino: DestinoDaCapa;
+  /** O corte (youtube, tiktok) ou o short que recebe a imagem. */
+  alvoId: string;
+  /** A imagem chegou à capa: hora de reler o que a tela mostra dela. */
+  aoConcluir?: () => void;
   /** A capa está ocupada com outra coisa (subindo, montando). */
   desabilitado?: boolean;
   className?: string;
@@ -44,13 +60,16 @@ interface Props {
 export function GerarNoChatGPT({
   prompt,
   promptDoElenco,
-  proporcao,
-  entregar,
+  destino,
+  alvoId,
+  aoConcluir,
   desabilitado,
   className,
 }: Props) {
   const config = useConfiguracaoCapaChatgpt();
-  const gerar = useGerarNoChatGPT(proporcao, entregar);
+  const pedir = usePedirNoChatGPT(destino, alvoId);
+  const pedido = usePedidoDaCapa(destino, alvoId, aoConcluir).data;
+  const ocupado = pedir.isPending || pedidoEmVoo(pedido);
   const configurado = Boolean(config.data?.projeto_url);
   const texto = prompt?.trim() ?? '';
   const elenco = useElencoConferido((promptDoElenco ?? prompt)?.trim() ?? '', configurado);
@@ -59,32 +78,52 @@ export function GerarNoChatGPT({
     ? 'Configure o projeto do ChatGPT em Canais → Capas no ChatGPT.'
     : !texto
       ? 'Gere o prompt da capa primeiro.'
-      : `Abre o projeto no Edge, anexa as fichas e as fotos das pessoas, cola o prompt e traz a imagem ${proporcao}.`;
+      : `Abre o projeto no Edge, anexa as fichas e as fotos das pessoas, cola o prompt e salva a imagem ${PROPORCAO_DO_DESTINO[destino]} nesta capa.`;
 
   return (
     <div className={cn('grid gap-1', className)}>
       <Button
         type="button"
         size="sm"
-        disabled={desabilitado || gerar.isPending || !configurado || !texto}
-        onClick={() => gerar.mutate({ prompt: texto, pessoas: fotosQueVao(elenco.pessoas) })}
+        disabled={desabilitado || ocupado || !configurado || !texto}
+        onClick={() => pedir.mutate({ prompt: texto, pessoas: fotosQueVao(elenco.pessoas) })}
         title={motivo}
       >
-        {gerar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.iaGera} />}
-        {gerar.isPending ? 'Gerando no ChatGPT…' : 'Gerar no ChatGPT'}
+        {ocupado ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.iaGera} />}
+        {ocupado ? 'Gerando no ChatGPT…' : 'Gerar no ChatGPT'}
       </Button>
-      {gerar.isPending && (
-        <span aria-live="polite" className="text-[10.5px] leading-snug text-[var(--wb-text-mute)]">
-          cerca de 1 minuto — acompanhe na janela do Edge
-        </span>
-      )}
-      {gerar.isError && (
+      {pedir.isError ? (
         <span role="alert" className="text-[10.5px] leading-snug text-error">
-          {mensagemDoRobo(gerar.error, 'Não consegui gerar no ChatGPT.')}
+          {mensagemDoRobo(pedir.error, 'Não consegui pedir ao ChatGPT.')}
         </span>
+      ) : (
+        <AndamentoDoPedido pedido={pedido} />
       )}
-      {configurado && texto && <ElencoDaCapa elenco={elenco} ocupado={gerar.isPending} />}
+      {configurado && texto && <ElencoDaCapa elenco={elenco} ocupado={ocupado} />}
     </div>
+  );
+}
+
+/** Em que passo o robô está nesta capa — ou por que parou, até o próximo pedido. */
+function AndamentoDoPedido({ pedido }: { pedido?: PedidoCapaChatgpt | null }) {
+  if (!pedido) return null;
+  if (pedido.estado === 'erro') {
+    return (
+      <span role="alert" className="text-[11px] leading-snug text-error">
+        Parou em “{pedido.etapa}”: {pedido.erro}
+      </span>
+    );
+  }
+  const texto =
+    pedido.estado === 'concluido'
+      ? 'Capa pronta, salva pelo robô.'
+      : pedido.estado === 'aguardando'
+        ? 'Na fila do ChatGPT — a Fila mostra a ordem.'
+        : `${pedido.etapa} — acompanhe na janela do Edge.`;
+  return (
+    <span aria-live="polite" className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+      {texto}
+    </span>
   );
 }
 
