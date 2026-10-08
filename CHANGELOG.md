@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **The YouTube Studio robot turns monetization on and links each short to
+  its cut.** The YouTube API uploads with monetization off (the Studio upload
+  defaults only apply to browser uploads) and cannot set a Short's "related
+  video". Two switches under Ajustes → "Robô do YouTube Studio", per channel
+  and off by default, hand both to a robot: every cut or short the app uploads
+  goes into a queue, and after the uploads it opens the Studio once and fixes
+  them all. A short is linked to the cut it came from, only when that cut is
+  already on YouTube. Log in to the channel in the robot's window the first
+  time (D-895).
+
 ### Changed
 - **Batch publishing is followed in the queue drawer, not in a modal.** When
   you start a batch (YouTube Shorts, TikTok, Instagram Reels, the "Subir

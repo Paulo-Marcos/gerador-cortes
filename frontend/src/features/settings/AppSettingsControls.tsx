@@ -19,8 +19,7 @@ import {
   CONTEXTO_DEPOIS_PADRAO_SEG,
   CONTEXTO_MIN_SEG,
 } from './useContextoCorte';
-import { CapaTikTokLayoutEditor } from './CapaTikTokLayoutEditor';
-import { NavegadorDoRobo } from './NavegadorDoRobo';
+import { AjustesQueSalvamSozinhos } from './AjustesQueSalvamSozinhos';
 import { Icon } from '@/upgrade/Icon';
 
 export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: string }> = [
@@ -398,9 +397,7 @@ export function AppSettingsControls() {
         </div>
       </div>
 
-      {/* D-532 e D-832: salvam sozinhos, com mutation propria — fora do `isBusy` de cima. */}
-      <CapaTikTokLayoutEditor />
-      <NavegadorDoRobo />
+      <AjustesQueSalvamSozinhos />
 
       {isBusy && (
         <p className="inline-flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">

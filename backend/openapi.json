@@ -8459,6 +8459,24 @@
         "title": "ReverterSkillRequest",
         "type": "object"
       },
+      "RoboDoStudio": {
+        "properties": {
+          "monetizar": {
+            "title": "Monetizar",
+            "type": "boolean"
+          },
+          "relacionar_short": {
+            "title": "Relacionar Short",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "monetizar",
+          "relacionar_short"
+        ],
+        "title": "RoboDoStudio",
+        "type": "object"
+      },
       "RoteiroDeCenasDoCorte": {
         "additionalProperties": true,
         "description": "O roteiro visual no formato com envelope; o antigo é a lista pura.",
@@ -11938,6 +11956,66 @@
           }
         },
         "summary": "Escolher Navegador Do Robo",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/ativo/robo-do-studio": {
+      "get": {
+        "operationId": "obter_robo_do_studio_api_channels_ativo_robo_do_studio_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoboDoStudio"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Obter Robo Do Studio",
+        "tags": [
+          "Canais"
+        ]
+      },
+      "put": {
+        "operationId": "gravar_robo_do_studio_api_channels_ativo_robo_do_studio_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoboDoStudio"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoboDoStudio"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gravar Robo Do Studio",
         "tags": [
           "Canais"
         ]

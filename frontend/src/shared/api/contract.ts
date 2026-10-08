@@ -319,6 +319,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/channels/ativo/robo-do-studio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obter Robo Do Studio */
+        get: operations["obter_robo_do_studio_api_channels_ativo_robo_do_studio_get"];
+        /** Gravar Robo Do Studio */
+        put: operations["gravar_robo_do_studio_api_channels_ativo_robo_do_studio_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels/temas": {
         parameters: {
             query?: never;
@@ -7920,6 +7938,13 @@ export interface components {
             /** Versao */
             versao: number;
         };
+        /** RoboDoStudio */
+        RoboDoStudio: {
+            /** Monetizar */
+            monetizar: boolean;
+            /** Relacionar Short */
+            relacionar_short: boolean;
+        };
         /**
          * RoteiroDeCenasDoCorte
          * @description O roteiro visual no formato com envelope; o antigo é a lista pura.
@@ -9551,6 +9576,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NavegadorDoRobo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_robo_do_studio_api_channels_ativo_robo_do_studio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoboDoStudio"];
+                };
+            };
+        };
+    };
+    gravar_robo_do_studio_api_channels_ativo_robo_do_studio_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoboDoStudio"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoboDoStudio"];
                 };
             };
             /** @description Validation Error */

@@ -72,7 +72,7 @@ EXCECOES = {
     "app/services/timeline_math.py::TimelineMath.recalcular_transcricao::PLR0915": 43,
     "app/services/youtube.py::YouTubeService.upload_video._run_upload::C901": 14,
     "app/services/youtube.py::YouTubeService.upload_video._run_upload::PLR0915": 59,
-    "app/services/youtube.py::YouTubeService.upload_video::C901": 39,
+    "app/services/youtube.py::YouTubeService.upload_video::C901": 38,
     "app/services/youtube.py::YouTubeService.upload_video::PLR0915": 140,
 }
 

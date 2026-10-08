@@ -58,6 +58,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN-20 | **Teto de hashtags por plataforma**: 3 no YouTube Shorts, 5 no Reels, 5 no TikTok. A legenda do Reels não leva link. O que se **grava** tem teto 10; o corte por plataforma é feito na publicação. | `domain/publicacao/publicacao.py` (`adaptar`, `hashtags_max`, `link_na_legenda`); `domain/short/metadados_short.py` (`MAX_HASHTAGS`) | — |
 | RN-21 | Ranking de lives = VPH + recência, normalizados min-max no lote. | `domain/live_candidata/ranking_lives.py` (`calcular_vph`, `calcular_recencia`, `normalizar_minmax`) | — |
 | RN-26 | **Publicar sozinho só com a capa confirmada.** Com o "publicar sozinho" ligado, o robô (TikTok e Instagram) só aperta Publicar se a capa pedida entrou; senão deixa a aba pronta e diz por quê. Sem capa pedida, publica. | `domain/publicacao/publicacao.py` (`pode_publicar_sozinho`) | D-799 |
+| RN-27 | **O robô do Studio só toca no que o app acabou de subir**, e só com o interruptor do canal ligado (desligado por padrão). Monetização já ativada não é mexida. O vídeo relacionado do short é o corte de onde ele saiu, e short cujo corte não está no YouTube fica sem relacionado. | `domain/publicacao/studio_youtube.py` (`tarefa_do_upload`, `esta_monetizado`); a fila em `services/studio_youtube.py` (`agendar`) | D-895 |
 
 ## F. Imagem, áudio e render
 

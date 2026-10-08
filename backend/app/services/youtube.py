@@ -15,6 +15,7 @@ from app.database import AsyncSessionLocal
 from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.infrastructure.imagem.thumbnail_encode import preparar_para_youtube
 from app.models import Corte, MetadadoCorte, Projeto
+from app.services import studio_youtube
 from app.services.media_retention import MediaRetentionService
 from app.services.validacao_publicacao import ValidacaoPublicacaoService
 from google.auth.transport.requests import Request
@@ -554,7 +555,6 @@ class YouTubeService:
                         if _actual != str(_thumb_found) and Path(_actual).exists():
                             Path(_actual).unlink(missing_ok=True)
 
-                # Adicionar à Playlist
                 playlist_id = YouTubeService._obter_ou_criar_playlist(youtube, titulo_live)
                 if playlist_id:
                     YouTubeService._adicionar_a_playlist(
@@ -581,20 +581,19 @@ class YouTubeService:
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(None, _run_upload)
 
-            # Salva video_id e scheduled_at no banco
             if result.get("status") == "ok":
                 async with AsyncSessionLocal() as db:
                     corte = await db.get(Corte, corte_id)
                     if corte:
                         corte.youtube_video_id = result["video_id"]
                         corte.youtube_url_publicado = result["url"]
-                        if scheduled_at:
-                            corte.youtube_scheduled_at = scheduled_at
+                        corte.youtube_scheduled_at = scheduled_at or corte.youtube_scheduled_at
                         retention = await asyncio.to_thread(
                             MediaRetentionService.aplicar_apos_upload, corte
                         )
                         result["retencao_arquivos"] = retention.to_dict()
                         await db.commit()
+                studio_youtube.agendar(result["video_id"])  # D-895: monetização pelo robô
 
             return result
 

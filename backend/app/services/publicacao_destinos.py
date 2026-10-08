@@ -68,6 +68,8 @@ class PacotePublicacao:
     metadados: MetadadosPublicacao
     capa: Path | None = None
     avisos: list[str] = field(default_factory=list)
+    # D-895: o corte longo no YouTube, que o robô liga como "vídeo relacionado".
+    url_video_longo: str = ""
 
     @property
     def publicavel_por_api(self) -> bool:
@@ -94,6 +96,7 @@ class Destino:
             arquivo=contexto.arquivo,
             capa=contexto.capa,
             metadados=adaptar(contexto.base, self.plataforma),
+            url_video_longo=contexto.base.url_video_longo,
             avisos=validar(
                 self.plataforma,
                 duracao_seg=contexto.duracao_seg,
