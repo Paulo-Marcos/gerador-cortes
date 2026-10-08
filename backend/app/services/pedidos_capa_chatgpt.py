@@ -64,6 +64,12 @@ class PedidoDeCapa:
     estado: EstadoDoPedido = "aguardando"
     etapa: str = ETAPA_NA_FILA
     erro: str = ""
+    # O que o robô desenha. Fica no pedido (e não só na task) porque um prompt
+    # mais novo da mesma capa o substitui enquanto ele espera a vez.
+    prompt: str = ""
+    pessoas: list[str] | None = None
+    # Prompt que chegou com este já desenhando: vira o próximo pedido da capa.
+    depois: tuple[str, list[str] | None] | None = None
 
     @property
     def ativo(self) -> bool:
@@ -125,12 +131,25 @@ async def enfileirar(
     corte_id = await _corte_do_alvo(destino, alvo_id)
     em_voo = pedido_da_capa(destino, alvo_id)
     if em_voo and em_voo.ativo:
+        # O prompt mais recente vence (achado da pr-audit do #156): com o
+        # "Gerar prompt" pedindo a imagem sozinho (D-899), refazer o prompt
+        # com o robô ainda trabalhando é o gesto comum — e o novo não pode
+        # sumir em silêncio, entregando a capa do prompt que o operador rejeitou.
+        if em_voo.estado == "aguardando":
+            em_voo.prompt, em_voo.pessoas = prompt, pessoas
+        elif prompt != em_voo.prompt:
+            em_voo.depois = (prompt, pessoas)
         return em_voo
     pedido = PedidoDeCapa(
-        id=uuid.uuid4().hex[:12], destino=destino, alvo_id=alvo_id, corte_id=corte_id
+        id=uuid.uuid4().hex[:12],
+        destino=destino,
+        alvo_id=alvo_id,
+        corte_id=corte_id,
+        prompt=prompt,
+        pessoas=pessoas,
     )
     _pedidos[(destino, alvo_id)] = pedido
-    fire_and_forget(_atender(pedido, prompt, pessoas), name=f"capa-chatgpt-{pedido.id}")
+    fire_and_forget(_atender(pedido), name=f"capa-chatgpt-{pedido.id}")
     return pedido
 
 
@@ -194,36 +213,47 @@ def cancelar(pedido_id: str) -> EstadoDoPedido | None:
     return estado
 
 
-async def _atender(pedido: PedidoDeCapa, prompt: str, pessoas: list[str] | None) -> None:
+async def _atender(pedido: PedidoDeCapa) -> None:
     async with _vez:
-        if pedido.estado == "cancelado":
-            return
-        pedido.estado = "rodando"
-
-        def anunciar(etapa: str) -> None:
-            # Chega da thread do navegador; trocar um str é atômico sob o GIL.
-            pedido.etapa = etapa
-
+        await _desenhar(pedido)
+    if pedido.depois is not None:
+        # Fora da vez: o próximo pedido espera a dele, atrás de quem já estava.
+        prompt, pessoas = pedido.depois
         try:
-            imagem, tipo = await capa_no_chatgpt.gerar_imagem(
-                prompt, PROPORCAO_DO_DESTINO[pedido.destino], pessoas, anunciar
-            )
-            pedido.etapa = ETAPA_SALVANDO
-            await _entregar(pedido, imagem, f"chatgpt.{tipo.split('/')[-1]}")
-        except Exception as exc:  # noqa: BLE001 — o motivo vai para a Fila, não para o log só
-            pedido.estado = "erro"
-            pedido.erro = _motivo(exc)
-            logger.warning(
-                "[ChatGPT] capa %s de %s parou em '%s': %s",
-                pedido.destino,
-                pedido.alvo_id[:8],
-                pedido.etapa,
-                pedido.erro,
-            )
-            return
-        pedido.estado = "concluido"
-        pedido.etapa = ETAPA_PRONTA
-        logger.info("[ChatGPT] capa %s de %s pronta", pedido.destino, pedido.alvo_id[:8])
+            await enfileirar(pedido.destino, pedido.alvo_id, prompt, pessoas)
+        except Exception as exc:  # noqa: BLE001 — o prompt segue salvo; a imagem fica no botão
+            logger.warning("[ChatGPT] não refiz a capa %s: %s", pedido.alvo_id[:8], exc)
+
+
+async def _desenhar(pedido: PedidoDeCapa) -> None:
+    if pedido.estado == "cancelado":
+        return
+    pedido.estado = "rodando"
+
+    def anunciar(etapa: str) -> None:
+        # Chega da thread do navegador; trocar um str é atômico sob o GIL.
+        pedido.etapa = etapa
+
+    try:
+        imagem, tipo = await capa_no_chatgpt.gerar_imagem(
+            pedido.prompt, PROPORCAO_DO_DESTINO[pedido.destino], pedido.pessoas, anunciar
+        )
+        pedido.etapa = ETAPA_SALVANDO
+        await _entregar(pedido, imagem, f"chatgpt.{tipo.split('/')[-1]}")
+    except Exception as exc:  # noqa: BLE001 — o motivo vai para a Fila, não para o log só
+        pedido.estado = "erro"
+        pedido.erro = _motivo(exc)
+        logger.warning(
+            "[ChatGPT] capa %s de %s parou em '%s': %s",
+            pedido.destino,
+            pedido.alvo_id[:8],
+            pedido.etapa,
+            pedido.erro,
+        )
+        return
+    pedido.estado = "concluido"
+    pedido.etapa = ETAPA_PRONTA
+    logger.info("[ChatGPT] capa %s de %s pronta", pedido.destino, pedido.alvo_id[:8])
 
 
 def _motivo(exc: Exception) -> str:

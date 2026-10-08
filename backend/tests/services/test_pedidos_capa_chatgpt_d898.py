@@ -456,3 +456,69 @@ class TestGestoDoPrompt:
 
         assert cliente.post("/api/shorts/corte/sem-thumb/capa-tiktok/prompt").status_code == 422
         assert registro == []
+
+
+class TestPromptMaisRecente:
+    """pr-audit do #156: refazer o prompt com o robô trabalhando não perde o novo."""
+
+    def test_prompt_novo_com_o_velho_desenhando_vira_o_proximo(self, monkeypatch, entregas):
+        robo = RoboFalso(monkeypatch)
+
+        async def cenario():
+            robo.liberar = asyncio.Event()
+            velho = await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "velho")
+            for _ in range(20):
+                await asyncio.sleep(0)
+            await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "novo")
+            robo.liberar.set()
+            await _ate_terminar(velho)
+            for _ in range(20):
+                await asyncio.sleep(0)
+            await _ate_terminar(*pedidos_capa_chatgpt.listar())
+            return pedidos_capa_chatgpt.pedido_da_capa("youtube", "c1")
+
+        ultimo = _rodar(cenario())
+
+        assert [p[0] for p in robo.pedidos] == ["velho", "novo"]
+        # A capa termina com a imagem do prompt novo: é a última entrega.
+        assert len(entregas) == 2
+        assert ultimo.estado == "concluido"
+
+    def test_prompt_novo_com_o_velho_na_espera_troca_o_que_sera_desenhado(
+        self, monkeypatch, entregas
+    ):
+        robo = RoboFalso(monkeypatch)
+
+        async def cenario():
+            robo.liberar = asyncio.Event()
+            outra = await pedidos_capa_chatgpt.enfileirar("short", "s9", "outra capa")
+            esperando = await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "velho")
+            for _ in range(20):
+                await asyncio.sleep(0)
+            mesmo = await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "novo")
+            robo.liberar.set()
+            await _ate_terminar(outra, esperando)
+            return esperando, mesmo
+
+        esperando, mesmo = _rodar(cenario())
+
+        assert mesmo is esperando
+        assert [p[0] for p in robo.pedidos] == ["outra capa", "novo"]
+
+    def test_o_mesmo_prompt_com_o_robo_desenhando_nao_desenha_de_novo(self, monkeypatch, entregas):
+        robo = RoboFalso(monkeypatch)
+
+        async def cenario():
+            robo.liberar = asyncio.Event()
+            pedido = await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "p")
+            for _ in range(20):
+                await asyncio.sleep(0)
+            await pedidos_capa_chatgpt.enfileirar("youtube", "c1", "p")
+            robo.liberar.set()
+            await _ate_terminar(pedido)
+            for _ in range(20):
+                await asyncio.sleep(0)
+
+        _rodar(cenario())
+
+        assert [p[0] for p in robo.pedidos] == ["p"]

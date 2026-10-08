@@ -50,8 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the YouTube thumbnail prompt puts the thumbnail in the ChatGPT queue, and
   the chained TikTok art prompt does the same for the art; the short's "Gerar
   prompt" does it for the short cover. No second click — "Gerar no ChatGPT"
-  stays for asking another version. Nothing happens when the channel has no
-  ChatGPT project set (D-899).
+  stays for asking another version. Redoing the prompt while the robot is
+  still drawing is not lost: the newest prompt is drawn next. Nothing happens
+  when the channel has no ChatGPT project set (D-899).
 
 ## [0.6.0] - 2026-10-07
 
