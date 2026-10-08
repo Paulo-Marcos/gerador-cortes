@@ -330,6 +330,29 @@ def test_navegador_que_nao_abre_vira_falha_e_nao_excecao(canal, monkeypatch):
     assert "navegador do robô" in falhas[0]
 
 
+def test_conexao_que_cai_no_meio_vira_falha_e_mostra_a_janela(canal, monkeypatch):
+    """O lote já saiu da fila quando a conexão cai: levantar aqui o perderia em silêncio."""
+    from contextlib import contextmanager
+
+    from app.services import navegador_assistido
+
+    @contextmanager
+    def _cai_ao_conectar(*a, **k):
+        raise RuntimeError("BrowserType.connect_over_cdp: connect ECONNREFUSED")
+        yield  # pragma: no cover
+
+    mostradas: list = []
+    monkeypatch.setattr(navegador_assistido, "sessao_no_chrome", _cai_ao_conectar)
+    monkeypatch.setattr(studio_youtube.navegador_do_robo, "executavel_escolhido", lambda: None)
+    monkeypatch.setattr(studio_youtube.janela_do_robo, "mostrar", mostradas.append)
+
+    falhas = studio_youtube._no_navegador([TarefaNoStudio(CORTE, monetizar=True)])
+
+    assert "parou no Studio" in falhas[0]
+    assert "ECONNREFUSED" in falhas[0]
+    assert len(mostradas) == 1, "a janela aparece: é nela que o operador vê o motivo"
+
+
 # --------------------------------------------------------------------------- #
 # Os ganchos nos uploads
 # --------------------------------------------------------------------------- #

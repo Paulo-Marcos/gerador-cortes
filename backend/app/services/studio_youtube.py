@@ -277,6 +277,9 @@ def _no_navegador(tarefas: list[TarefaNoStudio]) -> list[str]:
         navegador_assistido.PlaywrightAusente,
     ) as exc:
         return [f"não consegui abrir o navegador do robô: {exc}"]
+    except Exception as exc:  # noqa: BLE001 — conexão caída no meio: o lote já saiu da fila
+        motivo = (str(exc).splitlines() or [type(exc).__name__])[0]
+        falhas = [f"o robô parou no Studio antes de terminar o lote: {motivo}"]
     if falhas:
         # A janela nasce fora da tela; o que deu errado se lê NELA (D-799).
         janela_do_robo.mostrar(navegador_assistido.sessao_no_chrome(perfil))
