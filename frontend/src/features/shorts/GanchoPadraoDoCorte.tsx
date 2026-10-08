@@ -1,5 +1,12 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { useDefinirGanchoPadrao, useGanchoPadrao, useSeguirGanchoPadrao } from './useShortsDoCorte';
+import { api, dados } from '@/shared/api';
+import {
+  shortsDoCorteKey,
+  useDefinirGanchoPadrao,
+  useGanchoPadrao,
+  useSeguirGanchoPadrao,
+} from './useShortsDoCorte';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // D-594: o gancho que vale para TODOS os shorts deste corte.
@@ -16,6 +23,35 @@ import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 // gravar o gancho num trecho carimbava o véu e os 2,5s nele — e um trecho
 // carimbado não segue padrão nenhum. Sem o aviso, escolher um preset aqui
 // pareceria não fazer nada justamente nos trechos que já tinham gancho.
+//
+// D-901: um degrau acima, o padrão do CANAL. "Toda vez eu tenho que escolher
+// qual modelo do gancho" — agora o corte que não escolhe o seu (a opção vazia
+// do select) herda o do canal, e a estrela marca qual é. A herança é resolvida
+// no backend, na leitura: trocar o do canal muda todo corte que não escolheu.
+
+const GANCHO_DO_CANAL_KEY = ['shorts', 'gancho-padrao-do-canal'] as const;
+const URL_DO_CANAL = '/api/presets/gancho/padrao-do-canal';
+
+function useGanchoDoCanal() {
+  return useQuery({
+    queryKey: GANCHO_DO_CANAL_KEY,
+    queryFn: async () => (await dados(api.GET(URL_DO_CANAL))).preset_id,
+  });
+}
+
+/** Muda o padrão do canal: o gancho RESOLVIDO de todo corte que herda muda junto. */
+function useEscolherGanchoDoCanal(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (presetId: string) => dados(api.PUT(URL_DO_CANAL, { body: { preset_id: presetId } })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: GANCHO_DO_CANAL_KEY });
+      // O prefixo de `ganchoPadraoKey`: o padrão resolvido de TODO corte aberto.
+      void qc.invalidateQueries({ queryKey: ['shorts', 'gancho-padrao'] });
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+    },
+  });
+}
 
 interface Props {
   corteId: string;
@@ -27,11 +63,18 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
   const padrao = useGanchoPadrao(corteId);
   const definir = useDefinirGanchoPadrao(corteId);
   const seguir = useSeguirGanchoPadrao(corteId);
+  const doCanal = useGanchoDoCanal();
+  const escolherDoCanal = useEscolherGanchoDoCanal(corteId);
 
   if (padrao.isLoading || padrao.isError) return null;
 
   const escolhido = padrao.data?.gancho_padrao ?? '';
+  const canal = doCanal.data ?? '';
+  // O que vale no corte: o dele, ou o do canal quando ele segue o canal.
+  const efetivo = escolhido || canal;
+  const ehDoCanal = Boolean(efetivo) && efetivo === canal;
   const disponiveis = padrao.data?.disponiveis ?? [];
+  const nomeDoCanal = disponiveis.find((p) => p.id === canal)?.nome;
   const customizados = padrao.data?.customizados ?? 0;
 
   const fazerTodosSeguirem = () => {
@@ -57,7 +100,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
           onChange={(e) => definir.mutate(e.target.value)}
           className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
-          <option value="">cada trecho decide</option>
+          <option value="">{nomeDoCanal ? `padrão do canal (${nomeDoCanal})` : 'cada trecho decide'}</option>
           {disponiveis.map((preset) => (
             <option key={preset.id} value={preset.id}>
               {preset.nome}
@@ -68,9 +111,24 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
         <Button
           size="sm"
           variant="ghost"
-          disabled={!escolhido}
+          disabled={!efetivo || escolherDoCanal.isPending}
+          aria-pressed={ehDoCanal}
+          title={
+            ehDoCanal
+              ? 'É o gancho padrão do canal — clique para o canal deixar de ter padrão.'
+              : 'Todo corte que não escolher o próprio gancho passa a usar este.'
+          }
+          onClick={() => escolherDoCanal.mutate(ehDoCanal ? '' : efetivo)}
+        >
+          <Icon name="star" className={ehDoCanal ? 'fill-current text-[var(--wb-accent)]' : undefined} />
+          {ehDoCanal ? 'do canal' : 'padrão do canal'}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!efetivo}
           aria-label="Editar o gancho padrão"
-          onClick={() => onEditar(escolhido)}
+          onClick={() => onEditar(efetivo)}
         >
           <Icon name={ICONE_DO_CONCEITO.editar} />
           editar
@@ -81,7 +139,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
         </Button>
       </div>
 
-      {escolhido && customizados > 0 && (
+      {efetivo && customizados > 0 && (
         <p className="pl-[64px] text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
           {customizados} {customizados === 1 ? 'trecho não segue' : 'trechos não seguem'} o padrão.{' '}
           <button

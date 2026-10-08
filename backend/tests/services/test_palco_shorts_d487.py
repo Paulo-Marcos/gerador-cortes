@@ -678,6 +678,58 @@ class TestGanchoPadrao:
             await servico.escolher_gancho_padrao("c1", "pre-1")
 
 
+class TestGanchoPadraoDoCanal:
+    """D-901: o corte que não escolheu gancho herda o padrão do canal."""
+
+    @pytest.fixture
+    def canal(self, ambiente, monkeypatch, tmp_path):
+        from app.services import gancho_padrao_do_canal
+
+        monkeypatch.setattr(
+            gancho_padrao_do_canal, "_banco_e_canal", lambda: (tmp_path / "settings.db", "meu")
+        )
+        monkeypatch.setattr(gancho_padrao_do_canal, "AsyncSessionLocal", ambiente)
+        return gancho_padrao_do_canal
+
+    @pytest.mark.asyncio
+    async def test_corte_sem_gancho_proprio_usa_o_do_canal(self, ambiente, canal):
+        await TestGanchoPadrao._com_preset_de_gancho(
+            ambiente, {"cor": "#facc15", "realce": "caixa"}
+        )
+        await canal.escolher("gancho-1")
+
+        plano = await servico.plano_desenhavel("s1")
+        descricao = await servico.descrever_gancho_padrao("c1")
+
+        assert plano["gancho_cor"] == "#facc15"
+        # O corte continua "sem escolha própria" — é a herança, não uma cópia.
+        assert descricao["gancho_padrao"] == ""
+        assert (descricao["nome"], descricao["payload"]["cor"]) == ("Amarelo com caixa", "#facc15")
+
+    @pytest.mark.asyncio
+    async def test_o_gancho_do_corte_vence_o_do_canal(self, ambiente, canal):
+        await TestGanchoPadrao._com_preset_de_gancho(ambiente, {"cor": "#facc15"})
+        async with ambiente() as db:
+            db.add(
+                LayoutPreset(
+                    id="gancho-2", nome="Rosa", tipo="gancho_short", payload='{"cor": "#ff5a72"}'
+                )
+            )
+            await db.commit()
+        await canal.escolher("gancho-1")
+        await servico.escolher_gancho_padrao("c1", "gancho-2")
+
+        assert (await servico.plano_desenhavel("s1"))["gancho_cor"] == "#ff5a72"
+
+    @pytest.mark.asyncio
+    async def test_preset_de_palco_nao_vira_padrao_do_canal(self, canal):
+        from app.domain.compartilhado.erros import NaoEncontrado
+
+        with pytest.raises(NaoEncontrado):
+            await canal.escolher("pre-1")
+        assert canal.ler() == ""
+
+
 class TestPalcoDeRascunho:
     """D-594: o editor de preset desenha um palco sem gravar no trecho."""
 

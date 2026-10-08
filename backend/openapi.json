@@ -4068,6 +4068,30 @@
         "title": "FundosResponse",
         "type": "object"
       },
+      "GanchoPadraoDoCanalRequest": {
+        "properties": {
+          "preset_id": {
+            "default": "",
+            "title": "Preset Id",
+            "type": "string"
+          }
+        },
+        "title": "GanchoPadraoDoCanalRequest",
+        "type": "object"
+      },
+      "GanchoPadraoDoCanalResponse": {
+        "properties": {
+          "preset_id": {
+            "title": "Preset Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preset_id"
+        ],
+        "title": "GanchoPadraoDoCanalResponse",
+        "type": "object"
+      },
       "GanchoPadraoRequest": {
         "properties": {
           "preset_id": {
@@ -17084,6 +17108,68 @@
         "summary": "Normalizar Ordem",
         "tags": [
           "Ordem dos Cortes"
+        ]
+      }
+    },
+    "/api/presets/gancho/padrao-do-canal": {
+      "get": {
+        "description": "D-901: o preset de gancho com que todo corte do canal nasce.",
+        "operationId": "ler_gancho_padrao_do_canal_api_presets_gancho_padrao_do_canal_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GanchoPadraoDoCanalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ler Gancho Padrao Do Canal",
+        "tags": [
+          "Presets"
+        ]
+      },
+      "put": {
+        "description": "D-901: aponta o padrão do canal; \"\" tira. O corte que escolheu o seu não muda.",
+        "operationId": "escolher_gancho_padrao_do_canal_api_presets_gancho_padrao_do_canal_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GanchoPadraoDoCanalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GanchoPadraoDoCanalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Escolher Gancho Padrao Do Canal",
+        "tags": [
+          "Presets"
         ]
       }
     },
