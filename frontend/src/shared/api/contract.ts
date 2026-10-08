@@ -3269,9 +3269,7 @@ export interface paths {
          * Gerar Prompt Da Capa Tiktok
          * @description Escreve o prompt da ARTE da capa e o guarda no metadado (D-524).
          *
-         *     O app para aqui de proposito: quem desenha e o operador, no agente capista
-         *     dele. E o mesmo fluxo manual do horizontal — copiar o prompt, gerar a
-         *     imagem, trazer de volta.
+         *     D-899: e o gesto que ja pede a arte ao robo do ChatGPT, como no horizontal.
          */
         post: operations["gerar_prompt_da_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_prompt_post"];
         delete?: never;
@@ -4025,10 +4023,8 @@ export interface paths {
          * Gerar Prompt Da Capa
          * @description Escreve o prompt de imagem da capa deste short (D-581).
          *
-         *     O app nao desenha: ele entrega o prompt, o operador gera a imagem no agente
-         *     capista dele e sobe a arte de volta em `/capa/arte`. Mesma divisao da capa
-         *     do TikTok (D-524) — gerador de imagem dentro da esteira seria custo e
-         *     imprevisibilidade num passo que se julga com o olho.
+         *     D-899: e o gesto que ja pede a imagem ao robo do ChatGPT (quieto se a
+         *     integracao esta desligada); a arte volta sozinha para `/capa/arte`.
          */
         post: operations["gerar_prompt_da_capa_api_shorts__short_id__capa_prompt_post"];
         delete?: never;

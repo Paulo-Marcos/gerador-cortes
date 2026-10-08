@@ -376,7 +376,8 @@ async def _retratos(nomes: list[str]) -> list[retrato_wikipedia.RetratoEncontrad
     return list(await asyncio.gather(*(_retrato(nome) for nome in nomes)))
 
 
-def _pessoas_do_prompt(prompt: str) -> list[str]:
+def nomes_do_elenco(prompt: str) -> list[str]:
+    """As pessoas reais que o prompt desenha, pelas tags dele."""
     return pessoas_do_prompt(prompt, mascote=identidade_do_mascote().nome)
 
 
@@ -386,7 +387,7 @@ async def elenco_do_prompt(prompt: str) -> list[dict]:
     `slug` é a foto no banco de retratos (`/api/retratos/<slug>`); `None` quando
     nem o cache nem a Wikipédia a têm — a tela oferece subir uma.
     """
-    nomes = _pessoas_do_prompt(prompt)
+    nomes = nomes_do_elenco(prompt)
     achados = await _retratos(nomes)
     return [
         {"nome": nome, "slug": achado.slug if achado else None}
@@ -408,7 +409,7 @@ async def gerar_imagem(
     projeto_url = ler_configuracao()["projeto_url"]
     if not projeto_url:
         raise PedidoInvalido("Configure o link do projeto do ChatGPT em Canais → Capas no ChatGPT.")
-    nomes = _pessoas_do_prompt(prompt) if pessoas is None else pessoas[:MAXIMO_DE_PESSOAS]
+    nomes = nomes_do_elenco(prompt) if pessoas is None else pessoas[:MAXIMO_DE_PESSOAS]
     fotos = [
         (nome, achado.caminho_arquivo)
         for nome, achado in zip(nomes, await _retratos(nomes), strict=True)

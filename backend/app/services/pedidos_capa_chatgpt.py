@@ -23,10 +23,11 @@ from typing import Literal
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import ErroDeDominio, NaoEncontrado, PedidoInvalido
-from app.models import Short
+from app.models import MetadadoCorte, Short
 from app.services import capa_no_chatgpt, capa_short, capa_tiktok
 from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,39 @@ async def enfileirar(
     _pedidos[(destino, alvo_id)] = pedido
     fire_and_forget(_atender(pedido, prompt, pessoas), name=f"capa-chatgpt-{pedido.id}")
     return pedido
+
+
+async def pedir_sozinho(destino: Destino, alvo_id: str, prompt: str) -> None:
+    """D-899: o "Gerar prompt" da capa já põe a imagem na fila, sem outro clique.
+
+    Quem chama é quem atende o gesto (as rotas do prompt e o encadeamento do
+    TikTok), e não os serviços das capas: eles são importados por esta fila
+    para a entrega, e chamá-la de lá fecharia um ciclo.
+
+    Quieto quando não dá: sem o projeto do ChatGPT no canal a integração está
+    desligada, e uma falha aqui não pode custar o prompt já escrito.
+    """
+    if not capa_no_chatgpt.ler_configuracao()["projeto_url"]:
+        return
+    try:
+        # A arte do TikTok nasce do prompt da thumbnail, que é quem traz as
+        # pessoas reais (D-840); as outras capas as têm no próprio prompt.
+        pessoas = (
+            capa_no_chatgpt.nomes_do_elenco(await _prompt_da_thumbnail(alvo_id))
+            if destino == "tiktok"
+            else None
+        )
+        await enfileirar(destino, alvo_id, prompt, pessoas)
+    except Exception as exc:  # noqa: BLE001 — o prompt já está salvo; a imagem fica no botão
+        logger.warning("[ChatGPT] não pus a capa %s de %s na fila: %s", destino, alvo_id[:8], exc)
+
+
+async def _prompt_da_thumbnail(corte_id: str) -> str:
+    async with AsyncSessionLocal() as db:
+        prompt = await db.scalar(
+            select(MetadadoCorte.prompt_thumbnail).where(MetadadoCorte.corte_id == corte_id)
+        )
+    return prompt or ""
 
 
 async def _corte_do_alvo(destino: Destino, alvo_id: str) -> str:

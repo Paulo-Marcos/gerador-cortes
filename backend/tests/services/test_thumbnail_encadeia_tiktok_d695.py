@@ -18,6 +18,18 @@ modulo_do_caso_de_uso = metadados
 gerar_prompt_da_thumbnail = MetadadosService.gerar_prompt_thumbnail_via_claude
 
 
+@pytest.fixture(autouse=True)
+def fila_do_chatgpt(monkeypatch):
+    """D-899: o que o prompt escrito pôs na fila do ChatGPT (sem robô de verdade)."""
+    pedidos: list[tuple] = []
+
+    async def pedir_sozinho(*argumentos):
+        pedidos.append(argumentos)
+
+    monkeypatch.setattr(modulo_do_caso_de_uso, "pedir_sozinho", pedir_sozinho)
+    return pedidos
+
+
 @pytest.fixture
 def agendados(monkeypatch):
     """O caso de uso roda com as bordas trocadas; o que ele agenda fica registrado."""
@@ -65,11 +77,14 @@ def agendados(monkeypatch):
     return registro
 
 
-def test_gravar_o_prompt_do_youtube_agenda_o_da_capa_do_tiktok(agendados, monkeypatch):
+def test_gravar_o_prompt_do_youtube_agenda_o_da_capa_do_tiktok(
+    agendados, monkeypatch, fila_do_chatgpt
+):
     pedidos = []
 
     async def gerar_prompt_da_arte(corte_id):
         pedidos.append(corte_id)
+        return "a arte"
 
     monkeypatch.setattr(capa_tiktok, "gerar_prompt_da_arte", gerar_prompt_da_arte)
 
@@ -84,6 +99,8 @@ def test_gravar_o_prompt_do_youtube_agenda_o_da_capa_do_tiktok(agendados, monkey
     assert resultado == {"ok": True}
     assert nome == "capa-tiktok-prompt-c1"
     assert pedidos == ["c1"]
+    # D-899: a arte encadeada também vai para a fila do ChatGPT.
+    assert fila_do_chatgpt[-1] == ("tiktok", "c1", "a arte")
 
 
 def test_falha_no_tiktok_nao_escapa_do_encadeamento(agendados, monkeypatch):
@@ -98,3 +115,12 @@ def test_falha_no_tiktok_nao_escapa_do_encadeamento(agendados, monkeypatch):
         await agendado  # não pode levantar: o TikTok é acessório
 
     asyncio.run(cenario())
+
+
+def test_o_prompt_do_youtube_vai_para_a_fila_do_chatgpt(agendados, fila_do_chatgpt):
+    # D-899: o "Gerar prompt" já pede a imagem, antes de encadear o TikTok.
+    asyncio.run(gerar_prompt_da_thumbnail("c1"))
+
+    assert fila_do_chatgpt == [
+        ("youtube", "c1", "Editorial 2D thumbnail, 16:9, the frog mascot at a desk.")
+    ]

@@ -355,3 +355,104 @@ class TestAchadosDaAuditoria:
 
         with pytest.raises(JobNaoEstaEmVoo):
             cancelar_job("chatgpt:nao-existe")
+
+
+class TestPedirSozinho:
+    """D-899: o "Gerar prompt" já põe a imagem na fila — e nunca quebra o prompt."""
+
+    def test_arte_do_tiktok_leva_as_pessoas_do_prompt_da_thumbnail(self, monkeypatch, entregas):
+        robo = RoboFalso(monkeypatch)
+
+        async def thumbnail(corte_id):
+            return f"thumbnail de {corte_id}"
+
+        monkeypatch.setattr(pedidos_capa_chatgpt, "_prompt_da_thumbnail", thumbnail)
+        monkeypatch.setattr(capa_no_chatgpt, "nomes_do_elenco", lambda p: [p.upper()])
+
+        async def cenario():
+            await pedidos_capa_chatgpt.pedir_sozinho("tiktok", "c1", "a arte")
+            await _ate_terminar(*pedidos_capa_chatgpt.listar())
+
+        _rodar(cenario())
+
+        assert robo.pedidos == [("a arte", "4:5", ["THUMBNAIL DE C1"])]
+
+    def test_as_outras_capas_leem_o_elenco_do_proprio_prompt(self, monkeypatch, entregas):
+        robo = RoboFalso(monkeypatch)
+
+        async def cenario():
+            await pedidos_capa_chatgpt.pedir_sozinho("short", "s1", "a capa")
+            await _ate_terminar(*pedidos_capa_chatgpt.listar())
+
+        _rodar(cenario())
+
+        assert robo.pedidos == [("a capa", "9:16", None)]
+
+    def test_integracao_desligada_nao_poe_nada_na_fila(self, monkeypatch, entregas):
+        monkeypatch.setattr(capa_no_chatgpt, "ler_configuracao", lambda: {"projeto_url": ""})
+
+        _rodar(pedidos_capa_chatgpt.pedir_sozinho("youtube", "c1", "o prompt"))
+
+        assert pedidos_capa_chatgpt.listar() == []
+
+    def test_falha_ao_enfileirar_nao_escapa(self, monkeypatch, entregas):
+        async def quebra(*_a):
+            raise RuntimeError("banco fora")
+
+        monkeypatch.setattr(pedidos_capa_chatgpt, "enfileirar", quebra)
+
+        _rodar(pedidos_capa_chatgpt.pedir_sozinho("youtube", "c1", "o prompt"))
+
+
+class TestGestoDoPrompt:
+    """D-899: as rotas de "Gerar prompt" do TikTok e do short já pedem a imagem."""
+
+    @pytest.fixture
+    def pedidos(self, monkeypatch):
+        from app.routers import shorts as rota_shorts
+        from app.routers.errors import registrar_tratadores
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        registro: list[tuple] = []
+
+        async def pedir_sozinho(*argumentos):
+            registro.append(argumentos)
+
+        async def prompt_do_short(short_id, _provider):
+            return f"capa de {short_id}"
+
+        async def prompt_da_arte(corte_id, _provider):
+            if corte_id == "sem-thumb":
+                raise capa_tiktok.CapaTikTokError("Gere antes o prompt da thumbnail.")
+            return f"arte de {corte_id}"
+
+        monkeypatch.setattr(pedidos_capa_chatgpt, "pedir_sozinho", pedir_sozinho)
+        monkeypatch.setattr(capa_short, "gerar_prompt", prompt_do_short)
+        monkeypatch.setattr(capa_tiktok, "gerar_prompt_da_arte", prompt_da_arte)
+        app = FastAPI()
+        registrar_tratadores(app)
+        app.include_router(rota_shorts.router, prefix="/api/shorts")
+        return TestClient(app), registro
+
+    def test_prompt_do_short_pede_a_capa(self, pedidos):
+        cliente, registro = pedidos
+
+        resposta = cliente.post("/api/shorts/s1/capa/prompt")
+
+        assert resposta.json() == {"prompt": "capa de s1"}
+        assert registro == [("short", "s1", "capa de s1")]
+
+    def test_prompt_da_arte_do_tiktok_pede_a_arte(self, pedidos):
+        cliente, registro = pedidos
+
+        resposta = cliente.post("/api/shorts/corte/c1/capa-tiktok/prompt")
+
+        assert resposta.json() == {"prompt": "arte de c1"}
+        assert registro == [("tiktok", "c1", "arte de c1")]
+
+    def test_prompt_que_nao_saiu_nao_pede_imagem(self, pedidos):
+        cliente, registro = pedidos
+
+        assert cliente.post("/api/shorts/corte/sem-thumb/capa-tiktok/prompt").status_code == 422
+        assert registro == []
