@@ -108,7 +108,7 @@ export function GerarNoChatGPT({
 }
 
 /** Em que passo o robô está nesta capa — ou por que parou, até o próximo pedido. */
-function AndamentoDoPedido({ pedido }: { pedido?: PedidoCapaChatgpt | null }) {
+export function AndamentoDoPedido({ pedido }: { pedido?: PedidoCapaChatgpt | null }) {
   if (!pedido) return null;
   if (pedido.estado === 'erro') {
     return (

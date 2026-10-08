@@ -103,7 +103,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/settings/CapaTikTokLayoutEditor.tsx::CapaTikTokLayoutEditor": 142,
   "src/features/shorts/BlocosArrastaveis.tsx::BlocosArrastaveis": 120,
   "src/features/shorts/CabecalhoDoFire.tsx::CabecalhoDoFire": 133,
-  "src/features/shorts/CandidatoCard.tsx::CandidatoCard": 437,
+  "src/features/shorts/CandidatoCard.tsx::CandidatoCard": 429,
   "src/features/shorts/CapaModal.tsx::ArteDaCapa": 139,
   "src/features/shorts/CapaModal.tsx::CapaModal": 264,
   "src/features/shorts/ColunaDeDecisoes.tsx::ColunaDeDecisoes": 210,
