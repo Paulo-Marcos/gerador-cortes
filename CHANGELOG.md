@@ -62,6 +62,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cover modal now opens on "Arte desenhada" instead of the video frame
   (D-900).
 
+### Fixed
+- **The TikTok cover no longer gets lost when the robot publishes.** The
+  thumbnail changes the instant "Salvar" is clicked, but TikTok only finishes
+  sending the cover to its servers seconds later — measured at ~6 s on a
+  horizontal video. The robot took the new thumbnail as proof and could publish
+  inside that window, so the post went out with a video frame. It now waits
+  for TikTok's own confirmation that the cover was received; without it the
+  cover counts as not applied and the robot does not publish on its own (D-902).
+
 ## [0.6.0] - 2026-10-07
 
 ### Added
