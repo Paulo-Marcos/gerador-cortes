@@ -38,6 +38,7 @@ from app.domain.corte.youtube_layout import (
     _normalizar_retangulo,
     normalizar_layout_youtube,
 )
+from app.domain.corte.zona_card import normalizar_zona_card
 from app.domain.short import gancho_short, legenda_short
 from app.models import LayoutPreset
 from app.routers.resposta_api import RespostaApi
@@ -165,6 +166,10 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
         "slot_facecam": _normalizar_retangulo(bruto.get("slot_facecam"), DEFAULT_SLOT_FACECAM),
         "slot_tela": _normalizar_retangulo(bruto.get("slot_tela"), DEFAULT_SLOT_TELA),
     }
+    # D-904: a zona dos cards so vai ao preset quando foi definida (RN-10).
+    zona_card = normalizar_zona_card(bruto.get("zona_card"))
+    if zona_card is not None:
+        compartilhada["zona_card"] = zona_card
     return {
         "compartilhada": compartilhada,
         "fundo": _normalizar_fundo(payload.get("fundo")),

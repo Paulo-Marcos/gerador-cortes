@@ -23,6 +23,10 @@ export type {
   YoutubeLayout,
 } from '@/types/youtubeLayout';
 
+import { normalizeZonaCard, zonasCardIguais } from '@/shared/palco/zonaCard';
+
+export { ZONA_CARD_MINIMA, normalizeZonaCard, sharedVerticalCardZone } from '@/shared/palco/zonaCard';
+
 export const YOUTUBE_BACKGROUND_IDS: readonly YoutubeBackgroundId[] = [
   'hud-forte',
   'topo-estrutural',
@@ -127,6 +131,10 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
     fallback.compartilhada.slot_tela,
     LEGACY_SLOT_TELA,
   );
+  // D-904: a zona dos cards do corte vence a herdada; sem nenhuma, a chave
+  // fica ausente (regra automática) — espelha `_aplicar_compartilhada`.
+  const zonaCard =
+    normalizeZonaCard(raw.compartilhada?.zona_card) ?? fallback.compartilhada.zona_card;
 
   // Corte "intocado" (so a sentinela {modo_padrao:'full',regioes:[]}) JA INICIALIZA
   // com o modo do padrao do projeto (F-020). Assim que o usuario configura algo
@@ -151,45 +159,11 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
   // campo nao existe ou eh objeto inválido, o normalize devolve undefined
   // (nao polui o JSON com defaults artificiais — assim ainda da pra
   // distinguir "definido" de "herdando").
-  const rawSegmento = (raw as unknown as { compartilhada_segmento?: unknown })
-    .compartilhada_segmento;
-  let compartilhadaSegmento: YoutubeSharedConfig | undefined;
-  if (rawSegmento && typeof rawSegmento === 'object') {
-    const segCropFacecam = normalizeRect(
-      (rawSegmento as Partial<YoutubeSharedConfig>).crop_facecam,
-      fallback.compartilhada.crop_facecam,
-    );
-    const segCropTela = normalizeRect(
-      (rawSegmento as Partial<YoutubeSharedConfig>).crop_tela,
-      fallback.compartilhada.crop_tela,
-    );
-    compartilhadaSegmento = {
-      telas: normalizeScreenCount(
-        (rawSegmento as Partial<YoutubeSharedConfig>).telas,
-        fallback.compartilhada.telas,
-      ),
-      crop_facecam: segCropFacecam,
-      crop_tela: segCropTela,
-      slot_facecam: normalizeSlotRect(
-        normalizeRect(
-          (rawSegmento as Partial<YoutubeSharedConfig>).slot_facecam,
-          fallback.compartilhada.slot_facecam,
-        ),
-        segCropFacecam,
-        fallback.compartilhada.slot_facecam,
-        LEGACY_SLOT_FACECAM,
-      ),
-      slot_tela: normalizeSlotRect(
-        normalizeRect(
-          (rawSegmento as Partial<YoutubeSharedConfig>).slot_tela,
-          fallback.compartilhada.slot_tela,
-        ),
-        segCropTela,
-        fallback.compartilhada.slot_tela,
-        LEGACY_SLOT_TELA,
-      ),
-    };
-  }
+  const compartilhadaSegmento = normalizeSegmentoCompartilhada(
+    (raw as unknown as { compartilhada_segmento?: unknown }).compartilhada_segmento,
+    fallback.compartilhada,
+    zonaCard,
+  );
 
   const normalized: YoutubeLayout = {
     modo_padrao: corteConfigurado
@@ -212,6 +186,9 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
     },
     full: fullConfig,
   };
+  if (zonaCard) {
+    normalized.compartilhada.zona_card = { ...zonaCard };
+  }
   if (compartilhadaSegmento) {
     normalized.compartilhada_segmento = compartilhadaSegmento;
   }
@@ -219,6 +196,43 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
     normalized.full_segmento = fullSegmento;
   }
   return normalized;
+}
+
+/**
+ * I-029 v2: o padrão de SEGMENTO deste corte. `undefined` quando o campo não
+ * existe ou é ilegível — a chave ausente distingue "definido" de "herdando".
+ * A zona dos cards do corte (`zonaCard`) vale como base, como no backend
+ * (`_aplicar_padroes_de_segmento` parte de `merge_compartilhada`).
+ */
+function normalizeSegmentoCompartilhada(
+  rawSegmento: unknown,
+  fallback: YoutubeSharedConfig,
+  zonaCard: YoutubeSharedRect | undefined,
+): YoutubeSharedConfig | undefined {
+  if (!rawSegmento || typeof rawSegmento !== 'object') return undefined;
+  const raw = rawSegmento as Partial<YoutubeSharedConfig>;
+  const cropFacecam = normalizeRect(raw.crop_facecam, fallback.crop_facecam);
+  const cropTela = normalizeRect(raw.crop_tela, fallback.crop_tela);
+  const segmento: YoutubeSharedConfig = {
+    telas: normalizeScreenCount(raw.telas, fallback.telas),
+    crop_facecam: cropFacecam,
+    crop_tela: cropTela,
+    slot_facecam: normalizeSlotRect(
+      normalizeRect(raw.slot_facecam, fallback.slot_facecam),
+      cropFacecam,
+      fallback.slot_facecam,
+      LEGACY_SLOT_FACECAM,
+    ),
+    slot_tela: normalizeSlotRect(
+      normalizeRect(raw.slot_tela, fallback.slot_tela),
+      cropTela,
+      fallback.slot_tela,
+      LEGACY_SLOT_TELA,
+    ),
+  };
+  const segZonaCard = normalizeZonaCard(raw.zona_card) ?? zonaCard;
+  if (segZonaCard) segmento.zona_card = segZonaCard;
+  return segmento;
 }
 
 function normalizeFullConfig(value: unknown, fallback: YoutubeFullConfig): YoutubeFullConfig {
@@ -263,47 +277,6 @@ export function resolveCardLayoutForScene(
 ) {
   if (cena.layout_card === 'horizontal' || cena.layout_card === 'vertical') return cena.layout_card;
   return fallback;
-}
-
-export function sharedVerticalCardZone(config: YoutubeSharedConfig): YoutubeSharedRect {
-  const margem = 48;
-  const respiro = 28;
-
-  if (config.telas === 1) {
-    const tela = renderedSize(config.crop_tela, config.slot_tela);
-    const telaRight = config.slot_tela.x + tela.w;
-    const leftSpace = config.slot_tela.x - margem - respiro;
-    const rightSpace = 1920 - telaRight - margem - respiro;
-    const useRightSide = rightSpace > leftSpace;
-    const left = useRightSide ? Math.min(1920 - margem - 240, telaRight + respiro) : margem;
-    const right = useRightSide ? 1920 - margem : Math.max(left + 240, config.slot_tela.x - respiro);
-    const top = Math.max(56, Math.min(config.slot_tela.y, 1080 - 236));
-    const bottom = Math.max(top + 180, Math.min(1080 - 56, config.slot_tela.y + tela.h));
-
-    return {
-      x: Math.round(left),
-      y: Math.round(top),
-      w: Math.round(Math.max(240, right - left)),
-      h: Math.round(Math.max(180, bottom - top)),
-    };
-  }
-
-  // I-035: 2 telas — borda externa fixa define topo/esquerda; a tela grande
-  // limita a direita e o facecam limita o alcance inferior. O topo usa respiro
-  // maior que a lateral para o card nao colar no contorno do palco. Espelha
-  // _zona_card_vertical_compartilhada no backend (paridade preview/render).
-  const margemTopo = 96;
-  const left = margem;
-  const top = margemTopo;
-  const right = Math.min(Math.max(config.slot_tela.x - respiro, left + 240), 1920 - margem);
-  const bottom = Math.min(Math.max(config.slot_facecam.y - respiro, top + 180), 1080 - margem);
-
-  return {
-    x: Math.round(left),
-    y: Math.round(top),
-    w: Math.round(right - left),
-    h: Math.round(bottom - top),
-  };
 }
 
 export function sharedRegions(layout: YoutubeLayout, duration: number): YoutubeLayoutRegion[] {
@@ -384,6 +357,8 @@ function normalizeRegionOverride(value: unknown): Partial<YoutubeSharedConfig> |
   if (raw.slot_tela !== undefined) {
     result.slot_tela = normalizeRect(raw.slot_tela, DEFAULT_YOUTUBE_LAYOUT.compartilhada.slot_tela);
   }
+  const zonaCard = normalizeZonaCard(raw.zona_card);
+  if (zonaCard) result.zona_card = zonaCard;
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
@@ -403,12 +378,15 @@ export function mergeSharedConfig(
     slot_facecam: { ...base.slot_facecam },
     slot_tela: { ...base.slot_tela },
   };
+  // D-904: a zona dos cards só existe no resultado quando alguém a definiu.
+  if (base.zona_card) merged.zona_card = { ...base.zona_card };
   if (!override) return merged;
   if (override.telas !== undefined) merged.telas = override.telas;
   if (override.crop_facecam) merged.crop_facecam = { ...override.crop_facecam };
   if (override.crop_tela) merged.crop_tela = { ...override.crop_tela };
   if (override.slot_facecam) merged.slot_facecam = { ...override.slot_facecam };
   if (override.slot_tela) merged.slot_tela = { ...override.slot_tela };
+  if (override.zona_card) merged.zona_card = { ...override.zona_card };
   return merged;
 }
 
@@ -574,7 +552,8 @@ export function sharedConfigEquals(a: YoutubeSharedConfig, b: YoutubeSharedConfi
     rectsEqual(a.crop_facecam, b.crop_facecam) &&
     rectsEqual(a.crop_tela, b.crop_tela) &&
     rectsEqual(a.slot_facecam, b.slot_facecam) &&
-    rectsEqual(a.slot_tela, b.slot_tela)
+    rectsEqual(a.slot_tela, b.slot_tela) &&
+    zonasCardIguais(a.zona_card, b.zona_card)
   );
 }
 
@@ -675,11 +654,6 @@ function normalizeSlotRect(
     },
     fallback,
   );
-}
-
-function renderedSize(crop: YoutubeSharedRect, slot: YoutubeSharedRect) {
-  const scale = Math.max(0.01, Math.min(slot.w / crop.w, slot.h / crop.h));
-  return { w: crop.w * scale, h: crop.h * scale };
 }
 
 function sameRect(a: YoutubeSharedRect, b: YoutubeSharedRect) {

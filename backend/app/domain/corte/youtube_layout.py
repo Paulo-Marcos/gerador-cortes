@@ -12,6 +12,8 @@ import json
 from copy import deepcopy
 from typing import Any
 
+from app.domain.corte.zona_card import normalizar_zona_card, resolver_zona_card
+
 MODO_FULL = "full"
 MODO_COMPARTILHADA = "compartilhada"
 MODOS_VALIDOS = {MODO_FULL, MODO_COMPARTILHADA}
@@ -261,6 +263,12 @@ def _aplicar_compartilhada(config: dict[str, Any], compartilhada: Any) -> None:
                 compartilhada.get(chave),
                 config[chave],
             )
+        # D-904 (RN-28): a zona dos cards so entra quando o operador a definiu.
+        # Sem chave, vale a regra automatica — e a chave ausente e o que deixa
+        # o corte herdar a zona do projeto (RN-10).
+        zona_card = normalizar_zona_card(compartilhada.get("zona_card"))
+        if zona_card is not None:
+            config["zona_card"] = zona_card
     config["telas"] = _normalizar_quantidade_telas(config.get("telas"))
     config["slot_facecam"] = _normalizar_slot_proporcional(
         config["slot_facecam"],
@@ -288,6 +296,9 @@ def _aplicar_padroes_de_segmento(layout: dict[str, Any], payload: dict) -> None:
         )
         for chave in ("crop_facecam", "crop_tela", "slot_facecam", "slot_tela"):
             seg[chave] = _normalizar_retangulo(segmento_compartilhada.get(chave), seg[chave])
+        zona_card = normalizar_zona_card(segmento_compartilhada.get("zona_card"))
+        if zona_card is not None:
+            seg["zona_card"] = zona_card
         layout["compartilhada_segmento"] = seg
     segmento_full = payload.get("full_segmento")
     if isinstance(segmento_full, dict) and segmento_full:
@@ -322,7 +333,7 @@ def aplicar_layout_card_por_contexto(
     layout_padrao = (
         layout_card_padrao if layout_card_padrao in {"horizontal", "vertical"} else CARD_LAYOUT_FULL
     )
-    shared_card_zone = _zona_card_vertical_compartilhada(layout["compartilhada"])
+    shared_card_zone = resolver_zona_card(layout["compartilhada"])
     cenas_render = []
     for cena in cenas:
         if not isinstance(cena, dict):
@@ -365,69 +376,6 @@ def aplicar_layout_card_por_contexto(
 
         cenas_render.append(render)
     return cenas_render
-
-
-def _zona_card_vertical_compartilhada(config: dict[str, Any]) -> dict[str, int]:
-    """Retangulo livre a esquerda para card vertical no layout compartilhado.
-
-    I-035: a faixa e calculada de forma DINAMICA por layout YT. A borda externa
-    do palco (StageChrome) e fixa, entao define o topo e a esquerda. As duas
-    telas mudam por preset ou por customizacao do corte, e sao elas que limitam
-    o espaco interno:
-      - a tela grande (``slot_tela``) limita o alcance a DIREITA;
-      - a tela pequena / facecam (``slot_facecam``) limita o alcance INFERIOR.
-    Assim, sempre que as telas deixam mais respiro a esquerda, o card cresce.
-    """
-    margem = 48
-    respiro = 28
-
-    if config.get("telas") == 1:
-        tela = _tamanho_renderizado(config["crop_tela"], config["slot_tela"])
-        tela_right = config["slot_tela"]["x"] + tela["w"]
-        left_space = config["slot_tela"]["x"] - margem - respiro
-        right_space = CANVAS_W - tela_right - margem - respiro
-        use_right_side = right_space > left_space
-        if use_right_side:
-            left = min(CANVAS_W - margem - 240, tela_right + respiro)
-            right = CANVAS_W - margem
-        else:
-            left = margem
-            right = max(left + 240, config["slot_tela"]["x"] - respiro)
-        top = max(56, min(config["slot_tela"]["y"], CANVAS_H - 236))
-        bottom = max(top + 180, min(CANVAS_H - 56, config["slot_tela"]["y"] + tela["h"]))
-
-        return {
-            "x": int(left),
-            "y": int(top),
-            "w": int(max(240, right - left)),
-            "h": int(max(180, bottom - top)),
-        }
-
-    # 2 telas: borda externa fixa em cima/esquerda; as telas limitam a faixa.
-    # O topo usa respiro maior que a lateral para o card nao colar no contorno
-    # do palco (StageChrome).
-    margem_topo = 96
-    left = margem
-    top = margem_topo
-    right = config["slot_tela"]["x"] - respiro
-    bottom = config["slot_facecam"]["y"] - respiro
-
-    # Pisos de seguranca: mesmo que um preset aproxime demais as telas da borda,
-    # o card nunca some. 240x180 espelha o piso do fit (shared-card-zone.tsx).
-    right = min(max(right, left + 240), CANVAS_W - margem)
-    bottom = min(max(bottom, top + 180), CANVAS_H - margem)
-
-    return {
-        "x": int(left),
-        "y": int(top),
-        "w": int(right - left),
-        "h": int(bottom - top),
-    }
-
-
-def _tamanho_renderizado(crop: dict[str, int], slot: dict[str, int]) -> dict[str, int]:
-    escala = max(0.01, min(slot["w"] / crop["w"], slot["h"] / crop["h"]))
-    return {"w": round(crop["w"] * escala), "h": round(crop["h"] * escala)}
 
 
 def resolver_modo_intervalo(
@@ -568,21 +516,9 @@ def _normalizar_regiao(regiao: Any) -> dict[str, Any] | None:
     # F-048: override opcional de compartilhada por segmento. Aceita parcial —
     # campos ausentes herdam do compartilhada do corte (resolvido em
     # regioes_compartilhadas).
-    override = regiao.get("compartilhada")
-    if isinstance(override, dict) and override:
-        normalizado: dict[str, Any] = {}
-        if "telas" in override:
-            normalizado["telas"] = _normalizar_quantidade_telas(override.get("telas"))
-        for chave, padrao in (
-            ("crop_facecam", DEFAULT_CROP_FACECAM),
-            ("crop_tela", DEFAULT_CROP_TELA),
-            ("slot_facecam", DEFAULT_SLOT_FACECAM),
-            ("slot_tela", DEFAULT_SLOT_TELA),
-        ):
-            if chave in override:
-                normalizado[chave] = _normalizar_retangulo(override.get(chave), padrao)
-        if normalizado:
-            resultado["compartilhada"] = normalizado
+    override_compartilhada = _normalizar_override_compartilhada(regiao.get("compartilhada"))
+    if override_compartilhada:
+        resultado["compartilhada"] = override_compartilhada
 
     # F-060: override opcional do posicionamento FULL por segmento (parcial).
     override_full = regiao.get("full")
@@ -600,6 +536,27 @@ def _normalizar_regiao(regiao: Any) -> dict[str, Any] | None:
             resultado["full"] = normalizado_full
 
     return resultado
+
+
+def _normalizar_override_compartilhada(override: Any) -> dict[str, Any]:
+    """O override parcial de `compartilhada` de um segmento, só com o que ele trouxe."""
+    if not isinstance(override, dict) or not override:
+        return {}
+    normalizado: dict[str, Any] = {}
+    if "telas" in override:
+        normalizado["telas"] = _normalizar_quantidade_telas(override.get("telas"))
+    for chave, padrao in (
+        ("crop_facecam", DEFAULT_CROP_FACECAM),
+        ("crop_tela", DEFAULT_CROP_TELA),
+        ("slot_facecam", DEFAULT_SLOT_FACECAM),
+        ("slot_tela", DEFAULT_SLOT_TELA),
+    ):
+        if chave in override:
+            normalizado[chave] = _normalizar_retangulo(override.get(chave), padrao)
+    zona_card = normalizar_zona_card(override.get("zona_card"))
+    if zona_card is not None:
+        normalizado["zona_card"] = zona_card
+    return normalizado
 
 
 def merge_full(base: dict[str, Any], override: dict[str, Any] | None) -> dict[str, Any]:
@@ -722,6 +679,9 @@ def merge_compartilhada(base: dict[str, Any], override: dict[str, Any] | None) -
         "slot_facecam": dict(base["slot_facecam"]),
         "slot_tela": dict(base["slot_tela"]),
     }
+    # D-904: a zona dos cards so existe no resultado quando alguem a definiu.
+    if isinstance(base.get("zona_card"), dict):
+        resultado["zona_card"] = dict(base["zona_card"])
     if not override:
         return resultado
     if "telas" in override:
@@ -729,6 +689,8 @@ def merge_compartilhada(base: dict[str, Any], override: dict[str, Any] | None) -
     for chave in ("crop_facecam", "crop_tela", "slot_facecam", "slot_tela"):
         if chave in override:
             resultado[chave] = dict(override[chave])
+    if isinstance(override.get("zona_card"), dict):
+        resultado["zona_card"] = dict(override["zona_card"])
     return resultado
 
 

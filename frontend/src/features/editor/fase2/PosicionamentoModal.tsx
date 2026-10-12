@@ -24,17 +24,23 @@ import { cn } from '@/lib/utils';
 import {
   CropPicker,
   ModePicker,
+  RECT_KEYS_FULL,
   RECT_KEYS_ONE_SCREEN,
   RECT_KEYS_TWO_SCREENS,
   SharedRectEditor,
   SharedScreenCountToggle,
   SlotPreview,
+  comZonaManual,
   getRectLabel,
+  isCardZoneKey,
   isCropRectKey,
   isFacecamRectKey,
   resizeSlotForCrop,
+  semZonaManual,
   type SharedRectKey,
 } from './posicionamentoControls';
+import { NomeDoPresetDialog } from './NomeDoPresetDialog';
+import { ZonaCardsControle } from './ZonaCardsControle';
 import {
   useDeleteLayoutPreset,
   useLayoutPresets,
@@ -44,9 +50,11 @@ import {
 import {
   fullConfigDoPreset,
   fundoPlacaDoPreset,
+  normalizeZonaCard,
   sharedConfigDoPreset,
   sharedConfigEquals,
   sharedConfigFromFull,
+  sharedVerticalCardZone,
   type YoutubeBackgroundId,
   type YoutubeLayoutMode,
   type YoutubePlaca,
@@ -153,7 +161,12 @@ export function PosicionamentoModal({
 
   const sharedScreenCount = config.telas;
   const rectOptions = useMemo(
-    () => (isFullMode || sharedScreenCount === 1 ? RECT_KEYS_ONE_SCREEN : RECT_KEYS_TWO_SCREENS),
+    () =>
+      isFullMode
+        ? RECT_KEYS_FULL
+        : sharedScreenCount === 1
+          ? RECT_KEYS_ONE_SCREEN
+          : RECT_KEYS_TWO_SCREENS,
     [isFullMode, sharedScreenCount],
   );
 
@@ -163,7 +176,10 @@ export function PosicionamentoModal({
     }
   }, [sharedScreenCount, rectKey]);
 
-  const selectedRect = config[rectKey];
+  // D-904: com a zona dos cards na regra automática o editor mostra onde ela
+  // cai hoje; o operador só edita depois de passar para "Manual".
+  const zonaManual = Boolean(config.zona_card);
+  const selectedRect = isCardZoneKey(rectKey) ? sharedVerticalCardZone(config) : config[rectKey];
   const selectedCropKey = isCropRectKey(rectKey) ? rectKey : null;
   const selectedBaseRect =
     rectKey === 'slot_facecam'
@@ -171,8 +187,15 @@ export function PosicionamentoModal({
       : rectKey === 'slot_tela'
         ? config.crop_tela
         : undefined;
+  const editorLiberado = !isCardZoneKey(rectKey) || zonaManual;
 
   const updateRect = (key: SharedRectKey, rect: YoutubeSharedRect) => {
+    if (isCardZoneKey(key)) {
+      // O piso 240x180 e o quadro valem já no rascunho: o preview mostra o
+      // mesmo retângulo que o backend vai gravar.
+      setConfig((current) => ({ ...current, zona_card: normalizeZonaCard(rect) ?? rect }));
+      return;
+    }
     if (key === 'crop_facecam') {
       setConfig((current) => ({
         ...current,
@@ -482,14 +505,24 @@ export function PosicionamentoModal({
               ))}
             </div>
 
-            <SharedRectEditor
-              className="mt-1"
-              rect={selectedRect}
-              baseRect={selectedBaseRect}
-              onChange={(rect) => updateRect(rectKey, rect)}
-              onChangeDraft={(rect) => updateRect(rectKey, rect)}
-              onCommit={() => undefined}
-            />
+            {isCardZoneKey(rectKey) && (
+              <ZonaCardsControle
+                manual={zonaManual}
+                onAutomatica={() => setConfig((current) => semZonaManual(current))}
+                onManual={() => setConfig((current) => comZonaManual(current))}
+              />
+            )}
+
+            {editorLiberado && (
+              <SharedRectEditor
+                className="mt-1"
+                rect={selectedRect}
+                baseRect={selectedBaseRect}
+                onChange={(rect) => updateRect(rectKey, rect)}
+                onChangeDraft={(rect) => updateRect(rectKey, rect)}
+                onCommit={() => undefined}
+              />
+            )}
 
             {/* F-060: Fundo + Placa fazem parte do preset/escopo — editados
                 aqui, nao mais na pagina de Layout. Segmentos herdam do corte. */}
@@ -657,119 +690,34 @@ export function PosicionamentoModal({
           </Button>
         </footer>
 
-        {/* Mini modal aninhado para nomear o preset */}
         {salvarPresetOpen && (
-          <div
-            className="absolute inset-0 z-[90] flex items-center justify-center bg-black/40"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setSalvarPresetOpen(false);
-            }}
-          >
-            <div className="w-full max-w-sm rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-              <strong className="block font-editorial text-[14px] text-[var(--wb-ink)]">
-                Salvar posicionamento como preset
-              </strong>
-              <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
-                Dê um nome ao preset. Ele fica disponível em qualquer escopo (corte, projeto,
-                global, segmento).
-              </p>
-              <label className="mt-3 flex flex-col gap-1">
-                <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                  Nome
-                </span>
-                <Input
-                  autoFocus
-                  value={nomePreset}
-                  onChange={(event) => setNomePreset(event.target.value)}
-                  placeholder="Ex.: Estúdio principal — facecam menor"
-                  maxLength={120}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && nomePreset.trim()) {
-                      event.preventDefault();
-                      handleSalvarPreset();
-                    }
-                  }}
-                />
-              </label>
-              <div className="mt-4 flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSalvarPresetOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={handleSalvarPreset}
-                  disabled={!nomePreset.trim() || savePreset.isPending}
-                >
-                  {savePreset.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
-                  Salvar
-                </Button>
-              </div>
-            </div>
-          </div>
+          <NomeDoPresetDialog
+            titulo="Salvar posicionamento como preset"
+            descricao="Dê um nome ao preset. Ele fica disponível em qualquer escopo (corte, projeto, global, segmento)."
+            placeholder="Ex.: Estúdio principal — facecam menor"
+            value={nomePreset}
+            onChange={setNomePreset}
+            onConfirm={handleSalvarPreset}
+            onClose={() => setSalvarPresetOpen(false)}
+            confirmLabel="Salvar"
+            confirmIcon="save"
+            pending={savePreset.isPending}
+          />
         )}
 
-        {/* Mini modal aninhado para renomear o preset selecionado */}
         {renomearPresetOpen && (
-          <div
-            className="absolute inset-0 z-[90] flex items-center justify-center bg-black/40"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setRenomearPresetOpen(false);
-            }}
-          >
-            <div className="w-full max-w-sm rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-              <strong className="block font-editorial text-[14px] text-[var(--wb-ink)]">
-                Renomear preset
-              </strong>
-              <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
-                Edite o nome exibido para este preset. O conteúdo (recortes/encaixes) não muda.
-              </p>
-              <label className="mt-3 flex flex-col gap-1">
-                <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                  Nome
-                </span>
-                <Input
-                  autoFocus
-                  value={nomeRenomear}
-                  onChange={(event) => setNomeRenomear(event.target.value)}
-                  placeholder="Novo nome do preset"
-                  maxLength={120}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && nomeRenomear.trim()) {
-                      event.preventDefault();
-                      handleRenomearPreset();
-                    }
-                  }}
-                />
-              </label>
-              <div className="mt-4 flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setRenomearPresetOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={handleRenomearPreset}
-                  disabled={!nomeRenomear.trim() || updatePreset.isPending}
-                >
-                  {updatePreset.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.renomear} />}
-                  Renomear
-                </Button>
-              </div>
-            </div>
-          </div>
+          <NomeDoPresetDialog
+            titulo="Renomear preset"
+            descricao="Edite o nome exibido para este preset. O conteúdo (recortes/encaixes) não muda."
+            placeholder="Novo nome do preset"
+            value={nomeRenomear}
+            onChange={setNomeRenomear}
+            onConfirm={handleRenomearPreset}
+            onClose={() => setRenomearPresetOpen(false)}
+            confirmLabel="Renomear"
+            confirmIcon={ICONE_DO_CONCEITO.renomear}
+            pending={updatePreset.isPending}
+          />
         )}
       </div>
     </div>

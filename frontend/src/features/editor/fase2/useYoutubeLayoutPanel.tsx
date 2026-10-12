@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/toaster';
 import type { AppSettings, Corte, Projeto } from '@/types/models';
 import { projetosApi } from '@/features/projetos/api';
 import {  type PosicionamentoModalResult } from './PosicionamentoModal';
+import { overrideCompartilhadaDoSegmento, overrideFullDoSegmento } from './overrideDeSegmento';
 import {
   DEFAULT_FULL_CONFIG,
   DEFAULT_YOUTUBE_LAYOUT,
@@ -592,38 +593,17 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
       if (!modal) return;
       const { config, fundo, placa } = result;
       if (modal.scope === 'segmento' && modal.regionIndex !== undefined) {
+        // Override de segmento: só o que difere da base do corte (RN-10).
         if (modal.modo === 'full') {
-          // Override FULL de segmento: reduz para campos que diferem da base.
-          const base = draft.full;
-          const novo = fullFromSynthetic(config);
-          const partial: Partial<YoutubeFullConfig> = {};
-          (['crop', 'slot'] as const).forEach((chave) => {
-            const a = novo[chave];
-            const b = base[chave];
-            if (a.x !== b.x || a.y !== b.y || a.w !== b.w || a.h !== b.h) {
-              partial[chave] = a;
-            }
-          });
           aplicarOverrideSegmentoFull(
             modal.regionIndex,
-            Object.keys(partial).length > 0 ? partial : undefined,
+            overrideFullDoSegmento(draft.full, fullFromSynthetic(config)),
           );
           return;
         }
-        // Override de segmento: reduz para campos que diferem da base do corte.
-        const base = draft.compartilhada;
-        const partial: Partial<YoutubeSharedConfig> = {};
-        if (config.telas !== base.telas) partial.telas = config.telas;
-        (['crop_facecam', 'crop_tela', 'slot_facecam', 'slot_tela'] as const).forEach((chave) => {
-          const a = config[chave];
-          const b = base[chave];
-          if (a.x !== b.x || a.y !== b.y || a.w !== b.w || a.h !== b.h) {
-            partial[chave] = a;
-          }
-        });
         aplicarOverrideSegmento(
           modal.regionIndex,
-          Object.keys(partial).length > 0 ? partial : undefined,
+          overrideCompartilhadaDoSegmento(draft.compartilhada, config),
         );
       } else if (
         modal.scope === 'corte' ||

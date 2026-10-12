@@ -38,6 +38,10 @@ POOL = {
     "compartilhada-slot": {
         "compartilhada": {"slot_tela": {"x": 400, "y": 100, "w": 1200, "h": 700}}
     },
+    # D-904: a zona dos cards e opcional e cascateia como os encaixes.
+    "compartilhada-zona-card": {
+        "compartilhada": {"zona_card": {"x": 1400, "y": 200, "w": 440, "h": 600}}
+    },
     "full": {"full": {"crop": {"x": 100, "y": 50, "w": 1600, "h": 900}}},
     "regioes": {
         "regioes": [

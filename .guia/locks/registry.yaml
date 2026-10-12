@@ -222,13 +222,15 @@ locks:
   - backend/app/services/render/remotion_render.py
   - backend/app/routers/cortes.py
 - id: i-035-zona-card-compartilhada
-  description: Geometria dinamica da zona do card no layout compartilhado (2 telas)
-    e testes de paridade preview/render
+  description: Geometria da zona do card no layout compartilhado (automatica e manual,
+    D-904) e testes de paridade preview/render
   locked_at: 2026-06-09
   files:
   - backend/app/domain/corte/youtube_layout.py
+  - backend/app/domain/corte/zona_card.py
   - backend/tests/domain/test_youtube_card_zone.py
   - frontend/src/shared/palco/youtubeLayout.ts
+  - frontend/src/shared/palco/zonaCard.ts
   - frontend/src/features/editor/fase2/__tests__/sharedCardZone.test.ts
 - id: f061-dividir-corte
   description: 'F-061: dividir corte em 2 na edicao bruto (endpoint, api/hook, botao
