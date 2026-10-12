@@ -67,7 +67,6 @@ from app.services.janela_do_robo import fechar_aba
 from app.services.navegador_assistido import (
     ChromeNaoAbriu,
     Pagina,
-    PaginaDoPlaywright,
     PlaywrightAusente,
     aba_marcada,
     apagar_copias_do_upload,
@@ -235,7 +234,7 @@ ENVIO_CONCLUIDO = r"enviad|carregad|uploaded"
 
 
 def executar_roteiro(
-    pagina: Pagina,
+    pagina: capa_no_tiktok_studio.PaginaQueOuve,
     *,
     video: Path,
     legenda: str,
@@ -662,7 +661,7 @@ def _assistir(
             apagar_copias_do_upload(contexto, ORIGEM_DO_TIKTOK, TRECHO_DA_ABA_DE_UPLOAD)
             page = contexto.new_page()
             relatorio = executar_roteiro(
-                PaginaDoPlaywright(page, SELETORES),
+                capa_no_tiktok_studio.PaginaNoTikTok(page, SELETORES),
                 video=video,
                 legenda=legenda,
                 capa=capa,

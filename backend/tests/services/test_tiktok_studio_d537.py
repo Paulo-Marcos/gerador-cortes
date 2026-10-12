@@ -39,6 +39,10 @@ class PaginaFalsa:
         self.escrito: dict[str, str] = {}
         self.sobrescreve = 0
         self.miniatura = "blob:antes"
+        # D-902: o recibo do servidor. A miniatura troca NA HORA (imagem local);
+        # o envio da capa ao TikTok termina segundos depois, e e ele que conta.
+        self.servidor_confirma = True
+        self.escutas: list[int] = []  # posicao em `chamadas` de cada escuta
         # D-580: os campos de data e hora sao `readonly` e so mudam por clique
         # no seletor. O duble imita isso — escrever neles nao existe.
         self.campos = {"campo_da_data": "2026-09-12", "campo_da_hora": "00:00"}
@@ -85,6 +89,18 @@ class PaginaFalsa:
     def atributo_de(self, alvo, atributo):
         return self.miniatura
 
+    def escutar_resposta(self, trecho):
+        assert trecho == capa_no_tiktok_studio.RECIBO_DA_CAPA
+        inicio = len(self.chamadas)
+        self.escutas.append(inicio)
+
+        def esperar(segundos):
+            # O recibo so existe para um Salvar que aconteceu DEPOIS da escuta.
+            salvou = ("clicar", "confirmar_capa") in self.chamadas[inicio:]
+            return salvou and self.servidor_confirma
+
+        return esperar
+
     def esperar_sumir(self, alvo, *, segundos):
         self.chamadas.append(("sumir", alvo))
         self.ausentes.add(alvo)
@@ -92,7 +108,8 @@ class PaginaFalsa:
     def clicar(self, alvo, *, segundos):
         self._registrar("clicar", alvo)
         if alvo == "confirmar_capa":
-            self.miniatura = "blob:depois"
+            # Cada Salvar gera um blob novo, como na pagina medida (D-902).
+            self.miniatura = f"blob:depois-{len(self.chamadas)}"
         if alvo == "mes_seguinte":
             ano, mes = (int(x) for x in self.mes_visivel.split("-"))
             ano, mes = (ano + 1, 1) if mes == 12 else (ano, mes + 1)
@@ -893,6 +910,43 @@ class TestCapaInsistente:
         assert relatorio["capa_aplicada"] is False
         assert any("continua a mesma" in a for a in relatorio["avisos"])
         assert pagina.chamadas.count(("clicar", "botao_da_capa")) == 2
+
+
+class TestCapaConfirmadaPeloServidor:
+    """D-902: no video horizontal a capa "nao subia". Medido em 12/10/2026: a
+    miniatura troca no instante do Salvar (e uma imagem local), mas o envio da
+    capa ao TikTok so termina ~6 s depois, no `post_draft/get_image_urls`. O
+    robo via a miniatura nova, dava a capa por aplicada e publicava antes."""
+
+    def test_miniatura_nova_sem_recibo_do_servidor_nao_e_capa_aplicada(self, arquivos):
+        pagina = PaginaFalsa()
+        pagina.servidor_confirma = False
+
+        relatorio = _rodar(pagina, arquivos)
+
+        assert relatorio["capa_aplicada"] is False
+        assert any("nao confirmou" in a for a in relatorio["avisos"])
+        assert len(pagina.escutas) == capa_no_tiktok_studio.TENTATIVAS
+
+    def test_sem_recibo_o_robo_nao_publica_sozinho(self, arquivos, monkeypatch):
+        # Se o robo errar e publicar, a espera pela navegacao nao prende o teste.
+        monkeypatch.setattr(tiktok_studio, "SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO", 0.1)
+        pagina = PaginaFalsa()
+        pagina.servidor_confirma = False
+
+        relatorio = _rodar(pagina, arquivos, publicar_sozinho=True)
+
+        assert relatorio["publicado"] is False
+        assert ("clicar", "botao_publicar") not in pagina.chamadas
+
+    def test_escuta_comeca_antes_do_salvar(self, arquivos):
+        """O recibo pode chegar rapido; quem comeca a ouvir depois o perde."""
+        pagina = PaginaFalsa()
+
+        _rodar(pagina, arquivos)
+
+        assert pagina.escutas
+        assert pagina.escutas[0] <= pagina.chamadas.index(("clicar", "confirmar_capa"))
 
 
 class TestPublicarSozinhoExigeCapa:

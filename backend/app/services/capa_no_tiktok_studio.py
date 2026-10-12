@@ -1,4 +1,4 @@
-"""A capa no TikTok Studio: aplicar, provar que ficou e tentar de novo (D-537, D-545, D-799).
+"""A capa no TikTok Studio: aplicar, provar que ficou e tentar de novo (D-537, D-545, D-799, D-902).
 
 Saiu do `tiktok_studio` por dois motivos. A capa é o passo que mais falha, e o
 único que ganhou lógica própria de insistência; e o roteiro já estava no teto
@@ -17,15 +17,26 @@ O relato do operador (28/09/2026) era "vira e mexe não salva". Um clique que
 chega enquanto a página redesenha não falha com erro — ele só não acontece.
 Uma segunda passada, com o editor reaberto do zero, cobre esse acaso sem
 esconder o defeito de verdade: se as duas falharem, o motivo chega à tela.
+
+## A miniatura não basta: o recibo do servidor (D-902)
+
+Medido em 12/10/2026 num vídeo horizontal: a miniatura troca NO INSTANTE do
+Salvar — ela é a imagem local, um blob —, mas o envio da capa ao TikTok só
+termina ~6 s depois, quando a página chama `post_draft/get_image_urls`. Quem
+publica nesse intervalo publica sem capa. A miniatura prova que a PÁGINA tem a
+capa; só o recibo prova que o TIKTOK a tem.
 """
 
 from __future__ import annotations
 
 import logging
+import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import Protocol
 
-from app.services.navegador_assistido import Pagina
+from app.services.navegador_assistido import Pagina, PaginaDoPlaywright
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +45,49 @@ SEGUNDOS_PARA_CAPA = 20.0
 SEGUNDOS_PARA_A_MINIATURA = 5.0
 INTERVALO_DA_MINIATURA = 0.25
 TENTATIVAS = 2
+# D-902: a chamada que a página faz quando a capa terminou de subir — e só então.
+RECIBO_DA_CAPA = "post_draft/get_image_urls"
+# Mediu ~6 s com uma imagem de 10 KB; a arte de verdade pesa megabytes.
+SEGUNDOS_PARA_O_RECIBO = 60.0
 
 CAPA_FORA_DO_DISCO = "A capa nao esta mais em disco; o TikTok vai congelar um frame."
 
 
-def aplicar_no_roteiro(pagina: Pagina, capa: Path | None) -> tuple[bool, str]:
+class PaginaQueOuve(Pagina, Protocol):
+    """A `Pagina` que também ouve a rede — o recibo da capa não aparece no DOM."""
+
+    def escutar_resposta(self, trecho: str) -> Callable[[float], bool]: ...
+
+
+class PaginaNoTikTok(PaginaDoPlaywright):
+    """A `PaginaDoPlaywright` com o ouvido que só a capa do TikTok pede."""
+
+    def escutar_resposta(self, trecho: str) -> Callable[[float], bool]:
+        """Começa a ouvir JÁ; devolve a espera: `esperar(segundos) -> chegou?`.
+
+        Ouvir antes do clique é o ponto: a resposta pode chegar antes de quem
+        clicou voltar a olhar, e evento passado não se escuta depois.
+        """
+        chegou = threading.Event()
+
+        def ouvir(resposta) -> None:
+            if trecho in resposta.url and resposta.ok:
+                chegou.set()
+
+        self._page.on("response", ouvir)
+
+        def esperar(segundos: float) -> bool:
+            limite = time.monotonic() + segundos
+            # O Playwright síncrono só entrega eventos durante uma chamada a ele.
+            while not chegou.is_set() and time.monotonic() < limite:
+                self._page.wait_for_timeout(250)
+            self._page.remove_listener("response", ouvir)
+            return chegou.is_set()
+
+        return esperar
+
+
+def aplicar_no_roteiro(pagina: PaginaQueOuve, capa: Path | None) -> tuple[bool, str]:
     """A capa como passo do roteiro: `(aplicada, aviso)`. Nunca levanta.
 
     Sem capa pedida, não há o que fazer nem o que avisar. Capa pedida e fora do
@@ -55,7 +104,7 @@ def aplicar_no_roteiro(pagina: Pagina, capa: Path | None) -> tuple[bool, str]:
     return True, ""
 
 
-def aplicar(pagina: Pagina, capa: Path) -> str:
+def aplicar(pagina: PaginaQueOuve, capa: Path) -> str:
     """Troca a capa em até `TENTATIVAS` passadas; vazio quando entrou, ou o motivo."""
     motivo = ""
     for tentativa in range(1, TENTATIVAS + 1):
@@ -82,7 +131,7 @@ def _preparar_nova_tentativa(pagina: Pagina) -> None:
         logger.debug("[TikTokStudio] overlay: %s", exc)
 
 
-def _tentar(pagina: Pagina, capa: Path) -> str:
+def _tentar(pagina: PaginaQueOuve, capa: Path) -> str:
     """Uma passada: abrir o editor, entregar a imagem, salvar e conferir.
 
     Não há passo de "clicar em Upload cover": o `<input type=file>` do modal já
@@ -106,6 +155,7 @@ def _tentar(pagina: Pagina, capa: Path) -> str:
         # desabilitado enquanto processa a imagem, e um clique nesse intervalo
         # não é recusado com erro — ele simplesmente não acontece.
         pagina.esperar_habilitado("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
+        recibo = pagina.escutar_resposta(RECIBO_DA_CAPA)
         pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
         pagina.esperar_sumir("dialogo", segundos=SEGUNDOS_PARA_CAPA)
 
@@ -117,6 +167,8 @@ def _tentar(pagina: Pagina, capa: Path) -> str:
 
         if not _miniatura_mudou(pagina, antes):
             return "Cliquei em salvar, mas a capa na pagina continua a mesma."
+        if not recibo(SEGUNDOS_PARA_O_RECIBO):
+            return "A capa trocou na pagina, mas o TikTok nao confirmou o envio dela."
         return ""
     except Exception as exc:  # noqa: BLE001 — qualquer falha aqui vira aviso
         return f"{type(exc).__name__}: {exc}"
