@@ -36,10 +36,12 @@ from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.domain.short.formato_video import foco_de_regiao
 from app.domain.short.moldura_short import Moldura
 from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort, sem_repetir_existentes
+from app.domain.short.shorts_prontos import redes_do_corte
 from app.models import Corte, MetadadoShort, Projeto, Short, StatusShort
+from app.services import resumo_dos_fires
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -50,10 +52,6 @@ _SKILL_GANCHO_SHORT = "gancho-short-expert"
 
 ORIGEM_IA = "ia"
 ORIGEM_MANUAL = "manual"
-
-# Contagem zerada de shorts por estagio, DERIVADA do enum: acrescentar um status
-# novo em StatusShort passa a aparecer na tela sozinho, sem editar esta lista.
-_CONTAGEM_VAZIA: dict[str, int] = {"total": 0, **{s.value: 0 for s in StatusShort}}
 
 
 @dataclass(frozen=True)
@@ -1199,11 +1197,16 @@ async def listar_fires_com_bruto() -> list[dict]:
 
         if fires:
             ids = [f["corte_id"] for f in fires]
-            contagens = await _contar_shorts_por_corte(db, ids)
-            edicoes = await _edicao_por_corte(db, ids)
+            contagens = await resumo_dos_fires.contar_shorts_por_corte(db, ids)
+            edicoes = await resumo_dos_fires.edicao_por_corte(db, ids)
+            publicados = await resumo_dos_fires.publicados_por_corte(db, ids)
             for fire in fires:
-                fire["shorts"] = contagens.get(fire["corte_id"], _CONTAGEM_VAZIA.copy())
+                fire["shorts"] = contagens.get(fire["corte_id"], resumo_dos_fires.contagem_vazia())
                 fire["tem_edicao"] = edicoes.get(fire["corte_id"], False)
+                # D-905: a rede acende quando TODOS os prontos do corte ja subiram.
+                fire["redes"] = redes_do_corte(
+                    fire["shorts"]["renderizado"], publicados.get(fire["corte_id"], {})
+                )
 
     return fires
 
@@ -1265,72 +1268,6 @@ def _video_final_em_disco(corte: Corte) -> bool:
     """
     caminho = projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
     return caminho.is_file()
-
-
-async def _edicao_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[str, bool]:
-    """Em quais cortes a MAO HUMANA ja passou — o filtro "onde eu parei" (D-581).
-
-    A pergunta que o operador faz ao abrir a tela nao e "quantos candidatos a IA
-    propos", e sim "em qual destes eu estava trabalhando". Sao coisas diferentes:
-    um corte com dez sugestoes e nenhuma decisao esta intocado, e um corte com
-    uma sugestao e um gancho escrito esta no meio do caminho.
-
-    Por isso a conta olha para os sinais que SO existem se alguem agiu:
-
-      - o candidato foi julgado (qualquer status que nao seja `sugerido`);
-      - o trecho foi marcado a mao (`origem = manual`);
-      - o gancho da abertura foi escrito;
-      - o palco deste trecho foi mexido — arranjo, recorte, ajuste, textura,
-        preset aplicado ou cor/fonte da legenda.
-
-    Nenhum deles nasce preenchido pela geracao: `registrar_sugestoes` cria o
-    candidato com status `sugerido`, origem `ia` e os campos de palco vazios.
-
-    Uma consulta so, pela mesma razao do `_contar_shorts_por_corte`: a tela abre
-    com a lista inteira, e uma query por Fire viraria lentidao no primeiro uso.
-    """
-    tocado = or_(
-        Short.status != StatusShort.SUGERIDO,
-        Short.origem == "manual",
-        func.coalesce(Short.gancho_tela, "") != "",
-        func.coalesce(Short.arranjo_palco, "") != "",
-        func.coalesce(Short.palco_short_preset, "") != "",
-        func.coalesce(Short.fundo_editorial, "") != "",
-        func.coalesce(Short.legenda_cor, "") != "",
-        func.coalesce(Short.recortes_palco, "{}") != "{}",
-        func.coalesce(Short.ajustes_palco, "{}") != "{}",
-    )
-    linhas = (
-        await db.execute(
-            select(Short.corte_id, func.max(case((tocado, 1), else_=0)))
-            .where(Short.corte_id.in_(corte_ids))
-            .group_by(Short.corte_id)
-        )
-    ).all()
-    return {corte_id: bool(marca) for corte_id, marca in linhas}
-
-
-async def _contar_shorts_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[str, dict]:
-    """Quantos shorts cada corte tem, por status — numa consulta so.
-
-    Consultar dentro do laco daria uma query por Fire; a tela abre com a lista
-    inteira, entao o N+1 apareceria como lentidao ja no primeiro uso real.
-    """
-    linhas = (
-        await db.execute(
-            select(Short.corte_id, Short.status, func.count())
-            .where(Short.corte_id.in_(corte_ids))
-            .group_by(Short.corte_id, Short.status)
-        )
-    ).all()
-
-    contagens: dict[str, dict] = {}
-    for corte_id, status, quantos in linhas:
-        contagem = contagens.setdefault(corte_id, _CONTAGEM_VAZIA.copy())
-        contagem["total"] += quantos
-        if status in contagem:
-            contagem[status] += quantos
-    return contagens
 
 
 async def _proximo_numero_livre(db: AsyncSession, corte_id: str) -> int:

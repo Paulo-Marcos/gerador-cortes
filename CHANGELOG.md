@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lives with the layout, so it cascades (global → project → cut → segment) and
   travels with positioning presets; leaving it on Automática keeps inheriting
   (D-904).
+- **The Shorts list shows where each cut already is.** Every Fire card carries
+  three chips, YouTube, TikTok and Instagram, lit only when all the rendered
+  shorts of that cut are confirmed on that network and dimmed otherwise, with
+  the count on hover. It answers "can I finalize this one?" from the list,
+  without opening the workspace to check short by short (D-905).
 - **The YouTube Studio robot turns monetization on and links each short to
   its cut.** The YouTube API uploads with monetization off (the Studio upload
   defaults only apply to browser uploads) and cannot set a Short's "related
