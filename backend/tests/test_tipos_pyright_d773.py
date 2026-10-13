@@ -70,7 +70,6 @@ EXCECOES = {
     "app/routers/export.py::reportArgumentType": 2,
     "app/routers/metadados.py::reportArgumentType": 1,
     "app/routers/presets.py::reportInvalidTypeForm": 2,
-    "app/routers/presets.py::reportOptionalMemberAccess": 5,
     "app/routers/projetos.py::reportAttributeAccessIssue": 2,
     "app/routers/projetos.py::reportInvalidTypeForm": 8,
     "app/routers/projetos.py::reportOptionalMemberAccess": 1,

@@ -38,6 +38,7 @@ from app.domain.corte.youtube_layout import (
     _normalizar_retangulo,
     normalizar_layout_youtube,
 )
+from app.domain.corte.zona_card import normalizar_zona_card
 from app.domain.short import gancho_short, legenda_short
 from app.models import LayoutPreset
 from app.routers.resposta_api import RespostaApi
@@ -155,9 +156,12 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
 
     # posicionamento: shape novo {compartilhada, fundo, placa} (F-060). Payload
     # legado (bloco compartilhada direto no topo) e re-embrulhado.
-    bruto = (
-        payload.get("compartilhada") if isinstance(payload.get("compartilhada"), dict) else payload
-    )
+    # O isinstance no proprio `bruto` (e nao numa segunda chamada a `.get`) e o
+    # que deixa o pyright saber que ele e um dict: antes cada `bruto.get` contava
+    # como acesso a valor talvez-None (catraca D-773).
+    bruto = payload.get("compartilhada")
+    if not isinstance(bruto, dict):
+        bruto = payload
     compartilhada = {
         "telas": _normalizar_quantidade_telas(bruto.get("telas")),
         "crop_facecam": _normalizar_retangulo(bruto.get("crop_facecam"), DEFAULT_CROP_FACECAM),
@@ -165,6 +169,10 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
         "slot_facecam": _normalizar_retangulo(bruto.get("slot_facecam"), DEFAULT_SLOT_FACECAM),
         "slot_tela": _normalizar_retangulo(bruto.get("slot_tela"), DEFAULT_SLOT_TELA),
     }
+    # D-904: a zona dos cards so vai ao preset quando foi definida (RN-10).
+    zona_card = normalizar_zona_card(bruto.get("zona_card"))
+    if zona_card is not None:
+        compartilhada["zona_card"] = zona_card
     return {
         "compartilhada": compartilhada,
         "fundo": _normalizar_fundo(payload.get("fundo")),

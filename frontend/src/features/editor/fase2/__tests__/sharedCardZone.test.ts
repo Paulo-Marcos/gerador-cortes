@@ -83,3 +83,93 @@ describe('sharedVerticalCardZone — 1 tela (regressao)', () => {
     expect(sharedVerticalCardZone(config({ telas: 1 }))).toEqual(rect(48, 150, 424, 720));
   });
 });
+
+// D-904 (RN-28): a zona que o operador definiu vence a regra automática; a
+// ausência é a regra automática — e é o que deixa o corte herdar do projeto.
+import {
+  mergeSharedConfig,
+  normalizeYoutubeLayout,
+  normalizeZonaCard,
+  resolveLayoutChain,
+  sharedConfigEquals,
+} from '@/shared/palco/youtubeLayout';
+
+const MANUAL = rect(1400, 200, 440, 600);
+
+describe('sharedVerticalCardZone — zona manual (D-904)', () => {
+  it('a zona definida vence a regra automática, com 1 ou 2 telas', () => {
+    expect(sharedVerticalCardZone(config({ zona_card: MANUAL }))).toEqual(MANUAL);
+    expect(sharedVerticalCardZone(config({ telas: 1, zona_card: MANUAL }))).toEqual(MANUAL);
+  });
+
+  it('sem a chave, a regra automática segue igual', () => {
+    expect(sharedVerticalCardZone(config())).toEqual(rect(48, 96, 424, 281));
+  });
+
+  it('zona ilegível cai na regra automática', () => {
+    const cfg = { ...config(), zona_card: { x: 'a', y: 1, w: 300, h: 300 } as unknown as YoutubeSharedRect };
+    expect(sharedVerticalCardZone(cfg)).toEqual(rect(48, 96, 424, 281));
+  });
+
+  it('a zona respeita o piso 240x180 e o quadro', () => {
+    expect(normalizeZonaCard({ x: 1900, y: 1000, w: 10, h: 10 })).toEqual(
+      rect(1920 - 240, 1080 - 180, 240, 180),
+    );
+    expect(normalizeZonaCard(undefined)).toBeUndefined();
+    expect(normalizeZonaCard({ x: 10 })).toBeUndefined();
+  });
+
+  it('normalizar não materializa a zona (RN-10)', () => {
+    expect(normalizeYoutubeLayout({ compartilhada: { telas: 2 } }).compartilhada.zona_card).toBeUndefined();
+    expect(
+      normalizeYoutubeLayout({ compartilhada: { zona_card: MANUAL } }).compartilhada.zona_card,
+    ).toEqual(MANUAL);
+  });
+
+  it('o corte herda a zona do projeto e pode sobrepô-la', () => {
+    const herdada = resolveLayoutChain({ modo_padrao: 'compartilhada' }, { compartilhada: { zona_card: MANUAL } });
+    expect(herdada.compartilhada.zona_card).toEqual(MANUAL);
+    const propria = rect(60, 500, 400, 500);
+    const sobreposta = resolveLayoutChain(
+      { compartilhada: { zona_card: propria } },
+      { compartilhada: { zona_card: MANUAL } },
+    );
+    expect(sobreposta.compartilhada.zona_card).toEqual(propria);
+  });
+
+  it('o merge leva a zona da base e do override', () => {
+    expect(mergeSharedConfig(config({ zona_card: MANUAL }), null).zona_card).toEqual(MANUAL);
+    const outra = rect(60, 500, 400, 500);
+    expect(mergeSharedConfig(config({ zona_card: MANUAL }), { zona_card: outra }).zona_card).toEqual(outra);
+    expect(mergeSharedConfig(config(), { telas: 1 }).zona_card).toBeUndefined();
+  });
+
+  it('a igualdade de config enxerga a zona', () => {
+    expect(sharedConfigEquals(config(), config({ zona_card: MANUAL }))).toBe(false);
+    expect(sharedConfigEquals(config({ zona_card: MANUAL }), config({ zona_card: MANUAL }))).toBe(true);
+  });
+});
+
+// D-904: o preview resolve a zona do SEGMENTO no instante, e o render
+// (`resolver_zona_card_da_cena`) faz a mesma conta. Este teste fixa o lado da
+// tela; `TestZonaCardDoSegmento` fixa o do backend com os mesmos números.
+import { resolveSharedConfigAtTime } from '@/shared/palco/youtubeLayout';
+
+describe('zona dos cards num segmento (D-904)', () => {
+  const layout = (override: Partial<YoutubeSharedConfig>) =>
+    normalizeYoutubeLayout({
+      modo_padrao: 'compartilhada',
+      regioes: [{ inicio: 10, fim: 20, modo: 'compartilhada', compartilhada: override }],
+    });
+
+  it('dentro do segmento vale a zona dele; fora, a do corte', () => {
+    const l = layout({ zona_card: MANUAL });
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 14))).toEqual(MANUAL);
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 4))).toEqual(rect(48, 96, 424, 281));
+  });
+
+  it('segmento sem zona própria mantém a do corte', () => {
+    const l = layout({ telas: 1 });
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 14)).x).toBe(48);
+  });
+});

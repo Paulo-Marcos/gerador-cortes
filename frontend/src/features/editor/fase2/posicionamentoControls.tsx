@@ -11,12 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type {
-  YoutubeBackgroundId,
-  YoutubePlaca,
-  YoutubeSharedConfig,
-  YoutubeSharedRect,
-  YoutubeSharedScreenCount,
+import {
+  sharedVerticalCardZone,
+  type YoutubeBackgroundId,
+  type YoutubePlaca,
+  type YoutubeSharedConfig,
+  type YoutubeSharedRect,
+  type YoutubeSharedScreenCount,
 } from '@/shared/palco/youtubeLayout';
 import { YoutubeBackground } from '@/shared/palco/youtubeBackgrounds';
 import {
@@ -28,15 +29,19 @@ import {
 } from '@/shared/palco/youtubeChrome';
 import { limitar } from '@/lib/limitar';
 import { Icon } from '@/upgrade/Icon';
+import { CroppedStill, SlotDragOverlay, useArrastarRetangulo } from './SlotPreviewPartes';
 
 export type SharedRectKey = Exclude<keyof YoutubeSharedConfig, 'telas'>;
 export type CropRectKey = 'crop_facecam' | 'crop_tela';
+/** Os retângulos que se movem no preview do palco. */
+export type DragRectKey = 'slot_facecam' | 'slot_tela' | 'zona_card';
 
 export const RECT_LABEL: Record<SharedRectKey, string> = {
   crop_facecam: 'Menor recorte',
   slot_facecam: 'Menor encaixe',
   crop_tela: 'Maior recorte',
   slot_tela: 'Maior encaixe',
+  zona_card: 'Cards',
 };
 
 const RECT_LABEL_SINGLE: Partial<Record<SharedRectKey, string>> = {
@@ -49,8 +54,31 @@ export const RECT_KEYS_TWO_SCREENS: SharedRectKey[] = [
   'slot_facecam',
   'crop_tela',
   'slot_tela',
+  'zona_card',
 ];
-export const RECT_KEYS_ONE_SCREEN: SharedRectKey[] = ['crop_tela', 'slot_tela'];
+export const RECT_KEYS_ONE_SCREEN: SharedRectKey[] = ['crop_tela', 'slot_tela', 'zona_card'];
+// D-904: o FULL posicionado renderiza os cards em tamanho cheio (sem zona);
+// o modal de FULL não oferece o retângulo dos cards.
+export const RECT_KEYS_FULL: SharedRectKey[] = ['crop_tela', 'slot_tela'];
+
+export function isCardZoneKey(key: SharedRectKey): key is 'zona_card' {
+  return key === 'zona_card';
+}
+
+/**
+ * D-904: o config com a zona dos cards fixada onde a regra automática a
+ * colocaria agora — o ponto de partida de quem vai arrastar.
+ */
+export function comZonaManual(config: YoutubeSharedConfig): YoutubeSharedConfig {
+  return { ...config, zona_card: sharedVerticalCardZone(config) };
+}
+
+/** D-904: o config de volta à regra automática (a chave some, RN-10). */
+export function semZonaManual(config: YoutubeSharedConfig): YoutubeSharedConfig {
+  const { zona_card: _omit, ...rest } = config;
+  void _omit;
+  return rest;
+}
 
 export function getRectLabel(key: SharedRectKey, telas: YoutubeSharedScreenCount) {
   return telas === 1 ? (RECT_LABEL_SINGLE[key] ?? RECT_LABEL[key]) : RECT_LABEL[key];
@@ -347,18 +375,17 @@ export function SlotPreview({
   currentTime: number;
   fundo: YoutubeBackgroundId;
   placa: YoutubePlaca;
-  onChangeSlot: (key: 'slot_facecam' | 'slot_tela', rect: YoutubeSharedRect) => void;
+  onChangeSlot: (key: DragRectKey, rect: YoutubeSharedRect) => void;
 }) {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [stageScale, setStageScale] = useState(1);
-  const dragRef = useRef<{
-    key: 'slot_facecam' | 'slot_tela';
-    startX: number;
-    startY: number;
-    startSlotX: number;
-    startSlotY: number;
-  } | null>(null);
-  const [dragKey, setDragKey] = useState<'slot_facecam' | 'slot_tela' | null>(null);
+  // D-904: a zona dos cards aparece sempre que está selecionada — tracejada
+  // quando é a automática (só para ver onde o card vai cair) e arrastável
+  // quando o operador a definiu.
+  const zonaCard = sharedVerticalCardZone(config);
+  const zonaManual = Boolean(config.zona_card);
+  const rectDe = (key: DragRectKey): YoutubeSharedRect =>
+    key === 'zona_card' ? zonaCard : config[key];
 
   // Calcula a escala que faz o palco 1920x1080 caber no container 16:9.
   useEffect(() => {
@@ -376,7 +403,7 @@ export function SlotPreview({
   }, []);
 
   const hasFacecam = config.telas !== 1;
-  const isSelected = (key: 'slot_facecam' | 'slot_tela') =>
+  const isSelected = (key: DragRectKey) =>
     rectKey === key ||
     (key === 'slot_facecam' && rectKey === 'crop_facecam') ||
     (key === 'slot_tela' && rectKey === 'crop_tela');
@@ -394,43 +421,11 @@ export function SlotPreview({
   const faceW = config.crop_facecam.w * faceScale;
   const faceH = config.crop_facecam.h * faceScale;
 
-  const startDrag =
-    (key: 'slot_facecam' | 'slot_tela') => (event: PointerEvent<HTMLDivElement>) => {
-      const bounds = frameRef.current?.getBoundingClientRect();
-      if (!bounds) return;
-      dragRef.current = {
-        key,
-        startX: event.clientX,
-        startY: event.clientY,
-        startSlotX: config[key].x,
-        startSlotY: config[key].y,
-      };
-      setDragKey(key);
-      event.currentTarget.setPointerCapture(event.pointerId);
-      event.stopPropagation();
-    };
-
-  const onMove = (event: PointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    const bounds = frameRef.current?.getBoundingClientRect();
-    if (!drag || !bounds) return;
-    const dx = ((event.clientX - drag.startX) / bounds.width) * 1920;
-    const dy = ((event.clientY - drag.startY) / bounds.height) * 1080;
-    const slot = config[drag.key];
-    const nextX = limitar(Math.round(drag.startSlotX + dx), 0, 1920 - slot.w);
-    const nextY = limitar(Math.round(drag.startSlotY + dy), 0, 1080 - slot.h);
-    if (nextX !== slot.x || nextY !== slot.y) {
-      onChangeSlot(drag.key, { ...slot, x: nextX, y: nextY });
-    }
-  };
-
-  const endDrag = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    dragRef.current = null;
-    setDragKey(null);
-  };
+  const { dragKey, startDrag, onMove, endDrag } = useArrastarRetangulo<DragRectKey>({
+    frameRef,
+    rectDe,
+    onChange: onChangeSlot,
+  });
 
   const temPlaca = Boolean(placa && (placa.nome || placa.papel));
 
@@ -532,101 +527,21 @@ export function SlotPreview({
             onPointerCancel={endDrag}
           />
         )}
+        {(zonaManual || isSelected('zona_card')) && (
+          <SlotDragOverlay
+            rect={zonaCard}
+            label={zonaManual ? 'Cards' : 'Cards (automática)'}
+            color="var(--wb-warn)"
+            selected={isSelected('zona_card')}
+            dragging={dragKey === 'zona_card'}
+            draggable={zonaManual}
+            onPointerDown={startDrag('zona_card')}
+            onPointerMove={onMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          />
+        )}
       </div>
-    </div>
-  );
-}
-
-/** Frame estatico do video crop-positioned para o SlotPreview. */
-function CroppedStill({
-  videoSrc,
-  currentTime,
-  crop,
-  renderW,
-  renderH,
-}: {
-  videoSrc: string;
-  currentTime: number;
-  crop: YoutubeSharedRect;
-  renderW: number;
-  renderH: number;
-}) {
-  const scale = Math.min(renderW / crop.w, renderH / crop.h);
-  return (
-    <video
-      src={videoSrc}
-      muted
-      preload="metadata"
-      onLoadedMetadata={(event) => {
-        try {
-          event.currentTarget.currentTime = Math.max(0, currentTime);
-        } catch {
-          // ignore
-        }
-      }}
-      style={{
-        position: 'absolute',
-        left: -crop.x * scale,
-        top: -crop.y * scale,
-        width: 1920 * scale,
-        height: 1080 * scale,
-        maxWidth: 'none',
-        maxHeight: 'none',
-        objectFit: 'fill',
-      }}
-    />
-  );
-}
-
-function SlotDragOverlay({
-  rect,
-  label,
-  color,
-  selected,
-  dragging,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerCancel,
-}: {
-  rect: YoutubeSharedRect;
-  label: string;
-  color: string;
-  selected: boolean;
-  dragging: boolean;
-  onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
-  onPointerMove: (event: PointerEvent<HTMLDivElement>) => void;
-  onPointerUp: (event: PointerEvent<HTMLDivElement>) => void;
-  onPointerCancel: (event: PointerEvent<HTMLDivElement>) => void;
-}) {
-  return (
-    <div
-      role="presentation"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
-      className={cn(
-        'absolute flex flex-col items-stretch justify-end overflow-hidden border-2 transition-colors',
-        dragging ? 'cursor-grabbing' : 'cursor-grab',
-      )}
-      style={{
-        left: `${(rect.x / 1920) * 100}%`,
-        top: `${(rect.y / 1080) * 100}%`,
-        width: `${(rect.w / 1920) * 100}%`,
-        height: `${(rect.h / 1080) * 100}%`,
-        borderColor: selected ? color : 'transparent',
-        background: selected ? `color-mix(in oklch, ${color} 12%, transparent)` : 'transparent',
-      }}
-    >
-      {selected && (
-        <span
-          className="pointer-events-none m-1 self-start rounded-sm px-1 py-0.5 font-code text-[9px] font-bold uppercase tracking-[0.04em] text-white"
-          style={{ background: color }}
-        >
-          {label} {rect.w}×{rect.h}
-        </span>
-      )}
     </div>
   );
 }

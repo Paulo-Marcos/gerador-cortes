@@ -38,7 +38,6 @@ LIMITES = {"C901": 10, "PLR0915": 40}
 
 EXCECOES = {
     "app/domain/corte/ancora_match.py::ancorar_borda::C901": 11,
-    "app/domain/corte/youtube_layout.py::_normalizar_regiao::C901": 12,
     "app/domain/corte/youtube_layout.py::regioes_compartilhadas::C901": 12,
     "app/domain/corte/youtube_layout.py::regioes_full_posicionadas::C901": 12,
     "app/domain/projeto/chunker.py::fatiar_transcricao::C901": 12,

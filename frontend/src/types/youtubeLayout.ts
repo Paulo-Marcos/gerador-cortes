@@ -45,6 +45,12 @@ export interface YoutubeSharedConfig {
   crop_tela: YoutubeSharedRect;
   slot_facecam: YoutubeSharedRect;
   slot_tela: YoutubeSharedRect;
+  /**
+   * D-904 (RN-28): onde os cards encaixam, quando o operador decidiu.
+   * Ausente = a regra automática (`sharedVerticalCardZone`), e é a ausência
+   * que deixa o corte herdar a zona do projeto (RN-10) — nunca materializar.
+   */
+  zona_card?: YoutubeSharedRect;
 }
 
 /**

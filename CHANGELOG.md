@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Choose where the cards sit on the shared stage.** The positioning modal
+  gains a "Cards" rectangle next to the crops and slots. It starts on
+  "Automática" (the rule as before: left of the big screen, above the small
+  one), and "Manual" pins that rectangle so you can drag it to any column of
+  the stage and set its width and height; cards shrink to fit it. The choice
+  lives with the layout, so it cascades (global → project → cut → segment) and
+  travels with positioning presets; leaving it on Automática keeps inheriting
+  (D-904).
 - **The YouTube Studio robot turns monetization on and links each short to
   its cut.** The YouTube API uploads with monetization off (the Studio upload
   defaults only apply to browser uploads) and cannot set a Short's "related
