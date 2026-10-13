@@ -30,7 +30,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
   const horas = Array.from({ length: HORAS }, (_, h) => h);
   return (
     <div className="overflow-x-auto">
-      <table className="border-separate border-spacing-[2px] text-[10px]">
+      <table className="border-separate border-spacing-[2px] text-[11px]">
         <thead>
           <tr>
             <th className="w-16" />

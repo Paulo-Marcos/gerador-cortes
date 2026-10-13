@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
-import { escalonamentoApi } from '@/features/channels/api/escalonamento';
+import { escalonamentoApi, type Escalonamento } from '@/features/channels/api/escalonamento';
 import { mensagemErro } from '@/lib/mensagemErro';
 import { Icon } from '@/upgrade/Icon';
 import { BlocosDoDestinoForm } from './BlocosDoDestinoForm';
@@ -30,26 +30,10 @@ export function EscalonamentoSection() {
   const salvarDestino = useSalvarDestino();
   const resetar = useResetarEscalonamento();
   const pending = salvarPublico.isPending || salvarDestino.isPending || resetar.isPending;
-
   const dados = query.data;
-  const gradeDoCanal = dados ? gradeDasFaixas(dados.faixas) : null;
-  const [grade, setGrade] = useState<GradeDoPublico | null>(null);
-  useEffect(() => {
-    if (gradeDoCanal) setGrade(gradeDoCanal);
-    // A grade local nasce (e renasce) do que o canal tem gravado.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dados?.faixas]);
 
   const avisarErro = (erro: unknown, fallback: string) =>
     notify(mensagemErro(erro, fallback), { tone: 'error' });
-
-  const aoSalvarPublico = () => {
-    if (!grade) return;
-    salvarPublico.mutate(faixasDaGrade(grade), {
-      onSuccess: () => notify('Referência do público gravada.', { tone: 'success' }),
-      onError: (erro) => avisarErro(erro, 'Erro ao gravar a referência.'),
-    });
-  };
 
   const aoResetar = (chave: string, rotulo: string) => {
     resetar.mutate(chave, {
@@ -57,8 +41,6 @@ export function EscalonamentoSection() {
       onError: (erro) => avisarErro(erro, 'Erro ao resetar.'),
     });
   };
-
-  const gradeMudou = Boolean(grade && gradeDoCanal && !gradesIguais(grade, gradeDoCanal));
 
   return (
     <section className="grid gap-4 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
@@ -93,45 +75,19 @@ export function EscalonamentoSection() {
         </div>
       )}
 
-      {dados && grade && (
+      {dados && (
         <>
-          <div className="grid gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-[13px] font-bold text-[var(--wb-text)]">
-                Quando o público está lá
-              </h3>
-              {dados.publico_personalizado && (
-                <span className="rounded-full border border-[var(--wb-border-soft)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--wb-text-dim)]">
-                  personalizado
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-[var(--wb-text-mute)]">
-              Copie do relatório "Quando seus espectadores estão no YouTube" (Studio → Público):
-              pinte forte onde o mapa está escuro. Atualize de tempos em tempos; o padrão é a
-              leitura de um canal de tarde/noite.
-            </p>
-            <ReferenciaDoPublicoGrade
-              grade={grade}
-              diasDaSemana={dados.dias_da_semana}
-              onTrocar={(dia, hora) => setGrade((atual) => atual && trocarCelula(atual, dia, hora))}
-              desabilitado={pending}
-            />
-            <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => aoResetar('publico', 'Referência do público')}
-                disabled={pending || !dados.publico_personalizado}
-                className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
-              >
-                <Icon name="rotate-ccw" />
-                Voltar ao padrão
-              </button>
-              <Button type="button" size="sm" disabled={pending || !gradeMudou} onClick={aoSalvarPublico}>
-                Salvar referência
-              </Button>
-            </div>
-          </div>
+          <ReferenciaDoPublico
+            dados={dados}
+            pending={pending}
+            onSalvar={(faixas) =>
+              salvarPublico.mutate(faixas, {
+                onSuccess: () => notify('Referência do público gravada.', { tone: 'success' }),
+                onError: (erro) => avisarErro(erro, 'Erro ao gravar a referência.'),
+              })
+            }
+            onResetar={() => aoResetar('publico', 'Referência do público')}
+          />
 
           <div className="grid gap-3">
             <h3 className="text-[13px] font-bold text-[var(--wb-text)]">Blocos por rede</h3>
@@ -163,5 +119,71 @@ export function EscalonamentoSection() {
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * A grade do público com o rascunho local: o operador pinta, e só o "Salvar"
+ * grava. A grade renasce do que o canal tem gravado sempre que ele muda.
+ */
+function ReferenciaDoPublico({
+  dados,
+  pending,
+  onSalvar,
+  onResetar,
+}: {
+  dados: Escalonamento;
+  pending: boolean;
+  onSalvar: (faixas: Escalonamento['faixas']) => void;
+  onResetar: () => void;
+}) {
+  const gradeDoCanal = gradeDasFaixas(dados.faixas);
+  const [grade, setGrade] = useState<GradeDoPublico>(gradeDoCanal);
+  useEffect(() => {
+    setGrade(gradeDasFaixas(dados.faixas));
+  }, [dados.faixas]);
+  const gradeMudou = !gradesIguais(grade, gradeDoCanal);
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-[13px] font-bold text-[var(--wb-text)]">Quando o público está lá</h3>
+        {dados.publico_personalizado && (
+          <span className="rounded-full border border-[var(--wb-border-soft)] px-2 py-0.5 text-[11px] uppercase tracking-wide text-[var(--wb-text-dim)]">
+            personalizado
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-[var(--wb-text-mute)]">
+        Copie do relatório "Quando seus espectadores estão no YouTube" (Studio → Público): pinte
+        forte onde o mapa está escuro. Atualize de tempos em tempos; o padrão é a leitura de um
+        canal de tarde/noite.
+      </p>
+      <ReferenciaDoPublicoGrade
+        grade={grade}
+        diasDaSemana={dados.dias_da_semana}
+        onTrocar={(dia, hora) => setGrade((atual) => trocarCelula(atual, dia, hora))}
+        desabilitado={pending}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onResetar}
+          disabled={pending || !dados.publico_personalizado}
+          className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
+        >
+          <Icon name="rotate-ccw" />
+          Voltar ao padrão
+        </button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending || !gradeMudou}
+          onClick={() => onSalvar(faixasDaGrade(grade))}
+        >
+          Salvar referência
+        </Button>
+      </div>
+    </div>
   );
 }

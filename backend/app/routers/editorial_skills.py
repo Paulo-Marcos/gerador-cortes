@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 
+from app.routers import escalonamento_publicacao
 from app.services import ambiente
 from app.services.canal import (
     editorial_scaffolds,
@@ -414,6 +415,4 @@ async def resetar_prompt_utilitario(key: str):
 # D-908: a referência do público e os blocos de publicação por canal, no mesmo
 # router da tela de Canais (sem registro novo em `main.py`, travado). Segmentos
 # a mais que as rotas genéricas `/{skill_key}`: nenhuma captura a outra.
-from app.routers import escalonamento_publicacao  # noqa: E402
-
 router.include_router(escalonamento_publicacao.router, prefix="/escalonamento")

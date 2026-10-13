@@ -1007,6 +1007,8 @@ class TestAgendaPorItem:
     async def test_cada_item_chega_ao_destino_com_a_sua_data(
         self, ambiente, destino_que_anota_a_data
     ):
+        from datetime import UTC
+
         from app.domain.publicacao.agendamento import Agendamento
 
         factory, raias = ambiente
@@ -1025,13 +1027,15 @@ class TestAgendaPorItem:
             "07/01/2030 as 16:00",
             "07/01/2030 as 19:00",
         ]
-        # E a data fica no banco: é dela que o próximo lote parte.
+        # E a data fica no banco, em UTC sem fuso: é dela que o próximo lote parte.
+        # Comparada pela mesma conversão, e não por hora literal — o CI roda em UTC.
         async with factory() as db:
             linhas = (await db.execute(select(PublicacaoShort))).scalars().all()
-        assert sorted(linha.agendado_para.strftime("%H:%M") for linha in linhas) == [
-            "19:00",
-            "22:00",
+        esperadas = [
+            Agendamento.de_texto(texto).quando.astimezone(UTC).replace(tzinfo=None)
+            for texto in ("2030-01-07T16:00", "2030-01-07T19:00")
         ]
+        assert sorted(linha.agendado_para for linha in linhas) == esperadas
 
     @pytest.mark.asyncio
     async def test_item_sem_data_na_agenda_e_pulado_e_nao_sobe_agora(
