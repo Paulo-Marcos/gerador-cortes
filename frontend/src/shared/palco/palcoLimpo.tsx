@@ -27,6 +27,7 @@ export {
   RAIO_DA_JANELA_DO_SHORT,
   RAIO_DA_TELA,
   SombraDaJanela,
+  posicaoDaPlaca,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
   type Janela,

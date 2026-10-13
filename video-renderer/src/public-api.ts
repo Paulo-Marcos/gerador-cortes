@@ -38,6 +38,7 @@ export {
   RAIO_DA_TELA,
   SOMBRA_DA_JANELA,
   SombraDaJanela,
+  posicaoDaPlaca,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
   type ComponentesDoPalco as ComponentesDoPalcoDoRenderer,

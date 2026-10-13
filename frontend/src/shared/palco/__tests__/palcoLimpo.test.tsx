@@ -4,6 +4,7 @@ import {
   CabecalhoDoCanal,
   JanelaLimpa,
   PlacaLimpa,
+  posicaoDaPlaca,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
 } from '../palcoLimpo';
@@ -24,6 +25,33 @@ describe('palco limpo (D-911)', () => {
     expect(posicaoDoCabecalhoNoShort({ x: 0, y: 0, w: 1080, h: 1920 })).toBeNull();
     expect(posicaoDoCabecalhoNoShort(undefined)).toBeNull();
     expect(posicaoDoCabecalhoNoShort({ x: 0, y: 352, w: 1080, h: 608 })).toEqual({ x: 48, y: 232 });
+  });
+
+  it('a placa cede ao cabeçalho: acima da tela, à direita dele, ou dentro da tela', () => {
+    // Tela à direita do cabeçalho: acima dela, encostada à esquerda.
+    expect(posicaoDaPlaca({ x: 900, y: 150, w: 925, h: 720 }, true)).toEqual({
+      x: 900,
+      y: 86,
+      dentroDaTela: false,
+    });
+    // Tela larga que começa alta e à esquerda: desliza para a direita do cabeçalho.
+    expect(posicaoDaPlaca({ x: 150, y: 140, w: 1625, h: 731 }, true)).toEqual({
+      x: 824,
+      y: 76,
+      dentroDaTela: false,
+    });
+    // Tela estreita, alta e à esquerda: não cabe nem à direita — entra na tela.
+    expect(posicaoDaPlaca({ x: 100, y: 120, w: 600, h: 400 }, true)).toEqual({
+      x: 124,
+      y: 120 + 400 - 56 - 24,
+      dentroDaTela: true,
+    });
+    // Sem cabeçalho não há com quem bater.
+    expect(posicaoDaPlaca({ x: 150, y: 140, w: 1625, h: 731 }, false)).toEqual({
+      x: 150,
+      y: 76,
+      dentroDaTela: false,
+    });
   });
 
   it('o cabeçalho desenha imagem, nome e @; a placa só texto', () => {

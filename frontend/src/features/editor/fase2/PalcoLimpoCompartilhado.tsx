@@ -1,12 +1,12 @@
 import { AbsoluteFill, Video } from 'remotion';
 import type { YoutubePlaca, YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
 import {
-  ALTURA_DA_PLACA,
   CABECALHO_HORIZONTAL,
   CabecalhoDoCanal,
   COR_DO_FUNDO,
   JanelaLimpa,
   PlacaLimpa,
+  posicaoDaPlaca,
   RAIO_DA_FACECAM,
   RAIO_DA_TELA,
   type ComponentesDoPalco,
@@ -44,13 +44,12 @@ export function PalcoLimpoCompartilhado({
   const tela = renderedSize(config.crop_tela, config.slot_tela);
   const face = renderedSize(config.crop_facecam, config.slot_facecam);
   const temPlaca = palco.placa.ativo && Boolean(placa && (placa.nome || placa.papel));
+  const janelaTela = { x: config.slot_tela.x, y: config.slot_tela.y, w: tela.w, h: tela.h };
+  const posicaoPlaca = posicaoDaPlaca(janelaTela, palco.cabecalho.ativo);
 
   return (
     <AbsoluteFill style={{ background: COR_DO_FUNDO }}>
-      <JanelaLimpa
-        janela={{ x: config.slot_tela.x, y: config.slot_tela.y, w: tela.w, h: tela.h }}
-        raio={RAIO_DA_TELA}
-      >
+      <JanelaLimpa janela={janelaTela} raio={RAIO_DA_TELA}>
         <CropVideo videoSrc={videoSrc} crop={config.crop_tela} slot={config.slot_tela} muted={false} />
       </JanelaLimpa>
       {config.telas !== 1 ? (
@@ -72,10 +71,11 @@ export function PalcoLimpoCompartilhado({
       ) : null}
       {temPlaca && placa ? (
         <PlacaLimpa
-          x={config.slot_tela.x}
-          y={config.slot_tela.y - ALTURA_DA_PLACA - 8}
+          x={posicaoPlaca.x}
+          y={posicaoPlaca.y}
           nome={placa.nome}
           papel={placa.papel}
+          sobreVideo={posicaoPlaca.dentroDaTela}
         />
       ) : null}
     </AbsoluteFill>

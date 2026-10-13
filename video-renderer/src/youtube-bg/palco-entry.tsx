@@ -15,12 +15,12 @@ import {
   type ChromeOpts,
 } from "./chrome";
 import {
-  ALTURA_DA_PLACA,
   CABECALHO_HORIZONTAL,
   CabecalhoDoCanal,
   COMPONENTES_PADRAO,
   COR_DO_FUNDO,
   PlacaLimpa,
+  posicaoDaPlaca,
   RAIO_DA_FACECAM,
   RAIO_DA_TELA,
   SombraDaJanela,
@@ -245,10 +245,19 @@ const PalcoLimpo: FC<PalcoProps & { componentes: ComponentesDoPalco }> = ({
         />
       ) : null}
 
-      {temPlaca ? (
-        <PlacaLimpa x={slot_tela.x} y={slot_tela.y - ALTURA_DA_PLACA - 8} nome={placa.nome} papel={placa.papel} />
-      ) : null}
+      {temPlaca ? <PlacaDoLimpo tela={janelaTela} cabecalhoAtivo={cabecalho.ativo} placa={placa} /> : null}
     </AbsoluteFill>
+  );
+};
+
+const PlacaDoLimpo: FC<{
+  tela: { x: number; y: number; w: number; h: number };
+  cabecalhoAtivo: boolean;
+  placa: { nome: string; papel: string };
+}> = ({ tela, cabecalhoAtivo, placa }) => {
+  const posicao = posicaoDaPlaca(tela, cabecalhoAtivo);
+  return (
+    <PlacaLimpa x={posicao.x} y={posicao.y} nome={placa.nome} papel={placa.papel} sobreVideo={posicao.dentroDaTela} />
   );
 };
 
