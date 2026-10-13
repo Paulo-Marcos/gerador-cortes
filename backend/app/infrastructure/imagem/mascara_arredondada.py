@@ -26,5 +26,5 @@ def mascara_arredondada(largura: int, altura: int, raio: int, pasta: Path) -> Pa
     ImageDraw.Draw(grande).rounded_rectangle(
         (0, 0, largura * _ESCALA - 1, altura * _ESCALA - 1), radius=raio * _ESCALA, fill=255
     )
-    grande.resize((largura, altura), Image.LANCZOS).save(destino)
+    grande.resize((largura, altura), Image.Resampling.LANCZOS).save(destino)
     return destino
