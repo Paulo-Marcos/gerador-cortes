@@ -5,8 +5,9 @@ A main só recebe PR (D-822), então a versão não pode subir nela direto:
 1. **Preparar**, numa branch `release-vX.Y.Z` criada da origin/main: confere a
    árvore e a versão pedida contra a sugerida pelas categorias do CHANGELOG,
    roda o portão do AGENTS.md, atualiza as cópias da versão (VERSION,
-   package.json e lockfiles do frontend e do renderer, openapi.json), fecha o
-   [Unreleased] e commita. Sem tag: o squash do PR muda o SHA.
+   package.json e lockfiles do frontend e do renderer, openapi.json), junta os
+   fragmentos de `changelog.d/` no [Unreleased] (pelo motor do Guia, em
+   GUIA_PY), fecha o [Unreleased] e commita. Sem tag: o squash do PR muda o SHA.
 2. **Taguear**, depois do merge: acha na origin/main o commit da release pelo
    assunto, exige o CI verde NAQUELE SHA e cria a tag anotada com as notas.
 
@@ -43,6 +44,13 @@ COPIAS_DA_VERSAO = [
     "video-renderer/package-lock.json",
 ]
 MOTIVO_DO_UNLOCK = "só o campo version sobe para {versao} (release, bin/release.py)"
+# Fragmentos do Guia (R9): cada demanda grava changelog.d/<ID>.<categoria>.md
+# no próprio PR; a release os junta no [Unreleased] e os apaga no mesmo commit.
+PASTA_DE_FRAGMENTOS = "changelog.d"
+FRAGMENTO = re.compile(r"^[A-Za-z]+-\d+\.(added|changed|deprecated|removed|fixed|security)\.md$")
+MOTIVO_DOS_FRAGMENTOS = (
+    "fragmentos de changelog.d/ compilados no CHANGELOG da {versao} (release, bin/release.py)"
+)
 
 
 class ErroDeRelease(Exception):
@@ -79,6 +87,34 @@ def secoes_do_unreleased(changelog: str) -> dict[str, str]:
         if corpo.strip():
             secoes[categoria] = corpo.strip()
     return secoes
+
+
+def secoes_dos_fragmentos(fragmentos: dict[str, str]) -> dict[str, str]:
+    """Fragmento (`D-886.added.md` → texto) agrupado na categoria do nome.
+
+    Lê só os nomes e os textos: o `--verificar` sugere o nível certo sem
+    alterar nada. Nome fora do padrão recusa — categoria inventada decidiria
+    o número da versão errado.
+    """
+    secoes: dict[str, list[str]] = {}
+    for nome, texto in sorted(fragmentos.items()):
+        achado = FRAGMENTO.match(nome)
+        if not achado:
+            raise ErroDeRelease(
+                f"fragmento fora do padrão <ID>.<categoria>.md: {PASTA_DE_FRAGMENTOS}/{nome}"
+            )
+        if texto.strip():
+            secoes.setdefault(achado.group(1).capitalize(), []).append(texto.strip())
+    return {categoria: "\n".join(textos) for categoria, textos in secoes.items()}
+
+
+def juntar_secoes(*partes: dict[str, str]) -> dict[str, str]:
+    """O [Unreleased] escrito à mão mais os fragmentos, por categoria."""
+    juntas: dict[str, str] = {}
+    for parte in partes:
+        for categoria, texto in parte.items():
+            juntas[categoria] = f"{juntas[categoria]}\n{texto}" if categoria in juntas else texto
+    return juntas
 
 
 def nivel_sugerido(secoes: dict[str, str], atual: str) -> str:
@@ -197,9 +233,11 @@ def conferir_ci_verde(runs_json: str, sha: str) -> None:
         raise ErroDeRelease(f"o CI em {sha[:10]} terminou em {ultimo['conclusion']}")
 
 
-def marcas_de_unlock(saida_do_check_lock: str, versao: str) -> list[str]:
+def marcas_de_unlock(
+    saida_do_check_lock: str, versao: str, modelo: str = MOTIVO_DO_UNLOCK
+) -> list[str]:
     ids = sorted(set(re.findall(r"\[unlock:([^\]]+)\]", saida_do_check_lock)))
-    motivo = MOTIVO_DO_UNLOCK.format(versao=versao)
+    motivo = modelo.format(versao=versao)
     return [f"[unlock:{trava}] motivo: {motivo}" for trava in ids]
 
 
@@ -312,15 +350,60 @@ def consultar_travas(arquivos: list[str]) -> str:
     return feito.stdout + feito.stderr
 
 
-def commitar(versao: str, resumo: str) -> str:
+def commitar(versao: str, resumo: str, fragmentos: list[str] | None = None) -> str:
+    fragmentos = fragmentos or []
     marcas = marcas_de_unlock(consultar_travas(COPIAS_DA_VERSAO), versao)
+    if fragmentos:
+        ja = {marca.split("]")[0] for marca in marcas}
+        marcas += [
+            marca
+            for marca in marcas_de_unlock(
+                consultar_travas(fragmentos), versao, MOTIVO_DOS_FRAGMENTOS
+            )
+            if marca.split("]")[0] not in ja
+        ]
     if marcas:
         print("  travas liberadas no commit:\n    " + "\n    ".join(marcas))
     mensagem = f"{assunto_do_commit(versao)}\n\n{resumo}\n"
     if marcas:
         mensagem += "\n" + "\n".join(marcas) + "\n"
-    rodar(["git", "commit", "-m", mensagem, "--", *COPIAS_DA_VERSAO, "CHANGELOG.md"])
+    rodar(["git", "commit", "-m", mensagem, "--", *COPIAS_DA_VERSAO, "CHANGELOG.md", *fragmentos])
     return rodar(["git", "rev-parse", "HEAD"]).strip()
+
+
+def ler_fragmentos() -> dict[str, str]:
+    pasta = RAIZ / PASTA_DE_FRAGMENTOS
+    if not pasta.is_dir():
+        return {}
+    return {
+        arquivo.name: arquivo.read_text(encoding="utf-8")
+        for arquivo in sorted(pasta.glob("*.md"))
+        if arquivo.name.lower() != "readme.md"
+    }
+
+
+def motor_do_guia() -> str:
+    """O guia.py que compila os fragmentos. Explícito: o script não adivinha
+    onde o plugin está instalado, e sem motor a release para — nunca lança
+    deixando os fragmentos de fora."""
+    motor = os.environ.get("GUIA_PY", "").strip()
+    if not motor or not Path(motor).is_file():
+        raise ErroDeRelease(
+            f"há fragmentos em {PASTA_DE_FRAGMENTOS}/ e o motor do Guia não foi achado: "
+            "defina GUIA_PY com o caminho do guia.py (o bin/guia.py do plugin) e rode de novo"
+        )
+    return motor
+
+
+def compilar_fragmentos(motor: str) -> list[str]:
+    """Junta os fragmentos no [Unreleased] (`changelog compile`, sem versão:
+    quem fecha a versão continua sendo `fechar_unreleased`)."""
+    nomes = sorted(ler_fragmentos())
+    rodar([sys.executable, motor, "changelog", "compile"])
+    sobra = sorted(ler_fragmentos())
+    if sobra:
+        raise ErroDeRelease(f"o compile deixou fragmentos para trás: {', '.join(sobra)}")
+    return [f"{PASTA_DE_FRAGMENTOS}/{nome}" for nome in nomes]
 
 
 def criar_tag(versao: str, resumo: str, notas: str, sha: str = "HEAD") -> None:
@@ -383,10 +466,14 @@ def preparar(versao: str, resumo: str, verificar: bool) -> None:
     conferir_arvore(versao)
     anterior = (RAIZ / "VERSION").read_text(encoding="utf-8").strip()
     changelog = (RAIZ / "CHANGELOG.md").read_text(encoding="utf-8")
-    secoes = secoes_do_unreleased(changelog)
+    fragmentos = ler_fragmentos()
+    secoes = juntar_secoes(secoes_do_unreleased(changelog), secoes_dos_fragmentos(fragmentos))
     sugerido = nivel_sugerido(secoes, anterior)
     conferir_versao_pedida(anterior, versao, sugerido)
     print(f"{anterior} → {versao} ({sugerido}; categorias: {', '.join(secoes)})")
+    if fragmentos:
+        print(f"{len(fragmentos)} fragmento(s) em {PASTA_DE_FRAGMENTOS}/ entram no [Unreleased].")
+    motor = motor_do_guia() if fragmentos else None  # antes do portão: falha cedo
     if verificar:
         print("--verificar: árvore e versão conferidas; nada foi alterado.")
         return
@@ -394,9 +481,10 @@ def preparar(versao: str, resumo: str, verificar: bool) -> None:
     rodar_portao()
     print("Cópias da versão:")
     atualizar_copias(versao)
+    removidos = compilar_fragmentos(motor) if motor else []
     gravar_changelog(versao, anterior)
     print("Commit:")
-    imprimir_como_abrir_o_pr(versao, commitar(versao, resumo))
+    imprimir_como_abrir_o_pr(versao, commitar(versao, resumo, removidos))
 
 
 def main(argv: list[str] | None = None) -> int:
