@@ -111,6 +111,12 @@ LARGURA_DO_FRAME = round(ALTURA_DO_FRAME * 4 / 5)
 # encolhendo o corpo e usando até três linhas.
 MAX_CARACTERES_DA_ETIQUETA = 72
 
+# D-909: o texto da capa do YouTube virou FRASE (10 a 18 palavras, dita no
+# corte). Até este tamanho ele ainda é um nome curto e serve de etiqueta, como
+# a D-533 quis; acima, é a frase do cartaz, e encolhê-la para a vitrine
+# deixaria meia frase na capa vertical. Aí a etiqueta vem da skill dela.
+MAX_PALAVRAS_DA_ETIQUETA_HERDADA = 8
+
 
 @dataclass(frozen=True)
 class Faixa:
@@ -300,6 +306,21 @@ def normalizar_etiqueta(texto: str) -> str:
         palavras.pop()
 
     return " ".join(palavras).upper()
+
+
+def etiqueta_herdada(texto_capa: str) -> str:
+    """O texto da capa do YouTube quando ele cabe como etiqueta; "" quando é frase.
+
+    Emoji não conta como palavra: 🔥/📖 são marca, não texto.
+
+    >>> etiqueta_herdada(' 🔥 O JURO COMPOSTO ')
+    '🔥 O JURO COMPOSTO'
+    >>> etiqueta_herdada('EU DIVIDI O SET COM DIRETORES GIGANTES E DESCOBRI A VERDADE...')
+    ''
+    """
+    texto = (texto_capa or "").strip()
+    palavras = [p for p in texto.split() if any(c.isalnum() for c in p)]
+    return texto if len(palavras) <= MAX_PALAVRAS_DA_ETIQUETA_HERDADA else ""
 
 
 def etiqueta_da_resposta(bruto: str) -> str:

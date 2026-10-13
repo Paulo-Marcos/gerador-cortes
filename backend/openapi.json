@@ -1787,6 +1787,20 @@
         "title": "Body_subir_ficha_api_capa_chatgpt_fichas_post",
         "type": "object"
       },
+      "Body_subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post": {
+        "properties": {
+          "arquivo": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Arquivo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arquivo"
+        ],
+        "title": "Body_subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post",
+        "type": "object"
+      },
       "Body_upload_api_retratos_upload_post": {
         "properties": {
           "arquivo": {
@@ -2322,6 +2336,59 @@
           "descartes"
         ],
         "title": "CenasSugeridasResponse",
+        "type": "object"
+      },
+      "ClaridadeDaCapa": {
+        "description": "A medida da capa publicada e a meta do canal (D-909).",
+        "properties": {
+          "abaixo_da_meta": {
+            "title": "Abaixo Da Meta",
+            "type": "boolean"
+          },
+          "escuros_maximo": {
+            "title": "Escuros Maximo",
+            "type": "number"
+          },
+          "escuros_pct": {
+            "title": "Escuros Pct",
+            "type": "number"
+          },
+          "luminancia": {
+            "title": "Luminancia",
+            "type": "number"
+          },
+          "luminancia_minima": {
+            "title": "Luminancia Minima",
+            "type": "number"
+          }
+        },
+        "required": [
+          "luminancia",
+          "escuros_pct",
+          "luminancia_minima",
+          "escuros_maximo",
+          "abaixo_da_meta"
+        ],
+        "title": "ClaridadeDaCapa",
+        "type": "object"
+      },
+      "ClaridadeDaCapaResponse": {
+        "properties": {
+          "claridade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClaridadeDaCapa"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "claridade"
+        ],
+        "title": "ClaridadeDaCapaResponse",
         "type": "object"
       },
       "ConfiguracaoCapaChatgptResponse": {
@@ -3493,6 +3560,81 @@
         ],
         "title": "EstadoItem",
         "type": "string"
+      },
+      "EstiloDaCapaRequest": {
+        "properties": {
+          "escuros_maximo": {
+            "title": "Escuros Maximo",
+            "type": "number"
+          },
+          "luminancia_minima": {
+            "title": "Luminancia Minima",
+            "type": "number"
+          },
+          "protagonista": {
+            "enum": [
+              "mascote",
+              "apresentador"
+            ],
+            "title": "Protagonista",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protagonista",
+          "luminancia_minima",
+          "escuros_maximo"
+        ],
+        "title": "EstiloDaCapaRequest",
+        "type": "object"
+      },
+      "EstiloDaCapaResponse": {
+        "properties": {
+          "escuros_maximo": {
+            "title": "Escuros Maximo",
+            "type": "number"
+          },
+          "expressoes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Expressoes",
+            "type": "array"
+          },
+          "fotos_do_apresentador": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fotos Do Apresentador",
+            "type": "array"
+          },
+          "luminancia_minima": {
+            "title": "Luminancia Minima",
+            "type": "number"
+          },
+          "maximo_de_fotos": {
+            "title": "Maximo De Fotos",
+            "type": "integer"
+          },
+          "protagonista": {
+            "enum": [
+              "mascote",
+              "apresentador"
+            ],
+            "title": "Protagonista",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protagonista",
+          "luminancia_minima",
+          "escuros_maximo",
+          "fotos_do_apresentador",
+          "expressoes",
+          "maximo_de_fotos"
+        ],
+        "title": "EstiloDaCapaResponse",
+        "type": "object"
       },
       "FabricaDaLiveResponse": {
         "description": "O que o clique disparou: quantos cortes entram e se a live será baixada.",
@@ -11671,6 +11813,49 @@
         ]
       }
     },
+    "/api/avaliacoes-thumbnail/corte/{corte_id}/claridade": {
+      "get": {
+        "description": "Quão clara a capa do YouTube saiu, contra a meta de claridade do canal.",
+        "operationId": "claridade_da_capa_do_corte_api_avaliacoes_thumbnail_corte__corte_id__claridade_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaridadeDaCapaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Claridade Da Capa Do Corte",
+        "tags": [
+          "Avaliações Thumbnail"
+        ]
+      }
+    },
     "/api/avaliacoes-thumbnail/padroes": {
       "post": {
         "description": "Analisa os melhores prompts avaliados e propõe ajuste na skill (D-070).\n\nOperação custosa (chama o agente Claude). Devolve os padrões compilados +\na leitura semântica do agente, ou `status=dados_insuficientes`.",
@@ -11716,6 +11901,124 @@
         "summary": "Analisar Padroes",
         "tags": [
           "Avaliações Thumbnail"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/apresentador": {
+      "post": {
+        "description": "Guarda uma foto; o nome é a expressão, e o mesmo nome substitui a anterior.",
+        "operationId": "subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstiloDaCapaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Subir Foto Do Apresentador",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/apresentador/{nome}": {
+      "delete": {
+        "operationId": "remover_foto_do_apresentador_api_capa_chatgpt_apresentador__nome__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "nome",
+            "required": true,
+            "schema": {
+              "title": "Nome",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstiloDaCapaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remover Foto Do Apresentador",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      },
+      "get": {
+        "description": "A foto, para a miniatura na tela de Canais.",
+        "operationId": "ver_foto_do_apresentador_api_capa_chatgpt_apresentador__nome__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "nome",
+            "required": true,
+            "schema": {
+              "title": "Nome",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ver Foto Do Apresentador",
+        "tags": [
+          "Capa no ChatGPT"
         ]
       }
     },
@@ -11818,6 +12121,68 @@
           }
         },
         "summary": "Elenco Da Capa",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/estilo": {
+      "get": {
+        "description": "O protagonista, a meta de claridade e o banco de fotos do canal ativo.",
+        "operationId": "ler_estilo_api_capa_chatgpt_estilo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstiloDaCapaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ler Estilo",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      },
+      "put": {
+        "description": "Troca o protagonista e a meta; nada do banco de fotos se perde.",
+        "operationId": "gravar_estilo_api_capa_chatgpt_estilo_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstiloDaCapaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstiloDaCapaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gravar Estilo",
         "tags": [
           "Capa no ChatGPT"
         ]

@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from typing import Literal
 
+from app.domain.canal.protagonista_da_capa import Protagonista
 from app.routers.resposta_api import RespostaApi
 from app.services import capa_no_chatgpt, pedidos_capa_chatgpt
+from app.services.canal import capa_do_canal
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -119,3 +121,56 @@ async def pedido_da_capa(destino: DestinoDaCapa, alvo_id: str):
     """O último pedido desta capa: em que passo está, ou por que parou."""
     pedido = pedidos_capa_chatgpt.pedido_da_capa(destino, alvo_id)
     return {"pedido": pedido.to_dict() if pedido else None}
+
+
+# --------------------------------------------------------------------------- #
+# D-909: o estilo das capas do canal — protagonista, fotos do apresentador e
+# meta de claridade.
+# --------------------------------------------------------------------------- #
+
+
+class EstiloDaCapaResponse(RespostaApi):
+    protagonista: Protagonista
+    luminancia_minima: float
+    escuros_maximo: float
+    fotos_do_apresentador: list[str]
+    # Os rótulos que os nomes das fotos declaram, sem repetição.
+    expressoes: list[str]
+    maximo_de_fotos: int
+
+
+class EstiloDaCapaRequest(BaseModel):
+    protagonista: Protagonista
+    luminancia_minima: float
+    escuros_maximo: float
+
+
+@router.get("/estilo", response_model=EstiloDaCapaResponse)
+async def ler_estilo():
+    """O protagonista, a meta de claridade e o banco de fotos do canal ativo."""
+    return capa_do_canal.ler_estilo()
+
+
+@router.put("/estilo", response_model=EstiloDaCapaResponse)
+async def gravar_estilo(pedido: EstiloDaCapaRequest):
+    """Troca o protagonista e a meta; nada do banco de fotos se perde."""
+    return capa_do_canal.gravar_estilo(
+        pedido.protagonista, pedido.luminancia_minima, pedido.escuros_maximo
+    )
+
+
+@router.post("/apresentador", response_model=EstiloDaCapaResponse)
+async def subir_foto_do_apresentador(arquivo: UploadFile = File(...)):
+    """Guarda uma foto; o nome é a expressão, e o mesmo nome substitui a anterior."""
+    return capa_do_canal.salvar_foto(arquivo.filename or "", await arquivo.read())
+
+
+@router.get("/apresentador/{nome}", response_class=FileResponse)
+async def ver_foto_do_apresentador(nome: str):
+    """A foto, para a miniatura na tela de Canais."""
+    return FileResponse(capa_do_canal.caminho_da_foto(nome))
+
+
+@router.delete("/apresentador/{nome}", response_model=EstiloDaCapaResponse)
+async def remover_foto_do_apresentador(nome: str):
+    return capa_do_canal.remover_foto(nome)

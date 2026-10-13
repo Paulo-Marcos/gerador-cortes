@@ -48,7 +48,7 @@ from app.domain.short.capa_short import (
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
-from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 
@@ -355,7 +355,7 @@ async def _escrever_prompt_da_capa(short_id: str, provider: ProviderIA) -> str:
 
     skill = editorial_skills.resolver_skill(_SKILL_CAPA_SHORT)
     scaffold = editorial_scaffolds.resolver_scaffold("capa-short-imagem")
-    prompt = scaffold.format(
+    prompt = capa_do_canal.bloco_do_modo_da_capa() + scaffold.format(
         titulo=contexto.titulo or "(sem titulo)",
         tema_central=contexto.tema_central or "(sem tema)",
         gancho_tela=contexto.gancho_tela or "(este short nao tem gancho escrito)",

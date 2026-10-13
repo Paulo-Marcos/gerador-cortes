@@ -26,7 +26,7 @@ from app.infrastructure.channel_config_loader import (
 )
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services import channels
-from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from app.services.canal.editorial_identity import identidade_do_mascote
 from app.services.claude_ia import (
     SKILL_METADADOS,
@@ -431,9 +431,8 @@ class MetadadosService:
         Salva o campo `prompt_thumbnail` (string) que o gerador de imagem consome.
         """
         ctx = await MetadadosService.montar_contexto_thumbnail(corte_id)
-        # E-010: nome do mascote vem do instance/editorial (fallback neutro),
-        # não mais embutido no código — a saída do canal atual é preservada
-        # porque o instance/ fornece nome="Sapo".
+        # E-010: nome do mascote vem do instance/editorial (fallback neutro), não
+        # mais do código — o canal atual segue "Sapo" porque o instance/ o fornece.
         mascote = identidade_do_mascote().nome
         # F-058: direção manual do editor, anexada ao prompt como prioridade.
         bloco_hints = formatar_bloco_hints_thumbnail(ctx.get("hints"))
@@ -460,6 +459,7 @@ class MetadadosService:
             else "EMOJIS EDITORIAIS: nenhum (corte não é TOP nem Leitura — não invente emojis decorativos)."
         )
         prompt = MetadadosService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
+        prompt = capa_do_canal.bloco_do_modo_da_capa() + prompt  # D-909: mascote/apresentador
         skill = editorial_skills.resolver_skill(_SKILL_THUMBNAIL)
         registrar_skill_usada(
             _SKILL_THUMBNAIL, skill, editorial_scaffolds.resolver_scaffold("thumbnail")

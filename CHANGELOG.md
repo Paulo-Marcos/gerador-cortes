@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Covers can star the live host instead of the mascot.** Canais gains an
+  "Estilo das capas" section: pick the protagonist (mascot or host, never
+  both), keep a bank of host photos where the file name is the expression
+  (`pensativo.jpg`, `indignado-2.png`), and set the brightness goal. In host
+  mode the three cover prompts open with a `MODO DA CAPA: apresentador` block
+  listing the available expressions; the cover writer answers with an
+  `[APRESENTADOR="..."]` line, and the ChatGPT robot attaches up to three
+  matching photos (the rest picked deterministically from the prompt) instead
+  of the mascot sheets. Switching back to the mascot loses nothing (D-909).
+- **Dark covers get flagged.** Each YouTube cover is measured (mean luminance
+  and share of pixels below 50) against the channel goal, 95 and 40% by
+  default, and the cover tab shows a discreet warning with the numbers when it
+  falls short (D-909).
 - **Choose where the cards sit on the shared stage.** The positioning modal
   gains a "Cards" rectangle next to the crops and slots. It starts on
   "Automática" (the rule as before: left of the big screen, above the small
@@ -41,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pick another preset; deleting the default preset clears it (D-901).
 
 ### Changed
+- **A long cover phrase no longer becomes the TikTok label.** The YouTube
+  cover text is moving to the spoken sentence of the cut (10 to 18 words);
+  inheriting it would squeeze half a sentence into the vertical shelf. Up to
+  8 words it is still the label, as in D-533; above that the label comes from
+  its own skill (D-909).
 - **Batch publishing is followed in the queue drawer, not in a modal.** When
   you start a batch (YouTube Shorts, TikTok, Instagram Reels, the "Subir
   todos" of horizontal TikTok, or "Publicar em massa" on YouTube), the modal

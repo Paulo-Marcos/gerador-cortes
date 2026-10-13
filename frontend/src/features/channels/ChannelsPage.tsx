@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import type { Canal, IdentidadeCanal } from '@/features/channels/api/canais';
 import { AppSettingsControls } from '@/features/settings';
 import { CapaChatgptSection } from '@/features/capa-chatgpt/CapaChatgptSection';
+import { EstiloDaCapaSection } from '@/features/capa-chatgpt/EstiloDaCapaSection';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
@@ -286,8 +287,7 @@ export function ChannelsPage() {
               </ul>
             )}
 
-            <ChannelThemeSection />
-            <CapaChatgptSection />
+            <AparenciaECapasDoCanal />
 
             {/* Blocos-portal do design: cada área editorial abre em sub-view. */}
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
@@ -351,5 +351,16 @@ export function ChannelsPage() {
         )}
       </Modal>
     </div>
+  );
+}
+
+/** As seções de aparência do canal: tema, capas no ChatGPT e estilo das capas (D-909). */
+function AparenciaECapasDoCanal() {
+  return (
+    <>
+      <ChannelThemeSection />
+      <CapaChatgptSection />
+      <EstiloDaCapaSection />
+    </>
   );
 }

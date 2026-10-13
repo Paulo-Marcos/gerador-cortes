@@ -103,6 +103,44 @@ export const retratoUrl = (slug: string, versao: number) =>
 export const fichaUrl = (nome: string, versao: number) =>
   `${ORIGEM_API}/api/capa-chatgpt/fichas/${encodeURIComponent(nome)}?v=${versao}`;
 
+// D-909: o estilo das capas do canal — quem protagoniza, o banco de fotos do
+// apresentador (o nome do arquivo é a expressão) e a meta de claridade.
+
+export type EstiloDaCapa = Schema<'EstiloDaCapaResponse'>;
+export type Protagonista = EstiloDaCapa['protagonista'];
+export type ClaridadeDaCapa = Schema<'ClaridadeDaCapa'>;
+
+export const estiloDaCapaApi = {
+  ler: () => dados(api.GET('/api/capa-chatgpt/estilo')),
+
+  /** Só o que se escolhe: as fotos e as expressões vêm da pasta, não do corpo. */
+  gravar: ({ protagonista, luminancia_minima, escuros_maximo }: EstiloDaCapa) =>
+    dados(
+      api.PUT('/api/capa-chatgpt/estilo', {
+        body: { protagonista, luminancia_minima, escuros_maximo },
+      }),
+    ),
+
+  subirFoto: (arquivo: File) => dados(api.POST('/api/capa-chatgpt/apresentador', comoArquivo(arquivo))),
+
+  removerFoto: (nome: string) =>
+    dados(api.DELETE('/api/capa-chatgpt/apresentador/{nome}', { params: { path: { nome } } })),
+
+  /** A claridade da capa do YouTube do corte; null enquanto não há capa. */
+  claridade: async (corteId: string) =>
+    (
+      await dados(
+        api.GET('/api/avaliacoes-thumbnail/corte/{corte_id}/claridade', {
+          params: { path: { corte_id: corteId } },
+        }),
+      )
+    ).claridade,
+};
+
+/** A miniatura de uma foto do apresentador. `versao` fura o cache na troca. */
+export const fotoDoApresentadorUrl = (nome: string, versao: number) =>
+  `${ORIGEM_API}/api/capa-chatgpt/apresentador/${encodeURIComponent(nome)}?v=${versao}`;
+
 /** O `detail` do backend já é a frase para o operador; o status HTTP é ruído. */
 export const mensagemDoRobo = (erro: unknown, alternativa: string) =>
   erro instanceof ErroDaApi ? erro.detalhe : mensagemErro(erro, alternativa);

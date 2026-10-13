@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { IconButton } from '@/components/ui/icon-button';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
+import { AvisoDeClaridade } from '@/features/capa-chatgpt/AvisoDeClaridade';
 import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
 import { cortesApi } from '@/features/editor/api/cortes';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,8 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
           </div>
         )}
       </button>
+      {/* D-909: capa abaixo da meta de claridade do canal ganha um aviso discreto. */}
+      <AvisoDeClaridade corteId={cut.id} capaUrl={thumbnailUrl ?? undefined} />
 
       <Passo titulo="1 · Prompt">
         <ModalActionRow>

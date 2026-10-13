@@ -17,7 +17,7 @@ import pytest_asyncio
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.models import Base, Corte, MetadadoCorte, Projeto
 from app.services import capa_tiktok
-from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -169,6 +169,31 @@ async def test_o_pedido_da_arte_leva_o_corte_a_etiqueta_e_o_estilo_do_canal(banc
     assert "SELIC" in prompt
     assert "O juro composto corre contra quem deve." in prompt
     assert "sapo de terno, luz dura" in prompt
+
+
+MODO_APRESENTADOR = "=== MODO DA CAPA: apresentador ===\n"  # D-909
+
+
+@pytest.mark.asyncio
+async def test_o_pedido_da_arte_abre_com_o_modo_da_capa_d909(banco, ia, monkeypatch):
+    monkeypatch.setattr(capa_do_canal, "bloco_do_modo_da_capa", lambda: MODO_APRESENTADOR)
+    chamadas, _ = ia
+
+    await capa_tiktok.gerar_prompt_da_arte("c1")
+
+    assert chamadas[0]["prompt"].startswith("=== MODO DA CAPA: apresentador ===")
+
+
+@pytest.mark.asyncio
+async def test_frase_no_texto_da_capa_nao_conta_como_etiqueta_d909(banco):
+    assert await capa_tiktok.tem_texto_de_capa("c1") is True  # "selic", um nome curto
+
+    async with banco() as db:
+        meta = await db.scalar(select(MetadadoCorte).where(MetadadoCorte.corte_id == "c1"))
+        meta.texto_capa = "SABE POR QUE O JURO COMPOSTO CORRE CONTRA QUEM DEVE E NINGUÉM AVISA?"
+        await db.commit()
+
+    assert await capa_tiktok.tem_texto_de_capa("c1") is False
 
 
 @pytest.mark.asyncio

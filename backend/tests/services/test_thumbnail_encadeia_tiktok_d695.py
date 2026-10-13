@@ -11,7 +11,7 @@ import asyncio
 import pytest
 from app.infrastructure import claude_cli_client
 from app.services import capa_tiktok, metadados
-from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from app.services.metadados import MetadadosService
 
 modulo_do_caso_de_uso = metadados
@@ -124,3 +124,22 @@ def test_o_prompt_do_youtube_vai_para_a_fila_do_chatgpt(agendados, fila_do_chatg
     assert fila_do_chatgpt == [
         ("youtube", "c1", "Editorial 2D thumbnail, 16:9, the frog mascot at a desk.")
     ]
+
+
+MODO_APRESENTADOR = "=== MODO DA CAPA: apresentador ===\n"  # D-909
+
+
+def test_o_prompt_da_thumbnail_abre_com_o_modo_da_capa_d909(agendados, monkeypatch):
+    monkeypatch.setattr(capa_do_canal, "bloco_do_modo_da_capa", lambda: MODO_APRESENTADOR)
+    enviados: list[str] = []
+
+    async def gerar_texto(prompt, **_argumentos):
+        enviados.append(prompt)
+        return "Editorial 2D thumbnail, 16:9, the host at a desk."
+
+    monkeypatch.setattr(claude_cli_client, "generate_text", gerar_texto)
+
+    asyncio.run(gerar_prompt_da_thumbnail("c1"))
+
+    assert enviados[0].startswith("=== MODO DA CAPA: apresentador ===")
+    assert "fala do corte" in enviados[0]

@@ -39,11 +39,11 @@ from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte import capa_tiktok as layout_capa
-from app.domain.corte.capa_tiktok import etiqueta_da_resposta, prompt_da_arte
+from app.domain.corte.capa_tiktok import etiqueta_da_resposta, etiqueta_herdada, prompt_da_arte
 from app.domain.corte.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
-from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from app.services.channels import identidade_do_canal_ativo
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
@@ -275,7 +275,7 @@ async def tem_texto_de_capa(corte_id: str) -> bool:
             select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
         )
         meta = resultado.scalar_one_or_none()
-        return bool(meta and (meta.texto_capa or "").strip())
+        return bool(meta and etiqueta_herdada(meta.texto_capa or ""))  # D-909: frase não é etiqueta
 
 
 async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
@@ -289,7 +289,7 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
             select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
         )
         meta = resultado.scalar_one_or_none()
-        texto_capa = (meta.texto_capa if meta else "") or ""
+        texto_capa = etiqueta_herdada((meta.texto_capa if meta else "") or "")  # D-909
         prompt_thumbnail = (meta.prompt_thumbnail if meta else "") or ""
 
     video = projetos_dir() / projeto_id / "cortes" / corte_id / "upload_ready" / "video.mp4"
@@ -351,7 +351,7 @@ async def _escrever_prompt_da_arte(corte_id: str, texto_capa: str, provider: Pro
 
     skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK_IMAGEM)
     scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok-imagem")
-    prompt = scaffold.format(
+    prompt = capa_do_canal.bloco_do_modo_da_capa() + scaffold.format(
         titulo_proposto=contexto.titulo,
         tema_central=contexto.tema_central,
         texto_capa=texto_capa or "(sem etiqueta)",
