@@ -259,13 +259,50 @@ class TestZonaCardDoSegmento:
         assert fora["layout_card_zone"] == {"x": 48, "y": 96, "w": 424, "h": 281}
         assert dentro["layout_card_zone"] == self.ZONA_SEGMENTO
 
-    def test_segmento_sem_zona_propria_mantem_a_do_corte(self):
-        # Regra de hoje intacta: override so de telas/encaixes nao muda a zona.
+
+class TestZonaAutomaticaDoSegmento:
+    """D-907: sem zona manual, a regra automatica olha os encaixes do SEGMENTO.
+
+    O preview calcula a zona sobre `resolveSharedConfigAtTime` (base mesclada
+    com o override); o render calculava sobre a base do corte. Num segmento com
+    as telas movidas, o card do video caia num lugar e o do preview em outro.
+    Os numeros sao os mesmos do espelho em `sharedCardZone.test.ts`.
+    """
+
+    def _layout(self, override):
+        return normalizar_layout_youtube(
+            {
+                "modo_padrao": "compartilhada",
+                "regioes": [
+                    {"inicio": 10, "fim": 20, "modo": "compartilhada", "compartilhada": override}
+                ],
+            }
+        )
+
+    def test_encaixes_movidos_no_segmento_movem_a_zona(self):
+        override = {
+            "slot_tela": {"x": 700, "y": 150, "w": 1100, "h": 720},
+            "slot_facecam": {"x": 54, "y": 600, "w": 340, "h": 260},
+        }
+        layout = self._layout(override)
+        cenas = [
+            {"tipo": "card_informacao", "inicio": 2, "fim": 6, "texto": "fora"},
+            {"tipo": "card_informacao", "inicio": 12, "fim": 16, "texto": "dentro"},
+        ]
+        fora, dentro = aplicar_layout_card_por_contexto(cenas, layout)
+        assert fora["layout_card_zone"] == {"x": 48, "y": 96, "w": 424, "h": 281}
+        assert dentro["layout_card_zone"] == {"x": 48, "y": 96, "w": 624, "h": 476}
+        efetivo = merge_compartilhada(
+            layout["compartilhada"], layout["regioes"][0]["compartilhada"]
+        )
+        assert dentro["layout_card_zone"] == resolver_zona_card(efetivo)
+
+    def test_segmento_com_uma_tela_usa_a_regra_de_uma_tela(self):
         layout = self._layout({"telas": 1})
         cenas = [{"tipo": "card_informacao", "inicio": 12, "fim": 16, "texto": "dentro"}]
         assert aplicar_layout_card_por_contexto(cenas, layout)[0]["layout_card_zone"] == {
             "x": 48,
-            "y": 96,
+            "y": 150,
             "w": 424,
-            "h": 281,
+            "h": 720,
         }
