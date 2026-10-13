@@ -156,9 +156,12 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
 
     # posicionamento: shape novo {compartilhada, fundo, placa} (F-060). Payload
     # legado (bloco compartilhada direto no topo) e re-embrulhado.
-    bruto = (
-        payload.get("compartilhada") if isinstance(payload.get("compartilhada"), dict) else payload
-    )
+    # O isinstance no proprio `bruto` (e nao numa segunda chamada a `.get`) e o
+    # que deixa o pyright saber que ele e um dict: antes cada `bruto.get` contava
+    # como acesso a valor talvez-None (catraca D-773).
+    bruto = payload.get("compartilhada")
+    if not isinstance(bruto, dict):
+        bruto = payload
     compartilhada = {
         "telas": _normalizar_quantidade_telas(bruto.get("telas")),
         "crop_facecam": _normalizar_retangulo(bruto.get("crop_facecam"), DEFAULT_CROP_FACECAM),
