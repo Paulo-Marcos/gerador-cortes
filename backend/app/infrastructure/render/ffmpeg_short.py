@@ -131,6 +131,7 @@ def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg:
     plano: PlanoPalco,
     moldura: list[Faixa] | None = None,
     palco_png: Path | None = None,
+    mascaras: dict[int, Path] | None = None,
     fundo_cor: str = FUNDO_PADRAO,
     filtro: str | None = "cinematic_iii",
     crf: int = 18,
@@ -167,9 +168,22 @@ def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg:
         f"d={duracao_seg},format=rgba[palco]"
     ]
 
+    # D-911: um recorte com máscara (o insert) tem os cantos arredondados pelo
+    # alfa dela. As máscaras entram depois do PNG do palco, uma entrada cada.
+    mascaras = mascaras or {}
+    primeira_mascara = 2 if palco_png else 1
+    entrada_da_mascara = {
+        indice: primeira_mascara + ordem for ordem, indice in enumerate(sorted(mascaras))
+    }
+
     acumulador = "[palco]"
     for indice, recorte in enumerate(plano.recortes):
-        partes.append(f"[0:v]{_cadeia_do_recorte(recorte)}[r{indice}]")
+        if indice in entrada_da_mascara:
+            partes.append(f"[0:v]{_cadeia_do_recorte(recorte)}[s{indice}]")
+            partes.append(f"[{entrada_da_mascara[indice]}:v]format=gray[m{indice}]")
+            partes.append(f"[s{indice}][m{indice}]alphamerge[r{indice}]")
+        else:
+            partes.append(f"[0:v]{_cadeia_do_recorte(recorte)}[r{indice}]")
         x, y = recorte.posicao
         saida_overlay = "[comp]" if indice == len(plano.recortes) - 1 else f"[c{indice}]"
         partes.append(f"{acumulador}[r{indice}]overlay=x={x}:y={y}:format=auto{saida_overlay}")
@@ -205,6 +219,11 @@ def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg:
         "-i",
         str(entrada),
         *(("-i", str(palco_png)) if palco_png else ()),
+        *(
+            arg
+            for indice in sorted(mascaras)
+            for arg in ("-loop", "1", "-i", str(mascaras[indice]))
+        ),
         "-t",
         str(duracao_seg),
         "-filter_complex",

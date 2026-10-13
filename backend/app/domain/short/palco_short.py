@@ -229,6 +229,40 @@ class PlanoPalco:
     modelo: ModeloPalco
     recortes: list[Recorte]
 
+    def sobrepostos(self) -> list[int]:
+        """Os índices dos recortes que pousam INTEIROS dentro de um anterior.
+
+        É o insert: a tela entra por cima do vídeo da pessoa. O palco em PNG
+        não alcança os cantos dessa janela — por baixo dela não há fundo, há
+        outro vídeo —, então quem os arredonda é o FFmpeg (D-911).
+
+        Exemplo:
+            >>> from app.domain.short.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
+            >>> regioes = {"pessoa": {"x": 0, "y": 0, "w": 400, "h": 300},
+            ...            "tela": {"x": 400, "y": 0, "w": 800, "h": 450}}
+            >>> insert = Arranjo(modo=ModoPalco.DIVIDIDA, disposicao=Disposicao.INSERT)
+            >>> montar_plano(montar_modelo(insert, regioes), regioes).sobrepostos()
+            [1]
+            >>> empilhada = Arranjo(modo=ModoPalco.DIVIDIDA)
+            >>> montar_plano(montar_modelo(empilhada, regioes), regioes).sobrepostos()
+            []
+        """
+        janelas = [r.janela for r in self.recortes]
+
+        def dentro(a: dict, b: dict) -> bool:
+            return (
+                a["x"] >= b["x"]
+                and a["y"] >= b["y"]
+                and a["x"] + a["w"] <= b["x"] + b["w"]
+                and a["y"] + a["h"] <= b["y"] + b["h"]
+            )
+
+        return [
+            i
+            for i, janela in enumerate(janelas)
+            if any(dentro(janela, janelas[j]) for j in range(i))
+        ]
+
 
 class RegiaoFaltando(ValueError):
     """O modelo pede uma região que o preset do corte não tem.

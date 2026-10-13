@@ -314,6 +314,9 @@ class _ContextoRender:
     # D-508: o PNG do palco (fundo com textura + chrome), ou None quando nao ha
     # o que desenhar — sem regiao, moldura desligada, ou o gerador falhou.
     palco_png: object
+    # D-911: `{indice do recorte: PNG da mascara}` dos que ganham cantos
+    # arredondados no FFmpeg (o insert no estilo limpo). Vazio = nenhum.
+    mascaras: dict
 
     # D-604: as fatias do bruto que este short toca, na ordem de toque. Lista
     # vazia = a janela unica `[inicio_seg, fim_seg]`, que e o caso normal.
@@ -430,7 +433,47 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             moldura=faixas_do_canal(palco["moldura"]),
             fundo=para_ffmpeg(palco["fundo"]),
             palco_png=await _palco_em_png(palco),
+            mascaras=_mascaras_do_insert(palco),
         )
+
+
+def _mascaras_do_insert(palco: dict) -> dict:
+    """As máscaras de canto das janelas que ficam POR CIMA de outra (D-911).
+
+    Só no estilo limpo e só com o PNG do palco ligado: é o mesmo raio das
+    janelas que o PNG arredonda, aplicado onde o PNG não alcança.
+    """
+    from app.domain.short.palco_short import PlanoPalco
+    from app.infrastructure.imagem.mascara_arredondada import mascara_arredondada
+    from app.services import palco_componentes
+
+    plano = palco.get("plano")
+    if not isinstance(plano, PlanoPalco):
+        return {}
+    if moldura_short.Moldura(palco["moldura"]) is moldura_short.Moldura.NENHUMA:
+        return {}
+    if palco_componentes.ler().estilo != "limpo":
+        return {}
+    pasta = palco_short_png_cache()
+    return {
+        indice: mascara_arredondada(
+            plano.recortes[indice].janela["w"],
+            plano.recortes[indice].janela["h"],
+            RAIO_DA_JANELA_DO_SHORT,
+            pasta,
+        )
+        for indice in plano.sobrepostos()
+    }
+
+
+def palco_short_png_cache():
+    from app.core import channel_paths
+
+    return channel_paths.palco_cache_dir() / "mascaras"
+
+
+# Espelha `RAIO_DA_JANELA_DO_SHORT` em video-renderer/src/youtube-bg/palco-limpo.tsx.
+RAIO_DA_JANELA_DO_SHORT = 24
 
 
 async def _palco_em_png(palco: dict):
@@ -658,6 +701,7 @@ def _comando_do_quadro(
         moldura=contexto.moldura,
         fundo_cor=contexto.fundo,
         palco_png=contexto.palco_png,
+        mascaras=contexto.mascaras,
         filtro=filtro,
     )
 
