@@ -149,3 +149,27 @@ describe('sharedVerticalCardZone — zona manual (D-904)', () => {
     expect(sharedConfigEquals(config({ zona_card: MANUAL }), config({ zona_card: MANUAL }))).toBe(true);
   });
 });
+
+// D-904: o preview resolve a zona do SEGMENTO no instante, e o render
+// (`resolver_zona_card_da_cena`) faz a mesma conta. Este teste fixa o lado da
+// tela; `TestZonaCardDoSegmento` fixa o do backend com os mesmos números.
+import { resolveSharedConfigAtTime } from '@/shared/palco/youtubeLayout';
+
+describe('zona dos cards num segmento (D-904)', () => {
+  const layout = (override: Partial<YoutubeSharedConfig>) =>
+    normalizeYoutubeLayout({
+      modo_padrao: 'compartilhada',
+      regioes: [{ inicio: 10, fim: 20, modo: 'compartilhada', compartilhada: override }],
+    });
+
+  it('dentro do segmento vale a zona dele; fora, a do corte', () => {
+    const l = layout({ zona_card: MANUAL });
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 14))).toEqual(MANUAL);
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 4))).toEqual(rect(48, 96, 424, 281));
+  });
+
+  it('segmento sem zona própria mantém a do corte', () => {
+    const l = layout({ telas: 1 });
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 14)).x).toBe(48);
+  });
+});

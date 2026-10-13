@@ -12,7 +12,7 @@ import json
 from copy import deepcopy
 from typing import Any
 
-from app.domain.corte.zona_card import normalizar_zona_card, resolver_zona_card
+from app.domain.corte.zona_card import normalizar_zona_card, resolver_zona_card_da_cena
 
 MODO_FULL = "full"
 MODO_COMPARTILHADA = "compartilhada"
@@ -333,7 +333,6 @@ def aplicar_layout_card_por_contexto(
     layout_padrao = (
         layout_card_padrao if layout_card_padrao in {"horizontal", "vertical"} else CARD_LAYOUT_FULL
     )
-    shared_card_zone = resolver_zona_card(layout["compartilhada"])
     cenas_render = []
     for cena in cenas:
         if not isinstance(cena, dict):
@@ -362,7 +361,7 @@ def aplicar_layout_card_por_contexto(
 
         if modo == MODO_COMPARTILHADA:
             render["layout_youtube_modo"] = MODO_COMPARTILHADA
-            render["layout_card_zone"] = dict(shared_card_zone)
+            render["layout_card_zone"] = resolver_zona_card_da_cena(layout, render)
 
         if render.get("sombra_nivel") in (None, ""):
             render["sombra_nivel"] = "auto"

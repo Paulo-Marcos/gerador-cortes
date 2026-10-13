@@ -227,3 +227,45 @@ class TestZonaCardManual:
         cenas = [{"tipo": "card_informacao", "inicio": 0, "fim": 5, "texto": "A"}]
         render = aplicar_layout_card_por_contexto(cenas, layout)
         assert render[0]["layout_card_zone"] == self.MANUAL
+
+
+class TestZonaCardDoSegmento:
+    """D-904: a zona manual de um SEGMENTO vale no render como vale no preview.
+
+    O preview resolve o `compartilhada` no instante (`resolveSharedConfigAtTime`);
+    o render calculava a zona uma vez, com a base do corte, e ignorava a zona que
+    o operador definiu no segmento.
+    """
+
+    ZONA_SEGMENTO = {"x": 1400, "y": 200, "w": 440, "h": 600}
+
+    def _layout(self, override):
+        return normalizar_layout_youtube(
+            {
+                "modo_padrao": "compartilhada",
+                "regioes": [
+                    {"inicio": 10, "fim": 20, "modo": "compartilhada", "compartilhada": override}
+                ],
+            }
+        )
+
+    def test_cena_dentro_do_segmento_usa_a_zona_dele(self):
+        layout = self._layout({"zona_card": dict(self.ZONA_SEGMENTO)})
+        cenas = [
+            {"tipo": "card_informacao", "inicio": 2, "fim": 6, "texto": "fora"},
+            {"tipo": "card_informacao", "inicio": 12, "fim": 16, "texto": "dentro"},
+        ]
+        fora, dentro = aplicar_layout_card_por_contexto(cenas, layout)
+        assert fora["layout_card_zone"] == {"x": 48, "y": 96, "w": 424, "h": 281}
+        assert dentro["layout_card_zone"] == self.ZONA_SEGMENTO
+
+    def test_segmento_sem_zona_propria_mantem_a_do_corte(self):
+        # Regra de hoje intacta: override so de telas/encaixes nao muda a zona.
+        layout = self._layout({"telas": 1})
+        cenas = [{"tipo": "card_informacao", "inicio": 12, "fim": 16, "texto": "dentro"}]
+        assert aplicar_layout_card_por_contexto(cenas, layout)[0]["layout_card_zone"] == {
+            "x": 48,
+            "y": 96,
+            "w": 424,
+            "h": 281,
+        }

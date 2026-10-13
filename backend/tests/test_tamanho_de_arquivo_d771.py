@@ -35,7 +35,7 @@ EXTENSOES = {".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 GERADOS = {"frontend/src/shared/api/contract.ts"}
 
 EXCECOES = {
-    "backend/app/domain/corte/youtube_layout.py": 882,
+    "backend/app/domain/corte/youtube_layout.py": 881,
     "backend/app/domain/short/gancho_short.py": 561,
     "backend/app/infrastructure/claude_cli_client.py": 693,
     "backend/app/infrastructure/render/ffmpeg_commands.py": 512,

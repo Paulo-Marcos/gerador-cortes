@@ -48,6 +48,30 @@ def resolver_zona_card(config: dict[str, Any]) -> dict[str, int]:
     return _zona_automatica_duas_telas(config)
 
 
+def resolver_zona_card_da_cena(layout: dict[str, Any], cena: dict[str, Any]) -> dict[str, int]:
+    """A zona do card desta cena, olhando o segmento em que o MEIO dela cai.
+
+    Espelha o preview (`resolveSharedConfigAtTime`): vale o override do ULTIMO
+    segmento compartilhado que cobre o instante; se ele traz `zona_card`, ela
+    vence a do corte. Sem zona no segmento, a conta e a de sempre, sobre a base
+    do corte — o render de cortes ja existentes nao muda.
+
+    ``layout`` ja vem resolvido pela cascata (regioes normalizadas).
+    """
+    inicio = _numero(cena.get("inicio"), 0.0)
+    fim = _numero(cena.get("fim"), inicio + 5.0)
+    meio = max(0.0, (inicio + max(fim, inicio)) / 2)
+    override: dict[str, Any] = {}
+    for regiao in layout.get("regioes", []):
+        cobre = regiao["inicio"] <= meio < regiao["fim"]
+        if cobre and regiao["modo"] == "compartilhada" and regiao.get("compartilhada"):
+            override = regiao["compartilhada"]
+    base = layout["compartilhada"]
+    if "zona_card" in override:
+        return resolver_zona_card({**base, "zona_card": override["zona_card"]})
+    return resolver_zona_card(base)
+
+
 def normalizar_zona_card(valor: Any) -> dict[str, int] | None:
     """A zona que o operador definiu, ou ``None`` quando nao definiu.
 
@@ -116,3 +140,11 @@ def _tamanho_renderizado(crop: dict[str, int], slot: dict[str, int]) -> dict[str
 
 def _inteiro_na_faixa(valor: float, minimo: int, maximo: int) -> int:
     return max(minimo, min(maximo, int(valor)))
+
+
+def _numero(valor: Any, padrao: float) -> float:
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        return padrao
+    return numero if numero == numero else padrao
