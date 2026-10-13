@@ -53,12 +53,14 @@ def _cache_dir() -> Path:
     return channel_paths.palco_cache_dir()
 
 
-def chave_de(fundo: str, janelas: list[dict]) -> str:
-    """O identificador do palco: mesmo fundo e mesmas janelas, mesmo arquivo.
+def chave_de(fundo: str, janelas: list[dict], componentes: dict | None = None) -> str:
+    """O identificador do palco: mesmo fundo, mesmas janelas e mesmos componentes.
 
-    Só a GEOMETRIA entra — dois shorts de cortes diferentes, com o mesmo arranjo
-    e o mesmo fundo, compartilham o PNG. É o que faz o cache valer a pena: o
-    palco não depende do conteúdo do vídeo, só do buraco onde ele passa.
+    Só a GEOMETRIA e a identidade entram — dois shorts de cortes diferentes, com
+    o mesmo arranjo e o mesmo fundo, compartilham o PNG. É o que faz o cache
+    valer a pena: o palco não depende do conteúdo do vídeo, só do buraco onde ele
+    passa. D-911: os componentes do canal (estilo, cabeçalho) entram quando são
+    informados; sem eles a chave é a de sempre.
 
     Exemplos:
         >>> a = chave_de("hud-forte", [{"x": 0, "y": 0, "w": 1080, "h": 1920}])
@@ -67,16 +69,18 @@ def chave_de(fundo: str, janelas: list[dict]) -> str:
         True
         >>> a == chave_de("topographic", [{"x": 0, "y": 0, "w": 1080, "h": 1920}])
         False
+        >>> a == chave_de("hud-forte", [{"x": 0, "y": 0, "w": 1080, "h": 1920}], {"estilo": "limpo"})
+        False
     """
-    material = json.dumps(
-        {
-            "fundo": fundo,
-            "janelas": [
-                {lado: int(janela[lado]) for lado in ("x", "y", "w", "h")} for janela in janelas
-            ],
-        },
-        sort_keys=True,
-    )
+    relevante: dict = {
+        "fundo": fundo,
+        "janelas": [
+            {lado: int(janela[lado]) for lado in ("x", "y", "w", "h")} for janela in janelas
+        ],
+    }
+    if componentes:
+        relevante["componentes"] = componentes
+    material = json.dumps(relevante, sort_keys=True)
     return hashlib.sha1(material.encode("utf-8")).hexdigest()[:16]
 
 
@@ -90,7 +94,8 @@ async def obter(fundo: str, janelas: list[dict]) -> Path | None:
     if not janelas:
         return None
 
-    chave = chave_de(fundo, janelas)
+    componentes = _componentes_do_canal()
+    chave = chave_de(fundo, janelas, componentes)
     destino = _cache_dir() / f"short-{chave}.png"
     if destino.is_file() and destino.stat().st_size > 0:
         return destino
@@ -104,9 +109,18 @@ async def obter(fundo: str, janelas: list[dict]) -> Path | None:
 
     _em_voo.add(chave)
     try:
-        return await _gerar(chave, destino, {"fundo": fundo, "janelas": janelas})
+        return await _gerar(
+            chave, destino, {"fundo": fundo, "janelas": janelas, "componentes": componentes}
+        )
     finally:
         _em_voo.discard(chave)
+
+
+def _componentes_do_canal() -> dict:
+    """Estilo, cabeçalho e placa do canal, como o rasterizador os recebe (D-911)."""
+    from app.services import palco_componentes
+
+    return palco_componentes.props_para_palco()
 
 
 async def _gerar(chave: str, destino: Path, props: dict) -> Path | None:

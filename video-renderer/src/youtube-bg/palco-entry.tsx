@@ -1,5 +1,6 @@
-import { type FC } from "react";
-import { AbsoluteFill, Composition, registerRoot } from "remotion";
+import { useCallback, type FC } from "react";
+import { AbsoluteFill, Composition, Img, registerRoot, staticFile } from "remotion";
+import { fontFamily as familiaInter, loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { DEFAULT_YOUTUBE_BACKGROUND, YoutubeBackground, type YoutubeBackgroundId } from "./backgrounds";
 import {
   buildChromePaths,
@@ -13,6 +14,19 @@ import {
   StageChrome,
   type ChromeOpts,
 } from "./chrome";
+import {
+  ALTURA_DA_PLACA,
+  CABECALHO_HORIZONTAL,
+  CabecalhoDoCanal,
+  COMPONENTES_PADRAO,
+  COR_DO_FUNDO,
+  PlacaLimpa,
+  RAIO_DA_FACECAM,
+  RAIO_DA_TELA,
+  SombraDaJanela,
+  type ComponentesDoPalco,
+} from "./palco-limpo";
+import { useEsperarFontes } from "../theme-v2";
 
 /**
  * Entry dedicado p/ rasterizar o "palco" (fundo + chrome + molduras + placa) em
@@ -23,6 +37,10 @@ import {
  *
  * Não toca no Root.tsx principal nem no still-entry dos fundos — bundle isolado.
  * Uso: scripts/gen-youtube-palco.mjs.
+ *
+ * D-911: `componentes` escolhe o ESTILO. "atual" é o palco de sempre, byte a
+ * byte; "limpo" troca o desenho inteiro (`PalcoLimpo`) sem mexer na geometria
+ * dos slots — é o que deixa o canal voltar atrás trocando um campo.
  */
 
 // `type` (não `interface`): o tipo dos props precisa satisfazer o
@@ -42,6 +60,7 @@ type PalcoProps = {
   crop_facecam: Rect;
   slot_tela: Rect;
   slot_facecam: Rect;
+  componentes?: ComponentesDoPalco;
 };
 
 // Mesmos chromeOpts/outlineScale que o SharedVideoLayout do preview (frontend
@@ -55,7 +74,15 @@ const FRAME_DROP_SHADOW =
   "drop-shadow(0 50px 100px rgba(0,0,0,0.65)) drop-shadow(0 16px 36px rgba(0,0,0,0.50))";
 const INNER_SHADOW = "inset 0 0 60px rgba(0,0,0,0.45)";
 
-const PalcoStill: FC<PalcoProps> = ({
+const PalcoStill: FC<PalcoProps> = (props) => {
+  const componentes = props.componentes ?? COMPONENTES_PADRAO;
+  if (componentes.estilo === "limpo") {
+    return <PalcoLimpo {...props} componentes={componentes} />;
+  }
+  return <PalcoAtual {...props} />;
+};
+
+const PalcoAtual: FC<PalcoProps> = ({
   fundo,
   placa,
   telas = 2,
@@ -63,6 +90,7 @@ const PalcoStill: FC<PalcoProps> = ({
   crop_facecam,
   slot_tela,
   slot_facecam,
+  componentes,
 }) => {
   const tela = renderedSize(crop_tela, slot_tela);
   const face = renderedSize(crop_facecam, slot_facecam);
@@ -77,7 +105,9 @@ const PalcoStill: FC<PalcoProps> = ({
   const telaMain = buildChromePaths(telaW, telaH, TELA_OPTS).main;
   const faceMain = buildChromePaths(faceW, faceH, FACE_OPTS).main;
 
-  const temPlaca = Boolean(placa && (placa.nome || placa.papel));
+  // D-911: a placa pode ser desligada pelo canal; sem `componentes` (props
+  // antigos) ela segue como sempre.
+  const temPlaca = Boolean(placa && (placa.nome || placa.papel)) && (componentes?.placa.ativo ?? true);
 
   return (
     <AbsoluteFill>
@@ -156,6 +186,78 @@ const ShadowCaster: FC<{ x: number; y: number; w: number; h: number; clip: strin
   <div style={{ position: "absolute", left: x, top: y, width: w, height: h, filter: FRAME_DROP_SHADOW }}>
     <div style={{ position: "absolute", inset: 0, clipPath: clip, WebkitClipPath: clip, background: "black" }} />
   </div>
+);
+
+const carregarInter = () =>
+  loadInter("normal", { weights: ["500", "700"], subsets: ["latin", "latin-ext"] }).waitUntilDone().then(() => undefined);
+
+/**
+ * O palco limpo (D-911): fundo chapado, duas janelas com cantos arredondados e
+ * sombra, cabeçalho do canal e a placa em texto. Nenhuma linha, nenhum bracket.
+ */
+const PalcoLimpo: FC<PalcoProps & { componentes: ComponentesDoPalco }> = ({
+  placa,
+  telas = 2,
+  crop_tela,
+  crop_facecam,
+  slot_tela,
+  slot_facecam,
+  componentes,
+}) => {
+  const carregar = useCallback(carregarInter, []);
+  useEsperarFontes("Fonte do palco limpo", carregar);
+  const tela = renderedSize(crop_tela, slot_tela);
+  const face = renderedSize(crop_facecam, slot_facecam);
+  const hasFacecam = telas !== 1;
+  const janelaTela = { x: slot_tela.x, y: slot_tela.y, w: tela.w, h: tela.h };
+  const janelaFace = { x: slot_facecam.x, y: slot_facecam.y, w: face.w, h: face.h };
+  const { cabecalho } = componentes;
+  const temPlaca = componentes.placa.ativo && Boolean(placa && (placa.nome || placa.papel));
+
+  return (
+    <AbsoluteFill style={{ fontFamily: familiaInter }}>
+      <svg width={1920} height={1080} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} aria-hidden>
+        <defs>
+          <mask id="palcoLimpoCut" maskUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080">
+            <rect x="0" y="0" width="1920" height="1080" fill="white" />
+            <rect x={janelaTela.x} y={janelaTela.y} width={janelaTela.w} height={janelaTela.h} rx={RAIO_DA_TELA} fill="black" />
+            {hasFacecam ? (
+              <rect x={janelaFace.x} y={janelaFace.y} width={janelaFace.w} height={janelaFace.h} rx={RAIO_DA_FACECAM} fill="black" />
+            ) : null}
+          </mask>
+        </defs>
+      </svg>
+
+      {/* Fundo chapado + sombras das janelas, recortados pela máscara. */}
+      <div style={{ position: "absolute", inset: 0, maskImage: "url(#palcoLimpoCut)", WebkitMaskImage: "url(#palcoLimpoCut)" }}>
+        <div style={{ position: "absolute", inset: 0, background: COR_DO_FUNDO }} />
+        <SombraDaJanela janela={janelaTela} raio={RAIO_DA_TELA} />
+        {hasFacecam ? <SombraDaJanela janela={janelaFace} raio={RAIO_DA_FACECAM} /> : null}
+      </div>
+
+      {cabecalho.ativo ? (
+        <CabecalhoDoCanal
+          x={CABECALHO_HORIZONTAL.x}
+          y={CABECALHO_HORIZONTAL.y}
+          nome={cabecalho.nome}
+          handle={cabecalho.handle}
+          imagem={cabecalho.imagem ? <ImagemDoCabecalho caminho={cabecalho.imagem} /> : null}
+        />
+      ) : null}
+
+      {temPlaca ? (
+        <PlacaLimpa x={slot_tela.x} y={slot_tela.y - ALTURA_DA_PLACA - 8} nome={placa.nome} papel={placa.papel} />
+      ) : null}
+    </AbsoluteFill>
+  );
+};
+
+/** A imagem do cabeçalho pelo `staticFile`: o `Img` segura a foto até ela carregar. */
+export const ImagemDoCabecalho: FC<{ caminho: string; tamanho?: number }> = ({ caminho, tamanho = 44 }) => (
+  <Img
+    src={staticFile(caminho)}
+    style={{ width: tamanho, height: tamanho, borderRadius: "50%", objectFit: "cover", flex: "0 0 auto" }}
+  />
 );
 
 const DEFAULT_PROPS: PalcoProps = {

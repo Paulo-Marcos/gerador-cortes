@@ -36,6 +36,8 @@ import {
   SPEAKER_LABEL_HEIGHT,
   StageChrome,
 } from '@/shared/palco/youtubeChrome';
+import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
+import { CropVideo, PalcoLimpoCompartilhado, renderedSize } from './PalcoLimpoCompartilhado';
 
 export type SombraNivelPadrao = 'nenhuma' | 'leve' | 'media' | 'forte';
 
@@ -50,6 +52,8 @@ export interface CenasRemotionPreviewProps {
    * sem overlay editorial). Util para conferir o tempo exato do clipe ao
    * ajustar regioes de layout pela timeline. */
   cenasOcultas?: boolean;
+  /** D-911: estilo, cabeçalho e placa do canal — o que o PNG do palco leva. */
+  palco?: ComponentesDoPalco;
 }
 
 /**
@@ -68,6 +72,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
   fontPreset = 'atual',
   layoutYoutube,
   cenasOcultas = false,
+  palco,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -102,8 +107,8 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
     ? resolveFullConfigAtTime(layoutYoutube, currentTime)
     : undefined;
   const fullPosicionado = Boolean(fullConfig && !isDefaultFullConfig(fullConfig));
-  const fundo = layoutYoutube?.fundo;
-  const placa = layoutYoutube?.placa;
+  // D-911: fundo, placa e os componentes do canal viajam juntos para o palco.
+  const palcoProps = { fundo: layoutYoutube?.fundo, placa: layoutYoutube?.placa, palco };
 
   const overlayCenas = (
     <FrameOffsetContext.Provider value={0}>
@@ -187,7 +192,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
       ) : null}
 
       {videoSrc && layoutMode === 'compartilhada' && sharedConfig ? (
-        <SharedVideoLayout videoSrc={videoSrc} config={sharedConfig} fundo={fundo} placa={placa} />
+        <SharedVideoLayout videoSrc={videoSrc} config={sharedConfig} {...palcoProps} />
       ) : null}
 
       {/* F-060: FULL posicionado — palco de 1 tela com o crop/slot do FULL. */}
@@ -195,8 +200,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
         <SharedVideoLayout
           videoSrc={videoSrc}
           config={sharedConfigFromFull(fullConfig)}
-          fundo={fundo}
-          placa={placa}
+          {...palcoProps}
         />
       ) : null}
 
@@ -204,7 +208,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
           some quando não há cena. Sua opacity é a sombra efetiva da cena. */}
       {palcoOpacity > 0 && (
         <AbsoluteFill style={{ opacity: palcoOpacity }}>
-          <YoutubeBackground fundo={fundo} />
+          <YoutubeBackground fundo={palcoProps.fundo} />
         </AbsoluteFill>
       )}
 
@@ -225,6 +229,7 @@ function SharedVideoLayout({
   config,
   fundo,
   placa,
+  palco,
 }: {
   videoSrc: string;
   config: {
@@ -236,11 +241,17 @@ function SharedVideoLayout({
   };
   fundo?: YoutubeBackgroundId;
   placa?: YoutubePlaca;
+  palco?: ComponentesDoPalco;
 }) {
   const tela = renderedSize(config.crop_tela, config.slot_tela);
   const face = renderedSize(config.crop_facecam, config.slot_facecam);
   const hasFacecam = config.telas !== 1;
-  const temPlaca = Boolean(placa && (placa.nome || placa.papel));
+  // D-911: a placa pode estar desligada no canal; sem `palco` segue como sempre.
+  const temPlaca = Boolean(placa && (placa.nome || placa.papel)) && (palco?.placa.ativo ?? true);
+
+  if (palco?.estilo === 'limpo') {
+    return <PalcoLimpoCompartilhado videoSrc={videoSrc} config={config} placa={placa} palco={palco} />;
+  }
 
   return (
     <AbsoluteFill>
@@ -285,44 +296,5 @@ function SharedVideoLayout({
         />
       ) : null}
     </AbsoluteFill>
-  );
-}
-
-function renderedSize(crop: YoutubeSharedRect, slot: YoutubeSharedRect) {
-  const scale = Math.min(slot.w / crop.w, slot.h / crop.h);
-  return { w: crop.w * scale, h: crop.h * scale };
-}
-
-// Renderiza só o vídeo deslocado/escalado para o recorte preencher a moldura
-// (ImageFrame faz o posicionamento + clip chanfrado). maxWidth/maxHeight:none
-// impede o preflight do Tailwind de espremer o frame dentro do slot.
-function CropVideo({
-  videoSrc,
-  crop,
-  slot,
-  muted,
-}: {
-  videoSrc: string;
-  crop: YoutubeSharedRect;
-  slot: YoutubeSharedRect;
-  muted: boolean;
-}) {
-  const scale = Math.min(slot.w / crop.w, slot.h / crop.h);
-
-  return (
-    <Video
-      src={videoSrc}
-      muted={muted}
-      style={{
-        position: 'absolute',
-        left: -crop.x * scale,
-        top: -crop.y * scale,
-        width: 1920 * scale,
-        height: 1080 * scale,
-        maxWidth: 'none',
-        maxHeight: 'none',
-        objectFit: 'fill',
-      }}
-    />
   );
 }

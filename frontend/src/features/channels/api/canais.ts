@@ -68,3 +68,32 @@ export const youtubeAuthApi = {
 
   desconectar: () => dados(api.POST('/api/youtube/auth/desconectar')),
 };
+
+// ─── Componentes do palco por canal (D-911) ─────────────────────────────
+// Estilo do palco (atual/limpo), cabeçalho (imagem + nome + @) e placa: o que o
+// operador liga, desliga, renomeia e ilustra. Os arquivos são os do canal ATIVO.
+
+export type PalcoComponentes = Schema<'PalcoComponentesResponse'>;
+export type PalcoComponentesEdicao = Schema<'PalcoComponentesRequest'>;
+
+const comoImagem = (arquivo: File) => ({
+  body: { arquivo: arquivo as unknown as string },
+  bodySerializer: (corpo: { arquivo: string }) => {
+    const form = new FormData();
+    form.append('arquivo', corpo.arquivo);
+    return form;
+  },
+});
+
+export const palcoApi = {
+  obter: (id: string) => dados(api.GET('/api/channels/{canal_id}/palco', doCanal(id))),
+
+  gravar: (id: string, body: PalcoComponentesEdicao) =>
+    dados(api.PUT('/api/channels/{canal_id}/palco', { ...doCanal(id), body })),
+
+  enviarImagem: (id: string, arquivo: File) =>
+    dados(api.POST('/api/channels/{canal_id}/palco/imagem', { ...doCanal(id), ...comoImagem(arquivo) })),
+
+  removerImagem: (id: string) =>
+    dados(api.DELETE('/api/channels/{canal_id}/palco/imagem', doCanal(id))),
+};

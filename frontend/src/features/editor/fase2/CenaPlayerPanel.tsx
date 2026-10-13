@@ -10,6 +10,7 @@ import { buildCenaVisualRevision, type LayoutCardPadrao } from './cardPreviewCon
 import { resolveYoutubeModeAt, type YoutubeLayout } from '@/shared/palco/youtubeLayout';
 import { useTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';
 import { Icon } from '@/upgrade/Icon';
+import { usePalcoDoCanalAtivoResolvido } from '@/features/channels/useChannels';
 
 const FPS = 30;
 
@@ -67,17 +68,11 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
   }, [durationSeg, cenas]);
 
   const cenasOcultas = !remotionEnabled;
+  // D-911: o palco do canal ativo entra pelos inputProps, como o layout.
+  const palco = usePalcoDoCanalAtivoResolvido();
   const inputProps = useMemo(
-    () => ({
-      videoSrc: src,
-      cenas,
-      sombraNivelPadrao,
-      layoutCardPadrao,
-      fontPreset,
-      layoutYoutube,
-      cenasOcultas,
-    }),
-    [src, cenas, sombraNivelPadrao, layoutCardPadrao, fontPreset, layoutYoutube, cenasOcultas],
+    () => ({ videoSrc: src, cenas, sombraNivelPadrao, layoutCardPadrao, fontPreset, layoutYoutube, cenasOcultas, palco }),
+    [src, cenas, sombraNivelPadrao, layoutCardPadrao, fontPreset, layoutYoutube, cenasOcultas, palco],
   );
 
   const visualRevision = useMemo(() => buildCenaVisualRevision(cenas), [cenas]);

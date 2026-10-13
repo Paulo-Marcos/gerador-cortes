@@ -479,6 +479,42 @@ export interface paths {
         patch: operations["editar_canal_api_channels__canal_id__patch"];
         trace?: never;
     };
+    "/api/channels/{canal_id}/palco": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obter Palco Do Canal */
+        get: operations["obter_palco_do_canal_api_channels__canal_id__palco_get"];
+        /** Gravar Palco Do Canal */
+        put: operations["gravar_palco_do_canal_api_channels__canal_id__palco_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/channels/{canal_id}/palco/imagem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enviar Imagem Do Cabecalho */
+        post: operations["enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post"];
+        /** Remover Imagem Do Cabecalho */
+        delete: operations["remover_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels/{canal_id}/select": {
         parameters: {
             query?: never;
@@ -5355,6 +5391,11 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** Body_enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post */
+        Body_enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post: {
+            /** Arquivo */
+            arquivo: string;
+        };
         /** Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post */
         Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post: {
             /** Arquivo */
@@ -5431,6 +5472,32 @@ export interface components {
             agenda: components["schemas"]["AgendaDoUpload"][];
             /** Message */
             message: string;
+        };
+        /** CabecalhoRequest */
+        CabecalhoRequest: {
+            /** Ativo */
+            ativo?: boolean | null;
+            /** Handle */
+            handle?: string | null;
+            /** Nome */
+            nome?: string | null;
+        };
+        /** CabecalhoResponse */
+        CabecalhoResponse: {
+            /** Ativo */
+            ativo: boolean;
+            /** Handle */
+            handle: string;
+            /** Handle Efetivo */
+            handle_efetivo: string;
+            /** Imagem */
+            imagem: string;
+            /** Imagem Url */
+            imagem_url: string;
+            /** Nome */
+            nome: string;
+            /** Nome Efetivo */
+            nome_efetivo: string;
         };
         /** CaminhoDaPastaResponse */
         CaminhoDaPastaResponse: {
@@ -7527,6 +7594,27 @@ export interface components {
             /** Texto */
             texto: string;
         };
+        /**
+         * PalcoComponentesRequest
+         * @description Edição parcial: campo ausente não muda.
+         */
+        PalcoComponentesRequest: {
+            cabecalho?: components["schemas"]["CabecalhoRequest"] | null;
+            /** Estilo */
+            estilo?: ("atual" | "limpo") | null;
+            placa?: components["schemas"]["PlacaRequest"] | null;
+        };
+        /** PalcoComponentesResponse */
+        PalcoComponentesResponse: {
+            cabecalho: components["schemas"]["CabecalhoResponse"];
+            /** Canal Id */
+            canal_id: string;
+            /** Estilo */
+            estilo: string;
+            /** Estilos */
+            estilos: string[];
+            placa: components["schemas"]["PlacaResponse"];
+        };
         /** PalcoPadraoRequest */
         PalcoPadraoRequest: {
             /** Preset Id */
@@ -7669,6 +7757,16 @@ export interface components {
             points: number;
             /** Sample Rate */
             sample_rate: number;
+        };
+        /** PlacaRequest */
+        PlacaRequest: {
+            /** Ativo */
+            ativo?: boolean | null;
+        };
+        /** PlacaResponse */
+        PlacaResponse: {
+            /** Ativo */
+            ativo: boolean;
         };
         /**
          * PlanoDesenhavelResponse
@@ -10355,6 +10453,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CanalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_palco_do_canal_api_channels__canal_id__palco_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PalcoComponentesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gravar_palco_do_canal_api_channels__canal_id__palco_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PalcoComponentesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PalcoComponentesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PalcoComponentesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remover_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PalcoComponentesResponse"];
                 };
             };
             /** @description Validation Error */

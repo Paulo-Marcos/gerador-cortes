@@ -53,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and share of pixels below 50) against the channel goal, 95 and 40% by
   default, and the cover tab shows a discreet warning with the numbers when it
   falls short (D-909).
+- **A "clean" stage style, with a channel header you can customize.** Canais
+  gains a "Palco do canal" section: pick the stage style ("Atual", the chamfered
+  chrome as before, or "Limpo", a flat graphite background with rounded video
+  windows and no lines or brackets), switch the channel header (image + name +
+  @) and the speaker plate on or off, override the name and handle, and upload
+  the image shown next to the @ (the mascot's "apresentador" pose until you do).
+  It applies to the horizontal stage and to the shorts' stage of the active
+  channel on the next render; the cut's own window geometry is untouched, and
+  the editor preview and the shorts preview draw the same stage (D-911).
 - **Choose where the cards sit on the shared stage.** The positioning modal
   gains a "Cards" rectangle next to the crops and slots. It starts on
   "Automática" (the rule as before: left of the big screen, above the small

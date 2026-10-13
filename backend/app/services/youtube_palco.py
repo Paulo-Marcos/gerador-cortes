@@ -314,6 +314,19 @@ def _props_from_resolved(layout: dict) -> dict:
     }
 
 
+def _com_componentes_do_canal(props: dict[str, Any]) -> dict[str, Any]:
+    """Os props do PNG mais os componentes do canal (estilo, cabeçalho, placa).
+
+    D-911: entram só na hora de rasterizar, FORA da chave de cache — a chave é
+    do layout do corte, e quem edita os componentes apaga o cache
+    (`palco_componentes.gravar`). Assim um PNG nunca sai com o cabeçalho de
+    antes da edição, e a chave que o FFmpeg resolve continua a mesma.
+    """
+    from app.services import palco_componentes
+
+    return {**props, "componentes": palco_componentes.props_para_palco()}
+
+
 async def _ensure_png_para_props(
     props: dict[str, Any],
     *,
@@ -360,7 +373,7 @@ async def _ensure_png_para_props(
         fd, props_path = tempfile.mkstemp(suffix=".palco-props.json", dir=str(cache_dir))
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                json.dump(props, handle)
+                json.dump(_com_componentes_do_canal(props), handle)
             try:
                 resultado = await process_runner.rodar(
                     ["node", str(_GEN_SCRIPT), str(destino), props_path],

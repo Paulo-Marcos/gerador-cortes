@@ -115,3 +115,24 @@ def test_sync_e_noop_no_layout_legado(monkeypatch) -> None:
     # Sem raiz de assets do canal (None) → não materializa nada.
     monkeypatch.setattr(channel_assets_sync.channel_paths, "assets_root", lambda: None)
     assert channel_assets_sync.sincronizar_assets_servidos(None) == []
+
+
+def test_sync_espelha_a_imagem_do_palco_no_renderer(tmp_path: Path) -> None:
+    """D-911: `assets/palco/` do canal vai para `public/palco/` (staticFile)."""
+    canal_assets = tmp_path / "canal" / "assets"
+    (canal_assets / "palco").mkdir(parents=True)
+    (canal_assets / "palco" / "cabecalho.png").write_bytes(b"CABECALHO")
+    renderer_palco = tmp_path / "renderer" / "public" / "palco"
+
+    materializados = channel_assets_sync.sincronizar_assets_servidos(
+        canal_assets,
+        frontend_mascote=tmp_path / "f",
+        renderer_mascote=tmp_path / "r",
+        renderer_theme=tmp_path / "theme.json",
+        renderer_palco=renderer_palco,
+    )
+
+    assert (renderer_palco / "cabecalho.png").read_bytes() == b"CABECALHO"
+    assert renderer_palco / "cabecalho.png" in materializados
+    # Canal sem a pasta: nada a copiar, e nada quebra.
+    assert channel_assets_sync.garantir_palco_materializado(tmp_path / "nao-existe") == []

@@ -184,6 +184,21 @@ def retratos_dir() -> Path:
     return _BACKEND_ROOT / "assets" / "retratos"
 
 
+def palco_assets_dir() -> Path:
+    """Imagens do palco (`palco/`) do canal ativo: a do cabeçalho, por ora (D-911).
+
+    Diferente dos outros resolvedores, não exige que `assets/` já exista: esta
+    pasta nasce no primeiro upload, pela mão do operador, e um canal que ainda
+    não consolidou os assets receberia a imagem no lugar legado (`backend/assets`)
+    e a perderia na consolidação. No layout legado (sem pasta de canal) cai no
+    legado mesmo, porque não há outro lugar.
+    """
+    canal_root = active_channel_root()
+    if canal_root != _instance_root():
+        return canal_root / _DIR_ASSETS / "palco"
+    return _BACKEND_ROOT / "assets" / "palco"
+
+
 def moldura_thumbnail_path(arquivo: str) -> Path | None:
     """O PNG de UMA moldura de capa (pelo nome), ou None se ela não existir.
 
