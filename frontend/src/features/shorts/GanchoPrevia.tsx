@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { TextoComDestaque } from '@video-renderer/public-api';
 import {
   duracaoNoShort,
   estiloDoRealce,
@@ -213,7 +214,7 @@ export function GanchoPrevia({
             ...estilo.texto,
           }}
         >
-          {limpo}
+          <TextoComDestaque texto={limpo} cor="var(--wb-accent)" />
         </p>
       </div>
     </div>

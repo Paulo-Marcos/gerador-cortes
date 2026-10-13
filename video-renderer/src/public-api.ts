@@ -61,3 +61,12 @@ export {
   SOMBRAS_DA_LEGENDA,
   type EstiloDaLegenda,
 } from "./cenas-shorts/sombrasDaLegenda";
+
+// D-913: o trecho em destaque do gancho (entre asteriscos), igual no render e na prévia.
+export {
+  MARCA_DO_DESTAQUE,
+  TextoComDestaque,
+  partesDoGancho,
+  semMarcas,
+  type PartesDoGancho,
+} from "./cenas-shorts/destaqueDoGancho";

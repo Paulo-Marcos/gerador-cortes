@@ -195,3 +195,19 @@ async def test_short_inexistente_levanta_lookup_sem_chamar_a_ia(banco, ia):
         await capa_short.gerar_prompt("nao-existe")
 
     assert chamadas == []
+
+
+@pytest.mark.asyncio
+async def test_o_destaque_do_gancho_chega_sem_asteriscos_d913(banco, ia):
+    """D-913: o `*trecho*` é marca de cor do render; na capa ele é só texto."""
+    chamadas, _ = ia
+    async with banco() as db:
+        short = (await db.execute(select(Short).where(Short.id == "s1"))).scalar_one()
+        short.gancho_tela = "o *juro* trabalha contra voce"
+        await db.commit()
+
+    await capa_short.gerar_prompt("s1")
+
+    prompt = chamadas[0]["prompt"]
+    assert "o juro trabalha contra voce" in prompt
+    assert "*juro*" not in prompt

@@ -46,6 +46,7 @@ from app.domain.short.capa_short import (
     texto_da_capa,
 )
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
+from app.domain.short.destaque_do_gancho import sem_marcas
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
 from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
@@ -284,7 +285,7 @@ async def montar_contexto_da_capa(short_id: str) -> ContextoDaCapa:
             corte_id=corte.id,
             titulo=short.titulo_sugerido or corte.titulo_proposto or "",
             tema_central=corte.tema_central or "",
-            gancho_tela=short.gancho_tela or "",
+            gancho_tela=sem_marcas(short.gancho_tela or ""),
             gancho_da_curadoria=short.gancho or "",
             duracao_humana=seg_to_mmss(_duracao(short)),
             texto_transcricao=_falas_em_texto(janela),

@@ -286,7 +286,7 @@ export function GanchoModal({
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               rows={2}
-              placeholder="ninguém te conta isso sobre juros"
+              placeholder="ninguém te conta isso sobre *juros* (entre * fica no acento)"
               className="w-full resize-none rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2.5 py-2 font-display text-[15px] font-bold leading-snug text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)]"
             />
             <div className="flex items-baseline gap-2">
