@@ -218,6 +218,41 @@ async def test_avatar_que_nao_baixa_deixa_o_card_sem_foto(projetos):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "foto",
+    [
+        "https://exemplo.com/x=s64-c-k",  # host fora do YouTube
+        "http://yt4.ggpht.com/x=s64-c-k",  # sem https
+        "https://yt4.ggpht.com.exemplo.com/x=s64",  # imita o host
+        "file:///C:/Windows/win.ini",
+    ],
+)
+async def test_avatar_fora_dos_servidores_do_youtube_nao_e_baixado(projetos, foto):
+    # A URL vem do arquivo de chat, conteúdo de terceiros: nem chega a pedir.
+    _gravar_chat(projetos, _linha_do_chat(2830, PERGUNTA, foto=foto))
+    _WebFalsa.pedidos.clear()
+
+    card = (await _importar(_RESPOSTA_DA_IA, _WebFalsa(Download(b"jpeg", "image/jpeg"))))["cenas"][
+        0
+    ]
+
+    assert card["tipo"] == "pergunta_chat"
+    assert "avatar_url" not in card
+    assert _WebFalsa.pedidos == []
+
+
+@pytest.mark.asyncio
+async def test_avatar_grande_demais_nao_e_gravado(projetos):
+    _gravar_chat(projetos, _linha_do_chat(2830, PERGUNTA))
+    enorme = Download(b"x" * (abertura_do_corte._AVATAR_MAXIMO_BYTES + 1), "image/jpeg")
+
+    card = (await _importar(_RESPOSTA_DA_IA, _WebFalsa(enorme)))["cenas"][0]
+
+    assert "avatar_url" not in card
+    assert not (projetos / "proj-1" / "cortes" / "corte-1" / "pergunta_chat_avatar.jpg").exists()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("escolha", [None, 7, "nenhuma"])
 async def test_sem_pergunta_valida_a_ponte_fica(projetos, escolha):
     _gravar_chat(projetos, _linha_do_chat(2830, PERGUNTA))

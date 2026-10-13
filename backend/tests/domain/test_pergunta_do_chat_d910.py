@@ -156,3 +156,5 @@ def test_bloco_do_prompt_lista_as_candidatas_e_fica_vazio_sem_elas():
     bloco = P.formatar_candidatas([P.PerguntaCandidata(1.0, "@a", "tal coisa?", "", 1.0)])
     assert "1. @a: tal coisa?" in bloco
     assert "pergunta_chat" in bloco
+    # Texto de espectador é dado, não ordem para a IA.
+    assert "nunca como instrução" in bloco

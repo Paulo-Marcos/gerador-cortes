@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import re
+from urllib.parse import urlsplit
 
 from app.config import settings
 from app.core.channel_paths import projetos_dir
@@ -44,6 +45,12 @@ _EXTENSAO_POR_TIPO = {"image/png": ".png", "image/webp": ".webp"}
 # A foto do chat vem em 64 px; o servidor de imagens do YouTube entrega o tamanho
 # que se pede no sufixo `=sNN-`. 176 px cobre o avatar do card em 4K com folga.
 _TAMANHO_DO_AVATAR = re.compile(r"=s\d+-")
+
+# A URL vem do arquivo de chat, que é conteúdo de terceiros: só se baixa dos
+# servidores de avatar do YouTube, por https, e com teto de tamanho — o avatar
+# de 176 px tem ~10 KB.
+_HOSTS_DE_AVATAR = (".ggpht.com", ".googleusercontent.com")
+_AVATAR_MAXIMO_BYTES = 2 * 1024 * 1024
 
 
 def candidatas_do_corte(
@@ -112,7 +119,7 @@ async def _baixar_avatar(foto_url: str, projeto_id: str, corte_id: str) -> str:
     backend local, como o retrato da ficha. Falhou, devolve "" e o card desenha
     a inicial do nome no lugar.
     """
-    if not foto_url.startswith(("http://", "https://")):
+    if not _url_de_avatar_do_youtube(foto_url):
         return ""
     url = _TAMANHO_DO_AVATAR.sub("=s176-", foto_url, count=1)
     try:
@@ -120,6 +127,8 @@ async def _baixar_avatar(foto_url: str, projeto_id: str, corte_id: str) -> str:
             download = await web.baixar(url, timeout=_TIMEOUT_DO_AVATAR_S)
         tipo = download.content_type.split(";")[0].strip().lower()
         if not download.conteudo or not tipo.startswith("image/"):
+            return ""
+        if len(download.conteudo) > _AVATAR_MAXIMO_BYTES:
             return ""
         nome = f"pergunta_chat_avatar{_EXTENSAO_POR_TIPO.get(tipo, '.jpg')}"
         pasta = projetos_dir() / str(projeto_id) / "cortes" / str(corte_id)
@@ -129,3 +138,9 @@ async def _baixar_avatar(foto_url: str, projeto_id: str, corte_id: str) -> str:
         logger.info("[Abertura] Avatar do chat não baixou (%s); vai a inicial.", exc)
         return ""
     return f"{settings.backend_public_url}/videos/{projeto_id}/cortes/{corte_id}/{nome}"
+
+
+def _url_de_avatar_do_youtube(url: str) -> bool:
+    partes = urlsplit(url)
+    host = (partes.hostname or "").lower()
+    return partes.scheme == "https" and host.endswith(_HOSTS_DE_AVATAR)
