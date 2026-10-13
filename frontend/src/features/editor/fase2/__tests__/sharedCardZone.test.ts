@@ -168,8 +168,19 @@ describe('zona dos cards num segmento (D-904)', () => {
     expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 4))).toEqual(rect(48, 96, 424, 281));
   });
 
-  it('segmento sem zona própria mantém a do corte', () => {
+  // D-907: sem zona manual, a regra automática usa os encaixes do segmento.
+  // `TestZonaAutomaticaDoSegmento` fixa os mesmos números no render.
+  it('encaixes movidos no segmento movem a zona automática', () => {
+    const l = layout({
+      slot_tela: rect(700, 150, 1100, 720),
+      slot_facecam: rect(54, 600, 340, 260),
+    });
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 14))).toEqual(rect(48, 96, 624, 476));
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 4))).toEqual(rect(48, 96, 424, 281));
+  });
+
+  it('segmento com uma tela usa a regra de uma tela', () => {
     const l = layout({ telas: 1 });
-    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 14)).x).toBe(48);
+    expect(sharedVerticalCardZone(resolveSharedConfigAtTime(l, 14))).toEqual(rect(48, 150, 424, 720));
   });
 });

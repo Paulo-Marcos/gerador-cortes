@@ -52,11 +52,12 @@ def resolver_zona_card_da_cena(layout: dict[str, Any], cena: dict[str, Any]) -> 
     """A zona do card desta cena, olhando o segmento em que o MEIO dela cai.
 
     Espelha o preview (`resolveSharedConfigAtTime`): vale o override do ULTIMO
-    segmento compartilhado que cobre o instante; se ele traz `zona_card`, ela
-    vence a do corte. Sem zona no segmento, a conta e a de sempre, sobre a base
-    do corte — o render de cortes ja existentes nao muda.
+    segmento compartilhado que cobre o instante, mesclado sobre a base do corte
+    como em `merge_compartilhada`. A zona manual do segmento vence a do corte e,
+    sem zona manual, a regra automatica olha os encaixes do segmento (D-907).
 
-    ``layout`` ja vem resolvido pela cascata (regioes normalizadas).
+    ``layout`` ja vem resolvido pela cascata (regioes normalizadas): o override
+    so traz chaves conhecidas, entao o espalhamento equivale ao merge.
     """
     inicio = _numero(cena.get("inicio"), 0.0)
     fim = _numero(cena.get("fim"), inicio + 5.0)
@@ -66,10 +67,7 @@ def resolver_zona_card_da_cena(layout: dict[str, Any], cena: dict[str, Any]) -> 
         cobre = regiao["inicio"] <= meio < regiao["fim"]
         if cobre and regiao["modo"] == "compartilhada" and regiao.get("compartilhada"):
             override = regiao["compartilhada"]
-    base = layout["compartilhada"]
-    if "zona_card" in override:
-        return resolver_zona_card({**base, "zona_card": override["zona_card"]})
-    return resolver_zona_card(base)
+    return resolver_zona_card({**layout["compartilhada"], **override})
 
 
 def normalizar_zona_card(valor: Any) -> dict[str, int] | None:
