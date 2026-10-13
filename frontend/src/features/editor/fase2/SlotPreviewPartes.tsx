@@ -149,7 +149,7 @@ export function SlotDragOverlay({
     >
       {selected && (
         <span
-          className="pointer-events-none m-1 self-start rounded-sm px-1 py-0.5 font-code text-[11px] font-bold uppercase tracking-[0.04em] text-white"
+          className="pointer-events-none m-1 self-start rounded-sm px-1 py-0.5 font-code text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent-fg)]"
           style={{ background: color }}
         >
           {label} {rect.w}×{rect.h}

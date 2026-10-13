@@ -32,12 +32,12 @@ export function NomeDoPresetDialog({
 }) {
   return (
     <div
-      className="absolute inset-0 z-[90] flex items-center justify-center bg-black/40"
+      className="absolute inset-0 z-[90] flex items-center justify-center bg-[color-mix(in_oklch,var(--wb-ink)_40%,transparent)]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-sm rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <div className="w-full max-w-sm rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-4 shadow-[var(--wb-shadow)]">
         <strong className="block font-editorial text-[14px] text-[var(--wb-ink)]">{titulo}</strong>
         <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">{descricao}</p>
         <label className="mt-3 flex flex-col gap-1">
