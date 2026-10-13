@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
-import { estadoDaLinha, maisDaLinha, primarioDaLinha } from '../acoesDaLinha';
+import { estadoDaLinha, maisDaLinha, ondeJaSubiu, primarioDaLinha } from '../acoesDaLinha';
 
 // D-868 (Onda 3, nota 4): "uma ação por linha". Editar e o principal com
 // rótulo; Pós, Metadados, pasta e URL publicada vão para o "⋯" — nada some.
@@ -62,6 +62,20 @@ describe('primarioDaLinha', () => {
   });
 });
 
+describe('ondeJaSubiu (D-906)', () => {
+  it('separa "subiu em alguma rede" de "está no YouTube"', () => {
+    expect(ondeJaSubiu(status())).toEqual({ publicado: false, noYoutube: false });
+    expect(ondeJaSubiu(status({ tiktok_publicado_em: '2026-10-01T10:00:00' }))).toEqual({
+      publicado: true,
+      noYoutube: false,
+    });
+    expect(ondeJaSubiu(status({ youtube_url_publicado: 'https://youtu.be/x' }))).toEqual({
+      publicado: true,
+      noYoutube: true,
+    });
+  });
+});
+
 describe('maisDaLinha', () => {
   function montar(extra: Partial<Parameters<typeof maisDaLinha>[0]> = {}) {
     const fns = {
@@ -71,7 +85,8 @@ describe('maisDaLinha', () => {
       informarUrl: vi.fn(),
       liberarPublicacao: vi.fn(),
     };
-    return { itens: maisDaLinha({ publicado: false, abrindoPasta: false, ...fns, ...extra }), fns };
+    const base = { publicado: false, noYoutube: false, abrindoPasta: false };
+    return { itens: maisDaLinha({ ...base, ...fns, ...extra }), fns };
   }
 
   it('o ⋯ traz Pós, Metadados, a pasta e a URL publicada, com rótulo', () => {
@@ -83,8 +98,15 @@ describe('maisDaLinha', () => {
     ]);
   });
 
-  it('corte já publicado troca "Informar a URL" por "Liberar publicação"', () => {
-    expect(montar({ publicado: true }).itens.at(-1)!.label).toBe('Liberar publicação');
+  it('corte no ar no YouTube troca "Informar a URL" por "Liberar publicação"', () => {
+    const rotulos = montar({ publicado: true, noYoutube: true }).itens.map((i) => i.label);
+    expect(rotulos).not.toContain('Informar a URL publicada');
+    expect(rotulos.at(-1)).toBe('Liberar publicação');
+  });
+
+  it('D-906: só no TikTok, oferece informar a URL do YouTube E liberar', () => {
+    const rotulos = montar({ publicado: true, noYoutube: false }).itens.map((i) => i.label);
+    expect(rotulos.slice(-2)).toEqual(['Informar a URL publicada', 'Liberar publicação']);
   });
 
   it('cada item chama a sua ação', () => {
@@ -94,7 +116,7 @@ describe('maisDaLinha', () => {
     expect(fns.metadados).toHaveBeenCalledOnce();
     expect(fns.abrirPasta).toHaveBeenCalledOnce();
     expect(fns.informarUrl).toHaveBeenCalledOnce();
-    const liberar = montar({ publicado: true });
+    const liberar = montar({ publicado: true, noYoutube: true });
     liberar.itens.at(-1)!.onClick!();
     expect(liberar.fns.liberarPublicacao).toHaveBeenCalledOnce();
   });

@@ -76,6 +76,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (D-900).
 
 ### Fixed
+- **"Informar a URL publicada" no longer disappears once the cut is on
+  TikTok.** When the YouTube upload failed but the video went up anyway, the
+  row's ⋯ menu offered only "Liberar publicação" if the horizontal TikTok
+  was already confirmed, so the YouTube video could never be registered. Now
+  informing the URL depends only on YouTube, and both options show up
+  together when the cut is on TikTok but not on YouTube (D-906).
 - **The TikTok cover no longer gets lost when the robot publishes.** The
   thumbnail changes the instant "Salvar" is clicked, but TikTok only finishes
   sending the cover to its servers seconds later — measured at ~6 s on a

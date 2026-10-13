@@ -295,6 +295,25 @@ describe('CorteLinhaAp · o ⋯ (D-868)', () => {
     expect(props.onLiberarPublicacao).toHaveBeenCalledOnce();
   });
 
+  it('D-906: com o TikTok confirmado e o YouTube faltando, ainda dá para informar a URL', () => {
+    // O upload do YouTube deu erro mas o vídeo subiu; o TikTok já estava
+    // confirmado. A opção sumia e o vídeo nunca ficava registrado.
+    desenhar({}, { tiktok_publicado_em: '2026-10-01T10:00:00' });
+    expect(h.mais!.items.map((i) => i.label).slice(-2)).toEqual([
+      'Informar a URL publicada',
+      'Liberar publicação',
+    ]);
+    item('Informar a URL publicada').onClick!();
+    expect(props.onInformarUrl).toHaveBeenCalledOnce();
+  });
+
+  it('D-906: com o YouTube no ar, informar a URL sai e fica só o liberar', () => {
+    desenhar({}, { youtube_url_publicado: 'https://youtu.be/x' });
+    const rotulos = h.mais!.items.map((i) => i.label);
+    expect(rotulos).not.toContain('Informar a URL publicada');
+    expect(rotulos.at(-1)).toBe('Liberar publicação');
+  });
+
   it('a linha sobe de camada enquanto o SEU ⋯ está aberto, não enquanto tem o foco', () => {
     desenhar({});
     expect(typeof h.mais!.onAbertoMudou).toBe('function');
