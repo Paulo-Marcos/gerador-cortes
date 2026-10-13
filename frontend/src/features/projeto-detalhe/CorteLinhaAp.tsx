@@ -17,7 +17,7 @@ import { montarTira } from '@/upgrade/tiraDoCorte';
 import { MetadadosDoCorteModal } from '@/features/metadata/MetadadosDoCorteModal';
 import { BarraDoCorte } from '@/upgrade/BarraDoCorte';
 import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
-import { estadoDaLinha, maisDaLinha, primarioDaLinha } from './acoesDaLinha';
+import { estadoDaLinha, maisDaLinha, ondeJaSubiu, primarioDaLinha } from './acoesDaLinha';
 import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 import { SeloDaNota } from '@/features/porque-do-corte/SeloDaNota';
 import { PorQueDoCorteModal } from '@/features/porque-do-corte/PorQueDoCorteModal';
@@ -190,7 +190,7 @@ export function CorteLinhaAp({
       window.open(status.youtube_url_publicado ?? '', '_blank', 'noopener,noreferrer'),
   });
   const mais = maisDaLinha({
-    publicado: Boolean(status.youtube_url_publicado || status.tiktok_publicado_em),
+    ...ondeJaSubiu(status),
     abrindoPasta: abrirPasta.isPending,
     posProducao: () =>
       navigate(`/projetos/${projetoId}/post-production?corte=${status.corte_id}`),

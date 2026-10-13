@@ -58,10 +58,26 @@ export function primarioDaLinha(
   }[estado] as Primario;
 }
 
+/**
+ * D-906: os dois sinais de publicação que o ⋯ usa, lidos do status.
+ *
+ * São perguntas diferentes: "subiu em alguma rede?" decide o liberar, e "a
+ * URL do YouTube está gravada?" decide o informar. Juntá-las numa só escondia
+ * o informar quando só o TikTok estava confirmado.
+ */
+export function ondeJaSubiu(status: StatusExportCorte): { publicado: boolean; noYoutube: boolean } {
+  return {
+    publicado: Boolean(status.youtube_url_publicado || status.tiktok_publicado_em),
+    noYoutube: Boolean(status.youtube_url_publicado),
+  };
+}
+
 /** Os itens do "⋯" da linha: o que era ícone solto, agora com nome. */
 export function maisDaLinha(p: {
-  /** Já subiu (YouTube ou TikTok): a última ação é liberar para subir de novo. */
+  /** Já subiu (YouTube ou TikTok): dá para liberar para subir de novo. */
   publicado: boolean;
+  /** A URL do YouTube já está gravada: não há o que informar. */
+  noYoutube: boolean;
   abrindoPasta: boolean;
   posProducao: () => void;
   metadados: () => void;
@@ -69,7 +85,7 @@ export function maisDaLinha(p: {
   informarUrl: () => void;
   liberarPublicacao: () => void;
 }): OverflowMenuItem[] {
-  return [
+  const itens: OverflowMenuItem[] = [
     { icon: 'clapperboard', label: 'Pós-produção', onClick: p.posProducao },
     {
       icon: 'tags',
@@ -83,18 +99,26 @@ export function maisDaLinha(p: {
       disabled: p.abrindoPasta,
       onClick: p.abrirPasta,
     },
-    p.publicado
-      ? {
-          icon: 'rotate-ccw',
-          label: 'Liberar publicação',
-          title: 'Liberar para subir de novo',
-          onClick: p.liberarPublicacao,
-        }
-      : {
-          icon: ICONE_DO_CONCEITO.urlPublicada,
-          label: 'Informar a URL publicada',
-          title: 'Informar a URL de um vídeo já publicado no YouTube',
-          onClick: p.informarUrl,
-        },
   ];
+  // D-906: as duas ações respondem perguntas diferentes, e por isso não se
+  // excluem. Informar a URL depende só do YOUTUBE: o upload pode dar erro com
+  // o vídeo no ar, e um TikTok já confirmado escondia a opção — o vídeo nunca
+  // ficava registrado. Liberar depende de QUALQUER rede ter subido.
+  if (!p.noYoutube) {
+    itens.push({
+      icon: ICONE_DO_CONCEITO.urlPublicada,
+      label: 'Informar a URL publicada',
+      title: 'Informar a URL de um vídeo já publicado no YouTube',
+      onClick: p.informarUrl,
+    });
+  }
+  if (p.publicado) {
+    itens.push({
+      icon: 'rotate-ccw',
+      label: 'Liberar publicação',
+      title: 'Liberar para subir de novo',
+      onClick: p.liberarPublicacao,
+    });
+  }
+  return itens;
 }
