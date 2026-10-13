@@ -29,6 +29,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN-07 | **Duração líquida** = intervalo − desvios (corte e bloco) ou soma dos segmentos (short). `fim − inicio` mente quando há buracos. | `domain/corte/segment_calculator.py` (`duracao_liquida`: o núcleo, usado pelo corte, pelo bloco do arranjo e pela duração de referência do render); `domain/short/segmentos_short.py` (`duracao_liquida`: a soma do que o short toca) | D-575, D-711 |
 | RN-08 | Os tempos do **Short** estão no espaço do **BRUTO** (o clip do corte), não da live. | `models.py` (invariante documentada em `Short`) | — |
 | RN-09 | Segmentos do short: lista vazia = janela única; a ordem é decisão do operador e **nunca** é reordenada; com segmentos, `inicio_seg`/`fim_seg` viram o envelope. | `domain/short/segmentos_short.py` (`normalizar`, `efetivos`) | D-604 |
+| RN-30 | **Abertura do corte longo: a pergunta do chat OU a ponte, nunca as duas.** Com uma pergunta escolhida, o card abre o corte com o texto literal e o nome de quem perguntou, e nenhuma outra cena começa antes de ele sair; sem pergunta, a `contextualizacao` (a ponte com o que veio antes na live) é a base da 1ª cena. Só o corte longo: as cenas do short estão desligadas. | `domain/corte/pergunta_do_chat.py` (`candidatas_a_pergunta`, `abrir_com_a_pergunta`); a costura em `services/abertura_do_corte.py` | D-910 |
 
 ## C. Layout, palco e gancho
 

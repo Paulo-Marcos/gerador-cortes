@@ -52,7 +52,6 @@ EXCECOES = {
     "app/services/analise.py::AnaliseService.montar_prompt_intervalo::C901": 11,
     "app/services/cenas_remotion.py::CenasRemotionService._preencher_retratos_cenas::C901": 16,
     "app/services/cenas_remotion.py::CenasRemotionService._preencher_retratos_cenas::PLR0915": 48,
-    "app/services/cenas_remotion.py::CenasRemotionService.gerar_cenas::PLR0915": 45,
     "app/services/corte.py::CorteService.detectar_silencios_tecnico::C901": 13,
     "app/services/corte.py::CorteService.detectar_silencios_tecnico::PLR0915": 64,
     "app/services/export_processamento.py::_ExportProcessamentoMixin._adicionar_intro_outro::PLR0915": 41,

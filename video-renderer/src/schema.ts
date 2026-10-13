@@ -24,6 +24,9 @@ const tipoCenaEnum = z.enum([
   "fonte_referencia",      // Badge "Fonte: ..."
   "lista_enumerada",       // 1, 2, 3 pontos rápidos
 
+  // Abertura do corte (D-910)
+  "pergunta_chat",         // Mensagem do chat que o apresentador responde
+
   // Legado
   "mostrar_imagem",
 ]);
@@ -158,6 +161,10 @@ const cenaBaseSchema = z.object({
   // Retrato (ficha_biografica): URL absoluta ou relativa (/api/retratos/slug)
   // para a foto do personagem. Quando ausente, a cena renderiza placeholder.
   retrato_url: z.string().optional(),
+
+  // Avatar de quem perguntou (pergunta_chat, D-910): baixado para o projeto e
+  // servido pelo backend local. Ausente, o card desenha a inicial do nome.
+  avatar_url: z.string().optional(),
 
   // Listas
   marcos: z.array(itemTimelineSchema).optional(),  // linha_tempo

@@ -16,7 +16,8 @@ export type CenaIconName =
   | 'Brain'
   | 'Tag'
   | 'Check'
-  | 'Image';
+  | 'Image'
+  | 'MessageCircle';
 
 export interface TipoMeta {
   label: string;
@@ -24,6 +25,13 @@ export interface TipoMeta {
   color: string;
   tone: string;
 }
+
+// As duas perguntas — a de transição e a do chat (D-910) — são da mesma família
+// de cor; o ícone as distingue.
+const CORES_DE_PERGUNTA = {
+  color: 'oklch(0.54 0.16 32)',
+  tone: 'border-orange-500/40 bg-orange-500/10 text-orange-200',
+};
 
 export const TIPOS_CENA: Record<CenaTipo, TipoMeta> = {
   tela_cheia: {
@@ -71,8 +79,7 @@ export const TIPOS_CENA: Record<CenaTipo, TipoMeta> = {
   pergunta_transicao: {
     label: 'Pergunta',
     icon: 'CircleHelp',
-    color: 'oklch(0.54 0.16 32)',
-    tone: 'border-orange-500/40 bg-orange-500/10 text-orange-200',
+    ...CORES_DE_PERGUNTA,
   },
   chamada_final: {
     label: 'Chamada final',
@@ -121,6 +128,11 @@ export const TIPOS_CENA: Record<CenaTipo, TipoMeta> = {
     icon: 'Check',
     color: 'oklch(0.52 0.12 185)',
     tone: 'border-teal-500/40 bg-teal-500/10 text-teal-200',
+  },
+  pergunta_chat: {
+    label: 'Pergunta do chat',
+    icon: 'MessageCircle',
+    ...CORES_DE_PERGUNTA,
   },
   mostrar_imagem: {
     label: 'Imagem',

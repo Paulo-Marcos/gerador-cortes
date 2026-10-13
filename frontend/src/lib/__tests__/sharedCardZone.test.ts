@@ -29,6 +29,7 @@ const TIPOS_CARD_VERTICAL = [
   'fonte_referencia',
   'citacao_autor',
   'chamada_final',
+  'pergunta_chat',
 ] as const;
 
 function cenaCompartilhada(tipo: string) {
