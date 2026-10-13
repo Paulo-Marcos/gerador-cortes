@@ -36,6 +36,7 @@ const LOTE: LotePublicacao = {
           estado: 'preparando',
           detalhe: 'enviando o vídeo',
           url: '',
+          agendado_para: '',
         },
       ],
     },

@@ -10,7 +10,8 @@
 // depois que ele termina, nada. Uma tela aberta a noite inteira não tem por que
 // perguntar ao backend de dois em dois segundos sobre um lote que acabou.
 import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { shortsApi, type OpcoesDoLote } from './shortsApi';
+import { loteApi, type OpcoesDoLote } from './loteApi';
+import { shortsApi } from './shortsApi';
 import { FIRES_KEY } from './useFires';
 import { PRONTOS_KEY } from './useShortsProntos';
 
@@ -44,7 +45,7 @@ export function useCriarLote() {
       alvos: string[];
       plataformas: string[];
       opcoes: OpcoesDoLote;
-    }) => shortsApi.criarLote(alvos, plataformas, opcoes),
+    }) => loteApi.criar(alvos, plataformas, opcoes),
     onSuccess: (lote) => {
       // O lote já volta montado na resposta: escrever direto no cache evita a
       // piscada de "nenhum lote" entre o POST e o primeiro GET.

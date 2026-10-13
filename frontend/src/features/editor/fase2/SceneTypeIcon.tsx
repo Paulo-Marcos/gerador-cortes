@@ -22,6 +22,7 @@ const ICONE_DO_TIPO: Record<CenaIconName, IconName> = {
   Tag: 'tag',
   Check: 'check',
   Image: 'image',
+  MessageCircle: 'message-circle',
 };
 
 interface Props {

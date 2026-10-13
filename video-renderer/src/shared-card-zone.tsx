@@ -35,6 +35,7 @@ export const SOURCE_BY_TYPE: Partial<Record<CenaRemotion["tipo"], CardSourceRect
   // I-036: tipos fora deste mapa renderizam em tamanho cheio sobre o palco.
   citacao_autor: { x: 92, y: 116, w: 520, h: 760 },
   chamada_final: { x: 92, y: 92, w: 560, h: 760 },
+  pergunta_chat: { x: 92, y: 112, w: 520, h: 560 },
 };
 
 export function shouldUseSharedCardZone(

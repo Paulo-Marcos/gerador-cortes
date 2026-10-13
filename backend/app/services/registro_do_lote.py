@@ -9,7 +9,7 @@ mais a gravação da confirmação à mão (D-894), sem estado em memória.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.database import AsyncSessionLocal
 from app.domain.publicacao.publicacao import Plataforma
@@ -59,6 +59,33 @@ async def publicados_hoje(plataforma: Plataforma) -> int:
             )
         ).scalars()
         return publicados_no_dia([m for m in linhas if m], datetime.utcnow())
+
+
+# Estados que NÃO seguram a vaga: o item saiu da fila sem ir ao ar.
+_ESTADOS_SEM_VAGA = (EstadoItem.CANCELADO.value, EstadoItem.ERRO.value, EstadoItem.PULADO.value)
+
+
+async def ultimo_agendado(plataformas: list[str]) -> datetime | None:
+    """O instante mais tarde já marcado ou publicado nestas plataformas (D-908).
+
+    É o ponto de partida do próximo lote: continuar depois dele é o que faz dois
+    lotes seguidos preencherem os dias em vez de se empilharem no mesmo bloco.
+    Item cancelado, com erro ou pulado não segura a vaga. Devolve ciente do
+    fuso local, como o escalonamento espera; o banco guarda UTC sem fuso.
+    """
+    async with AsyncSessionLocal() as db:
+        linhas = (
+            await db.execute(
+                select(PublicacaoShort.agendado_para, PublicacaoShort.publicado_em).where(
+                    PublicacaoShort.plataforma.in_(plataformas),
+                    PublicacaoShort.estado.not_in(_ESTADOS_SEM_VAGA),
+                )
+            )
+        ).all()
+    instantes = [m for agendado, publicado in linhas for m in (agendado, publicado) if m]
+    if not instantes:
+        return None
+    return max(instantes).replace(tzinfo=UTC).astimezone()
 
 
 async def rotulos_dos_alvos(alvos: list[tuple[str, str]]) -> dict[str, str]:

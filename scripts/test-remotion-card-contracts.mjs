@@ -18,6 +18,13 @@ const base = {
   sombra_nivel: "media",
 };
 
+const perguntaChat = {
+  ...base,
+  tipo: "pergunta_chat",
+  texto: "pq a UP tá contribuindo com os ataques a via democratica? 🤔",
+  autor: "@Fulano_de_Tal",
+};
+
 const scenarios = [
   scene("tela_cheia-padrao", {
     ...base,
@@ -237,6 +244,19 @@ const scenarios = [
     mascotMood: "convidativo",
   }),
 
+  // D-910: a pergunta do chat, com texto literal (erro, @menção e emoji unicode).
+  ...layoutPair("pergunta_chat", perguntaChat),
+  scene("pergunta_chat-avatar-quebrado", {
+    ...perguntaChat,
+    layout_card: "vertical",
+    avatar_url: "http://127.0.0.1:9/avatar-que-nao-existe.jpg",
+  }, "vertical"),
+  scene("pergunta_chat-longa-h", {
+    ...perguntaChat,
+    layout_card: "horizontal",
+    texto: "uma dúvida agora, uma das justificativas mais comuns do nazismo ser de direita é o nacionalismo, mas se tmb existe nacionalismo de esquerda esse argumento não cai ? @Outro o que vc acha 🤔🤔",
+  }, "horizontal"),
+
   scene("destaque_numerico-padrao", {
     ...base,
     tipo: "destaque_numerico",
@@ -269,6 +289,8 @@ const identicalPairs = [
   ["tela_cheia-auto-longo", "tela_cheia-card-longo-v", "tela_cheia longa sem modelo_cena deve renderizar como card"],
   ["tela_cheia-padrao-longo", "tela_cheia-card-longo-v", "tela_cheia longa com modelo_cena=padrao deve renderizar como card"],
   ["tela_cheia-auto-longo-default-forte", "tela_cheia-card-longo-forte-v", "tela_cheia longa automatica renderiza como card respeitando sombra"],
+  // D-910: avatar que não carrega não derruba o render, vira a inicial do nome.
+  ["pergunta_chat-avatar-quebrado", "pergunta_chat-v", "pergunta_chat com avatar quebrado desenha a inicial"],
 ];
 
 function scene(id, cena, layoutCardPadrao = "vertical", sombraNivelPadrao = "media") {
@@ -295,6 +317,7 @@ function layoutTypes() {
     "fonte_referencia",
     "lista_enumerada",
     "chamada_final",
+    "pergunta_chat",
   ];
 }
 
