@@ -16,6 +16,7 @@ import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
 import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
+import { EscalonamentoSection } from './EscalonamentoSection';
 import { PreRequisitosSection } from './PreRequisitosSection';
 import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
@@ -36,7 +37,7 @@ import { Icon, type IconName } from '@/upgrade/Icon';
 
 type Dialogo = { tipo: 'criar' } | { tipo: 'editar'; canal: Canal } | null;
 type Aba = 'canal' | 'aplicacao';
-type SecaoCanal = null | 'skills' | 'scaffolds' | 'prompts' | 'pesos';
+type SecaoCanal = null | 'skills' | 'scaffolds' | 'prompts' | 'pesos' | 'horarios';
 
 
 /** Converte os campos do form em payload de identidade (sem o `id`). */
@@ -80,11 +81,47 @@ function BlocoPortal({
   );
 }
 
+/** Os blocos-portal da aba do canal, na ordem da tela; o título vira o cabeçalho da seção. */
+const PORTAIS: { secao: Exclude<SecaoCanal, null>; icone: IconName; titulo: string; descricao: string }[] = [
+  {
+    secao: 'skills',
+    icone: 'brain',
+    titulo: 'Skills editoriais',
+    descricao:
+      'Prompts por etapa (análise, títulos, cenas…) com histórico de versões e reset por campo.',
+  },
+  {
+    secao: 'scaffolds',
+    icone: 'puzzle',
+    titulo: 'Scaffolds',
+    descricao: 'Contrato de saída de cada skill: placeholders validados e texto do invólucro.',
+  },
+  {
+    secao: 'prompts',
+    icone: 'wrench',
+    titulo: 'Prompts utilitários',
+    descricao: 'Prompts avulsos (desvios, thumbnail, sentimento…) editáveis com validação.',
+  },
+  {
+    secao: 'pesos',
+    icone: 'scale',
+    titulo: 'Pesos do ranking',
+    descricao: 'Pesos usados no score do ranking de lives do canal.',
+  },
+  {
+    secao: 'horarios',
+    icone: 'calendar-days',
+    titulo: 'Horários de publicação',
+    descricao: 'Quando o público está lá e os blocos por rede que distribuem o lote de shorts.',
+  },
+];
+
 const SECOES_CANAL: Record<Exclude<SecaoCanal, null>, { titulo: string }> = {
   skills: { titulo: 'Skills editoriais' },
   scaffolds: { titulo: 'Scaffolds' },
   prompts: { titulo: 'Prompts utilitários' },
   pesos: { titulo: 'Pesos do ranking' },
+  horarios: { titulo: 'Horários de publicação' },
 };
 
 export function ChannelsPage() {
@@ -254,6 +291,7 @@ export function ChannelsPage() {
             {secao === 'scaffolds' && <EditorialScaffoldsSection />}
             {secao === 'prompts' && <PromptsUtilitariosSection />}
             {secao === 'pesos' && <RankingPesosSection />}
+            {secao === 'horarios' && <EscalonamentoSection />}
           </>
         )}
 
@@ -291,30 +329,9 @@ export function ChannelsPage() {
 
             {/* Blocos-portal do design: cada área editorial abre em sub-view. */}
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
-              <BlocoPortal
-                icone="brain"
-                titulo="Skills editoriais"
-                descricao="Prompts por etapa (análise, títulos, cenas…) com histórico de versões e reset por campo."
-                onClick={() => setSecao('skills')}
-              />
-              <BlocoPortal
-                icone="puzzle"
-                titulo="Scaffolds"
-                descricao="Contrato de saída de cada skill: placeholders validados e texto do invólucro."
-                onClick={() => setSecao('scaffolds')}
-              />
-              <BlocoPortal
-                icone="wrench"
-                titulo="Prompts utilitários"
-                descricao="Prompts avulsos (desvios, thumbnail, sentimento…) editáveis com validação."
-                onClick={() => setSecao('prompts')}
-              />
-              <BlocoPortal
-                icone="scale"
-                titulo="Pesos do ranking"
-                descricao="Pesos usados no score do ranking de lives do canal."
-                onClick={() => setSecao('pesos')}
-              />
+              {PORTAIS.map((portal) => (
+                <BlocoPortal key={portal.secao} {...portal} onClick={() => setSecao(portal.secao)} />
+              ))}
             </div>
           </>
         )}

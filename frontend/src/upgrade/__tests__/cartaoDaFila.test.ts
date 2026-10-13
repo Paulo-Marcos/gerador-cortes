@@ -30,6 +30,7 @@ function lote(estados: EstadoItemLote[], extra: Partial<LotePublicacao> = {}): L
           estado,
           detalhe: '',
           url: '',
+          agendado_para: '',
         })),
       },
     ],

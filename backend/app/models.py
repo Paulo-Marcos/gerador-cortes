@@ -876,14 +876,13 @@ class PublicacaoShort(Base):
     Para um short, nada — e sem esse registro o lote republicaria em silêncio o
     que já subiu, que é o erro mais caro que uma fila pode cometer.
 
-    A linha nasce quando o item entra no lote e acompanha o item até o fim. Ela
-    é a memória durável de três coisas que a fila em memória perde num restart:
-    o que já foi (não repetir), quantos saíram hoje (a cota do YouTube) e o que
-    ficou esperando o clique do operador.
+    A linha nasce quando o item entra no lote e acompanha o item até o fim: é a
+    memória durável do que já foi (não repetir), de quantos saíram hoje (a cota
+    do YouTube), do que espera o clique do operador e, D-908, de quando cada um
+    foi marcado — o próximo lote parte do último agendado.
 
     `alvo_tipo` distingue "short" (o vertical, 9:16) de "corte" (o MP4 16:9 que
-    também vai para o TikTok, D-470): os dois publicam pelo mesmo contrato, e
-    uma tabela só evita duas metades da mesma pergunta.
+    também vai para o TikTok, D-470): um contrato, uma tabela.
     """
 
     __tablename__ = "publicacoes_shorts"
@@ -895,9 +894,8 @@ class PublicacaoShort(Base):
     estado: Mapped[str] = mapped_column(String(20), default="aguardando")
     lote_id: Mapped[str] = mapped_column(String(36), default="", index=True)
     url: Mapped[str] = mapped_column(String(500), default="")
-    # O que a tela mostra quando algo saiu do trilho: a orientação do roteiro do
-    # TikTok, o erro da API, ou a pasta do pacote manual. Texto pronto para ler,
-    # não código de erro — quem lê é o operador.
+    # O que a tela mostra quando algo saiu do trilho (roteiro do TikTok, erro da
+    # API, pasta do pacote): texto pronto para ler — quem lê é o operador.
     detalhe: Mapped[str] = mapped_column(Text, default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
@@ -906,3 +904,5 @@ class PublicacaoShort(Base):
     # Só quando a publicação foi CONFIRMADA. Nulo enquanto espera o clique: é
     # este campo que conta a cota do dia, e enchê-lo no escuro inflaria a conta.
     publicado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # D-908: a data marcada para este item (UTC), ou nulo quando subiu "agora".
+    agendado_para: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

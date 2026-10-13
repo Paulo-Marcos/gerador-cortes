@@ -29,18 +29,14 @@ mesma cota, e o segundo estragaria o primeiro sem que ninguém tivesse pedido.
 from __future__ import annotations
 
 import logging
-import threading
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
-from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma
 from app.domain.publicacao.ritmo_publicacao import (
     ESTADOS_DO_OPERADOR,
-    ESTADOS_FORA_DA_RAIA,
     Cadencia,
     EstadoItem,
     cadencia_de,
@@ -53,6 +49,20 @@ from app.services import (
     publicacao_destinos,
     publicacao_no_tiktok,
     registro_do_lote,
+)
+
+# D-908: o que o lote É mora em módulo próprio; quem importava daqui continua podendo.
+from app.services.itens_do_lote import (  # noqa: F401
+    SEM_DATA_NA_AGENDA,
+    AgendaDoLote,
+    ItemDoLote,
+    Lote,
+    LoteEmAndamento,
+    OpcoesDoLote,
+    agendamento_do_item,
+    com_avisos,
+    escalona,
+    recado_do_pacote,
 )
 from app.services.publicacao_destinos import Destino
 from app.services.registro_do_lote import (  # noqa: F401 — historico: o router lê por aqui
@@ -87,121 +97,6 @@ CONFERINDO_O_ANTERIOR = "conferindo a aba do envio anterior — o post pode ter 
 _conferindo: set[tuple[str, Plataforma]] = set()
 
 
-@dataclass(frozen=True)
-class OpcoesDoLote:
-    """As escolhas que mudam COMO cada plataforma é publicada (D-564).
-
-    `tiktok_assistido` e `instagram_assistido` decidem o TRANSPORTE: com eles o
-    robô abre o Chrome e sobe; sem eles, o lote só monta a pasta. Continuam
-    sendo escolhas porque o assistido depende de seletores de páginas que não
-    são nossas — no dia em que uma delas se redesenhar, desligar aquela devolve
-    o caminho que funciona, sem derrubar a outra.
-
-    São dois interruptores e não um justamente por isso: as duas páginas quebram
-    em dias diferentes.
-
-    `publicar_sozinho` decide QUEM aperta o botão, e vale para as duas. Desligado
-    por padrão, e essa assimetria é intencional: até o clique tudo é reversível.
-    """
-
-    tiktok_assistido: bool = False
-    instagram_assistido: bool = False
-    publicar_sozinho: bool = False
-    # D-580: quando o operador marca dia e hora, ela vale para o LOTE inteiro —
-    # cada destino a honra do jeito que consegue (a API do YouTube com
-    # `publishAt`, o robo do TikTok clicando no Studio) e os que nao conseguem
-    # dizem isso em vez de engolir a data.
-    agendamento: Agendamento | None = None
-    # D-590: sobe de novo o que já foi publicado. Existe porque "já subiu" não
-    # quer dizer "subiu certo" — um short com a capa errada no ar precisa voltar
-    # para a fila. Desligado por padrão: republicar em silêncio duplicaria vídeo.
-    republicar: bool = False
-
-
-class LoteEmAndamento(RuntimeError):
-    """Já existe um lote rodando — e um operador só não publica dois ao mesmo tempo."""
-
-
-@dataclass
-class ItemDoLote:
-    """Um vídeo indo para UMA plataforma. A unidade de trabalho da raia."""
-
-    alvo_tipo: str
-    alvo_id: str
-    plataforma: Plataforma
-    rotulo: str
-    """O título do short, para a tela não mostrar um uuid."""
-    registro_id: str
-    estado: EstadoItem = EstadoItem.AGUARDANDO
-    detalhe: str = ""
-    url: str = ""
-    # D-591: o sinal que tira a raia da vigília do robô. Sem ele, "cancelar" e
-    # "publiquei" mudavam o estado, mas a raia seguia presa esperando a aba — e
-    # os itens seguintes ficavam parados por até meia hora.
-    #
-    # `threading` e não `asyncio`: quem lê o sinal é a vigília, que roda num
-    # thread (Playwright síncrono, D-369).
-    espera: threading.Event = field(default_factory=threading.Event, repr=False, compare=False)
-
-    def como_dict(self) -> dict:
-        return {
-            "alvo_tipo": self.alvo_tipo,
-            "alvo_id": self.alvo_id,
-            "plataforma": self.plataforma.value,
-            "plataforma_rotulo": LIMITES[self.plataforma].rotulo,
-            "rotulo": self.rotulo,
-            "estado": self.estado.value,
-            "detalhe": self.detalhe,
-            "url": self.url,
-        }
-
-
-@dataclass
-class Lote:
-    """O lote inteiro: os itens, as raias e o que já parou."""
-
-    id: str
-    criado_em: datetime
-    itens: list[ItemDoLote] = field(default_factory=list)
-    opcoes: OpcoesDoLote = field(default_factory=OpcoesDoLote)
-    cancelado: bool = False
-    avisos: dict[str, str] = field(default_factory=dict)
-    """Por plataforma: por que a raia parou antes do fim (cota, sessão, layout)."""
-
-    def da_plataforma(self, plataforma: Plataforma) -> list[ItemDoLote]:
-        return [i for i in self.itens if i.plataforma is plataforma]
-
-    @property
-    def plataformas(self) -> list[Plataforma]:
-        """Na ordem canônica, e sem repetir."""
-        return [p for p in Plataforma if any(i.plataforma is p for i in self.itens)]
-
-    @property
-    def terminou(self) -> bool:
-        return all(i.estado in ESTADOS_FORA_DA_RAIA for i in self.itens)
-
-    def como_dict(self) -> dict:
-        return {
-            "lote_id": self.id,
-            "criado_em": self.criado_em.isoformat(),
-            "cancelado": self.cancelado,
-            "terminou": self.terminou,
-            "tiktok_assistido": self.opcoes.tiktok_assistido,
-            "instagram_assistido": self.opcoes.instagram_assistido,
-            "publicar_sozinho": self.opcoes.publicar_sozinho,
-            "raias": [
-                {
-                    "plataforma": p.value,
-                    "rotulo": LIMITES[p].rotulo,
-                    "exige_humano": cadencia_de(p).exige_humano,
-                    "aviso": self.avisos.get(p.value, ""),
-                    "itens": [i.como_dict() for i in self.da_plataforma(p)],
-                }
-                for p in self.plataformas
-            ],
-        }
-
-
 _lote_atual: Lote | None = None
 
 
@@ -214,6 +109,7 @@ async def criar(
     alvos: list[tuple[str, str]],
     plataformas: list[Plataforma],
     opcoes: OpcoesDoLote | None = None,
+    agenda: AgendaDoLote | None = None,
 ) -> Lote:
     """Monta o lote e solta uma raia por plataforma.
 
@@ -222,6 +118,12 @@ async def criar(
 
     O que já subiu entra como `PULADO`, e não some da lista: ver "já está no
     TikTok" é resposta; um item que desaparece é dúvida.
+
+    D-908: com `agenda`, cada item leva a própria data. Item de destino que
+    escalona e ficou sem data na agenda (não coube no horizonte, e o operador
+    não ajustou) também entra como `PULADO`: subi-lo "agora" desfaria o
+    espaçamento que a agenda existe para garantir. Destino que publica no ato
+    (Instagram) não precisa de data e segue normal.
     """
     global _lote_atual
 
@@ -240,7 +142,17 @@ async def criar(
         for plataforma in plataformas:
             ja_foi = plataforma.value in publicados.get(alvo_id, set())
             conferindo = (alvo_id, plataforma) in _conferindo
-            pulado = CONFERINDO_O_ANTERIOR if conferindo else "ja publicado antes" if ja_foi else ""
+            agendamento = agendamento_do_item(agenda, alvo_id, plataforma)
+            sem_data = agenda is not None and agendamento is None and escalona(plataforma)
+            pulado = (
+                CONFERINDO_O_ANTERIOR
+                if conferindo
+                else "ja publicado antes"
+                if ja_foi
+                else SEM_DATA_NA_AGENDA
+                if sem_data
+                else ""
+            )
             item = ItemDoLote(
                 alvo_tipo=alvo_tipo,
                 alvo_id=alvo_id,
@@ -249,6 +161,7 @@ async def criar(
                 registro_id=str(uuid.uuid4()),
                 estado=EstadoItem.PULADO if pulado else EstadoItem.AGUARDANDO,
                 detalhe=pulado,
+                agendamento=agendamento,
             )
             lote.itens.append(item)
 
@@ -343,22 +256,23 @@ def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
     pedido — o assistido é uma escolha DO LOTE, e só dele.
     """
     robo = _robo_do_lote(item.plataforma, lote.opcoes)
+    agendamento = item.agendamento_efetivo(lote.opcoes.agendamento)
     if robo is None:
         return publicacao_destinos.com_agendamento(
-            publicacao_destinos.obter_destino(item.plataforma), lote.opcoes.agendamento
+            publicacao_destinos.obter_destino(item.plataforma), agendamento
         )
 
     async def ao_ficar_pronta(avisos: Sequence[str] = ()) -> None:
         # D-588: os avisos entram JUNTO do "sua vez", e não depois. É durante a
         # espera que o operador pode agir — pôr a capa que o robô não pôs, por
         # exemplo; no fim da vigília o post já saiu sem ela.
-        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_com_avisos(RECADO_DA_ABA, avisos))
+        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=com_avisos(RECADO_DA_ABA, avisos))
 
     return robo(
         item.plataforma,
         publicar_sozinho=lote.opcoes.publicar_sozinho,
         ao_ficar_pronta=ao_ficar_pronta,
-        agendamento=lote.opcoes.agendamento,
+        agendamento=agendamento,
         parar_espera=item.espera,
         # D-799: a raia não espera o operador publicar para subir o próximo.
         sem_esperar=True,
@@ -423,7 +337,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
             item,
             EstadoItem.PUBLICADO,
             url=str(resultado.get("url", "")),
-            detalhe=_com_avisos("", avisos),
+            detalhe=com_avisos("", avisos),
             publicado=True,
         )
         return EstadoItem.PUBLICADO
@@ -431,7 +345,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
     if destino.modo is ModoPublicacao.ASSISTIDO:
         if resultado.get("marca") and isinstance(destino, destinos_assistidos.DestinoAssistido):
             # Já está em SUA_VEZ (`ao_ficar_pronta`); a raia segue, a vigília fica.
-            recado = _com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos)
+            recado = com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos)
             vigilia = _vigiar(item, destino, resultado["marca"], EstadoItem.SUA_VEZ, recado)
             fire_and_forget(vigilia, name="vigiar-aba")
             return EstadoItem.SUA_VEZ
@@ -445,10 +359,10 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
         # `False` aqui é "não sei", e não "não publicou" — a aba pode ter sido
         # fechada. Deixar em SUA_VEZ mantém o botão "publiquei" à mão, que é o
         # jeito barato de errar: marcar no escuro libera a limpeza do MP4.
-        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos))
+        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos))
         return EstadoItem.SUA_VEZ
 
-    await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_recado_do_pacote(resultado, ritmo))
+    await _mudar(item, EstadoItem.SUA_VEZ, detalhe=recado_do_pacote(resultado, ritmo))
     return EstadoItem.SUA_VEZ
 
 
@@ -472,21 +386,6 @@ async def _vigiar(
             await _mudar(item, espera, detalhe=recado)
     finally:
         _conferindo.discard((item.alvo_id, item.plataforma))
-
-
-def _recado_do_pacote(resultado: dict, ritmo: Cadencia) -> str:
-    """O que o operador faz agora, com o pacote já montado."""
-    pasta = str(resultado.get("pasta", ""))
-    recado = f"pacote pronto em {pasta}" if pasta else f"pacote do {ritmo.rotulo} pronto"
-    return _com_avisos(recado, resultado.get("avisos") or [])
-
-
-def _com_avisos(recado: str, avisos: Sequence[str]) -> str:
-    """O recado do item, seguido dos avisos quando há — ou só os avisos."""
-    juntos = "; ".join(str(a) for a in avisos)
-    if not juntos:
-        return recado
-    return f"{recado} — {juntos}" if recado else juntos
 
 
 async def _montar_contexto(item: ItemDoLote):
@@ -552,6 +451,7 @@ async def _gravar_registros(lote: Lote) -> None:
                     estado=item.estado.value,
                     lote_id=lote.id,
                     detalhe=item.detalhe,
+                    agendado_para=item.agendado_para_utc(),
                 )
             )
         await db.commit()

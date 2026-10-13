@@ -409,3 +409,11 @@ async def resetar_prompt_utilitario(key: str):
     except KeyError as e:
         raise HTTPException(status_code=404, detail=f"Prompt desconhecido: {key!r}.") from e
     return _para_response_prompt(prompt)
+
+
+# D-908: a referência do público e os blocos de publicação por canal, no mesmo
+# router da tela de Canais (sem registro novo em `main.py`, travado). Segmentos
+# a mais que as rotas genéricas `/{skill_key}`: nenhuma captura a outra.
+from app.routers import escalonamento_publicacao  # noqa: E402
+
+router.include_router(escalonamento_publicacao.router, prefix="/escalonamento")

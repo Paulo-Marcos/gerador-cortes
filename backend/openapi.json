@@ -49,6 +49,22 @@
         "title": "AgendaDoUpload",
         "type": "object"
       },
+      "AgendaPrevistaResponse": {
+        "properties": {
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/LinhaDaAgenda"
+            },
+            "title": "Itens",
+            "type": "array"
+          }
+        },
+        "required": [
+          "itens"
+        ],
+        "title": "AgendaPrevistaResponse",
+        "type": "object"
+      },
       "AmbienteResponse": {
         "description": "D-627: o que o app precisa nesta máquina. `pronto` é falso se falta um\nobrigatório.",
         "properties": {
@@ -2928,6 +2944,37 @@
         "title": "DefinirCenasRequest",
         "type": "object"
       },
+      "DestinoEscalonadoResponse": {
+        "properties": {
+          "destino": {
+            "title": "Destino",
+            "type": "string"
+          },
+          "padrao": {
+            "$ref": "#/components/schemas/ParametrosDoDestinoModel"
+          },
+          "parametros": {
+            "$ref": "#/components/schemas/ParametrosDoDestinoModel"
+          },
+          "personalizado": {
+            "title": "Personalizado",
+            "type": "boolean"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destino",
+          "rotulo",
+          "parametros",
+          "padrao",
+          "personalizado"
+        ],
+        "title": "DestinoEscalonadoResponse",
+        "type": "object"
+      },
       "DesvioDoCorte": {
         "additionalProperties": true,
         "description": "Um trecho a remover. A `categoria` sai sempre do vocabulário fechado:\no `_corte_to_dict` a normaliza na leitura (D-422).",
@@ -3367,6 +3414,51 @@
         "title": "EnquadramentoResponse",
         "type": "object"
       },
+      "EscalonamentoResponse": {
+        "properties": {
+          "destinos": {
+            "items": {
+              "$ref": "#/components/schemas/DestinoEscalonadoResponse"
+            },
+            "title": "Destinos",
+            "type": "array"
+          },
+          "dias_da_semana": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dias Da Semana",
+            "type": "array"
+          },
+          "faixas": {
+            "items": {
+              "$ref": "#/components/schemas/FaixaDoPublicoModel"
+            },
+            "title": "Faixas",
+            "type": "array"
+          },
+          "faixas_padrao": {
+            "items": {
+              "$ref": "#/components/schemas/FaixaDoPublicoModel"
+            },
+            "title": "Faixas Padrao",
+            "type": "array"
+          },
+          "publico_personalizado": {
+            "title": "Publico Personalizado",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "faixas",
+          "faixas_padrao",
+          "publico_personalizado",
+          "dias_da_semana",
+          "destinos"
+        ],
+        "title": "EscalonamentoResponse",
+        "type": "object"
+      },
       "EscolherPresetRequest": {
         "description": "`\"\"` volta ao automático (deduzir do layout do corte, ou nada).",
         "properties": {
@@ -3577,6 +3669,35 @@
           "cor"
         ],
         "title": "FaixaDaMoldura",
+        "type": "object"
+      },
+      "FaixaDoPublicoModel": {
+        "description": "Uma faixa de horas de um dia da semana (0 = segunda) e a força do público.",
+        "properties": {
+          "dia": {
+            "title": "Dia",
+            "type": "integer"
+          },
+          "fim": {
+            "title": "Fim",
+            "type": "integer"
+          },
+          "inicio": {
+            "title": "Inicio",
+            "type": "integer"
+          },
+          "intensidade": {
+            "title": "Intensidade",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dia",
+          "inicio",
+          "fim",
+          "intensidade"
+        ],
+        "title": "FaixaDoPublicoModel",
         "type": "object"
       },
       "FaixaSeguraCapa": {
@@ -4441,6 +4562,30 @@
         "title": "IndicarRequest",
         "type": "object"
       },
+      "ItemDaAgendaRequest": {
+        "description": "A data de UM (alvo, plataforma), como a tela a ajustou (D-908).",
+        "properties": {
+          "agendar_para": {
+            "default": "",
+            "title": "Agendar Para",
+            "type": "string"
+          },
+          "alvo": {
+            "title": "Alvo",
+            "type": "string"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alvo",
+          "plataforma"
+        ],
+        "title": "ItemDaAgendaRequest",
+        "type": "object"
+      },
       "ItemDoAmbiente": {
         "properties": {
           "como_resolver": {
@@ -4486,6 +4631,10 @@
       },
       "ItemDoLote": {
         "properties": {
+          "agendado_para": {
+            "title": "Agendado Para",
+            "type": "string"
+          },
           "alvo_id": {
             "title": "Alvo Id",
             "type": "string"
@@ -4526,7 +4675,8 @@
           "rotulo",
           "estado",
           "detalhe",
-          "url"
+          "url",
+          "agendado_para"
         ],
         "title": "ItemDoLote",
         "type": "object"
@@ -5071,6 +5221,45 @@
           "removidos"
         ],
         "title": "LimpezaDeArquivosResponse",
+        "type": "object"
+      },
+      "LinhaDaAgenda": {
+        "description": "Um item do lote e a data que a janela do canal propõe para ele (D-908).",
+        "properties": {
+          "agendar_para": {
+            "title": "Agendar Para",
+            "type": "string"
+          },
+          "alvo_id": {
+            "title": "Alvo Id",
+            "type": "string"
+          },
+          "alvo_tipo": {
+            "title": "Alvo Tipo",
+            "type": "string"
+          },
+          "intensidade": {
+            "title": "Intensidade",
+            "type": "string"
+          },
+          "motivo": {
+            "title": "Motivo",
+            "type": "string"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alvo_tipo",
+          "alvo_id",
+          "plataforma",
+          "agendar_para",
+          "intensidade",
+          "motivo"
+        ],
+        "title": "LinhaDaAgenda",
         "type": "object"
       },
       "LinhaDaTranscricao": {
@@ -5886,6 +6075,14 @@
       "LoteRequest": {
         "description": "O lote que o operador montou na tela.\n\n`alvos` são pares `tipo:id` (\"short:uuid\" ou \"corte:uuid\") na ORDEM em que\nele escolheu — a ordem da tela vira a ordem da fila. `plataformas` são os\ndestinos que ele marcou; o mesmo conjunto vale para todos os alvos, que é\ncomo a seleção acontece na prática (\"estes cinco, nestas duas redes\").",
         "properties": {
+          "agenda": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ItemDaAgendaRequest"
+            },
+            "title": "Agenda",
+            "type": "array"
+          },
           "agendar_para": {
             "default": "",
             "title": "Agendar Para",
@@ -6639,6 +6836,46 @@
         "title": "PaletaModel",
         "type": "object"
       },
+      "ParametrosDoDestinoModel": {
+        "description": "Como um destino distribui os itens ao longo do dia.",
+        "properties": {
+          "blocos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocos",
+            "type": "array"
+          },
+          "dias_ativos": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Dias Ativos",
+            "type": "array"
+          },
+          "intervalo_minimo_min": {
+            "title": "Intervalo Minimo Min",
+            "type": "integer"
+          },
+          "itens_por_bloco": {
+            "title": "Itens Por Bloco",
+            "type": "integer"
+          },
+          "teto_por_dia": {
+            "title": "Teto Por Dia",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "blocos",
+          "itens_por_bloco",
+          "teto_por_dia",
+          "intervalo_minimo_min",
+          "dias_ativos"
+        ],
+        "title": "ParametrosDoDestinoModel",
+        "type": "object"
+      },
       "ParteDoPrompt": {
         "properties": {
           "parte": {
@@ -7150,6 +7387,30 @@
           "nome"
         ],
         "title": "PresetDisponivel",
+        "type": "object"
+      },
+      "PreverAgendaRequest": {
+        "properties": {
+          "alvos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Alvos",
+            "type": "array"
+          },
+          "plataformas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Plataformas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "alvos",
+          "plataformas"
+        ],
+        "title": "PreverAgendaRequest",
         "type": "object"
       },
       "ProcessarMultiversionRequest": {
@@ -7876,6 +8137,22 @@
           "completa"
         ],
         "title": "RedeDoCorte",
+        "type": "object"
+      },
+      "ReferenciaDoPublicoRequest": {
+        "properties": {
+          "faixas": {
+            "items": {
+              "$ref": "#/components/schemas/FaixaDoPublicoModel"
+            },
+            "title": "Faixas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "faixas"
+        ],
+        "title": "ReferenciaDoPublicoRequest",
         "type": "object"
       },
       "RegistrarAvaliacaoRequest": {
@@ -9721,6 +9998,22 @@
         ],
         "title": "StatusShort",
         "type": "string"
+      },
+      "SugestaoDeBlocosResponse": {
+        "properties": {
+          "blocos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "blocos"
+        ],
+        "title": "SugestaoDeBlocosResponse",
+        "type": "object"
       },
       "SugestoesDeShortsResponse": {
         "description": "Os candidatos que a IA propôs e, em `descartes`, por que recusou o resto.",
@@ -15163,6 +15456,205 @@
         ]
       }
     },
+    "/api/editorial-skills/escalonamento": {
+      "get": {
+        "operationId": "ver_escalonamento_api_editorial_skills_escalonamento_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalonamentoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ver Escalonamento",
+        "tags": [
+          "Skills editoriais"
+        ]
+      }
+    },
+    "/api/editorial-skills/escalonamento/destinos/{destino}": {
+      "put": {
+        "operationId": "definir_destino_api_editorial_skills_escalonamento_destinos__destino__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "destino",
+            "required": true,
+            "schema": {
+              "title": "Destino",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParametrosDoDestinoModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalonamentoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Definir Destino",
+        "tags": [
+          "Skills editoriais"
+        ]
+      }
+    },
+    "/api/editorial-skills/escalonamento/destinos/{destino}/sugestao": {
+      "get": {
+        "description": "Os mesmos N blocos do destino, realinhados à janela forte do público.",
+        "operationId": "sugerir_blocos_api_editorial_skills_escalonamento_destinos__destino__sugestao_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "destino",
+            "required": true,
+            "schema": {
+              "title": "Destino",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SugestaoDeBlocosResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sugerir Blocos",
+        "tags": [
+          "Skills editoriais"
+        ]
+      }
+    },
+    "/api/editorial-skills/escalonamento/publico": {
+      "put": {
+        "operationId": "definir_publico_api_editorial_skills_escalonamento_publico_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenciaDoPublicoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalonamentoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Definir Publico",
+        "tags": [
+          "Skills editoriais"
+        ]
+      }
+    },
+    "/api/editorial-skills/escalonamento/reset/{chave}": {
+      "post": {
+        "operationId": "resetar_api_editorial_skills_escalonamento_reset__chave__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chave",
+            "required": true,
+            "schema": {
+              "title": "Chave",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalonamentoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resetar",
+        "tags": [
+          "Skills editoriais"
+        ]
+      }
+    },
     "/api/editorial-skills/modelos-gemini": {
       "get": {
         "description": "Os modelos que o `agy` desta máquina oferece, para a escolha no modal.\n\nVazio quando o CLI não está instalado ou logado — o campo aceita texto livre.",
@@ -20539,6 +21031,48 @@
           }
         },
         "summary": "Criar Lote",
+        "tags": [
+          "Shorts"
+        ]
+      }
+    },
+    "/api/shorts/lote/agenda": {
+      "post": {
+        "description": "A data que a janela do canal propõe para cada item, antes de publicar (D-908).",
+        "operationId": "prever_agenda_api_shorts_lote_agenda_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreverAgendaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgendaPrevistaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prever Agenda",
         "tags": [
           "Shorts"
         ]

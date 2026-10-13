@@ -975,3 +975,154 @@ async def test_short_publicado_nao_marca_o_corte(ambiente):
 
     async with factory() as db:
         assert (await db.get(Corte, "c1")).tiktok_publicado_em is None
+
+
+class TestAgendaPorItem:
+    """D-908: cada item leva a própria data quando o lote é distribuído pela
+    janela do canal. O que se guarda aqui é que a data certa chega ao destino
+    certo — e que o item que ficou sem data NÃO sobe "agora" por acidente."""
+
+    @pytest.fixture
+    def destino_que_anota_a_data(self):
+        from app.domain.publicacao.agendamento import Agendamento
+
+        class _DestinoAgendavel(Destino):
+            modo = ModoPublicacao.API
+            plataforma = Plataforma.YOUTUBE_SHORTS
+            agenda_sozinho = True
+            datas: list[str] = []
+
+            def __init__(self, *, agendamento: Agendamento | None = None) -> None:
+                self.agendamento = agendamento
+
+            async def publicar(self, pacote):
+                type(self).datas.append(self.agendamento.legivel() if self.agendamento else "agora")
+                return {"url": "https://exemplo/agendado"}
+
+        _DestinoAgendavel.datas = []
+        destinos.registrar(_DestinoAgendavel())
+        return _DestinoAgendavel
+
+    @pytest.mark.asyncio
+    async def test_cada_item_chega_ao_destino_com_a_sua_data(
+        self, ambiente, destino_que_anota_a_data
+    ):
+        from app.domain.publicacao.agendamento import Agendamento
+
+        factory, raias = ambiente
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
+            plataformas=[Plataforma.YOUTUBE_SHORTS],
+            agenda={
+                ("s1", "youtube_shorts"): Agendamento.de_texto("2030-01-07T16:00"),
+                ("s2", "youtube_shorts"): Agendamento.de_texto("2030-01-07T19:00"),
+            },
+        )
+        await _rodar(raias)
+
+        assert destino_que_anota_a_data.datas == ["07/01/2030 as 16:00", "07/01/2030 as 19:00"]
+        assert [i.como_dict()["agendado_para"] for i in lote.itens] == [
+            "07/01/2030 as 16:00",
+            "07/01/2030 as 19:00",
+        ]
+        # E a data fica no banco: é dela que o próximo lote parte.
+        async with factory() as db:
+            linhas = (await db.execute(select(PublicacaoShort))).scalars().all()
+        assert sorted(linha.agendado_para.strftime("%H:%M") for linha in linhas) == [
+            "19:00",
+            "22:00",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_item_sem_data_na_agenda_e_pulado_e_nao_sobe_agora(
+        self, ambiente, destino_que_anota_a_data
+    ):
+        from app.domain.publicacao.agendamento import Agendamento
+
+        _, raias = ambiente
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
+            plataformas=[Plataforma.YOUTUBE_SHORTS],
+            agenda={("s1", "youtube_shorts"): Agendamento.de_texto("2030-01-07T16:00")},
+        )
+        await _rodar(raias)
+
+        por_alvo = {i.alvo_id: i for i in lote.itens}
+        assert por_alvo["s2"].estado is EstadoItem.PULADO
+        assert "sem data na agenda" in por_alvo["s2"].detalhe
+        assert destino_que_anota_a_data.datas == ["07/01/2030 as 16:00"]
+
+    @pytest.mark.asyncio
+    async def test_destino_que_publica_no_ato_segue_sem_data(self, ambiente):
+        """O Instagram não escalona: com agenda e tudo, ele sobe na hora."""
+        _, raias = ambiente
+        reels = _DestinoDePacote(Plataforma.INSTAGRAM_REELS)
+        destinos.registrar(reels)
+
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1")],
+            plataformas=[Plataforma.INSTAGRAM_REELS],
+            agenda={},
+        )
+        await _rodar(raias)
+
+        assert lote.itens[0].estado is EstadoItem.SUA_VEZ
+        assert reels.preparados
+
+    @pytest.mark.asyncio
+    async def test_sem_agenda_vale_a_data_unica_do_lote(self, ambiente, destino_que_anota_a_data):
+        from app.domain.publicacao.agendamento import Agendamento
+
+        _, raias = ambiente
+        await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1")],
+            plataformas=[Plataforma.YOUTUBE_SHORTS],
+            opcoes=lote_svc.OpcoesDoLote(agendamento=Agendamento.de_texto("2030-01-07T12:00")),
+        )
+        await _rodar(raias)
+
+        assert destino_que_anota_a_data.datas == ["07/01/2030 as 12:00"]
+
+
+@pytest.mark.asyncio
+async def test_ultimo_agendado_ignora_quem_saiu_da_fila(ambiente):
+    """D-908: o próximo lote parte do último marcado — mas cancelado e com erro
+    não seguram vaga, senão um lote desfeito empurraria o seguinte para longe."""
+    from datetime import UTC, datetime
+
+    factory, _ = ambiente
+    async with factory() as db:
+        db.add(
+            PublicacaoShort(
+                id="r1",
+                alvo_id="s1",
+                plataforma="tiktok",
+                estado="aguardando",
+                agendado_para=datetime(2030, 1, 7, 21, 0),
+            )
+        )
+        db.add(
+            PublicacaoShort(
+                id="r2",
+                alvo_id="s2",
+                plataforma="tiktok_horizontal",
+                estado="cancelado",
+                agendado_para=datetime(2030, 1, 9, 21, 0),
+            )
+        )
+        db.add(
+            PublicacaoShort(
+                id="r3",
+                alvo_id="s1",
+                plataforma="youtube_shorts",
+                estado="publicado",
+                publicado_em=datetime(2030, 1, 8, 21, 0),
+            )
+        )
+        await db.commit()
+
+    ultimo = await registro_do_lote.ultimo_agendado(["tiktok", "tiktok_horizontal"])
+
+    assert ultimo == datetime(2030, 1, 7, 21, 0, tzinfo=UTC)
+    assert ultimo.tzinfo is not None
+    assert await registro_do_lote.ultimo_agendado(["instagram_reels"]) is None

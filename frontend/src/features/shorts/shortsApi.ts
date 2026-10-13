@@ -143,16 +143,11 @@ export type ItemDoLote = Schema<'ItemDoLote'>;
 export type RaiaDoLote = Schema<'RaiaDoLote'>;
 export type LotePublicacao = Schema<'LoteDePublicacao'>;
 
-/** O que a tela escolhe antes de disparar o lote. */
-export interface OpcoesDoLote {
-  tiktokAssistido: boolean;
-  instagramAssistido: boolean;
-  publicarSozinho: boolean;
+/** A data e o "aperta sozinho" de um envio assistido (D-580, D-834). */
+export interface EnvioAssistido {
   agendarPara: string;
-  republicar: boolean;
+  publicarSozinho: boolean;
 }
-
-export type EnvioAssistido = Pick<OpcoesDoLote, 'agendarPara' | 'publicarSozinho'>;
 const SEM_ESCOLHA: EnvioAssistido = { agendarPara: '', publicarSozinho: false };
 
 export type ShortIdentificado = Pick<ShortSugerido, 'id' | 'titulo'>;
@@ -443,26 +438,7 @@ export const shortsApi = {
       }),
     ),
 
-  // ─── D-564: o lote ────────────────────────────────────────────
-
-  /**
-   * Dispara o lote. `alvos` vão prefixados por tipo ("short:uuid"), porque o
-   * mesmo lote mistura o vertical do short e o 16:9 do corte.
-   */
-  criarLote: (alvos: string[], plataformas: string[], opcoes: OpcoesDoLote) =>
-    dados(
-      api.POST('/api/shorts/lote', {
-        body: {
-          alvos,
-          plataformas,
-          tiktok_assistido: opcoes.tiktokAssistido,
-          instagram_assistido: opcoes.instagramAssistido,
-          publicar_sozinho: opcoes.publicarSozinho,
-          agendar_para: opcoes.agendarPara,
-          republicar: opcoes.republicar,
-        },
-      }),
-    ),
+  // ─── D-564: o lote (o disparo e a agenda moram em `loteApi`) ─────
 
   verLote: () => dados(api.GET('/api/shorts/lote')),
 

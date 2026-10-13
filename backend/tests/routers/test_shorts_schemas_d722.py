@@ -5,6 +5,7 @@ PROD; aqui ficam as respostas de ação, que não têm dado gravado para conferi
 """
 
 import pytest
+from app.routers import shorts_lote_schemas as esquemas_do_lote
 from app.routers import shorts_schemas as esquemas
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -73,6 +74,7 @@ def test_o_lote_passa_inteiro():
         "estado": "sua_vez",
         "detalhe": "",
         "url": "",
+        "agendado_para": "",
     }
     lote = {
         "lote_id": "l1",
@@ -93,11 +95,13 @@ def test_o_lote_passa_inteiro():
         ],
     }
 
-    assert _pela_rota(esquemas.LoteCanceladoResponse, {"cancelado": True, "lote": lote}) == {
+    assert _pela_rota(
+        esquemas_do_lote.LoteCanceladoResponse, {"cancelado": True, "lote": lote}
+    ) == {
         "cancelado": True,
         "lote": lote,
     }
-    assert _pela_rota(esquemas.LoteAtualResponse, {"lote": None}) == {"lote": None}
+    assert _pela_rota(esquemas_do_lote.LoteAtualResponse, {"lote": None}) == {"lote": None}
 
 
 @pytest.mark.parametrize(
