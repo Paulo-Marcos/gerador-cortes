@@ -28,7 +28,7 @@ import logging
 from app.database import AsyncSessionLocal
 
 # A textura do palco vertical: a MESMA que o render usa para rasterizar o PNG
-# (`render_short._palco_em_png`). Duas fontes para este id fariam a previa e o
+# (`palco_do_short.palco_em_png`). Duas fontes para este id fariam a previa e o
 # arquivo divergirem sem nada quebrar.
 from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL
 from app.domain.corte.youtube_layout import _normalizar_fundo as textura_valida
