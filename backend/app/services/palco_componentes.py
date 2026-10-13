@@ -19,6 +19,7 @@ os componentes novos, e nenhum render usa um palco de antes da edição.
 
 from __future__ import annotations
 
+import io
 import logging
 from pathlib import Path
 from typing import Any
@@ -28,12 +29,15 @@ from app.domain.canal import palco_componentes as dominio
 from app.domain.canal.palco_componentes import PalcoComponentes
 from app.domain.compartilhado.erros import PedidoInvalido
 from app.infrastructure import channel_assets_sync, palco_componentes_store
+from PIL import Image, UnidentifiedImageError
 
 logger = logging.getLogger(__name__)
 
 # O arquivo da imagem do cabeçalho dentro de `assets/palco/` (a extensão vem do
 # upload). Um nome fixo: trocar a imagem substitui, nunca acumula.
 NOME_DA_IMAGEM = "cabecalho"
+# Um logo ou avatar cabe folgado; acima disso é engano (um vídeo, uma foto crua).
+TAMANHO_MAXIMO_DA_IMAGEM = 10 * 1024 * 1024
 
 # Subpasta do `public/` do renderer onde a imagem é servida (`staticFile`).
 SUBPASTA_SERVIDA = "palco"
@@ -110,8 +114,7 @@ def salvar_imagem(
 ) -> PalcoComponentes:
     """Guarda a imagem subida pelo operador e aponta o cabeçalho para ela."""
     extensao = dominio.extensao_da_imagem(content_type)
-    if not conteudo:
-        raise PedidoInvalido("A imagem do cabeçalho veio vazia.")
+    _exigir_imagem_de_verdade(conteudo)
     pasta = assets_dir if assets_dir is not None else channel_paths.palco_assets_dir()
     pasta.mkdir(parents=True, exist_ok=True)
     _apagar_imagens_antigas(pasta)
@@ -144,6 +147,23 @@ def remover_imagem(
     return gravar(
         {"cabecalho": {"imagem": ""}}, db_path=db_path, channel_id=channel_id, cache_dir=cache_dir
     )
+
+
+def _exigir_imagem_de_verdade(conteudo: bytes) -> None:
+    """Recusa o que não abre como imagem: o content-type é só o que o cliente DIZ.
+
+    Um arquivo qualquer gravado como `cabecalho.png` passaria aqui e quebraria
+    o rasterizador do palco no próximo render, longe de quem o subiu.
+    """
+    if not conteudo:
+        raise PedidoInvalido("A imagem do cabeçalho veio vazia.")
+    if len(conteudo) > TAMANHO_MAXIMO_DA_IMAGEM:
+        raise PedidoInvalido("A imagem do cabeçalho passa de 10 MB; use um arquivo menor.")
+    try:
+        with Image.open(io.BytesIO(conteudo)) as imagem:
+            imagem.verify()
+    except (UnidentifiedImageError, OSError, SyntaxError) as erro:
+        raise PedidoInvalido("O arquivo enviado não é uma imagem válida.") from erro
 
 
 def _apagar_imagens_antigas(pasta: Path) -> None:

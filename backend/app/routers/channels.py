@@ -139,14 +139,24 @@ def _palco_para_response(
 
 
 def _identidade_para_o_palco(canal_id: str) -> tuple[str, str]:
+    """O canal do palco, que tem de ser o ATIVO.
+
+    O banco de settings e a pasta da imagem são os do canal ativo; servir outro
+    id leria padrões falsos e gravaria a imagem por cima do cabeçalho do ativo.
+    """
     canal = next((c for c in channels_service.listar_canais() if c.id == canal_id), None)
     if canal is None:
         raise HTTPException(status_code=404, detail=f"Canal '{canal_id}' nao encontrado")
+    if not canal.ativo:
+        raise HTTPException(
+            status_code=409, detail=f"O palco se edita no canal ativo; ative '{canal_id}' antes."
+        )
     return canal.nome, canal.handle
 
 
 @router.get("/{canal_id}/palco", response_model=PalcoComponentesResponse)
 async def obter_palco_do_canal(canal_id: str):
+    _identidade_para_o_palco(canal_id)
     return _palco_para_response(canal_id, palco_componentes.ler(channel_id=canal_id))
 
 
@@ -178,6 +188,7 @@ async def remover_imagem_do_cabecalho(canal_id: str):
 # tela monta a URL pela `imagem_url` da resposta tipada acima.
 @router.get("/{canal_id}/palco/imagem", response_class=FileResponse, include_in_schema=False)
 async def servir_imagem_do_cabecalho(canal_id: str):
+    _identidade_para_o_palco(canal_id)
     """A imagem ao lado do @: a subida pelo operador ou a pose padrão do mascote."""
     imagem = palco_componentes.imagem_para_servir(palco_componentes.ler(channel_id=canal_id))
     if imagem is None:

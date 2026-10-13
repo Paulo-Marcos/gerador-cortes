@@ -7,6 +7,7 @@ endpoints exercitam o filesystem inteiro sem tocar o `instance/` real.
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,16 @@ from app.routers.errors import registrar_tratadores
 from app.services import channels as svc
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from PIL import Image
+
+
+def _png(cor: str = "red") -> bytes:
+    saida = io.BytesIO()
+    Image.new("RGB", (4, 4), cor).save(saida, format="PNG")
+    return saida.getvalue()
+
+
+MINHA = _png()
 
 EXEMPLO_YAML = """config_version: 1
 handle: "@seucanal"
@@ -107,12 +118,12 @@ def test_imagem_padrao_e_o_mascote(client: TestClient):
 def test_enviar_e_remover_a_imagem_do_cabecalho(client: TestClient, tmp_path: Path):
     resp = client.post(
         "/api/channels/default/palco/imagem",
-        files={"arquivo": ("logo.png", b"MINHA", "image/png")},
+        files={"arquivo": ("logo.png", MINHA, "image/png")},
     )
     assert resp.status_code == 200
     assert resp.json()["cabecalho"]["imagem"] == "cabecalho.png"
-    assert client.get("/api/channels/default/palco/imagem").content == b"MINHA"
-    assert (tmp_path / "renderer" / "public" / "palco" / "cabecalho.png").read_bytes() == b"MINHA"
+    assert client.get("/api/channels/default/palco/imagem").content == MINHA
+    assert (tmp_path / "renderer" / "public" / "palco" / "cabecalho.png").read_bytes() == MINHA
 
     resp = client.delete("/api/channels/default/palco/imagem")
     assert resp.status_code == 200
@@ -126,3 +137,33 @@ def test_imagem_em_formato_recusado_e_400(client: TestClient):
         files={"arquivo": ("logo.gif", b"GIF", "image/gif")},
     )
     assert resp.status_code == 400
+
+
+def test_arquivo_que_nao_e_imagem_e_400_e_nao_grava(client: TestClient, tmp_path: Path):
+    resp = client.post(
+        "/api/channels/default/palco/imagem",
+        files={"arquivo": ("logo.png", b"<script>nada de imagem</script>", "image/png")},
+    )
+    assert resp.status_code == 400
+    assert not (tmp_path / "instance" / "channels" / "default" / "assets" / "palco").exists()
+
+
+def test_canal_que_nao_e_o_ativo_e_409_e_nao_mexe_no_ativo(client: TestClient, tmp_path: Path):
+    outro = tmp_path / "instance" / "channels" / "outro"
+    outro.mkdir()
+    (outro / "channel.yaml").write_text(EXEMPLO_YAML, encoding="utf-8")
+    client.post(
+        "/api/channels/default/palco/imagem",
+        files={"arquivo": ("logo.png", MINHA, "image/png")},
+    )
+
+    assert client.get("/api/channels/outro/palco").status_code == 409
+    assert client.put("/api/channels/outro/palco", json={"estilo": "limpo"}).status_code == 409
+    resp = client.post(
+        "/api/channels/outro/palco/imagem",
+        files={"arquivo": ("logo.png", _png("blue"), "image/png")},
+    )
+    assert resp.status_code == 409
+    # O cabeçalho do ativo continua o dele.
+    assert client.get("/api/channels/default/palco/imagem").content == MINHA
+    assert client.get("/api/channels/default/palco").json()["estilo"] == "atual"

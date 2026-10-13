@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
 
 import pytest
 from app.domain.canal import palco_componentes as dominio
+from app.domain.compartilhado.erros import PedidoInvalido
 from app.services import palco_componentes as svc
+from PIL import Image
+
+
+def _imagem(formato: str) -> bytes:
+    saida = io.BytesIO()
+    Image.new("RGB", (4, 4), "red").save(saida, format=formato)
+    return saida.getvalue()
+
+
+PNG = _imagem("PNG")
+JPG = _imagem("JPEG")
 
 
 @pytest.fixture
@@ -61,7 +74,7 @@ def test_salvar_imagem_guarda_espelha_e_aponta_o_cabecalho(
     db: Path, assets: Path, renderer_public: Path, tmp_path: Path
 ):
     novo = svc.salvar_imagem(
-        b"PNG",
+        PNG,
         "image/png",
         db_path=db,
         channel_id="c1",
@@ -70,8 +83,8 @@ def test_salvar_imagem_guarda_espelha_e_aponta_o_cabecalho(
         cache_dir=tmp_path,
     )
     assert novo.cabecalho.imagem == "cabecalho.png"
-    assert (assets / "cabecalho.png").read_bytes() == b"PNG"
-    assert (renderer_public / "palco" / "cabecalho.png").read_bytes() == b"PNG"
+    assert (assets / "cabecalho.png").read_bytes() == PNG
+    assert (renderer_public / "palco" / "cabecalho.png").read_bytes() == PNG
     assert svc.imagem_servida_relativa(novo, assets_dir=assets) == "palco/cabecalho.png"
 
 
@@ -79,8 +92,8 @@ def test_salvar_imagem_com_outra_extensao_substitui_a_antiga(
     db: Path, assets: Path, renderer_public: Path, tmp_path: Path
 ):
     comum = dict(db_path=db, channel_id="c1", assets_dir=assets, renderer_public=renderer_public)
-    svc.salvar_imagem(b"PNG", "image/png", cache_dir=tmp_path, **comum)
-    novo = svc.salvar_imagem(b"JPG", "image/jpeg", cache_dir=tmp_path, **comum)
+    svc.salvar_imagem(PNG, "image/png", cache_dir=tmp_path, **comum)
+    novo = svc.salvar_imagem(JPG, "image/jpeg", cache_dir=tmp_path, **comum)
     assert novo.cabecalho.imagem == "cabecalho.jpg"
     assert sorted(p.name for p in assets.iterdir()) == ["cabecalho.jpg"]
 
@@ -89,7 +102,7 @@ def test_remover_imagem_volta_ao_mascote(
     db: Path, assets: Path, renderer_public: Path, tmp_path: Path
 ):
     comum = dict(db_path=db, channel_id="c1", assets_dir=assets, renderer_public=renderer_public)
-    svc.salvar_imagem(b"PNG", "image/png", cache_dir=tmp_path, **comum)
+    svc.salvar_imagem(PNG, "image/png", cache_dir=tmp_path, **comum)
     novo = svc.remover_imagem(cache_dir=tmp_path, **comum)
     assert novo.cabecalho.imagem == ""
     assert not (assets / "cabecalho.png").exists()
@@ -142,3 +155,32 @@ def test_props_para_palco_sem_identidade_nao_levanta(db: Path, monkeypatch):
     props = svc.props_para_palco(db_path=db, channel_id="c1")
     assert props["cabecalho"]["nome"] == ""
     assert props["cabecalho"]["handle"] == ""
+
+
+def test_salvar_imagem_recusa_o_que_nao_e_imagem(tmp_path: Path):
+    assets = tmp_path / "assets"
+    with pytest.raises(PedidoInvalido, match="não é uma imagem"):
+        svc.salvar_imagem(
+            b"so texto",
+            "image/png",
+            db_path=tmp_path / "s.db",
+            channel_id="c",
+            assets_dir=assets,
+            renderer_public=tmp_path / "r",
+            cache_dir=tmp_path,
+        )
+    assert not assets.exists()
+
+
+def test_salvar_imagem_recusa_acima_do_teto(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(svc, "TAMANHO_MAXIMO_DA_IMAGEM", 10)
+    with pytest.raises(PedidoInvalido, match="10 MB"):
+        svc.salvar_imagem(
+            PNG,
+            "image/png",
+            db_path=tmp_path / "s.db",
+            channel_id="c",
+            assets_dir=tmp_path / "assets",
+            renderer_public=tmp_path / "r",
+            cache_dir=tmp_path,
+        )
