@@ -26,7 +26,7 @@ export const RAIO_DA_TELA = 20;
 export const RAIO_DA_FACECAM = 14;
 export const RAIO_DA_JANELA_DO_SHORT = 24;
 
-const SOMBRA_DA_JANELA = "drop-shadow(0 30px 60px rgba(0,0,0,0.45))";
+export const SOMBRA_DA_JANELA = "drop-shadow(0 30px 60px rgba(0,0,0,0.45))";
 
 /** Onde o cabeçalho senta no horizontal (a margem do palco). */
 export const CABECALHO_HORIZONTAL = { x: 64, y: 64 } as const;

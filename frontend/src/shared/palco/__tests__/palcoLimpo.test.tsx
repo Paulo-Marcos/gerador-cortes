@@ -1,16 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   CabecalhoDoCanal,
+  JanelaLimpa,
   PlacaLimpa,
-  RAIO_DA_JANELA_DO_SHORT,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
 } from '../palcoLimpo';
 
-// D-911: o palco limpo da prévia e o do renderer são cópias; os números têm de bater.
+// D-911: a prévia monta os componentes do renderer; só a janela e a imagem por
+// URL são dela.
 
 describe('palco limpo (D-911)', () => {
   it('a janela que atravessa o quadro não leva canto; a que tem margem leva', () => {
@@ -41,21 +40,14 @@ describe('palco limpo (D-911)', () => {
     expect(renderToStaticMarkup(<PlacaLimpa x={0} y={0} />)).toBe('');
   });
 
-  it('os números do espelho batem com os do renderer', () => {
-    const renderer = readFileSync(
-      resolve(__dirname, '../../../../../video-renderer/src/youtube-bg/palco-limpo.tsx'),
-      'utf-8',
+  it('a janela da prévia recorta com o raio e põe o conteúdo dentro', () => {
+    const html = renderToStaticMarkup(
+      <JanelaLimpa janela={{ x: 500, y: 150, w: 1325, h: 720 }} raio={20}>
+        <span>video</span>
+      </JanelaLimpa>,
     );
-    for (const constante of [
-      'COR_DO_FUNDO = "#121417"',
-      'RAIO_DA_TELA = 20',
-      'RAIO_DA_FACECAM = 14',
-      `RAIO_DA_JANELA_DO_SHORT = ${RAIO_DA_JANELA_DO_SHORT}`,
-      'CABECALHO_HORIZONTAL = { x: 64, y: 64 }',
-      'FOLGA_DO_CABECALHO_NO_SHORT = 120',
-      'FAIXA_MINIMA_PARA_O_CABECALHO = 200',
-    ]) {
-      expect(renderer).toContain(constante);
-    }
+    expect(html).toContain('border-radius:20px');
+    expect(html).toContain('left:500px');
+    expect(html).toContain('<span>video</span>');
   });
 });
