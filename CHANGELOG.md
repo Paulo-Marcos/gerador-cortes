@@ -107,6 +107,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   inside that window, so the post went out with a video frame. It now waits
   for TikTok's own confirmation that the cover was received; without it the
   cover counts as not applied and the robot does not publish on its own (D-902).
+- **Cards in a shared-stage segment land where the preview shows them.** When a
+  segment moved its screens (slots, crops or screen count) and left the cards
+  on "Automática", the editor placed the card by the segment's screens but the
+  rendered video still used the cut's base screens, so the card jumped to
+  another spot. The render now uses the segment's screens too. Cuts already
+  rendered this way get the new card position only if rendered again (D-907).
 
 ## [0.6.0] - 2026-10-07
 
