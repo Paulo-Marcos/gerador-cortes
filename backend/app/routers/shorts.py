@@ -944,7 +944,7 @@ async def gerar_capa_tiktok(
     # O texto da capa ja curado tem prioridade sobre a skill: quem escolheu
     # aquela palavra para a thumbnail do YouTube ja decidiu como o corte se
     # chama, e uma segunda versao criaria duas identidades para o mesmo video.
-    etiqueta = body.etiqueta.strip()
+    etiqueta = capa_tiktok.etiqueta_herdada(body.etiqueta)  # D-909: frase longa não vira etiqueta
     if not etiqueta and body.sugerir_etiqueta and not await capa_tiktok.tem_texto_de_capa(corte_id):
         try:
             etiqueta = await capa_tiktok.sugerir_etiqueta(corte_id, provider)

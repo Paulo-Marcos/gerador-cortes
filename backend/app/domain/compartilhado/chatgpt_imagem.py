@@ -74,7 +74,12 @@ def url_do_projeto_valida(url: str) -> str:
     return url
 
 
-def montar_pedido(prompt: str, proporcao: str, pessoas: Sequence[tuple[str, str]] = ()) -> str:
+def montar_pedido(
+    prompt: str,
+    proporcao: str,
+    pessoas: Sequence[tuple[str, str]] = (),
+    fotos_do_apresentador: Sequence[str] | None = None,
+) -> str:
     """O texto que vai para o chat: o prompt do app e o quadro que a capa exige.
 
     O quadro vai no fim, e não só dentro do prompt, porque os prompts antigos
@@ -83,17 +88,25 @@ def montar_pedido(prompt: str, proporcao: str, pessoas: Sequence[tuple[str, str]
     `pessoas` são pares (nome, arquivo) das fotos anexadas de gente real (D-840).
     O pedido diz qual arquivo é quem: sem isso, o ChatGPT leria a foto como mais
     uma ficha do mascote.
+
+    `fotos_do_apresentador` (D-909) é o modo em que o apresentador protagoniza:
+    os anexos são fotos dele, e o pedido não fala de fichas nem de personagem.
     """
     prompt = (prompt or "").strip()
     if not prompt:
         raise PedidoInvalido("Não há prompt para mandar ao ChatGPT: gere o prompt da capa antes.")
     if proporcao not in PROPORCOES:
         raise PedidoInvalido(f"Proporção desconhecida: {proporcao!r}.")
-    pedido = (
-        f"{prompt}\n\n"
-        f"Gere a imagem agora, no formato {PROPORCOES[proporcao]}, usando as fichas "
-        "anexas como referência do personagem."
-    )
+    if fotos_do_apresentador is None:
+        referencia = "usando as fichas anexas como referência do personagem."
+    elif fotos_do_apresentador:
+        referencia = (
+            f"usando as fotos anexas do apresentador ({', '.join(fotos_do_apresentador)}) "
+            "como referência do rosto e dos traços dele; a expressão e a pose são as do prompt."
+        )
+    else:
+        referencia = "sem personagem fixo: o apresentador é desenhado pela descrição do prompt."
+    pedido = f"{prompt}\n\nGere a imagem agora, no formato {PROPORCOES[proporcao]}, {referencia}"
     if pessoas:
         fotos = "; ".join(f"{arquivo} = {nome}" for nome, arquivo in pessoas)
         pedido += (

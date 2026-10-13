@@ -155,6 +155,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/avaliacoes-thumbnail/corte/{corte_id}/claridade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Claridade Da Capa Do Corte
+         * @description Quão clara a capa do YouTube saiu, contra a meta de claridade do canal.
+         */
+        get: operations["claridade_da_capa_do_corte_api_avaliacoes_thumbnail_corte__corte_id__claridade_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/avaliacoes-thumbnail/padroes": {
         parameters: {
             query?: never;
@@ -173,6 +193,47 @@ export interface paths {
          */
         post: operations["analisar_padroes_api_avaliacoes_thumbnail_padroes_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-chatgpt/apresentador": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subir Foto Do Apresentador
+         * @description Guarda uma foto; o nome é a expressão, e o mesmo nome substitui a anterior.
+         */
+        post: operations["subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-chatgpt/apresentador/{nome}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ver Foto Do Apresentador
+         * @description A foto, para a miniatura na tela de Canais.
+         */
+        get: operations["ver_foto_do_apresentador_api_capa_chatgpt_apresentador__nome__get"];
+        put?: never;
+        post?: never;
+        /** Remover Foto Do Apresentador */
+        delete: operations["remover_foto_do_apresentador_api_capa_chatgpt_apresentador__nome__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -216,6 +277,30 @@ export interface paths {
          * @description As pessoas reais do prompt e a foto de cada uma (cache → Wikipédia).
          */
         post: operations["elenco_da_capa_api_capa_chatgpt_elenco_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-chatgpt/estilo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ler Estilo
+         * @description O protagonista, a meta de claridade e o banco de fotos do canal ativo.
+         */
+        get: operations["ler_estilo_api_capa_chatgpt_estilo_get"];
+        /**
+         * Gravar Estilo
+         * @description Troca o protagonista e a meta; nada do banco de fotos se perde.
+         */
+        put: operations["gravar_estilo_api_capa_chatgpt_estilo_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5290,6 +5375,11 @@ export interface components {
             /** Arquivo */
             arquivo: string;
         };
+        /** Body_subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post */
+        Body_subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post: {
+            /** Arquivo */
+            arquivo: string;
+        };
         /** Body_upload_api_retratos_upload_post */
         Body_upload_api_retratos_upload_post: {
             /** Arquivo */
@@ -5525,6 +5615,26 @@ export interface components {
             /** Descartes */
             descartes: string[];
             short: components["schemas"]["ShortResponse"];
+        };
+        /**
+         * ClaridadeDaCapa
+         * @description A medida da capa publicada e a meta do canal (D-909).
+         */
+        ClaridadeDaCapa: {
+            /** Abaixo Da Meta */
+            abaixo_da_meta: boolean;
+            /** Escuros Maximo */
+            escuros_maximo: number;
+            /** Escuros Pct */
+            escuros_pct: number;
+            /** Luminancia */
+            luminancia: number;
+            /** Luminancia Minima */
+            luminancia_minima: number;
+        };
+        /** ClaridadeDaCapaResponse */
+        ClaridadeDaCapaResponse: {
+            claridade: components["schemas"]["ClaridadeDaCapa"] | null;
         };
         /** ConfiguracaoCapaChatgptResponse */
         ConfiguracaoCapaChatgptResponse: {
@@ -6092,6 +6202,36 @@ export interface components {
          * @enum {string}
          */
         EstadoItem: "aguardando" | "preparando" | "sua_vez" | "conferir" | "publicado" | "erro" | "pulado" | "cancelado";
+        /** EstiloDaCapaRequest */
+        EstiloDaCapaRequest: {
+            /** Escuros Maximo */
+            escuros_maximo: number;
+            /** Luminancia Minima */
+            luminancia_minima: number;
+            /**
+             * Protagonista
+             * @enum {string}
+             */
+            protagonista: "mascote" | "apresentador";
+        };
+        /** EstiloDaCapaResponse */
+        EstiloDaCapaResponse: {
+            /** Escuros Maximo */
+            escuros_maximo: number;
+            /** Expressoes */
+            expressoes: string[];
+            /** Fotos Do Apresentador */
+            fotos_do_apresentador: string[];
+            /** Luminancia Minima */
+            luminancia_minima: number;
+            /** Maximo De Fotos */
+            maximo_de_fotos: number;
+            /**
+             * Protagonista
+             * @enum {string}
+             */
+            protagonista: "mascote" | "apresentador";
+        };
         /**
          * FabricaDaLiveResponse
          * @description O que o clique disparou: quantos cortes entram e se a live será baixada.
@@ -9562,6 +9702,37 @@ export interface operations {
             };
         };
     };
+    claridade_da_capa_do_corte_api_avaliacoes_thumbnail_corte__corte_id__claridade_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaridadeDaCapaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     analisar_padroes_api_avaliacoes_thumbnail_padroes_post: {
         parameters: {
             query?: {
@@ -9580,6 +9751,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PadroesThumbnailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_subir_foto_do_apresentador_api_capa_chatgpt_apresentador_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstiloDaCapaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ver_foto_do_apresentador_api_capa_chatgpt_apresentador__nome__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nome: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remover_foto_do_apresentador_api_capa_chatgpt_apresentador__nome__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nome: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstiloDaCapaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9666,6 +9930,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ElencoDaCapaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ler_estilo_api_capa_chatgpt_estilo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstiloDaCapaResponse"];
+                };
+            };
+        };
+    };
+    gravar_estilo_api_capa_chatgpt_estilo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EstiloDaCapaRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstiloDaCapaResponse"];
                 };
             };
             /** @description Validation Error */

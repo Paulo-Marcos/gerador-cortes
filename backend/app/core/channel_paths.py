@@ -133,6 +133,15 @@ def fichas_do_chatgpt_dir() -> Path:
     return active_channel_root() / "capa_chatgpt" / "fichas"
 
 
+def fotos_do_apresentador_dir() -> Path:
+    """O banco de fotos do apresentador, uma por expressão (D-909).
+
+    Em `assets/`, ao lado das molduras, mas fora de `mascote/`: só aquela pasta é
+    espelhada no `public/` do Remotion, e uma foto nova aqui não muda o render.
+    """
+    return active_channel_root() / _DIR_ASSETS / "apresentador"
+
+
 # --------------------------------------------------------------------------- #
 # Assets visuais do canal (D-156)
 # --------------------------------------------------------------------------- #

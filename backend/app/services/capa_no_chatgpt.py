@@ -44,6 +44,7 @@ from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido, Servic
 from app.infrastructure import capa_chatgpt_store
 from app.infrastructure.executaveis_do_navegador import edge_no_disco
 from app.services import janela_do_robo, navegador_assistido, retrato_wikipedia
+from app.services.canal import capa_do_canal
 from app.services.canal.editorial_identity import identidade_do_mascote
 
 logger = logging.getLogger(__name__)
@@ -415,8 +416,16 @@ async def gerar_imagem(
         for nome, achado in zip(nomes, await _retratos(nomes), strict=True)
         if achado
     ]
-    pedido = montar_pedido(prompt, proporcao, [(nome, foto.name) for nome, foto in fotos])
-    anexos = _fichas() + [foto for _, foto in fotos]
+    # D-909: no modo apresentador o mascote sai da capa — as fichas dele também.
+    apresentador = capa_do_canal.protagonista() == "apresentador"
+    referencias = capa_do_canal.fotos_para_o_prompt(prompt) if apresentador else _fichas()
+    pedido = montar_pedido(
+        prompt,
+        proporcao,
+        [(nome, foto.name) for nome, foto in fotos],
+        [r.name for r in referencias] if apresentador else None,
+    )
+    anexos = referencias + [foto for _, foto in fotos]
     logger.info(
         "[ChatGPT] gerando capa %s com %d anexo(s), %d de pessoa(s)",
         proporcao,

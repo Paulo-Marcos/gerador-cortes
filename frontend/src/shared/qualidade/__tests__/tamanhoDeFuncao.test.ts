@@ -35,7 +35,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/atalhos/AtalhosPage.tsx::AtalhosPage": 226,
   "src/features/channels/ChannelCard.tsx::ChannelCard": 144,
   "src/features/channels/ChannelForm.tsx::ChannelForm": 142,
-  "src/features/channels/ChannelsPage.tsx::ChannelsPage": 246,
+  "src/features/channels/ChannelsPage.tsx::ChannelsPage": 245,
   "src/features/channels/EditorialScaffoldForm.tsx::EditorialScaffoldForm": 106,
   "src/features/channels/EditorialScaffoldsSection.tsx::EditorialScaffoldsSection": 106,
   "src/features/channels/EditorialSkillForm.tsx::EditorialSkillForm": 166,

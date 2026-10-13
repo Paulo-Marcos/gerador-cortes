@@ -13,7 +13,7 @@ import pytest_asyncio
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.models import Base, Corte, MetadadoCorte, MetadadoShort, Projeto, Short
 from app.services import capa_short
-from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -151,6 +151,19 @@ async def test_o_pedido_leva_o_trecho_o_gancho_e_o_estilo_do_canal(banco, ia):
     assert "o juro trabalha contra voce" in prompt
     assert "o juro composto trabalha contra" in prompt
     assert "sapo de terno, luz dura" in prompt
+
+
+MODO_APRESENTADOR = "=== MODO DA CAPA: apresentador ===\n"  # D-909
+
+
+@pytest.mark.asyncio
+async def test_o_pedido_abre_com_o_modo_da_capa_d909(banco, ia, monkeypatch):
+    monkeypatch.setattr(capa_do_canal, "bloco_do_modo_da_capa", lambda: MODO_APRESENTADOR)
+    chamadas, _ = ia
+
+    await capa_short.gerar_prompt("s1")
+
+    assert chamadas[0]["prompt"].startswith("=== MODO DA CAPA: apresentador ===")
 
 
 @pytest.mark.asyncio

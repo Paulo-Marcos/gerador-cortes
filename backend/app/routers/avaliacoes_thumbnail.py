@@ -10,6 +10,7 @@ from typing import Literal
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 from app.services.avaliacao_thumbnail import AvaliacaoThumbnailService
+from app.services.claridade_da_capa import claridade_da_capa
 from app.services.padroes_thumbnail import PadroesThumbnailService
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -138,6 +139,27 @@ async def listar_avaliacoes_corte(corte_id: str):
     except Exception as exc:  # noqa: BLE001
         logger.exception("Erro ao listar avaliações de thumbnail do corte")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+class ClaridadeDaCapa(RespostaApi):
+    """A medida da capa publicada e a meta do canal (D-909)."""
+
+    luminancia: float
+    escuros_pct: float
+    luminancia_minima: float
+    escuros_maximo: float
+    abaixo_da_meta: bool
+
+
+class ClaridadeDaCapaResponse(RespostaApi):
+    # None: o corte ainda não tem capa em disco.
+    claridade: ClaridadeDaCapa | None
+
+
+@router.get("/corte/{corte_id}/claridade", response_model=ClaridadeDaCapaResponse)
+async def claridade_da_capa_do_corte(corte_id: str):
+    """Quão clara a capa do YouTube saiu, contra a meta de claridade do canal."""
+    return {"claridade": await claridade_da_capa(corte_id)}
 
 
 @router.get("", response_model=AvaliacoesThumbnailResponse)
