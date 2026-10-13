@@ -10,12 +10,8 @@ import { efetivos, temColagem, type Segmento } from './segmentosDoShort';
 import { PainelPublicacao } from './PainelPublicacao';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { shortVideoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
-import {
-  useCapaDoShort,
-  useGanchoPadrao,
-  usePalcoPadrao,
-  useProgressoRender,
-} from './useShortsDoCorte';
+import { useCapaDoShort, useGanchoPadrao, usePalcoPadrao, useProgressoRender } from './useShortsDoCorte';
+import { semMarcas } from '@video-renderer/public-api';
 import { useFechoDoShort } from './useFechoDoShort';
 import { AcoesRapidasDoShort } from './AcoesRapidasDoShort';
 import { Icon } from '@/upgrade/Icon';
@@ -274,7 +270,7 @@ export function CandidatoCard({
               <Icon name="plus" className="flex-none opacity-70" />
             )}
             <span className="truncate">
-              {short.gancho_tela || 'escrever o gancho da abertura'}
+              {semMarcas(short.gancho_tela ?? '') || 'escrever o gancho da abertura'}
             </span>
           </button>
         </div>
