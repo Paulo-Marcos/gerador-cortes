@@ -173,7 +173,7 @@ export function FotosDoApresentador({ estilo }: { estilo: EstiloDaCapa }) {
                 imgClassName="aspect-square w-full rounded-[6px] object-cover"
               />
               <div className="flex items-center gap-1">
-                <span className="min-w-0 flex-1 truncate font-code text-[10.5px] text-[var(--wb-text-mute)]">
+                <span className="min-w-0 flex-1 truncate font-code text-[11px] text-[var(--wb-text-mute)]">
                   {nome}
                 </span>
                 <button
