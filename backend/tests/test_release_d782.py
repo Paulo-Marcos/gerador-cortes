@@ -278,3 +278,69 @@ def test_marcas_de_unlock_uma_por_trava_com_motivo():
         "só o campo version sobe para 0.5.0 (release, bin/release.py)"
     ]
     assert release.marcas_de_unlock("OK: nenhum travado.", "0.5.0") == []
+
+
+# ---- fragmentos de changelog.d/ (R9 da entrega por PR do Guia) -------------
+
+
+def test_fragmentos_agrupam_pela_categoria_do_nome():
+    secoes = release.secoes_dos_fragmentos(
+        {
+            "D-2.fixed.md": "- Conserto (D-2).\n",
+            "D-1.added.md": "- Novo (D-1).\n",
+            "D-3.fixed.md": "\n",
+        }
+    )
+    assert secoes == {"Added": "- Novo (D-1).", "Fixed": "- Conserto (D-2)."}
+
+
+def test_fragmento_fora_do_padrao_e_recusado():
+    with pytest.raises(release.ErroDeRelease, match="fora do padrão"):
+        release.secoes_dos_fragmentos({"D-1.novidade.md": "- x"})
+
+
+@pytest.mark.parametrize(
+    ("fragmentos", "esperado"),
+    [
+        ({"D-1.fixed.md": "- conserto"}, "patch"),
+        ({"D-1.fixed.md": "- conserto", "D-2.added.md": "- novo"}, "minor"),
+        ({"D-1.changed.md": "- BREAKING: troca"}, "minor"),  # 0.y.z: a minor faz o papel
+    ],
+)
+def test_so_os_fragmentos_decidem_o_nivel_com_o_unreleased_vazio(fragmentos, esperado):
+    secoes = release.juntar_secoes({}, release.secoes_dos_fragmentos(fragmentos))
+    assert release.nivel_sugerido(secoes, "0.6.0") == esperado
+
+
+def test_unreleased_escrito_e_fragmentos_se_somam_por_categoria():
+    juntas = release.juntar_secoes({"Fixed": "- antigo"}, {"Fixed": "- novo", "Added": "- x"})
+    assert juntas == {"Fixed": "- antigo\n- novo", "Added": "- x"}
+
+
+def test_com_fragmentos_e_sem_motor_a_release_para(tmp_path, monkeypatch):
+    (tmp_path / "changelog.d").mkdir()
+    (tmp_path / "changelog.d" / "D-1.added.md").write_text("- novo\n", encoding="utf-8")
+    monkeypatch.setattr(release, "RAIZ", tmp_path)
+    monkeypatch.delenv("GUIA_PY", raising=False)
+    assert release.ler_fragmentos() == {"D-1.added.md": "- novo\n"}
+    with pytest.raises(release.ErroDeRelease, match="GUIA_PY"):
+        release.motor_do_guia()
+
+
+def test_commit_da_release_leva_a_delecao_dos_fragmentos(monkeypatch):
+    comandos = []
+    monkeypatch.setattr(release, "consultar_travas", lambda arquivos: "")
+    monkeypatch.setattr(
+        release, "rodar", lambda comando, *a, **k: comandos.append(comando) or "sha\n"
+    )
+    release.commitar("0.7.0", "resumo", ["changelog.d/D-1.added.md"])
+    commit = next(c for c in comandos if c[:2] == ["git", "commit"])
+    assert commit[-1] == "changelog.d/D-1.added.md"
+    assert "CHANGELOG.md" in commit
+
+
+def test_marca_dos_fragmentos_tem_motivo_proprio():
+    marcas = release.marcas_de_unlock("[unlock:x]", "0.7.0", release.MOTIVO_DOS_FRAGMENTOS)
+    assert marcas == [
+        "[unlock:x] motivo: fragmentos de changelog.d/ compilados no CHANGELOG da 0.7.0 (release, bin/release.py)"
+    ]
