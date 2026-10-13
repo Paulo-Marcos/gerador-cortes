@@ -54,3 +54,10 @@ export {
   type Janela,
   type PosicaoDoComponente,
 } from "./youtube-bg/palco-limpo";
+
+// D-913: as sombras da legenda do short, para a prévia desenhar igual ao render.
+export {
+  ESTILOS_DA_LEGENDA,
+  SOMBRAS_DA_LEGENDA,
+  type EstiloDaLegenda,
+} from "./cenas-shorts/sombrasDaLegenda";

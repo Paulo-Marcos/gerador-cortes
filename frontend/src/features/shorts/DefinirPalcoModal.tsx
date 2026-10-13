@@ -7,7 +7,7 @@ import { EditorDeRecorte } from './EditorDeRecorte';
 import { PresetsDoPalco } from './PresetsDoPalco';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
-import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
+import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA, LegendaDoCanal } from './LegendaPrevia';
 import {
   LARGURA_MAX,
   LARGURA_MIN,
@@ -671,7 +671,7 @@ export function DefinirPalcoModal({
             <div className={cn('w-full', movendo ? 'max-w-[300px]' : 'max-w-[220px]')}>
               <PalcoPrevia plano={planoNaTela} video={video}>
                 {transcricao.data && (
-                  <LegendaPrevia
+                  <LegendaDoCanal
                     palavras={transcricao.data.palavras}
                     inicioSeg={short.inicio_seg}
                     fimSeg={short.fim_seg}

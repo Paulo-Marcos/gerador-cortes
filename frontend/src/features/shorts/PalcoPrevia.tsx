@@ -11,6 +11,7 @@ import {
   buildChromePaths,
   chromeClipPath,
 } from '@/shared/palco/youtubeChrome';
+import { EcoDaPrevia } from './EcoDaPrevia';
 import type { PlanoDesenhavel } from './shortsApi';
 import {
   CabecalhoDoCanal,
@@ -21,6 +22,7 @@ import {
   janelaComContorno,
   posicaoDoCabecalhoNoShortDe,
   raioDaJanela,
+  temEcoNoShort,
   type ComponentesDoPalco,
 } from '@/shared/palco/palcoLimpo';
 import { usePalcoDoCanalAtivoResolvido } from '@/features/channels/useChannels';
@@ -123,7 +125,7 @@ export function PalcoPrevia({ plano, video, children }: Props) {
           das janelas e o cabeçalho na faixa. */}
       {comMoldura &&
         (limpo ? (
-          <CamadaDoPalcoLimpo largura={largura} altura={altura} plano={plano} componentes={componentes} />
+          <CamadaDoPalcoLimpo largura={largura} altura={altura} plano={plano} componentes={componentes} video={video} />
         ) : (
           <div className="absolute inset-0">
             <YoutubeBackground fundo={textura} />
@@ -249,15 +251,21 @@ function CamadaDoPalcoLimpo({
   altura,
   plano,
   componentes,
+  video,
 }: {
   largura: number;
   altura: number;
   plano: PlanoDesenhavel;
   componentes: ComponentesDoPalco;
+  video: RefObject<HTMLVideoElement | null>;
 }) {
   const posicao = posicaoDoCabecalhoNoShortDe(componentes, plano.recortes[0]?.recorta);
   const todas = plano.recortes.map((recorte) => recorte.recorta);
+  // D-913: com eco, o fundo é o vídeo desfocado por baixo, e não a textura.
+  const eco = temEcoNoShort(componentes);
   return (
+    <>
+    {eco ? <EcoDaPrevia plano={plano} video={video} /> : null}
     <svg
       viewBox={`0 0 ${largura} ${altura}`}
       className="pointer-events-none absolute inset-0 h-full w-full"
@@ -265,7 +273,7 @@ function CamadaDoPalcoLimpo({
     >
       <foreignObject x={0} y={0} width={largura} height={altura}>
         <div style={{ position: 'relative', width: largura, height: altura }}>
-          <FundoLimpo fundo={componentes.fundo} />
+          {eco ? null : <FundoLimpo fundo={componentes.fundo} />}
           {todas.map((janela) => {
             const buraco = janelaComContorno(janela, todas, largura, altura, componentes.contorno_short);
             return (
@@ -289,6 +297,7 @@ function CamadaDoPalcoLimpo({
         </div>
       </foreignObject>
     </svg>
+    </>
   );
 }
 

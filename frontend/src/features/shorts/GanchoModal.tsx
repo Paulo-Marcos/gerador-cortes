@@ -26,7 +26,7 @@ import {
 } from './ganchoDoShort';
 import type { GanchoShortPreset } from '@/types/presets';
 import { GanchoPrevia } from './GanchoPrevia';
-import { LegendaPrevia } from './LegendaPrevia';
+import { LegendaDoCanal } from './LegendaPrevia';
 import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
@@ -250,7 +250,7 @@ export function GanchoModal({
         onMover={mover}
       />
       {palavras.length > 0 && (
-        <LegendaPrevia
+        <LegendaDoCanal
           palavras={palavras}
           inicioSeg={short.inicio_seg}
           fimSeg={short.fim_seg}

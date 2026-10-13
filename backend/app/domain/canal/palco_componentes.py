@@ -36,6 +36,21 @@ ESTILO_PADRAO = ESTILO_ATUAL
 FUNDOS = ("reticula-aurora", "reticula", "aurora", "linho", "chapado")
 FUNDO_PADRAO = "reticula-aurora"
 
+# D-913: o que o short mostra em volta das janelas. "palco" é o fundo do estilo
+# (a textura do PNG); "eco" é o próprio vídeo, desfocado e escurecido, nas
+# faixas que sobram — o quadro inteiro parece vir do vídeo, sem cor inventada.
+# Só o estilo limpo tem eco: o chrome do atual é um PNG opaco por desenho.
+FUNDO_SHORT_PALCO = "palco"
+FUNDO_SHORT_ECO = "eco"
+FUNDOS_DO_SHORT = (FUNDO_SHORT_PALCO, FUNDO_SHORT_ECO)
+
+# D-913: como a legenda do short se separa do vídeo. "contorno" é o de sempre
+# (quatro sombras duras de 2 px); "sombra" é a do limpo: só uma sombra suave e
+# larga, sem a borda preta em volta de cada letra.
+LEGENDA_CONTORNO = "contorno"
+LEGENDA_SOMBRA = "sombra"
+ESTILOS_DA_LEGENDA = (LEGENDA_CONTORNO, LEGENDA_SOMBRA)
+
 # Tamanho máximo de nome e handle no cabeçalho: cabem numa linha do palco.
 _TAMANHO_MAXIMO_DO_TEXTO = 60
 
@@ -53,6 +68,10 @@ class EstiloDePalcoInvalido(PedidoInvalido):
 
 class FundoDePalcoInvalido(PedidoInvalido):
     """O fundo informado não existe."""
+
+
+class OpcaoDePalcoInvalida(PedidoInvalido):
+    """Uma escolha do palco (fundo do short, estilo da legenda) fora da lista."""
 
 
 # Posição e tamanho (D-911): todo componente fixo do palco diz ONDE fica e de
@@ -112,12 +131,30 @@ class PalcoComponentes:
     """O fundo do estilo limpo (`FUNDOS`); o estilo atual tem o fundo do layout."""
     contorno_short: int = CONTORNO_PADRAO
     """Quanto as janelas do short recuam das bordas (px); 0 = sem contorno."""
+    fundo_short: str = FUNDO_SHORT_PALCO
+    """O que o short mostra em volta das janelas (`FUNDOS_DO_SHORT`)."""
+    estilo_da_legenda: str = LEGENDA_CONTORNO
+    """Como a legenda do short se separa do vídeo (`ESTILOS_DA_LEGENDA`)."""
+
+    @property
+    def eco_no_short(self) -> bool:
+        """O short leva o eco do vídeo nas faixas: pedido E estilo limpo.
+
+        Exemplos:
+            >>> PalcoComponentes(estilo="limpo", fundo_short="eco").eco_no_short
+            True
+            >>> PalcoComponentes(estilo="atual", fundo_short="eco").eco_no_short
+            False
+        """
+        return self.estilo == ESTILO_LIMPO and self.fundo_short == FUNDO_SHORT_ECO
 
     def para_dict(self) -> dict[str, Any]:
         return {
             "estilo": self.estilo,
             "fundo": self.fundo,
             "contorno_short": self.contorno_short,
+            "fundo_short": self.fundo_short,
+            "estilo_da_legenda": self.estilo_da_legenda,
             "cabecalho": {
                 "ativo": self.cabecalho.ativo,
                 "nome": self.cabecalho.nome,
@@ -197,6 +234,17 @@ def _fundo(valor: Any, atual: str) -> str:
     return fundo
 
 
+def _escolha(valor: Any, atual: str, opcoes: tuple[str, ...], campo: str) -> str:
+    if valor is None:
+        return atual
+    escolha = str(valor).strip().lower()
+    if escolha not in opcoes:
+        raise OpcaoDePalcoInvalida(
+            f"{campo} desconhecido: {valor!r}. Use um de: {', '.join(opcoes)}."
+        )
+    return escolha
+
+
 def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoComponentes:
     """Os componentes depois de uma edição parcial: só o que veio muda.
 
@@ -260,6 +308,15 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
         contorno_short=int(
             _numero(mudancas.get("contorno_short"), atual.contorno_short, 0, CONTORNO_MAXIMO)
         ),
+        fundo_short=_escolha(
+            mudancas.get("fundo_short"), atual.fundo_short, FUNDOS_DO_SHORT, "Fundo do short"
+        ),
+        estilo_da_legenda=_escolha(
+            mudancas.get("estilo_da_legenda"),
+            atual.estilo_da_legenda,
+            ESTILOS_DA_LEGENDA,
+            "Estilo da legenda",
+        ),
     )
 
 
@@ -289,6 +346,12 @@ def normalizar(dados: Any) -> PalcoComponentes:
         base["estilo"] = ESTILO_PADRAO
     if base.get("fundo") is not None and str(base["fundo"]).strip().lower() not in FUNDOS:
         base["fundo"] = FUNDO_PADRAO
+    for campo, opcoes in (
+        ("fundo_short", FUNDOS_DO_SHORT),
+        ("estilo_da_legenda", ESTILOS_DA_LEGENDA),
+    ):
+        if base.get(campo) is not None and str(base[campo]).strip().lower() not in opcoes:
+            base.pop(campo)
     return mesclar(PADRAO, base)
 
 
@@ -334,6 +397,9 @@ def props_para_renderer(
         "estilo": componentes.estilo,
         "fundo": componentes.fundo,
         "contorno_short": componentes.contorno_short,
+        # O PNG do short com eco deixa o fundo transparente: quem pinta as
+        # faixas é o FFmpeg, com o vídeo desfocado por baixo.
+        "eco_no_short": componentes.eco_no_short,
         "cabecalho": {
             "ativo": cabecalho.ativo,
             "nome": cabecalho.nome or nome_do_canal.strip(),

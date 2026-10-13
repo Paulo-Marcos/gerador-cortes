@@ -7612,8 +7612,12 @@ export interface components {
             contorno_short?: number | null;
             /** Estilo */
             estilo?: ("atual" | "limpo") | null;
+            /** Estilo Da Legenda */
+            estilo_da_legenda?: ("contorno" | "sombra") | null;
             /** Fundo */
             fundo?: ("reticula-aurora" | "reticula" | "aurora" | "linho" | "chapado") | null;
+            /** Fundo Short */
+            fundo_short?: ("palco" | "eco") | null;
             placa?: components["schemas"]["PlacaRequest"] | null;
         };
         /** PalcoComponentesResponse */
@@ -7625,12 +7629,20 @@ export interface components {
             contorno_short: number;
             /** Estilo */
             estilo: string;
+            /** Estilo Da Legenda */
+            estilo_da_legenda: string;
             /** Estilos */
             estilos: string[];
+            /** Estilos Da Legenda */
+            estilos_da_legenda: string[];
             /** Fundo */
             fundo: string;
+            /** Fundo Short */
+            fundo_short: string;
             /** Fundos */
             fundos: string[];
+            /** Fundos Do Short */
+            fundos_do_short: string[];
             placa: components["schemas"]["PlacaResponse"];
         };
         /** PalcoPadraoRequest */

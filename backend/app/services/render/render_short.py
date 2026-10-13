@@ -33,7 +33,6 @@ from app.domain.short import gancho_short, segmentos_short
 # nomes com um `s` de diferenca no mesmo arquivo e erro de leitura esperando.
 from app.domain.short import legenda_short as lugar_da_legenda
 from app.domain.short.formato_video import VERTICAL, Resolucao
-from app.domain.short.fundo_short import para_ffmpeg
 from app.domain.short.moldura_short import COR_PADRAO, faixas
 from app.infrastructure.channel_assets_sync import cor_do_tema
 from app.infrastructure.ffmpeg_runner import probe_resolucao
@@ -54,7 +53,8 @@ from app.models import Corte, Short, StatusShort
 from app.services import legendas_short, palco_shorts
 from app.services.app_settings import AppSettingsService
 from app.services.cancelamento_jobs import TrabalhoEmVoo
-from app.services.render.palco_do_short import mascaras_do_insert, palco_em_png
+from app.services.render.camada_short import props_da_camada
+from app.services.render.palco_do_short import fundo_do_quadro, moldes_do_short, palco_em_png
 from app.services.render.pipeline_render import _preparar_bundle_overlay
 from app.services.render.pipeline_render_helpers import (
     _build_overlay_render_cmd,
@@ -201,21 +201,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
     props_file = saida_dir / f"camada_{estagio}.props.json"
     props_file.write_text(
         json.dumps(
-            {
-                "cenas": contexto.cenas,
-                "gancho": contexto.gancho,
-                "captions": legenda.captions,
-                # D-563: a cor da palavra corrente. Vazio = o acento do canal,
-                # resolvido pelo renderer — o backend nao conhece a paleta dele.
-                "legendaCor": contexto.legenda_cor,
-                "legendaFonte": contexto.legenda_fonte,
-                # D-605: onde a legenda senta, JA com a heranca resolvida. O
-                # renderer nao conhece a cascata — recebe onde desenhar, e os
-                # defaults sao os numeros que estavam cravados nele, entao um
-                # short gravado antes desta demanda sai igual.
-                "legendaLugar": contexto.legenda_lugar,
-                "duracaoSeg": contexto.duracao_seg,
-            },
+            props_da_camada(contexto, legenda.captions),
             ensure_ascii=False,
         ),
         encoding="utf-8",
@@ -313,9 +299,9 @@ class _ContextoRender:
     # D-508: o PNG do palco (fundo com textura + chrome), ou None quando nao ha
     # o que desenhar — sem regiao, moldura desligada, ou o gerador falhou.
     palco_png: object
-    # D-911: `{indice do recorte: PNG da mascara}` dos que ganham cantos
-    # arredondados no FFmpeg (o insert no estilo limpo). Vazio = nenhum.
-    mascaras: dict
+    # D-911/D-913: `{indice do recorte: Molde}` — cantos e contorno aplicados no
+    # FFmpeg (o insert no limpo; com eco, todas as janelas). Vazio = nenhum.
+    moldes: dict
 
     # D-604: as fatias do bruto que este short toca, na ordem de toque. Lista
     # vazia = a janela unica `[inicio_seg, fim_seg]`, que e o caso normal.
@@ -430,9 +416,9 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             plano=palco["plano"],
             origem_palco=palco["origem"],
             moldura=faixas_do_canal(palco["moldura"]),
-            fundo=para_ffmpeg(palco["fundo"]),
+            fundo=fundo_do_quadro(palco),
             palco_png=await palco_em_png(palco),
-            mascaras=mascaras_do_insert(palco),
+            moldes=moldes_do_short(palco),
         )
 
 
@@ -622,7 +608,7 @@ def _comando_do_quadro(
         moldura=contexto.moldura,
         fundo_cor=contexto.fundo,
         palco_png=contexto.palco_png,
-        mascaras=contexto.mascaras,
+        moldes=contexto.moldes,
         filtro=filtro,
     )
 
