@@ -56,7 +56,112 @@ export interface ComponentesDoPalco {
   estilo: "atual" | "limpo";
   cabecalho: { ativo: boolean; nome: string; handle: string; imagem: string };
   placa: { ativo: boolean };
+  /** O fundo do estilo limpo (`FUNDOS_DO_LIMPO`); ausente = o padrão. */
+  fundo?: string;
 }
+
+/**
+ * Os fundos do estilo limpo: um grafite que não é 100 % chapado.
+ *
+ * Saíram de quatro rodadas de prévia sobre vídeo real da PROD (13/10/2026). O
+ * escolhido é a retícula em halftone com a aurora por baixo, as duas no eixo
+ * inferior-esquerdo → superior-direito; os outros são as variações do mesmo
+ * vocabulário que o canal pode trocar sem mudar de identidade. Todos
+ * procedurais (CSS/SVG), sem PNG, e todos estáticos: um fundo que se mexe
+ * disputaria com o vídeo.
+ */
+export const FUNDOS_DO_LIMPO = ["reticula-aurora", "reticula", "aurora", "linho", "chapado"] as const;
+export type FundoDoLimpo = (typeof FUNDOS_DO_LIMPO)[number];
+export const FUNDO_PADRAO_DO_LIMPO: FundoDoLimpo = "reticula-aurora";
+
+const VINHETA = "radial-gradient(ellipse 70% 65% at 50% 45%, transparent 55%, rgba(0,0,0,0.38) 100%)";
+const COR_DA_TRAMA = "rgba(243,242,238,0.075)";
+
+/** Grão fotográfico: ruído fino e monocromático. Esconde o banding dos gradientes. */
+const Grao: FC<{ opacidade: number }> = ({ opacidade }) => (
+  <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, opacity: opacidade }} aria-hidden>
+    <filter id="grao-do-palco">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grao-do-palco)" />
+  </svg>
+);
+
+/** A luz do palco: coral no canto inferior esquerdo, petróleo no superior direito. */
+const Aurora: FC = () => (
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      background:
+        "radial-gradient(ellipse 55% 60% at 4% 96%, rgba(255,110,90,0.30) 0%, transparent 65%)," +
+        "radial-gradient(ellipse 55% 60% at 98% 4%, rgba(40,110,120,0.36) 0%, transparent 65%)",
+    }}
+  />
+);
+
+/**
+ * A retícula: dois aglomerados de pontos, um no canto inferior esquerdo e outro
+ * no superior direito, e o meio limpo — onde ficam as janelas. Cada aglomerado
+ * é halftone de verdade: o ponto é maior no canto e encolhe até sumir. O de
+ * baixo pesa um pouco mais, porque é onde a aurora coral também está.
+ */
+const CANTOS_DA_RETICULA = [
+  { canto: "0% 100%", raio: 2.6, alcance: "55% 70%", alfa: 0.24 },
+  { canto: "100% 0%", raio: 2.0, alcance: "45% 60%", alfa: 0.2 },
+];
+const PASSO_DA_RETICULA = 22;
+
+const Reticula: FC = () => (
+  <>
+    {CANTOS_DA_RETICULA.map(({ canto, raio, alcance, alfa }) => {
+      const mascara = `radial-gradient(ellipse ${alcance} at ${canto}, #000 0%, rgba(0,0,0,0.55) 45%, transparent 100%)`;
+      return (
+        <div
+          key={canto}
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `radial-gradient(circle, rgba(243,242,238,${alfa}) ${raio}px, transparent ${raio + 0.6}px)`,
+            backgroundSize: `${PASSO_DA_RETICULA}px ${PASSO_DA_RETICULA}px`,
+            WebkitMaskImage: mascara,
+            maskImage: mascara,
+          }}
+        />
+      );
+    })}
+  </>
+);
+
+/** Trama diagonal fina: tecido, não grade. */
+const Linho: FC = () => (
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      backgroundImage:
+        `repeating-linear-gradient(45deg, ${COR_DA_TRAMA} 0 1px, transparent 1px 4px),` +
+        `repeating-linear-gradient(-45deg, ${COR_DA_TRAMA} 0 1px, transparent 1px 4px)`,
+    }}
+  />
+);
+
+/** O fundo do palco limpo. Fundo desconhecido cai no padrão: render antigo não quebra. */
+export const FundoLimpo: FC<{ fundo?: string }> = ({ fundo = FUNDO_PADRAO_DO_LIMPO }) => {
+  const escolhido = (FUNDOS_DO_LIMPO as readonly string[]).includes(fundo) ? fundo : FUNDO_PADRAO_DO_LIMPO;
+  const base = { position: "absolute" as const, inset: 0, background: COR_DO_FUNDO };
+  if (escolhido === "chapado") return <div style={base} />;
+  return (
+    <div style={base}>
+      {escolhido === "reticula-aurora" || escolhido === "aurora" ? <Aurora /> : null}
+      <Grao opacidade={escolhido === "linho" ? 0.05 : 0.12} />
+      {escolhido === "reticula-aurora" || escolhido === "reticula" ? <Reticula /> : null}
+      {escolhido === "linho" ? <Linho /> : null}
+      <div style={{ position: "absolute", inset: 0, background: VINHETA }} />
+    </div>
+  );
+};
 
 export const COMPONENTES_PADRAO: ComponentesDoPalco = {
   estilo: "atual",
@@ -198,6 +303,49 @@ export function posicaoDaPlaca(
     x: tela.x + RECUO_DA_PLACA_DENTRO_DA_TELA,
     y: tela.y + tela.h - ALTURA_DA_PLACA - RECUO_DA_PLACA_DENTRO_DA_TELA,
     dentroDaTela: true,
+  };
+}
+
+/** Quanto a janela do short recua da borda do quadro no estilo limpo. */
+export const CONTORNO_DO_SHORT = 32;
+/** Quanto cada janela recua de uma vizinha (o vão entre as duas é o dobro). */
+export const VAO_ENTRE_JANELAS = 12;
+
+/**
+ * A janela do short com o contorno do estilo limpo.
+ *
+ * Uma janela que encosta na borda do quadro (a de baixo da empilhada, a cheia)
+ * recua dela, e o fundo aparece em volta como um contorno; duas janelas que se
+ * tocam abrem um vão. Só o BURACO do palco encolhe: o vídeo continua no mesmo
+ * slot por baixo, e o PNG cobre a borda dele. Por isso nada muda no FFmpeg nem
+ * no domínio — o contorno é desenho, não geometria.
+ */
+export function janelaComContorno(
+  janela: Janela,
+  janelas: Janela[],
+  canvasW: number,
+  canvasH: number,
+): Janela {
+  const tocaOutra = (lado: "cima" | "baixo") =>
+    janelas.some((outra) => {
+      if (outra === janela) return false;
+      const cruzaNaHorizontal = outra.x < janela.x + janela.w && janela.x < outra.x + outra.w;
+      if (!cruzaNaHorizontal) return false;
+      return lado === "cima"
+        ? Math.abs(outra.y + outra.h - janela.y) <= 2
+        : Math.abs(janela.y + janela.h - outra.y) <= 2;
+    });
+  const recuo = (naBorda: boolean, naVizinha: boolean) =>
+    naBorda ? CONTORNO_DO_SHORT : naVizinha ? VAO_ENTRE_JANELAS : 0;
+  const esquerda = recuo(janela.x <= 1, false);
+  const direita = recuo(janela.x + janela.w >= canvasW - 1, false);
+  const cima = recuo(janela.y <= 1, tocaOutra("cima"));
+  const baixo = recuo(janela.y + janela.h >= canvasH - 1, tocaOutra("baixo"));
+  return {
+    x: janela.x + esquerda,
+    y: janela.y + cima,
+    w: janela.w - esquerda - direita,
+    h: janela.h - cima - baixo,
   };
 }
 

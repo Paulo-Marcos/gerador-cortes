@@ -18,7 +18,7 @@ import {
   CABECALHO_HORIZONTAL,
   CabecalhoDoCanal,
   COMPONENTES_PADRAO,
-  COR_DO_FUNDO,
+  FundoLimpo,
   PlacaLimpa,
   posicaoDaPlaca,
   RAIO_DA_FACECAM,
@@ -230,7 +230,7 @@ const PalcoLimpo: FC<PalcoProps & { componentes: ComponentesDoPalco }> = ({
 
       {/* Fundo chapado + sombras das janelas, recortados pela máscara. */}
       <div style={{ position: "absolute", inset: 0, maskImage: "url(#palcoLimpoCut)", WebkitMaskImage: "url(#palcoLimpoCut)" }}>
-        <div style={{ position: "absolute", inset: 0, background: COR_DO_FUNDO }} />
+        <FundoLimpo fundo={componentes.fundo} />
         <SombraDaJanela janela={janelaTela} raio={RAIO_DA_TELA} />
         {hasFacecam ? <SombraDaJanela janela={janelaFace} raio={RAIO_DA_FACECAM} /> : null}
       </div>

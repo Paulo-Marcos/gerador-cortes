@@ -54,6 +54,8 @@ def test_get_devolve_o_padrao_com_a_identidade_herdada(client: TestClient):
     body = resp.json()
     assert body["estilo"] == "atual"
     assert body["estilos"] == ["atual", "limpo"]
+    assert body["fundo"] == "reticula-aurora"
+    assert "linho" in body["fundos"]
     assert body["cabecalho"]["nome"] == ""
     assert body["cabecalho"]["nome_efetivo"] == "Seu Canal"
     assert body["cabecalho"]["handle_efetivo"] == "@seucanal"
@@ -77,6 +79,13 @@ def test_put_edita_parcialmente(client: TestClient):
     body = resp.json()
     assert body["estilo"] == "limpo"
     assert body["placa"]["ativo"] is False
+
+
+def test_put_troca_o_fundo(client: TestClient):
+    resp = client.put("/api/channels/default/palco", json={"fundo": "aurora"})
+    assert resp.status_code == 200
+    assert resp.json()["fundo"] == "aurora"
+    assert client.put("/api/channels/default/palco", json={"fundo": "neon"}).status_code == 422
 
 
 def test_put_estilo_desconhecido_e_422(client: TestClient):

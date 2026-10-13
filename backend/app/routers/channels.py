@@ -49,6 +49,7 @@ class PalcoComponentesRequest(BaseModel):
     """Edição parcial: campo ausente não muda."""
 
     estilo: Literal["atual", "limpo"] | None = None
+    fundo: Literal["reticula-aurora", "reticula", "aurora", "linho", "chapado"] | None = None
     cabecalho: CabecalhoRequest | None = None
     placa: PlacaRequest | None = None
 
@@ -73,6 +74,8 @@ class PalcoComponentesResponse(BaseModel):
     canal_id: str
     estilo: str
     estilos: list[str]
+    fundo: str
+    fundos: list[str]
     cabecalho: CabecalhoResponse
     placa: PlacaResponse
 
@@ -92,6 +95,8 @@ def _palco_para_response(
         canal_id=canal_id,
         estilo=componentes.estilo,
         estilos=list(palco_dominio.ESTILOS),
+        fundo=componentes.fundo,
+        fundos=list(palco_dominio.FUNDOS),
         cabecalho=CabecalhoResponse(
             ativo=componentes.cabecalho.ativo,
             nome=componentes.cabecalho.nome,

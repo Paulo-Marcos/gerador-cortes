@@ -3,7 +3,7 @@ import type { YoutubePlaca, YoutubeSharedRect } from '@/shared/palco/youtubeLayo
 import {
   CABECALHO_HORIZONTAL,
   CabecalhoDoCanal,
-  COR_DO_FUNDO,
+  FundoLimpo,
   JanelaLimpa,
   PlacaLimpa,
   posicaoDaPlaca,
@@ -48,7 +48,8 @@ export function PalcoLimpoCompartilhado({
   const posicaoPlaca = posicaoDaPlaca(janelaTela, palco.cabecalho.ativo);
 
   return (
-    <AbsoluteFill style={{ background: COR_DO_FUNDO }}>
+    <AbsoluteFill>
+      <FundoLimpo fundo={palco.fundo} />
       <JanelaLimpa janela={janelaTela} raio={RAIO_DA_TELA}>
         <CropVideo videoSrc={videoSrc} crop={config.crop_tela} slot={config.slot_tela} muted={false} />
       </JanelaLimpa>

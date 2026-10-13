@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CabecalhoDoCanal,
   JanelaLimpa,
+  janelaComContorno,
   PlacaLimpa,
   posicaoDaPlaca,
   posicaoDoCabecalhoNoShort,
@@ -19,6 +20,23 @@ describe('palco limpo (D-911)', () => {
     expect(raioDaJanela({ x: 0, y: 352, w: 1080, h: 608 }, 1080, 1920, 24)).toBe(0);
     // Insert: a tela flutua com margem e leva o canto.
     expect(raioDaJanela({ x: 64, y: 400, w: 952, h: 535 }, 1080, 1920, 24)).toBe(24);
+  });
+
+  it('no short o buraco recua das bordas e abre um vão entre janelas vizinhas', () => {
+    const tela = { x: 51, y: 352, w: 978, h: 608 };
+    const pessoa = { x: 0, y: 960, w: 1080, h: 960 };
+    const todas = [tela, pessoa];
+    // A de baixo encosta na esquerda, na direita e no pé: recua 32; em cima, toca a tela: 12.
+    expect(janelaComContorno(pessoa, todas, 1080, 1920)).toEqual({ x: 32, y: 972, w: 1016, h: 916 });
+    // A de cima só toca a de baixo: abre o vão embaixo e mais nada.
+    expect(janelaComContorno(tela, todas, 1080, 1920)).toEqual({ x: 51, y: 352, w: 978, h: 596 });
+    // Cheia: recua das quatro bordas.
+    expect(janelaComContorno({ x: 0, y: 0, w: 1080, h: 1920 }, [], 1080, 1920)).toEqual({
+      x: 32,
+      y: 32,
+      w: 1016,
+      h: 1856,
+    });
   });
 
   it('o cabeçalho do short só existe quando há faixa acima da primeira janela', () => {

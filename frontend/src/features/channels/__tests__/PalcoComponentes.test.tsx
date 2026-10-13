@@ -9,6 +9,8 @@ function palco(extra: Partial<PalcoComponentes> = {}): PalcoComponentes {
     canal_id: 'default',
     estilo: 'atual',
     estilos: ['atual', 'limpo'],
+    fundo: 'reticula-aurora',
+    fundos: ['reticula-aurora', 'reticula', 'aurora', 'linho', 'chapado'],
     cabecalho: {
       ativo: true,
       nome: '',
@@ -30,6 +32,7 @@ describe('rascunho e edição do palco (D-911)', () => {
     expect(rascunho.placaAtiva).toBe(false);
     expect(edicaoDe({ ...rascunho, nome: 'Pedro', handle: '@pedro' })).toEqual({
       estilo: 'limpo',
+      fundo: 'reticula-aurora',
       cabecalho: { ativo: true, nome: 'Pedro', handle: '@pedro' },
       placa: { ativo: false },
     });
@@ -38,6 +41,7 @@ describe('rascunho e edição do palco (D-911)', () => {
   it('a resposta vira o que a prévia desenha, com a imagem na origem da API', () => {
     const componentes = paraComponentesDoPalco(palco({ estilo: 'limpo' }));
     expect(componentes.estilo).toBe('limpo');
+    expect(componentes.fundo).toBe('reticula-aurora');
     expect(componentes.cabecalho.nome).toBe('Seu Canal');
     expect(componentes.cabecalho.handle).toBe('@seucanal');
     expect(componentes.cabecalho.imagemUrl).toMatch(/\/api\/channels\/default\/palco\/imagem\?v=1$/);
@@ -68,6 +72,9 @@ describe('PalcoComponentesForm', () => {
     expect(html).toContain('Mostrar o cabeçalho');
     expect(html).toContain('Mostrar a placa');
     expect(html).toContain('Pose padrão do mascote');
+    // No limpo aparece a escolha do fundo, com o padrão marcado.
+    expect(html).toContain('Fundo do palco limpo');
+    expect(html).toContain('Retícula + aurora');
     expect(html).not.toContain('Voltar ao mascote');
     // Vazio herda da identidade: o placeholder diz o que vai aparecer.
     expect(html).toContain('placeholder="Seu Canal"');

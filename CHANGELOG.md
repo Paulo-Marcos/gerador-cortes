@@ -61,7 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the image shown next to the @ (the mascot's "apresentador" pose until you do).
   It applies to the horizontal stage and to the shorts' stage of the active
   channel on the next render; the cut's own window geometry is untouched, and
-  the editor preview and the shorts preview draw the same stage (D-911).
+  the editor preview and the shorts preview draw the same stage. The clean
+  style has its own background, a halftone dot pattern in the lower-left and
+  upper-right corners over a coral-to-petrol glow (or plain halftone, glow,
+  linen, flat), and on shorts the windows sit inside a thin contour of that
+  background instead of touching the frame edges (D-911).
 - **Choose where the cards sit on the shared stage.** The positioning modal
   gains a "Cards" rectangle next to the crops and slots. It starts on
   "Automática" (the rule as before: left of the big screen, above the small

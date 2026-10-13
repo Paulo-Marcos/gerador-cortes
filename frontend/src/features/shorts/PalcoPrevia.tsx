@@ -16,7 +16,9 @@ import {
   CabecalhoDoCanal,
   COR_DO_FUNDO,
   RAIO_DA_JANELA_DO_SHORT,
+  FundoLimpo,
   SombraDaJanela,
+  janelaComContorno,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
   type ComponentesDoPalco,
@@ -215,14 +217,22 @@ function optsDa(
 /** O recorte da janela no canvas: o chanfro do canal ou, no limpo, o canto arredondado. */
 function caminhoDaJanela(
   r: { x: number; y: number; w: number; h: number },
-  largura: number,
-  altura: number,
-  opts: typeof OPTS_DA_JANELA,
+  todas: { x: number; y: number; w: number; h: number }[],
+  quadro: { largura: number; altura: number },
   limpo: boolean,
 ): Path2D {
-  if (!limpo) return new Path2D(buildChromePaths(r.w, r.h, opts).main);
+  const { largura, altura } = quadro;
+  if (!limpo) return new Path2D(buildChromePaths(r.w, r.h, optsDa(r, largura, altura)).main);
+  // D-911: no limpo o buraco recua das bordas (o contorno do fundo), como no PNG.
+  const buraco = janelaComContorno(r, todas, largura, altura);
   const caminho = new Path2D();
-  caminho.roundRect(0, 0, r.w, r.h, raioDaJanela(r, largura, altura, RAIO_DA_JANELA_DO_SHORT));
+  caminho.roundRect(
+    buraco.x - r.x,
+    buraco.y - r.y,
+    buraco.w,
+    buraco.h,
+    raioDaJanela(buraco, largura, altura, RAIO_DA_JANELA_DO_SHORT),
+  );
   return caminho;
 }
 
@@ -246,6 +256,7 @@ function CamadaDoPalcoLimpo({
   const posicao = componentes.cabecalho.ativo
     ? posicaoDoCabecalhoNoShort(plano.recortes[0]?.recorta)
     : null;
+  const todas = plano.recortes.map((recorte) => recorte.recorta);
   return (
     <svg
       viewBox={`0 0 ${largura} ${altura}`}
@@ -254,13 +265,17 @@ function CamadaDoPalcoLimpo({
     >
       <foreignObject x={0} y={0} width={largura} height={altura}>
         <div style={{ position: 'relative', width: largura, height: altura }}>
-          {plano.recortes.map((recorte) => (
-            <SombraDaJanela
-              key={`${recorte.recorta.x}-${recorte.recorta.y}-${recorte.recorta.w}`}
-              janela={recorte.recorta}
-              raio={raioDaJanela(recorte.recorta, largura, altura, RAIO_DA_JANELA_DO_SHORT)}
-            />
-          ))}
+          <FundoLimpo fundo={componentes.fundo} />
+          {todas.map((janela) => {
+            const buraco = janelaComContorno(janela, todas, largura, altura);
+            return (
+              <SombraDaJanela
+                key={`${janela.x}-${janela.y}-${janela.w}`}
+                janela={buraco}
+                raio={raioDaJanela(buraco, largura, altura, RAIO_DA_JANELA_DO_SHORT)}
+              />
+            );
+          })}
           {posicao ? (
             <CabecalhoDoCanal
               x={posicao.x}
@@ -303,6 +318,7 @@ function useDesenhoDosRecortes(
       // LIMPA, não preenche: o que estiver fora dos recortes tem de deixar a
       // textura do fundo aparecer, como as janelas vazadas do PNG do render.
       ctx.clearRect(0, 0, tela.width, tela.height);
+      const todas = plano.recortes.map((recorte) => recorte.recorta);
 
       for (const recorte of plano.recortes) {
         const { origem, destino, recorta } = recorte;
@@ -323,9 +339,8 @@ function useDesenhoDosRecortes(
         // a mesma dos dois lados — nada de reimplementar o chanfro em canvas.
         // De `plano.canvas`, e não das constantes desestruturadas lá embaixo:
         // o efeito depende de `plano`, e ler daqui mantém a dependência única.
-        const opts = optsDa(recorta, plano.canvas.largura, plano.canvas.altura);
         ctx.translate(recorta.x, recorta.y);
-        ctx.clip(caminhoDaJanela(recorta, plano.canvas.largura, plano.canvas.altura, opts, limpo));
+        ctx.clip(caminhoDaJanela(recorta, todas, plano.canvas, limpo));
         // Volta ao referencial do quadro: o clip já ficou gravado onde estava,
         // e `destino` vem em coordenadas do canvas.
         ctx.translate(-recorta.x, -recorta.y);

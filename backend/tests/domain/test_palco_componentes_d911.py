@@ -40,6 +40,39 @@ class TestMesclar:
         assert pc.normalizar(novo.para_dict()) == novo
 
 
+class TestFundo:
+    def test_padrao_e_a_reticula_com_aurora(self):
+        assert pc.PADRAO.fundo == "reticula-aurora"
+
+    def test_troca_o_fundo(self):
+        assert pc.mesclar(pc.PADRAO, {"fundo": "linho"}).fundo == "linho"
+
+    def test_fundo_desconhecido_e_erro_na_edicao(self):
+        with pytest.raises(pc.FundoDePalcoInvalido):
+            pc.mesclar(pc.PADRAO, {"fundo": "carbono"})
+
+    def test_fundo_gravado_que_saiu_cai_no_padrao(self):
+        assert pc.normalizar({"fundo": "carbono"}).fundo == "reticula-aurora"
+
+    def test_fundo_vai_para_o_renderer(self):
+        props = pc.props_para_renderer(
+            pc.mesclar(pc.PADRAO, {"estilo": "limpo", "fundo": "aurora"}),
+            nome_do_canal="",
+            handle_do_canal="",
+            imagem_servida="",
+        )
+        assert props["fundo"] == "aurora"
+
+    def test_fundos_espelham_o_renderer(self):
+        from pathlib import Path
+
+        raiz = Path(__file__).resolve().parents[3]
+        fonte = (raiz / "video-renderer/src/youtube-bg/palco-limpo.tsx").read_text(encoding="utf-8")
+        lista = ", ".join(f'"{f}"' for f in pc.FUNDOS)
+        assert f"FUNDOS_DO_LIMPO = [{lista}]" in fonte
+        assert f'FUNDO_PADRAO_DO_LIMPO: FundoDoLimpo = "{pc.FUNDO_PADRAO}"' in fonte
+
+
 class TestNormalizar:
     def test_estilo_desconhecido_gravado_cai_no_padrao(self):
         assert pc.normalizar({"estilo": "sumiu", "placa": {"ativo": False}}).placa.ativo is False
@@ -60,6 +93,7 @@ class TestPropsParaRenderer:
         )
         assert props == {
             "estilo": "limpo",
+            "fundo": "reticula-aurora",
             "cabecalho": {
                 "ativo": True,
                 "nome": "Pedro Ivo",

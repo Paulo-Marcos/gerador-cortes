@@ -7602,6 +7602,8 @@ export interface components {
             cabecalho?: components["schemas"]["CabecalhoRequest"] | null;
             /** Estilo */
             estilo?: ("atual" | "limpo") | null;
+            /** Fundo */
+            fundo?: ("reticula-aurora" | "reticula" | "aurora" | "linho" | "chapado") | null;
             placa?: components["schemas"]["PlacaRequest"] | null;
         };
         /** PalcoComponentesResponse */
@@ -7613,6 +7615,10 @@ export interface components {
             estilo: string;
             /** Estilos */
             estilos: string[];
+            /** Fundo */
+            fundo: string;
+            /** Fundos */
+            fundos: string[];
             placa: components["schemas"]["PlacaResponse"];
         };
         /** PalcoPadraoRequest */

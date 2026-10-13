@@ -13,7 +13,8 @@ import {
 import {
   CabecalhoDoCanal,
   COMPONENTES_PADRAO,
-  COR_DO_FUNDO,
+  FundoLimpo,
+  janelaComContorno,
   posicaoDoCabecalhoNoShort,
   RAIO_DA_JANELA_DO_SHORT,
   raioDaJanela,
@@ -186,7 +187,9 @@ const carregarInter = () =>
 const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }> = ({ janelas, componentes }) => {
   const carregar = useCallback(carregarInter, []);
   useEsperarFontes("Fonte do palco limpo", carregar);
-  const raios = janelas.map((j) => raioDaJanela(j, CANVAS_W, CANVAS_H, RAIO_DA_JANELA_DO_SHORT));
+  // O buraco de cada janela recua das bordas: o fundo vira o contorno dela.
+  const buracos = janelas.map((j) => janelaComContorno(j, janelas, CANVAS_W, CANVAS_H));
+  const raios = buracos.map((j) => raioDaJanela(j, CANVAS_W, CANVAS_H, RAIO_DA_JANELA_DO_SHORT));
   const { cabecalho } = componentes;
   const posicao = cabecalho.ativo ? posicaoDoCabecalhoNoShort(janelas[0]) : null;
 
@@ -196,7 +199,7 @@ const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }
         <defs>
           <mask id="palcoLimpoShortCut" maskUnits="userSpaceOnUse" x="0" y="0" width={CANVAS_W} height={CANVAS_H}>
             <rect x="0" y="0" width={CANVAS_W} height={CANVAS_H} fill="white" />
-            {janelas.map((j, i) => (
+            {buracos.map((j, i) => (
               <rect key={i} x={j.x} y={j.y} width={j.w} height={j.h} rx={raios[i]} fill="black" />
             ))}
           </mask>
@@ -204,8 +207,8 @@ const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }
       </svg>
 
       <div style={{ position: "absolute", inset: 0, maskImage: "url(#palcoLimpoShortCut)", WebkitMaskImage: "url(#palcoLimpoShortCut)" }}>
-        <div style={{ position: "absolute", inset: 0, background: COR_DO_FUNDO }} />
-        {janelas.map((j, i) => (
+        <FundoLimpo fundo={componentes.fundo} />
+        {buracos.map((j, i) => (
           <SombraDaJanela key={i} janela={j} raio={raios[i]} />
         ))}
       </div>

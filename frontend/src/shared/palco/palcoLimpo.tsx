@@ -18,18 +18,24 @@ export {
   ALTURA_DO_CABECALHO,
   CABECALHO_HORIZONTAL,
   CABECALHO_SHORT_X,
+  CONTORNO_DO_SHORT,
   COMPONENTES_PADRAO as COMPONENTES_PADRAO_DO_RENDERER,
   COR_DO_ACENTO,
   COR_DO_FUNDO,
   COR_DO_TEXTO,
+  FUNDO_PADRAO_DO_LIMPO,
+  FUNDOS_DO_LIMPO,
+  FundoLimpo,
   PlacaLimpa,
   RAIO_DA_FACECAM,
   RAIO_DA_JANELA_DO_SHORT,
   RAIO_DA_TELA,
   SombraDaJanela,
+  janelaComContorno,
   posicaoDaPlaca,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
+  type FundoDoLimpo,
   type Janela,
 } from '@video-renderer/public-api';
 
@@ -38,12 +44,15 @@ export interface ComponentesDoPalco {
   estilo: 'atual' | 'limpo';
   cabecalho: { ativo: boolean; nome: string; handle: string; imagemUrl: string };
   placa: { ativo: boolean };
+  /** O fundo do estilo limpo (`FUNDOS_DO_LIMPO`). */
+  fundo: string;
 }
 
 export const COMPONENTES_PADRAO: ComponentesDoPalco = {
   estilo: 'atual',
   cabecalho: { ativo: true, nome: '', handle: '', imagemUrl: '' },
   placa: { ativo: true },
+  fundo: 'reticula-aurora',
 };
 
 /** A janela da prévia: recorta o vídeo com os cantos do estilo limpo e leva a sombra. */

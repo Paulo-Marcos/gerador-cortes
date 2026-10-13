@@ -30,6 +30,12 @@ ESTILO_LIMPO = "limpo"
 ESTILOS = (ESTILO_ATUAL, ESTILO_LIMPO)
 ESTILO_PADRAO = ESTILO_ATUAL
 
+# Os fundos do estilo limpo. Espelha `FUNDOS_DO_LIMPO` em
+# `video-renderer/src/youtube-bg/palco-limpo.tsx`, que é quem os desenha; o
+# padrão saiu das prévias sobre vídeo real de 13/10/2026.
+FUNDOS = ("reticula-aurora", "reticula", "aurora", "linho", "chapado")
+FUNDO_PADRAO = "reticula-aurora"
+
 # Tamanho máximo de nome e handle no cabeçalho: cabem numa linha do palco.
 _TAMANHO_MAXIMO_DO_TEXTO = 60
 
@@ -43,6 +49,10 @@ POSE_PADRAO_DO_CABECALHO = "apresentador"
 
 class EstiloDePalcoInvalido(PedidoInvalido):
     """O estilo informado não existe."""
+
+
+class FundoDePalcoInvalido(PedidoInvalido):
+    """O fundo informado não existe."""
 
 
 @dataclass(frozen=True)
@@ -70,10 +80,13 @@ class PalcoComponentes:
     estilo: str = ESTILO_PADRAO
     cabecalho: Cabecalho = Cabecalho()
     placa: Placa = Placa()
+    fundo: str = FUNDO_PADRAO
+    """O fundo do estilo limpo (`FUNDOS`); o estilo atual tem o fundo do layout."""
 
     def para_dict(self) -> dict[str, Any]:
         return {
             "estilo": self.estilo,
+            "fundo": self.fundo,
             "cabecalho": {
                 "ativo": self.cabecalho.ativo,
                 "nome": self.cabecalho.nome,
@@ -110,6 +123,17 @@ def _estilo(valor: Any, atual: str) -> str:
     return estilo
 
 
+def _fundo(valor: Any, atual: str) -> str:
+    if valor is None:
+        return atual
+    fundo = str(valor).strip().lower()
+    if fundo not in FUNDOS:
+        raise FundoDePalcoInvalido(
+            f"Fundo de palco desconhecido: {valor!r}. Use um de: {', '.join(FUNDOS)}."
+        )
+    return fundo
+
+
 def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoComponentes:
     """Os componentes depois de uma edição parcial: só o que veio muda.
 
@@ -125,6 +149,8 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
         'Pedro'
         >>> mesclar(PADRAO, {"cabecalho": {"ativo": False}}).cabecalho.handle
         ''
+        >>> mesclar(PADRAO, {"fundo": "Linho"}).fundo
+        'linho'
         >>> mesclar(PADRAO, None) == PADRAO
         True
     """
@@ -151,6 +177,7 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
         estilo=_estilo(mudancas.get("estilo"), atual.estilo),
         cabecalho=cabecalho,
         placa=placa,
+        fundo=_fundo(mudancas.get("fundo"), atual.fundo),
     )
 
 
@@ -166,6 +193,8 @@ def normalizar(dados: Any) -> PalcoComponentes:
         False
         >>> normalizar({"estilo": "nao-existe"}).estilo
         'atual'
+        >>> normalizar({"fundo": "sumiu"}).fundo
+        'reticula-aurora'
         >>> normalizar(None) == PADRAO
         True
     """
@@ -176,6 +205,8 @@ def normalizar(dados: Any) -> PalcoComponentes:
         _estilo(base.get("estilo"), ESTILO_PADRAO)
     except EstiloDePalcoInvalido:
         base["estilo"] = ESTILO_PADRAO
+    if base.get("fundo") is not None and str(base["fundo"]).strip().lower() not in FUNDOS:
+        base["fundo"] = FUNDO_PADRAO
     return mesclar(PADRAO, base)
 
 
@@ -219,6 +250,7 @@ def props_para_renderer(
     cabecalho = componentes.cabecalho
     return {
         "estilo": componentes.estilo,
+        "fundo": componentes.fundo,
         "cabecalho": {
             "ativo": cabecalho.ativo,
             "nome": cabecalho.nome or nome_do_canal.strip(),

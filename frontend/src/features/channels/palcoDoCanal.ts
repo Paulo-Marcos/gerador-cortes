@@ -17,6 +17,7 @@ export function paraComponentesDoPalco(resposta: PalcoComponentes | undefined): 
       imagemUrl: urlDaImagem(resposta.cabecalho.imagem_url),
     },
     placa: { ativo: resposta.placa.ativo },
+    fundo: resposta.fundo,
   };
 }
 

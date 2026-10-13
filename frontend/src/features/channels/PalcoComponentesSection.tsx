@@ -24,6 +24,15 @@ import {
 
 type Estilo = 'atual' | 'limpo';
 
+// Os fundos do estilo limpo, com o nome que a tela mostra (ids do renderer).
+const FUNDOS: { id: string; nome: string }[] = [
+  { id: 'reticula-aurora', nome: 'Retícula + aurora' },
+  { id: 'reticula', nome: 'Retícula' },
+  { id: 'aurora', nome: 'Aurora' },
+  { id: 'linho', nome: 'Linho' },
+  { id: 'chapado', nome: 'Chapado' },
+];
+
 const ESTILOS: { id: Estilo; nome: string; descricao: string }[] = [
   {
     id: 'atual',
@@ -41,6 +50,7 @@ const ESTILOS: { id: Estilo; nome: string; descricao: string }[] = [
 /** O que o operador está editando; vira a edição parcial no Salvar. */
 export interface RascunhoDoPalco {
   estilo: Estilo;
+  fundo: string;
   cabecalhoAtivo: boolean;
   nome: string;
   handle: string;
@@ -50,6 +60,7 @@ export interface RascunhoDoPalco {
 export function rascunhoDe(palco: PalcoComponentes): RascunhoDoPalco {
   return {
     estilo: palco.estilo === 'limpo' ? 'limpo' : 'atual',
+    fundo: palco.fundo,
     cabecalhoAtivo: palco.cabecalho.ativo,
     nome: palco.cabecalho.nome,
     handle: palco.cabecalho.handle,
@@ -60,6 +71,7 @@ export function rascunhoDe(palco: PalcoComponentes): RascunhoDoPalco {
 export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
   return {
     estilo: rascunho.estilo,
+    fundo: rascunho.fundo as PalcoComponentesEdicao['fundo'],
     cabecalho: { ativo: rascunho.cabecalhoAtivo, nome: rascunho.nome, handle: rascunho.handle },
     placa: { ativo: rascunho.placaAtiva },
   };
@@ -87,6 +99,9 @@ export function PalcoComponentesForm(props: FormProps) {
       }}
     >
       <EscolhaDoEstilo estilo={rascunho.estilo} onEscolher={(estilo) => onMudar({ ...rascunho, estilo })} />
+      {rascunho.estilo === 'limpo' && (
+        <EscolhaDoFundo fundo={rascunho.fundo} onEscolher={(fundo) => onMudar({ ...rascunho, fundo })} />
+      )}
       <CabecalhoDoPalco {...props} />
       <fieldset className="grid gap-2 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
         <legend className="px-1 text-xs font-medium text-text-300">Placa do interlocutor</legend>
@@ -141,6 +156,28 @@ function EscolhaDoEstilo({ estilo, onEscolher }: { estilo: Estilo; onEscolher: (
             </button>
           );
         })}
+      </div>
+    </fieldset>
+  );
+}
+
+function EscolhaDoFundo({ fundo, onEscolher }: { fundo: string; onEscolher: (f: string) => void }) {
+  return (
+    <fieldset className="grid gap-2">
+      <legend className="text-xs font-medium text-text-300">Fundo do palco limpo</legend>
+      <div className="flex flex-wrap gap-2">
+        {FUNDOS.map((opcao) => (
+          <Button
+            key={opcao.id}
+            type="button"
+            size="sm"
+            variant={fundo === opcao.id ? 'default' : 'outline'}
+            aria-pressed={fundo === opcao.id}
+            onClick={() => onEscolher(opcao.id)}
+          >
+            {opcao.nome}
+          </Button>
+        ))}
       </div>
     </fieldset>
   );

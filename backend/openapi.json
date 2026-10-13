@@ -7033,6 +7033,24 @@
             ],
             "title": "Estilo"
           },
+          "fundo": {
+            "anyOf": [
+              {
+                "enum": [
+                  "reticula-aurora",
+                  "reticula",
+                  "aurora",
+                  "linho",
+                  "chapado"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fundo"
+          },
           "placa": {
             "anyOf": [
               {
@@ -7067,6 +7085,17 @@
             "title": "Estilos",
             "type": "array"
           },
+          "fundo": {
+            "title": "Fundo",
+            "type": "string"
+          },
+          "fundos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fundos",
+            "type": "array"
+          },
           "placa": {
             "$ref": "#/components/schemas/PlacaResponse"
           }
@@ -7075,6 +7104,8 @@
           "canal_id",
           "estilo",
           "estilos",
+          "fundo",
+          "fundos",
           "cabecalho",
           "placa"
         ],
