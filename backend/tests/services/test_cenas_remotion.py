@@ -43,6 +43,11 @@ def _mock_corte(transcricao_final=None, cenas_remotion=None):
     corte.resumo = "resumo"
     corte.transcricao_final = json.dumps(transcricao_final or [])
     corte.cenas_remotion = json.dumps(cenas_remotion) if cenas_remotion else None
+    # Texto do modelo, nunca MagicMock: desde a D-910 a contextualização entra
+    # no prompt pelo código, e o repr do mock mudaria o texto a cada execução.
+    corte.projeto_id = "proj-teste"
+    corte.contextualizacao = ""
+    corte.frase_gancho_texto = ""
     # O span bruto sai da propria transcricao: e o teto que a guarda de cenas
     # fora do corte usa. MagicMock deixaria fim_seg nao-numerico e a guarda
     # nao teria como julgar.

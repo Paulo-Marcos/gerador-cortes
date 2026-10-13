@@ -21,6 +21,7 @@
         "definicao_termo",
         "fonte_referencia",
         "lista_enumerada",
+        "pergunta_chat",
         "mostrar_imagem"
       ]
     },
@@ -125,6 +126,9 @@
       "type": "string"
     },
     "retrato_url": {
+      "type": "string"
+    },
+    "avatar_url": {
       "type": "string"
     },
     "marcos": {

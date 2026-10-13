@@ -26,6 +26,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   active days, each with a default and a reset. Instagram Reels stays out: the
   web composer does not schedule — not even emulating a phone, where it does
   not accept video (measured 2026-10-13) — so it publishes on the spot (D-908).
+- **A long cut opens with the chat question it answers — or with a bridge to
+  the live.** When the presenter is reading or answering a chat message at the
+  start of a cut, the first scene is a card that looks like the YouTube live
+  chat: round avatar, the author's name and the message exactly as typed
+  (typos, @mentions and unicode emoji kept; channel-only emoji dropped). The
+  app picks up to three candidates from the downloaded chat replay (messages
+  with "?" in the 15 minutes before the cut whose words he repeats in its
+  first 90 seconds) and the scenes AI only says which one, or none. Without a
+  chosen question, the cut's `contextualizacao` now actually reaches the
+  scenes prompt as the opening bridge — no scenes scaffold carried it before.
+  The two are exclusive: with a question, no other scene starts before the
+  card leaves. The avatar is downloaded into the cut's folder; if it fails,
+  the card draws the name's initial. Shorts are out of scope (their scenes are
+  off since D-560) (D-910).
 - **Choose where the cards sit on the shared stage.** The positioning modal
   gains a "Cards" rectangle next to the crops and slots. It starts on
   "Automática" (the rule as before: left of the big screen, above the small

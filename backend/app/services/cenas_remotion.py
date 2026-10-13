@@ -19,7 +19,7 @@ from app.domain.corte.corte_mapper import (
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo_falante
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
-from app.services import retrato_wikipedia
+from app.services import abertura_do_corte, retrato_wikipedia
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, registrar_skill_usada
 from sqlalchemy import select
@@ -79,6 +79,36 @@ def _calcular_limites(duracao_seg: int) -> dict:
         "max_fullscreen": max(1, max_cenas // 8),
         "min_primeiros_15s": 1 if duracao_seg < _CORTE_CURTO_SEG else 2,
     }
+
+
+def _texto_da_parte(
+    corte: Corte, chunk: list, i: int, total: int, mapa_falantes=None, abertura: str = ""
+) -> str:
+    """O prompt de uma parte: cabeçalho, a abertura (só na 1ª) e o scaffold."""
+    duracao_estimada = 0
+    if chunk:
+        duracao_estimada = int(_to_seg(chunk[-1].get("end", chunk[-1].get("fim", 0))))
+        duracao_estimada -= int(_to_seg(chunk[0].get("start", chunk[0].get("inicio", 0))))
+    limites = _calcular_limites(duracao_estimada)
+    cabecalho = f"*** ATENÇÃO: Esta é a PARTE {i + 1} de {total} do vídeo. Gere as cenas APENAS para as legendas listadas abaixo. ***\n\n"
+    primeira = i == 0
+    if primeira and abertura:
+        cabecalho += f"{abertura}\n\n"
+    return cabecalho + editorial_scaffolds.resolver_scaffold("cenas").format(
+        titulo=corte.titulo_proposto,
+        tema_central=corte.tema_central,
+        resumo=corte.resumo,
+        duracao_estimada=duracao_estimada,
+        legendas_numeradas=CenasRemotionService._montar_legendas_numeradas(chunk, mapa_falantes),
+        max_cenas=limites["max_cenas"],
+        max_identidade=limites["max_identidade"],
+        max_fullscreen=limites["max_fullscreen"],
+        # Só a 1ª parte obriga hook e carrega a abertura (D-295 folding): os
+        # placeholders opcionais seguem para os canais que os usam.
+        min_primeiros_15s=limites["min_primeiros_15s"] if primeira else 0,
+        contextualizacao=(corte.contextualizacao or "").strip() if primeira else "",
+        frase_gancho=(corte.frase_gancho_texto or "").strip() if primeira else "",
+    )
 
 
 _url_retrato_para_remotion = retrato_wikipedia.url_para_remotion
@@ -181,12 +211,15 @@ class CenasRemotionService:
         # Uma lente por geração (consistente entre as partes), do banco por canal.
         variacao = bloco_variacao_de(skill.lentes)
         cenas: list = []
+        escolha = None
         for indice, parte in enumerate(prompts):
             prompt = f"{variacao}\n\n{parte['texto']}"
             t = time.perf_counter()
             resultado = await gerar_json(provider, prompt, skill, _SKILL_CENAS, corte_id=corte_id)
             novas = resultado.get("cenas", [])
             cenas.extend(novas)
+            if indice == 0:
+                escolha = resultado.get("pergunta_chat")
             logger.info(
                 "[ClaudeIA/cenas] corte %s chunk %d/%d: %d cenas (Claude) em %.1fs",
                 corte_id[:8],
@@ -200,7 +233,9 @@ class CenasRemotionService:
             raise ValueError("Claude não retornou cenas.")
 
         t_imp = time.perf_counter()
-        await CenasRemotionService.importar_cenas(corte_id, {"cenas": cenas})
+        await CenasRemotionService.importar_cenas(
+            corte_id, {"cenas": cenas, "pergunta_chat": escolha}
+        )
         logger.info(
             "[ClaudeIA/cenas] corte %s: importar_cenas (retratos + save) em %.1fs",
             corte_id[:8],
@@ -261,48 +296,23 @@ class CenasRemotionService:
                 min_last_chunk_seg=PROMPT_CENAS_MIN_LAST_SEG,
             )
 
-            prompts = []
-            for i, chunk in enumerate(chunks):
-                legendas_numeradas = CenasRemotionService._montar_legendas_numeradas(
-                    chunk, mapa_falantes
-                )
-                duracao_estimada = 0
-                if chunk:
-                    ultimo = chunk[-1]
-                    duracao_estimada = int(_to_seg(ultimo.get("end", ultimo.get("fim", 0))))
-                    primeiro = chunk[0]
-                    inicio_estimado = int(_to_seg(primeiro.get("start", primeiro.get("inicio", 0))))
-                    duracao_estimada -= inicio_estimado
-
-                limites = _calcular_limites(duracao_estimada)
-                cabecalho_parte = f"*** ATENÇÃO: Esta é a PARTE {i + 1} de {len(chunks)} do vídeo. Gere as cenas APENAS para as legendas listadas abaixo. ***\n\n"
-                prompt_chunk = cabecalho_parte + editorial_scaffolds.resolver_scaffold(
-                    "cenas"
-                ).format(
-                    titulo=corte.titulo_proposto,
-                    tema_central=corte.tema_central,
-                    resumo=corte.resumo,
-                    duracao_estimada=duracao_estimada,
-                    legendas_numeradas=legendas_numeradas,
-                    max_cenas=limites["max_cenas"],
-                    max_identidade=limites["max_identidade"],
-                    max_fullscreen=limites["max_fullscreen"],
-                    min_primeiros_15s=limites["min_primeiros_15s"]
-                    if i == 0
-                    else 0,  # só obriga hook na primeira parte
-                    # B (D-295 folding): fonte única da abertura contextual — a frase
-                    # que o cortador-expert já produziu p/ o corte. Opcionais no
-                    # scaffold; só a 1ª parte carrega o gancho (i == 0).
-                    contextualizacao=(corte.contextualizacao or "").strip() if i == 0 else "",
-                    frase_gancho=(corte.frase_gancho_texto or "").strip() if i == 0 else "",
-                )
-                prompts.append(
-                    {
-                        "parte": i + 1,
-                        "total_partes": len(chunks),
-                        "texto": pedir_resposta_json_em_bloco_codigo(prompt_chunk),
-                    }
-                )
+            # D-910: a abertura (ponte + perguntas do chat) só na 1ª parte e só
+            # no corte longo — o short tem transcrição própria e cenas desligadas.
+            abertura = (
+                ""
+                if transcricao_override is not None
+                else abertura_do_corte.bloco_do_corte(corte, transcricao_final)
+            )
+            prompts = [
+                {
+                    "parte": i + 1,
+                    "total_partes": len(chunks),
+                    "texto": pedir_resposta_json_em_bloco_codigo(
+                        _texto_da_parte(corte, chunk, i, len(chunks), mapa_falantes, abertura)
+                    ),
+                }
+                for i, chunk in enumerate(chunks)
+            ]
 
         prompt_agregado = "\n\n========== PRÓXIMA PARTE ==========\n\n".join(
             p["texto"] for p in prompts
@@ -400,6 +410,10 @@ class CenasRemotionService:
         cenas_convertidas = CenasRemotionService._descartar_cenas_fora_do_corte(
             cenas_convertidas, dur_bruta
         )
+        escolha = payload.get("pergunta_chat") if isinstance(payload, dict) else None
+        cenas_convertidas = await abertura_do_corte.abrir_com_a_pergunta_escolhida(
+            corte, transcricao_final, escolha, cenas_convertidas
+        )
         retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)
 
         resultado = {
@@ -439,45 +453,18 @@ class CenasRemotionService:
                 min_last_chunk_seg=PROMPT_CENAS_MIN_LAST_SEG,
             )
 
-            prompts = []
-            for i, chunk in enumerate(chunks):
-                legendas_numeradas = CenasRemotionService._montar_legendas_numeradas(chunk)
-                duracao_estimada = 0
-                if chunk:
-                    ultimo = chunk[-1]
-                    duracao_estimada = int(_to_seg(ultimo.get("end", ultimo.get("fim", 0))))
-                    primeiro = chunk[0]
-                    inicio_estimado = int(_to_seg(primeiro.get("start", primeiro.get("inicio", 0))))
-                    duracao_estimada -= inicio_estimado
-
-                limites = _calcular_limites(duracao_estimada)
-                cabecalho_parte = f"*** ATENÇÃO: Esta é a PARTE {i + 1} de {len(chunks)} do vídeo. Gere as cenas APENAS para as legendas listadas abaixo. ***\n\n"
-                prompts.append(
-                    {
-                        "parte": i + 1,
-                        "total_partes": len(chunks),
-                        "texto": cabecalho_parte
-                        + editorial_scaffolds.resolver_scaffold("cenas").format(
-                            titulo=corte.titulo_proposto,
-                            tema_central=corte.tema_central,
-                            resumo=corte.resumo,
-                            duracao_estimada=duracao_estimada,
-                            legendas_numeradas=legendas_numeradas,
-                            max_cenas=limites["max_cenas"],
-                            max_identidade=limites["max_identidade"],
-                            max_fullscreen=limites["max_fullscreen"],
-                            min_primeiros_15s=limites["min_primeiros_15s"] if i == 0 else 0,
-                            # B (D-295 folding): abertura contextual reusa a frase do
-                            # cortador-expert; opcionais no scaffold, só na 1ª parte.
-                            contextualizacao=(corte.contextualizacao or "").strip()
-                            if i == 0
-                            else "",
-                            frase_gancho=(corte.frase_gancho_texto or "").strip() if i == 0 else "",
-                        ),
-                    }
-                )
+            abertura = abertura_do_corte.bloco_do_corte(corte, transcricao_final)
+            prompts = [
+                {
+                    "parte": i + 1,
+                    "total_partes": len(chunks),
+                    "texto": _texto_da_parte(corte, chunk, i, len(chunks), abertura=abertura),
+                }
+                for i, chunk in enumerate(chunks)
+            ]
 
             todas_cenas = []
+            escolha = None
             operational_info("CenasRemotion", f"Gerando cenas em {len(prompts)} parte(s)...")
             for prompt_info in prompts:
                 operational_info(
@@ -505,6 +492,8 @@ class CenasRemotionService:
                     cenas_parte = resultado_ia
                 else:
                     cenas_parte = resultado_ia.get("cenas", [])
+                    if prompt_info["parte"] == 1:
+                        escolha = resultado_ia.get("pergunta_chat")
 
                 todas_cenas.extend(cenas_parte)
 
@@ -514,6 +503,9 @@ class CenasRemotionService:
             )
             cenas_convertidas = CenasRemotionService._descartar_cenas_fora_do_corte(
                 cenas_convertidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
+            )
+            cenas_convertidas = await abertura_do_corte.abrir_com_a_pergunta_escolhida(
+                corte, transcricao_final, escolha, cenas_convertidas
             )
             retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)
             operational_info(

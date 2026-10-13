@@ -13,6 +13,7 @@ export { CenaLinhaTempo } from "./CenaLinhaTempo";
 export { CenaDefinicao } from "./CenaDefinicao";
 export { CenaFonte } from "./CenaFonte";
 export { CenaLista } from "./CenaLista";
+export { CenaPerguntaChat } from "./CenaPerguntaChat";
 
 import type { CenaRemotion } from "../schema";
 import { CenaFullscreen } from "./CenaFullscreen";
@@ -30,6 +31,7 @@ import { CenaLinhaTempo } from "./CenaLinhaTempo";
 import { CenaDefinicao } from "./CenaDefinicao";
 import { CenaFonte } from "./CenaFonte";
 import { CenaLista } from "./CenaLista";
+import { CenaPerguntaChat } from "./CenaPerguntaChat";
 
 /** Mapa de `tipo` → componente da v2 (nova identidade). */
 export function renderCenaV2(cena: CenaRemotion): React.ReactNode {
@@ -65,6 +67,8 @@ export function renderCenaV2(cena: CenaRemotion): React.ReactNode {
       return <CenaFonte cena={cena} />;
     case "lista_enumerada":
       return <CenaLista cena={cena} />;
+    case "pergunta_chat":
+      return <CenaPerguntaChat cena={cena} />;
     default:
       return null;
   }
