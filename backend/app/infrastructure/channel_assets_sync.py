@@ -34,8 +34,11 @@ from pathlib import Path
 from app.core import channel_paths
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]  # infrastructure → app → backend → repo
+RENDERER_PUBLIC = _REPO_ROOT / "video-renderer" / "public"
 _FRONTEND_MASCOTE = _REPO_ROOT / "frontend" / "public" / "mascote"
-_RENDERER_MASCOTE = _REPO_ROOT / "video-renderer" / "public" / "mascote"
+_RENDERER_MASCOTE = RENDERER_PUBLIC / "mascote"
+# D-911: a imagem do cabeçalho do palco, servida ao `staticFile` do renderer.
+_RENDERER_PALCO = RENDERER_PUBLIC / "palco"
 _RENDERER_THEME = _REPO_ROOT / "video-renderer" / "theme.config.json"
 
 # Nomes aceitos para a subpasta de PNGs do mascote nos assets do canal: o genérico
@@ -133,6 +136,7 @@ def sincronizar_assets_servidos(
     frontend_mascote: Path | None = None,
     renderer_mascote: Path | None = None,
     renderer_theme: Path | None = None,
+    renderer_palco: Path | None = None,
 ) -> list[Path]:
     """Espelha os assets do canal ativo nos diretórios servidos. Idempotente.
 
@@ -164,7 +168,24 @@ def sincronizar_assets_servidos(
     if theme_src.is_file() and _espelhar_arquivo(theme_src, renderer_theme):
         materializados.append(renderer_theme)
 
+    materializados += garantir_palco_materializado(
+        canal_assets_root / "palco", renderer_palco=renderer_palco
+    )
     return materializados
+
+
+def garantir_palco_materializado(
+    palco_src: Path, *, renderer_palco: Path | None = None
+) -> list[Path]:
+    """Espelha as imagens do palco do canal (`assets/palco/`) no `public/palco/`.
+
+    D-911: a imagem do cabeçalho entra no PNG do palco pelo `staticFile`, que só
+    lê do `public/` do renderer. NO-OP quando o canal não tem a pasta — o
+    cabeçalho usa a pose do mascote, que já está servida.
+    """
+    if not palco_src.is_dir():
+        return []
+    return _espelhar_dir(palco_src, renderer_palco or _RENDERER_PALCO)
 
 
 def _espelhar_dir(origem: Path, destino: Path) -> list[Path]:

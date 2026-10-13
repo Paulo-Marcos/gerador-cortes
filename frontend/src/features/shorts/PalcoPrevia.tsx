@@ -12,6 +12,18 @@ import {
   chromeClipPath,
 } from '@/shared/palco/youtubeChrome';
 import type { PlanoDesenhavel } from './shortsApi';
+import {
+  CabecalhoDoCanal,
+  COR_DO_FUNDO,
+  RAIO_DA_JANELA_DO_SHORT,
+  FundoLimpo,
+  SombraDaJanela,
+  janelaComContorno,
+  posicaoDoCabecalhoNoShortDe,
+  raioDaJanela,
+  type ComponentesDoPalco,
+} from '@/shared/palco/palcoLimpo';
+import { usePalcoDoCanalAtivoResolvido } from '@/features/channels/useChannels';
 
 // E-036/D-489: o palco desenhado ao vivo, como o arquivo vai sair.
 //
@@ -62,73 +74,11 @@ const PAD_DO_TRILHO = 40;
 
 export function PalcoPrevia({ plano, video, children }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const tela = canvas.current;
-    const ctx = tela?.getContext('2d');
-    if (!tela || !ctx) return;
-
-    let vivo = true;
-
-    const desenhar = () => {
-      if (!vivo) return;
-      requestAnimationFrame(desenhar);
-
-      const fonte = video.current;
-      // `readyState < 2` = ainda não há quadro decodificado. Desenhar aqui
-      // levanta InvalidStateError em alguns navegadores e pinta lixo nos
-      // outros.
-      if (!fonte || fonte.readyState < 2) return;
-
-      // LIMPA, não preenche: o que estiver fora dos recortes tem de deixar a
-      // textura do fundo aparecer, como as janelas vazadas do PNG do render.
-      ctx.clearRect(0, 0, tela.width, tela.height);
-
-      for (const recorte of plano.recortes) {
-        const { origem, destino, recorta } = recorte;
-        ctx.save();
-        // O clip é o que faz o excesso do COBRIR ficar de fora — o destino
-        // começa fora do slot de propósito, exatamente como no filtergraph.
-        //
-        // D-559: e o clip é o CHANFRO, não um retângulo.
-        //
-        // O canto superior direito do chrome é cortado na diagonal (e o
-        // inferior direito também, mais discreto). Com `ctx.rect` o vídeo
-        // mantinha os cantos quadrados e escapava POR FORA da linha ali —
-        // "no canto direito a imagem está passando da borda". O arquivo nunca
-        // teve isso: o `palco-short-entry.tsx` vaza as janelas do PNG com
-        // `buildChromePaths(...).main`, este mesmo desenho.
-        //
-        // `Path2D` aceita a string de path do SVG, então a forma é literalmente
-        // a mesma dos dois lados — nada de reimplementar o chanfro em canvas.
-        // De `plano.canvas`, e não das constantes desestruturadas lá embaixo:
-        // o efeito depende de `plano`, e ler daqui mantém a dependência única.
-        const opts = optsDa(recorta, plano.canvas.largura, plano.canvas.altura);
-        ctx.translate(recorta.x, recorta.y);
-        ctx.clip(new Path2D(buildChromePaths(recorta.w, recorta.h, opts).main));
-        // Volta ao referencial do quadro: o clip já ficou gravado onde estava,
-        // e `destino` vem em coordenadas do canvas.
-        ctx.translate(-recorta.x, -recorta.y);
-        ctx.drawImage(
-          fonte,
-          origem.x,
-          origem.y,
-          origem.w,
-          origem.h,
-          destino.x,
-          destino.y,
-          destino.w,
-          destino.h,
-        );
-        ctx.restore();
-      }
-    };
-
-    requestAnimationFrame(desenhar);
-    return () => {
-      vivo = false;
-    };
-  }, [plano, video]);
+  // D-911: o estilo do palco vem do canal ativo (ver `CamadaDoPalcoLimpo`).
+  const componentes = usePalcoDoCanalAtivoResolvido();
+  const limpo = componentes.estilo === 'limpo';
+  // No limpo o recorte recua das bordas pelo contorno do canal; fora dele, nulo.
+  useDesenhoDosRecortes(canvas, plano, video, limpo ? componentes.contorno_short : null);
 
   const { largura, altura } = plano.canvas;
   const comMoldura = plano.moldura !== 'nenhuma';
@@ -164,16 +114,21 @@ export function PalcoPrevia({ plano, video, children }: Props) {
       style={{
         aspectRatio: `${largura} / ${altura}`,
         containerType: 'inline-size',
-        background: comMoldura ? '#000' : plano.fundo,
+        background: comMoldura ? (limpo ? COR_DO_FUNDO : '#000') : plano.fundo,
       }}
     >
       {/* Camada 1 — o fundo editorial do canal. O mesmo id que o render manda
-          para o PNG, então a textura aqui é a textura de lá. */}
-      {comMoldura && (
-        <div className="absolute inset-0">
-          <YoutubeBackground fundo={textura} />
-        </div>
-      )}
+          para o PNG, então a textura aqui é a textura de lá. No estilo limpo
+          (D-911) o fundo é chapado, e o que vai por baixo do vídeo é a sombra
+          das janelas e o cabeçalho na faixa. */}
+      {comMoldura &&
+        (limpo ? (
+          <CamadaDoPalcoLimpo largura={largura} altura={altura} plano={plano} componentes={componentes} />
+        ) : (
+          <div className="absolute inset-0">
+            <YoutubeBackground fundo={textura} />
+          </div>
+        ))}
 
       {/* Camada 2 — o vídeo nos slots, transparente no resto. */}
       <canvas
@@ -185,7 +140,7 @@ export function PalcoPrevia({ plano, video, children }: Props) {
 
       {/* Camada 3 — o chrome: a moldura de cada janela e o trilho do palco.
           Em px do QUADRO, escalados junto com ele por `viewBox`. */}
-      {comMoldura && (
+      {comMoldura && !limpo && (
         <svg
           viewBox={`0 0 ${largura} ${altura}`}
           className="pointer-events-none absolute inset-0 h-full w-full"
@@ -257,6 +212,159 @@ function optsDa(
 ): typeof OPTS_DA_JANELA {
   const colada = r.x <= 1 && r.y <= 1 && r.w >= largura - 1 && r.h >= altura - 1;
   return colada ? OPTS_COLADA : OPTS_DA_JANELA;
+}
+
+/** O recorte da janela no canvas: o chanfro do canal ou, no limpo, o canto arredondado. */
+function caminhoDaJanela(
+  r: { x: number; y: number; w: number; h: number },
+  todas: { x: number; y: number; w: number; h: number }[],
+  quadro: { largura: number; altura: number },
+  contornoLimpo: number | null,
+): Path2D {
+  const { largura, altura } = quadro;
+  if (contornoLimpo === null) {
+    return new Path2D(buildChromePaths(r.w, r.h, optsDa(r, largura, altura)).main);
+  }
+  // D-911: no limpo o buraco recua das bordas (o contorno do fundo), como no PNG.
+  const buraco = janelaComContorno(r, todas, largura, altura, contornoLimpo);
+  const caminho = new Path2D();
+  caminho.roundRect(
+    buraco.x - r.x,
+    buraco.y - r.y,
+    buraco.w,
+    buraco.h,
+    raioDaJanela(buraco, largura, altura, RAIO_DA_JANELA_DO_SHORT),
+  );
+  return caminho;
+}
+
+/**
+ * O que o palco limpo põe POR BAIXO do vídeo (D-911): a sombra de cada janela e
+ * o cabeçalho do canal na faixa acima da primeira — o canvas é transparente ali,
+ * então o cabeçalho aparece mesmo estando nesta camada. Em px do quadro,
+ * escalados pelo `viewBox`, como o chrome.
+ */
+function CamadaDoPalcoLimpo({
+  largura,
+  altura,
+  plano,
+  componentes,
+}: {
+  largura: number;
+  altura: number;
+  plano: PlanoDesenhavel;
+  componentes: ComponentesDoPalco;
+}) {
+  const posicao = posicaoDoCabecalhoNoShortDe(componentes, plano.recortes[0]?.recorta);
+  const todas = plano.recortes.map((recorte) => recorte.recorta);
+  return (
+    <svg
+      viewBox={`0 0 ${largura} ${altura}`}
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      aria-hidden
+    >
+      <foreignObject x={0} y={0} width={largura} height={altura}>
+        <div style={{ position: 'relative', width: largura, height: altura }}>
+          <FundoLimpo fundo={componentes.fundo} />
+          {todas.map((janela) => {
+            const buraco = janelaComContorno(janela, todas, largura, altura, componentes.contorno_short);
+            return (
+              <SombraDaJanela
+                key={`${janela.x}-${janela.y}-${janela.w}`}
+                janela={buraco}
+                raio={raioDaJanela(buraco, largura, altura, RAIO_DA_JANELA_DO_SHORT)}
+              />
+            );
+          })}
+          {posicao ? (
+            <CabecalhoDoCanal
+              x={posicao.x}
+              y={posicao.y}
+              escala={componentes.cabecalho.escala}
+              nome={componentes.cabecalho.nome}
+              handle={componentes.cabecalho.handle}
+              imagemSrc={componentes.cabecalho.imagemUrl || undefined}
+            />
+          ) : null}
+        </div>
+      </foreignObject>
+    </svg>
+  );
+}
+
+/** O loop que pinta os recortes do vídeo no canvas, quadro a quadro. */
+function useDesenhoDosRecortes(
+  canvas: RefObject<HTMLCanvasElement | null>,
+  plano: PlanoDesenhavel,
+  video: RefObject<HTMLVideoElement | null>,
+  contornoLimpo: number | null,
+) {
+  useEffect(() => {
+    const tela = canvas.current;
+    const ctx = tela?.getContext('2d');
+    if (!tela || !ctx) return;
+
+    let vivo = true;
+
+    const desenhar = () => {
+      if (!vivo) return;
+      requestAnimationFrame(desenhar);
+
+      const fonte = video.current;
+      // `readyState < 2` = ainda não há quadro decodificado. Desenhar aqui
+      // levanta InvalidStateError em alguns navegadores e pinta lixo nos
+      // outros.
+      if (!fonte || fonte.readyState < 2) return;
+
+      // LIMPA, não preenche: o que estiver fora dos recortes tem de deixar a
+      // textura do fundo aparecer, como as janelas vazadas do PNG do render.
+      ctx.clearRect(0, 0, tela.width, tela.height);
+      const todas = plano.recortes.map((recorte) => recorte.recorta);
+
+      for (const recorte of plano.recortes) {
+        const { origem, destino, recorta } = recorte;
+        ctx.save();
+        // O clip é o que faz o excesso do COBRIR ficar de fora — o destino
+        // começa fora do slot de propósito, exatamente como no filtergraph.
+        //
+        // D-559: e o clip é o CHANFRO, não um retângulo.
+        //
+        // O canto superior direito do chrome é cortado na diagonal (e o
+        // inferior direito também, mais discreto). Com `ctx.rect` o vídeo
+        // mantinha os cantos quadrados e escapava POR FORA da linha ali —
+        // "no canto direito a imagem está passando da borda". O arquivo nunca
+        // teve isso: o `palco-short-entry.tsx` vaza as janelas do PNG com
+        // `buildChromePaths(...).main`, este mesmo desenho.
+        //
+        // `Path2D` aceita a string de path do SVG, então a forma é literalmente
+        // a mesma dos dois lados — nada de reimplementar o chanfro em canvas.
+        // De `plano.canvas`, e não das constantes desestruturadas lá embaixo:
+        // o efeito depende de `plano`, e ler daqui mantém a dependência única.
+        ctx.translate(recorta.x, recorta.y);
+        ctx.clip(caminhoDaJanela(recorta, todas, plano.canvas, contornoLimpo));
+        // Volta ao referencial do quadro: o clip já ficou gravado onde estava,
+        // e `destino` vem em coordenadas do canvas.
+        ctx.translate(-recorta.x, -recorta.y);
+        ctx.drawImage(
+          fonte,
+          origem.x,
+          origem.y,
+          origem.w,
+          origem.h,
+          destino.x,
+          destino.y,
+          destino.w,
+          destino.h,
+        );
+        ctx.restore();
+      }
+    };
+
+    requestAnimationFrame(desenhar);
+    return () => {
+      vivo = false;
+    };
+  }, [canvas, plano, video, contornoLimpo]);
 }
 
 export { chromeClipPath };

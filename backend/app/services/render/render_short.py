@@ -27,9 +27,7 @@ from pathlib import Path
 from app.config import settings
 from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
-from app.domain.corte.youtube_layout import _normalizar_fundo as textura_valida
-from app.domain.short import gancho_short, moldura_short, segmentos_short
+from app.domain.short import gancho_short, segmentos_short
 
 # Alias: o servico `legendas_short` (as palavras) ja e importado abaixo, e dois
 # nomes com um `s` de diferenca no mesmo arquivo e erro de leitura esperando.
@@ -56,6 +54,7 @@ from app.models import Corte, Short, StatusShort
 from app.services import legendas_short, palco_shorts
 from app.services.app_settings import AppSettingsService
 from app.services.cancelamento_jobs import TrabalhoEmVoo
+from app.services.render.palco_do_short import mascaras_do_insert, palco_em_png
 from app.services.render.pipeline_render import _preparar_bundle_overlay
 from app.services.render.pipeline_render_helpers import (
     _build_overlay_render_cmd,
@@ -314,6 +313,9 @@ class _ContextoRender:
     # D-508: o PNG do palco (fundo com textura + chrome), ou None quando nao ha
     # o que desenhar — sem regiao, moldura desligada, ou o gerador falhou.
     palco_png: object
+    # D-911: `{indice do recorte: PNG da mascara}` dos que ganham cantos
+    # arredondados no FFmpeg (o insert no estilo limpo). Vazio = nenhum.
+    mascaras: dict
 
     # D-604: as fatias do bruto que este short toca, na ordem de toque. Lista
     # vazia = a janela unica `[inicio_seg, fim_seg]`, que e o caso normal.
@@ -429,35 +431,9 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             origem_palco=palco["origem"],
             moldura=faixas_do_canal(palco["moldura"]),
             fundo=para_ffmpeg(palco["fundo"]),
-            palco_png=await _palco_em_png(palco),
+            palco_png=await palco_em_png(palco),
+            mascaras=mascaras_do_insert(palco),
         )
-
-
-async def _palco_em_png(palco: dict):
-    """O PNG do palco deste short, ou `None` para seguir sem ele (D-508).
-
-    O fundo EDITORIAL (a textura) e a cor do fundo são coisas diferentes: a cor
-    preenche o que sobra dentro do ffmpeg, e a textura vem no PNG. Enquanto o
-    seletor da tela ainda oferece cores da paleta, a textura fica no default do
-    canal — trocá-la é a D-509.
-    """
-    from app.services import palco_short_png
-
-    if moldura_short.Moldura(palco["moldura"]) is moldura_short.Moldura.NENHUMA:
-        return None
-
-    plano = palco.get("plano")
-    if plano is None:
-        # D-543: sem plano de palco o render degrada para o recorte 9:16 do
-        # quadro cru — mas a MOLDURA nao precisa degradar junto. Aqui a janela e
-        # uma so, o que sobra entre as duas faixas, e o palco texturizado serve
-        # aos dois caminhos. Sem isto, um corte sem preset saia com duas barras
-        # de verde chapado.
-        janela = moldura_short.janela_entre_as_faixas(palco["moldura"])
-        return await palco_short_png.obter(_textura(palco), [janela] if janela else [])
-
-    janelas = [recorte.janela for recorte in plano.recortes]
-    return await palco_short_png.obter(_textura(palco), janelas)
 
 
 # D-560: as cenas estao DESLIGADAS.
@@ -471,18 +447,6 @@ async def _palco_em_png(palco: dict):
 # apaga-las. O dado fica no banco — nada e destruido, e religar e mudar esta
 # constante de volta.
 CENAS_LIGADAS = False
-
-
-def _textura(palco: dict) -> str:
-    """A textura escolhida para este short, ou a padrao do canal (D-552).
-
-    O PNG e a PREVIA leem daqui. Duas fontes para este id fariam a tela e o
-    arquivo divergirem sem nada quebrar — que e como a D-549 nasceu.
-    """
-    # D-554: `or` so pega o vazio. Um id que nao e textura (uma chave de
-    # paleta vinda de preset antigo) passaria por aqui e o rasterizador
-    # procuraria um fundo inexistente.
-    return textura_valida(palco.get("fundo_editorial"), FUNDO_EDITORIAL_PADRAO)
 
 
 def faixas_do_canal(moldura: str) -> list:
@@ -658,6 +622,7 @@ def _comando_do_quadro(
         moldura=contexto.moldura,
         fundo_cor=contexto.fundo,
         palco_png=contexto.palco_png,
+        mascaras=contexto.mascaras,
         filtro=filtro,
     )
 

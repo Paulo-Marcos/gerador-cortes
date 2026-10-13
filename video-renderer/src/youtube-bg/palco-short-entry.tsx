@@ -1,5 +1,6 @@
-import { type FC } from "react";
-import { AbsoluteFill, Composition, registerRoot } from "remotion";
+import { useCallback, type FC } from "react";
+import { AbsoluteFill, Composition, Img, registerRoot, staticFile } from "remotion";
+import { fontFamily as familiaInter, loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { DEFAULT_YOUTUBE_BACKGROUND, YoutubeBackground, type YoutubeBackgroundId } from "./backgrounds";
 import {
   buildChromePaths,
@@ -9,6 +10,18 @@ import {
   StageChrome,
   type ChromeOpts,
 } from "./chrome";
+import {
+  CabecalhoDoCanal,
+  COMPONENTES_PADRAO,
+  FundoLimpo,
+  janelaComContorno,
+  posicaoDoCabecalhoNoShortDe,
+  RAIO_DA_JANELA_DO_SHORT,
+  raioDaJanela,
+  SombraDaJanela,
+  type ComponentesDoPalco,
+} from "./palco-limpo";
+import { useEsperarFontes } from "../theme-v2";
 
 /**
  * O palco do SHORT em PNG 1080x1920, com as janelas de vídeo transparentes
@@ -39,6 +52,10 @@ import {
  * implementação da geometria, que é o risco que este épico inteiro evita: o
  * buraco transparente ficaria alguns pixels fora do vídeo, e o sintoma seria
  * uma linha de fundo aparecendo na borda do rosto.
+ *
+ * D-911: `componentes.estilo === "limpo"` troca o desenho pelo `PalcoLimpoShort`:
+ * sem chrome externo (ele caía na safe zone dos apps), janelas com cantos
+ * arredondados e o cabeçalho do canal na faixa de cima, quando ela existe.
  */
 
 type Janela = {
@@ -52,6 +69,7 @@ type PalcoShortProps = {
   fundo: YoutubeBackgroundId;
   /** Os retângulos que o vídeo ocupa, na ordem de empilhamento. */
   janelas: Janela[];
+  componentes?: ComponentesDoPalco;
 };
 
 export const CANVAS_W = 1080;
@@ -74,7 +92,15 @@ function optsDa(janela: Janela): ChromeOpts {
   return colada ? OPTS_SEM_MARGEM : OPTS_COM_MARGEM;
 }
 
-const PalcoShortStill: FC<PalcoShortProps> = ({ fundo, janelas }) => (
+const PalcoShortStill: FC<PalcoShortProps> = (props) => {
+  const componentes = props.componentes ?? COMPONENTES_PADRAO;
+  if (componentes.estilo === "limpo") {
+    return <PalcoLimpoShort janelas={props.janelas} componentes={componentes} />;
+  }
+  return <PalcoShortAtual fundo={props.fundo} janelas={props.janelas} />;
+};
+
+const PalcoShortAtual: FC<{ fundo: YoutubeBackgroundId; janelas: Janela[] }> = ({ fundo, janelas }) => (
   <AbsoluteFill>
     {/* Máscara que CORTA as janelas no fundo opaco (branco=mantém,
         preto=transparente). userSpaceOnUse → coordenadas do quadro do short. */}
@@ -153,6 +179,61 @@ const ShadowCaster: FC<{ janela: Janela; clip: string }> = ({ janela, clip }) =>
     <div style={{ position: "absolute", inset: 0, clipPath: clip, WebkitClipPath: clip, background: "black" }} />
   </div>
 );
+
+const carregarInter = () =>
+  loadInter("normal", { weights: ["500", "700"], subsets: ["latin", "latin-ext"] }).waitUntilDone().then(() => undefined);
+
+/** O palco limpo do short: fundo chapado, janelas arredondadas, cabeçalho na faixa. */
+const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }> = ({ janelas, componentes }) => {
+  const carregar = useCallback(carregarInter, []);
+  useEsperarFontes("Fonte do palco limpo", carregar);
+  // O buraco de cada janela recua das bordas: o fundo vira o contorno dela.
+  const contorno = componentes.contorno_short;
+  const buracos = janelas.map((j) => janelaComContorno(j, janelas, CANVAS_W, CANVAS_H, contorno));
+  const raios = buracos.map((j) => raioDaJanela(j, CANVAS_W, CANVAS_H, RAIO_DA_JANELA_DO_SHORT));
+  const { cabecalho } = componentes;
+  const posicao = posicaoDoCabecalhoNoShortDe(componentes, janelas[0]);
+
+  return (
+    <AbsoluteFill style={{ fontFamily: familiaInter }}>
+      <svg width={CANVAS_W} height={CANVAS_H} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} aria-hidden>
+        <defs>
+          <mask id="palcoLimpoShortCut" maskUnits="userSpaceOnUse" x="0" y="0" width={CANVAS_W} height={CANVAS_H}>
+            <rect x="0" y="0" width={CANVAS_W} height={CANVAS_H} fill="white" />
+            {buracos.map((j, i) => (
+              <rect key={i} x={j.x} y={j.y} width={j.w} height={j.h} rx={raios[i]} fill="black" />
+            ))}
+          </mask>
+        </defs>
+      </svg>
+
+      <div style={{ position: "absolute", inset: 0, maskImage: "url(#palcoLimpoShortCut)", WebkitMaskImage: "url(#palcoLimpoShortCut)" }}>
+        <FundoLimpo fundo={componentes.fundo} />
+        {buracos.map((j, i) => (
+          <SombraDaJanela key={i} janela={j} raio={raios[i]} />
+        ))}
+      </div>
+
+      {posicao ? (
+        <CabecalhoDoCanal
+          x={posicao.x}
+          y={posicao.y}
+          escala={cabecalho.escala}
+          nome={cabecalho.nome}
+          handle={cabecalho.handle}
+          imagem={
+            cabecalho.imagem ? (
+              <Img
+                src={staticFile(cabecalho.imagem)}
+                style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flex: "0 0 auto" }}
+              />
+            ) : null
+          }
+        />
+      ) : null}
+    </AbsoluteFill>
+  );
+};
 
 const DEFAULT_PROPS: PalcoShortProps = {
   fundo: DEFAULT_YOUTUBE_BACKGROUND,

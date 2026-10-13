@@ -19,3 +19,38 @@ export {
   SOMBRA_TOKENS,
   resolverNivel,
 } from "./cenas-v2/_shared";
+
+// D-911: o palco "limpo" — a prévia monta os mesmos componentes e lê as mesmas
+// constantes do PNG do palco, em vez de manter uma cópia espelhada.
+export {
+  ALTURA_DA_PLACA,
+  ALTURA_DO_CABECALHO,
+  CABECALHO_HORIZONTAL,
+  CABECALHO_SHORT_X,
+  CONTORNO_DO_SHORT,
+  CabecalhoDoCanal,
+  COMPONENTES_PADRAO,
+  COR_DO_ACENTO,
+  COR_DO_FUNDO,
+  COR_DO_TEXTO,
+  FundoLimpo,
+  PlacaLimpa,
+  RAIO_DA_FACECAM,
+  RAIO_DA_JANELA_DO_SHORT,
+  RAIO_DA_TELA,
+  SOMBRA_DA_JANELA,
+  SombraDaJanela,
+  FUNDO_PADRAO_DO_LIMPO,
+  FUNDOS_DO_LIMPO,
+  janelaComContorno,
+  posicaoDaPlaca,
+  posicaoDaPlacaDe,
+  posicaoDoCabecalho,
+  posicaoDoCabecalhoNoShortDe,
+  posicaoDoCabecalhoNoShort,
+  raioDaJanela,
+  type ComponentesDoPalco as ComponentesDoPalcoDoRenderer,
+  type FundoDoLimpo,
+  type Janela,
+  type PosicaoDoComponente,
+} from "./youtube-bg/palco-limpo";

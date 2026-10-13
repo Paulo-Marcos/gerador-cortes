@@ -1747,6 +1747,20 @@
         "title": "Body_atualizar_falantes_api_diarizacao_projeto__projeto_id__falantes_put",
         "type": "object"
       },
+      "Body_enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post": {
+        "properties": {
+          "arquivo": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Arquivo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arquivo"
+        ],
+        "title": "Body_enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post",
+        "type": "object"
+      },
       "Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post": {
         "properties": {
           "arquivo": {
@@ -1968,6 +1982,132 @@
           "agenda"
         ],
         "title": "BulkYoutubeResponse",
+        "type": "object"
+      },
+      "CabecalhoRequest": {
+        "properties": {
+          "ativo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ativo"
+          },
+          "escala": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escala"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle"
+          },
+          "nome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome"
+          },
+          "posicao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PosicaoModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "posicao_short": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PosicaoModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "CabecalhoRequest",
+        "type": "object"
+      },
+      "CabecalhoResponse": {
+        "properties": {
+          "ativo": {
+            "title": "Ativo",
+            "type": "boolean"
+          },
+          "escala": {
+            "title": "Escala",
+            "type": "number"
+          },
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "handle_efetivo": {
+            "title": "Handle Efetivo",
+            "type": "string"
+          },
+          "imagem": {
+            "title": "Imagem",
+            "type": "string"
+          },
+          "imagem_url": {
+            "title": "Imagem Url",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "nome_efetivo": {
+            "title": "Nome Efetivo",
+            "type": "string"
+          },
+          "posicao": {
+            "$ref": "#/components/schemas/PosicaoModel"
+          },
+          "posicao_short": {
+            "$ref": "#/components/schemas/PosicaoModel"
+          }
+        },
+        "required": [
+          "ativo",
+          "nome",
+          "handle",
+          "imagem",
+          "escala",
+          "posicao",
+          "posicao_short",
+          "nome_efetivo",
+          "handle_efetivo",
+          "imagem_url"
+        ],
+        "title": "CabecalhoResponse",
         "type": "object"
       },
       "CaminhoDaPastaResponse": {
@@ -6909,6 +7049,129 @@
         "title": "PalavraDoBruto",
         "type": "object"
       },
+      "PalcoComponentesRequest": {
+        "description": "Edição parcial: campo ausente não muda.",
+        "properties": {
+          "cabecalho": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CabecalhoRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contorno_short": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contorno Short"
+          },
+          "estilo": {
+            "anyOf": [
+              {
+                "enum": [
+                  "atual",
+                  "limpo"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estilo"
+          },
+          "fundo": {
+            "anyOf": [
+              {
+                "enum": [
+                  "reticula-aurora",
+                  "reticula",
+                  "aurora",
+                  "linho",
+                  "chapado"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fundo"
+          },
+          "placa": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlacaRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "PalcoComponentesRequest",
+        "type": "object"
+      },
+      "PalcoComponentesResponse": {
+        "properties": {
+          "cabecalho": {
+            "$ref": "#/components/schemas/CabecalhoResponse"
+          },
+          "canal_id": {
+            "title": "Canal Id",
+            "type": "string"
+          },
+          "contorno_short": {
+            "title": "Contorno Short",
+            "type": "integer"
+          },
+          "estilo": {
+            "title": "Estilo",
+            "type": "string"
+          },
+          "estilos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Estilos",
+            "type": "array"
+          },
+          "fundo": {
+            "title": "Fundo",
+            "type": "string"
+          },
+          "fundos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fundos",
+            "type": "array"
+          },
+          "placa": {
+            "$ref": "#/components/schemas/PlacaResponse"
+          }
+        },
+        "required": [
+          "canal_id",
+          "estilo",
+          "estilos",
+          "fundo",
+          "fundos",
+          "contorno_short",
+          "cabecalho",
+          "placa"
+        ],
+        "title": "PalcoComponentesResponse",
+        "type": "object"
+      },
       "PalcoPadraoRequest": {
         "properties": {
           "preset_id": {
@@ -7270,6 +7533,66 @@
         "title": "PicosDaOndaResponse",
         "type": "object"
       },
+      "PlacaRequest": {
+        "properties": {
+          "ativo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ativo"
+          },
+          "escala": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escala"
+          },
+          "posicao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PosicaoModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "PlacaRequest",
+        "type": "object"
+      },
+      "PlacaResponse": {
+        "properties": {
+          "ativo": {
+            "title": "Ativo",
+            "type": "boolean"
+          },
+          "escala": {
+            "title": "Escala",
+            "type": "number"
+          },
+          "posicao": {
+            "$ref": "#/components/schemas/PosicaoModel"
+          }
+        },
+        "required": [
+          "ativo",
+          "escala",
+          "posicao"
+        ],
+        "title": "PlacaResponse",
+        "type": "object"
+      },
       "PlanoDesenhavelResponse": {
         "description": "O palco do short como a prévia o desenha — a mesma resolução do render,\ncom a aparência já herdada do corte (D-549, D-570, D-585, D-594, D-600).",
         "properties": {
@@ -7431,6 +7754,30 @@
           "faixas"
         ],
         "title": "PlanoDesenhavelResponse",
+        "type": "object"
+      },
+      "PosicaoModel": {
+        "description": "Onde o componente senta, em px do quadro; `automatica` = a regra do estilo.",
+        "properties": {
+          "automatica": {
+            "title": "Automatica",
+            "type": "boolean"
+          },
+          "x": {
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "automatica",
+          "x",
+          "y"
+        ],
+        "title": "PosicaoModel",
         "type": "object"
       },
       "PostDoShortResponse": {
@@ -12947,6 +13294,190 @@
           }
         },
         "summary": "Editar Canal",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/{canal_id}/palco": {
+      "get": {
+        "operationId": "obter_palco_do_canal_api_channels__canal_id__palco_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "canal_id",
+            "required": true,
+            "schema": {
+              "title": "Canal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PalcoComponentesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Obter Palco Do Canal",
+        "tags": [
+          "Canais"
+        ]
+      },
+      "put": {
+        "operationId": "gravar_palco_do_canal_api_channels__canal_id__palco_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "canal_id",
+            "required": true,
+            "schema": {
+              "title": "Canal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PalcoComponentesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PalcoComponentesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gravar Palco Do Canal",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/{canal_id}/palco/imagem": {
+      "delete": {
+        "operationId": "remover_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "canal_id",
+            "required": true,
+            "schema": {
+              "title": "Canal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PalcoComponentesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remover Imagem Do Cabecalho",
+        "tags": [
+          "Canais"
+        ]
+      },
+      "post": {
+        "operationId": "enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "canal_id",
+            "required": true,
+            "schema": {
+              "title": "Canal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_enviar_imagem_do_cabecalho_api_channels__canal_id__palco_imagem_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PalcoComponentesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enviar Imagem Do Cabecalho",
         "tags": [
           "Canais"
         ]

@@ -677,7 +677,7 @@ def test_textura_invalida_no_palco_cai_na_padrao_do_canal():
     fundo inexistente — a divergencia silenciosa que a D-549 ja custou uma vez.
     """
     from app.domain.corte.youtube_layout import FUNDO_PADRAO
-    from app.services.render.render_short import _textura
+    from app.services.render.palco_do_short import textura_do_short as _textura
 
     assert _textura({"fundo_editorial": "verdeProfundo"}) == FUNDO_PADRAO
     assert _textura({"fundo_editorial": ""}) == FUNDO_PADRAO

@@ -1,14 +1,20 @@
 // D-154: camada de I/O (react-query) do gerenciador de canais. Mantém a página
 // "burra" — o componente só consome estes hooks, sem tocar em fetch direto.
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
+import { paraComponentesDoPalco } from './palcoDoCanal';
 import {
   channelsApi,
+  palcoApi,
   themesApi,
   youtubeAuthApi,
   type CriarCanalRequest,
   type IdentidadeCanal,
   type ListaCanaisResponse,
   type ListaTemasResponse,
+  type PalcoComponentes,
+  type PalcoComponentesEdicao,
   type TemaSelecionado,
   type YoutubeAuthStatus,
 } from '@/features/channels/api/canais';
@@ -113,5 +119,57 @@ export function useDesconectarYoutube() {
   return useMutation({
     mutationFn: () => youtubeAuthApi.desconectar(),
     onSuccess: () => qc.invalidateQueries({ queryKey: YOUTUBE_AUTH_KEY }),
+  });
+}
+
+// ─── Componentes do palco por canal (D-911) ────────────────────────────
+
+const palcoDoCanalKey = (id: string) => ['palco-canal', id] as const;
+
+export function usePalcoDoCanal(canalId: string | undefined) {
+  return useQuery<PalcoComponentes>({
+    queryKey: palcoDoCanalKey(canalId ?? ''),
+    queryFn: () => palcoApi.obter(canalId ?? ''),
+    enabled: Boolean(canalId),
+    staleTime: 5_000,
+  });
+}
+
+/** Os componentes do palco do canal ATIVO — o que as prévias desenham. */
+export function usePalcoDoCanalAtivo() {
+  const canais = useCanais();
+  const ativo = canais.data?.canais.find((c) => c.ativo);
+  return usePalcoDoCanal(ativo?.id);
+}
+
+/** O mesmo, já resolvido para o que o palco desenha (estável entre renders). */
+export function usePalcoDoCanalAtivoResolvido(): ComponentesDoPalco {
+  const { data } = usePalcoDoCanalAtivo();
+  return useMemo(() => paraComponentesDoPalco(data), [data]);
+}
+
+export function useGravarPalco() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ canalId, edicao }: { canalId: string; edicao: PalcoComponentesEdicao }) =>
+      palcoApi.gravar(canalId, edicao),
+    onSuccess: (data) => qc.invalidateQueries({ queryKey: palcoDoCanalKey(data.canal_id) }),
+  });
+}
+
+export function useEnviarImagemDoPalco() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ canalId, arquivo }: { canalId: string; arquivo: File }) =>
+      palcoApi.enviarImagem(canalId, arquivo),
+    onSuccess: (data) => qc.invalidateQueries({ queryKey: palcoDoCanalKey(data.canal_id) }),
+  });
+}
+
+export function useRemoverImagemDoPalco() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (canalId: string) => palcoApi.removerImagem(canalId),
+    onSuccess: (data) => qc.invalidateQueries({ queryKey: palcoDoCanalKey(data.canal_id) }),
   });
 }

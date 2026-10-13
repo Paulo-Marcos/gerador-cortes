@@ -13,8 +13,9 @@ import { AppSettingsControls } from '@/features/settings';
 import { CapaChatgptSection } from '@/features/capa-chatgpt/CapaChatgptSection';
 import { EstiloDaCapaSection } from '@/features/capa-chatgpt/EstiloDaCapaSection';
 import { ChannelCard } from './ChannelCard';
-import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
+import { PalcoComponentesSection } from './PalcoComponentesSection';
+import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
 import { EscalonamentoSection } from './EscalonamentoSection';
@@ -376,6 +377,7 @@ function AparenciaECapasDoCanal() {
   return (
     <>
       <ChannelThemeSection />
+      <PalcoComponentesSection />
       <CapaChatgptSection />
       <EstiloDaCapaSection />
     </>

@@ -13,16 +13,193 @@ from __future__ import annotations
 
 from typing import Literal
 
+from app.domain.canal import palco_componentes as palco_dominio
 from app.domain.canal import theme_library
 from app.domain.canal.identidade import Canal, IdCanalInvalido
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
-from app.services import navegador_do_robo, studio_youtube
+from app.services import navegador_do_robo, palco_componentes, studio_youtube
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter()
+
+
+# --------------------------------------------------------------------------- #
+# Componentes do palco por canal (D-911)
+# --------------------------------------------------------------------------- #
+# Estilo do palco, cabeçalho (imagem + nome + @) e placa: o que o operador liga,
+# desliga, renomeia e ilustra na tela de Canais. Os arquivos (imagem subida,
+# cache do palco) são sempre os do canal ATIVO — é dele que a tela edita.
+
+
+class PosicaoModel(BaseModel):
+    """Onde o componente senta, em px do quadro; `automatica` = a regra do estilo."""
+
+    automatica: bool
+    x: int
+    y: int
+
+
+class CabecalhoRequest(BaseModel):
+    ativo: bool | None = None
+    nome: str | None = None
+    handle: str | None = None
+    escala: float | None = None
+    posicao: PosicaoModel | None = None
+    posicao_short: PosicaoModel | None = None
+
+
+class PlacaRequest(BaseModel):
+    ativo: bool | None = None
+    escala: float | None = None
+    posicao: PosicaoModel | None = None
+
+
+class PalcoComponentesRequest(BaseModel):
+    """Edição parcial: campo ausente não muda."""
+
+    estilo: Literal["atual", "limpo"] | None = None
+    fundo: Literal["reticula-aurora", "reticula", "aurora", "linho", "chapado"] | None = None
+    contorno_short: int | None = None
+    cabecalho: CabecalhoRequest | None = None
+    placa: PlacaRequest | None = None
+
+
+class CabecalhoResponse(BaseModel):
+    ativo: bool
+    nome: str
+    handle: str
+    imagem: str
+    # Os textos como saem no palco (vazio herda da identidade do canal).
+    escala: float
+    posicao: PosicaoModel
+    posicao_short: PosicaoModel
+    nome_efetivo: str
+    handle_efetivo: str
+    # URL da imagem que a tela mostra ao lado do @; vazia sem imagem nenhuma.
+    imagem_url: str
+
+
+class PlacaResponse(BaseModel):
+    ativo: bool
+    escala: float
+    posicao: PosicaoModel
+
+
+class PalcoComponentesResponse(BaseModel):
+    canal_id: str
+    estilo: str
+    estilos: list[str]
+    fundo: str
+    fundos: list[str]
+    contorno_short: int
+    cabecalho: CabecalhoResponse
+    placa: PlacaResponse
+
+
+def _palco_para_response(
+    canal_id: str, componentes: palco_dominio.PalcoComponentes
+) -> PalcoComponentesResponse:
+    nome, handle = _identidade_para_o_palco(canal_id)
+    props = palco_dominio.props_para_renderer(
+        componentes, nome_do_canal=nome, handle_do_canal=handle, imagem_servida=""
+    )
+    imagem = palco_componentes.imagem_para_servir(componentes)
+    imagem_url = (
+        f"/api/channels/{canal_id}/palco/imagem?v={int(imagem.stat().st_mtime)}" if imagem else ""
+    )
+    return PalcoComponentesResponse(
+        canal_id=canal_id,
+        estilo=componentes.estilo,
+        estilos=list(palco_dominio.ESTILOS),
+        fundo=componentes.fundo,
+        fundos=list(palco_dominio.FUNDOS),
+        contorno_short=componentes.contorno_short,
+        cabecalho=CabecalhoResponse(
+            ativo=componentes.cabecalho.ativo,
+            nome=componentes.cabecalho.nome,
+            handle=componentes.cabecalho.handle,
+            imagem=componentes.cabecalho.imagem,
+            escala=componentes.cabecalho.escala,
+            posicao=PosicaoModel(**props["cabecalho"]["posicao"]),
+            posicao_short=PosicaoModel(**props["cabecalho"]["posicao_short"]),
+            nome_efetivo=props["cabecalho"]["nome"],
+            handle_efetivo=props["cabecalho"]["handle"],
+            imagem_url=imagem_url,
+        ),
+        placa=PlacaResponse(
+            ativo=componentes.placa.ativo,
+            escala=componentes.placa.escala,
+            posicao=PosicaoModel(**props["placa"]["posicao"]),
+        ),
+    )
+
+
+def _identidade_para_o_palco(canal_id: str) -> tuple[str, str]:
+    """O canal do palco, que tem de ser o ATIVO.
+
+    O banco de settings e a pasta da imagem são os do canal ativo; servir outro
+    id leria padrões falsos e gravaria a imagem por cima do cabeçalho do ativo.
+    """
+    canal = next((c for c in channels_service.listar_canais() if c.id == canal_id), None)
+    if canal is None:
+        raise HTTPException(status_code=404, detail=f"Canal '{canal_id}' nao encontrado")
+    if not canal.ativo:
+        raise HTTPException(
+            status_code=409, detail=f"O palco se edita no canal ativo; ative '{canal_id}' antes."
+        )
+    return canal.nome, canal.handle
+
+
+@router.get("/{canal_id}/palco", response_model=PalcoComponentesResponse)
+async def obter_palco_do_canal(canal_id: str):
+    _identidade_para_o_palco(canal_id)
+    return _palco_para_response(canal_id, palco_componentes.ler(channel_id=canal_id))
+
+
+@router.put("/{canal_id}/palco", response_model=PalcoComponentesResponse)
+async def gravar_palco_do_canal(canal_id: str, body: PalcoComponentesRequest):
+    _identidade_para_o_palco(canal_id)
+    componentes = palco_componentes.gravar(body.model_dump(exclude_none=True), channel_id=canal_id)
+    return _palco_para_response(canal_id, componentes)
+
+
+@router.post("/{canal_id}/palco/imagem", response_model=PalcoComponentesResponse)
+async def enviar_imagem_do_cabecalho(canal_id: str, arquivo: UploadFile = File(...)):
+    _identidade_para_o_palco(canal_id)
+    conteudo = await arquivo.read()
+    componentes = palco_componentes.salvar_imagem(
+        conteudo, arquivo.content_type or "", channel_id=canal_id
+    )
+    return _palco_para_response(canal_id, componentes)
+
+
+@router.delete("/{canal_id}/palco/imagem", response_model=PalcoComponentesResponse)
+async def remover_imagem_do_cabecalho(canal_id: str):
+    _identidade_para_o_palco(canal_id)
+    componentes = palco_componentes.remover_imagem(channel_id=canal_id)
+    return _palco_para_response(canal_id, componentes)
+
+
+# Fora do contrato (`include_in_schema=False`): é um arquivo, não um JSON, e a
+# tela monta a URL pela `imagem_url` da resposta tipada acima.
+@router.get("/{canal_id}/palco/imagem", response_class=FileResponse, include_in_schema=False)
+async def servir_imagem_do_cabecalho(canal_id: str):
+    _identidade_para_o_palco(canal_id)
+    """A imagem ao lado do @: a subida pelo operador ou a pose padrão do mascote."""
+    imagem = palco_componentes.imagem_para_servir(palco_componentes.ler(channel_id=canal_id))
+    if imagem is None:
+        raise HTTPException(status_code=404, detail="O canal nao tem imagem para o cabecalho")
+    tipos = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+    }
+    return FileResponse(str(imagem), media_type=tipos.get(imagem.suffix.lower(), "image/png"))
 
 
 # --------------------------------------------------------------------------- #

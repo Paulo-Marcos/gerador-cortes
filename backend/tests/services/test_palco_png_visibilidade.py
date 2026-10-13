@@ -232,3 +232,22 @@ async def test_executar_grade_bloqueia_antes_do_ffmpeg_quando_palco_falha(tmp_pa
 
     assert jobs == []  # FFmpeg nunca rodou — falhou alto ANTES do placeholder
     assert dict(event_log.eventos)["palco_png_falhou"]["bloqueante"] is True
+
+
+# ---------------------------------------------------------------------------
+# D-911: os componentes do canal entram nos props do PNG, fora da chave
+# ---------------------------------------------------------------------------
+
+
+def test_props_do_png_levam_os_componentes_do_canal(monkeypatch):
+    from app.services import palco_componentes
+
+    monkeypatch.setattr(
+        palco_componentes,
+        "props_para_palco",
+        lambda: {"estilo": "limpo", "cabecalho": {"ativo": True}, "placa": {"ativo": False}},
+    )
+    props = yp._com_componentes_do_canal({"fundo": "hud-forte", "telas": 2})
+    assert props["fundo"] == "hud-forte"
+    assert props["componentes"]["estilo"] == "limpo"
+    assert props["componentes"]["placa"] == {"ativo": False}
