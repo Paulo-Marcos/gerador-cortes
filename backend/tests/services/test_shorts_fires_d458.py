@@ -390,3 +390,25 @@ async def test_corte_sem_short_pronto_nao_acende_rede_nenhuma(ambiente):
         "instagram_reels",
     ]
     assert not any(r["completa"] for r in redes.values())
+
+
+@pytest.mark.asyncio
+async def test_short_publicado_e_depois_rejeitado_nao_conta_para_a_rede(ambiente):
+    """A curadoria pode tirar um short do estado renderizado depois que ele subiu.
+
+    Ele sai dos prontos, e a publicacao dele tem de sair junto: senao conta a
+    favor e acende a rede com outro short pronto ainda fora dela.
+    """
+    factory, raiz = ambiente
+    await _semear(factory, corte_id="c1", fire=True, clip_path=_criar_bruto(raiz, "c1"))
+    async with factory() as db:
+        db.add(Short(id="s1", corte_id="c1", numero=1, status=StatusShort.RENDERIZADO))
+        db.add(Short(id="s2", corte_id="c1", numero=2, status=StatusShort.RENDERIZADO))
+        db.add(Short(id="s3", corte_id="c1", numero=3, status=StatusShort.REJEITADO))
+        db.add(_publicacao("s1", "tiktok"))
+        db.add(_publicacao("s3", "tiktok"))
+        await db.commit()
+
+    redes = _redes((await servico.listar_fires_com_bruto())[0])
+
+    assert redes["tiktok"] == {"plataforma": "tiktok", "publicados": 1, "completa": False}

@@ -9,8 +9,9 @@
 // O intervalo é condicional de propósito: enquanto o lote corre, dois segundos;
 // depois que ele termina, nada. Uma tela aberta a noite inteira não tem por que
 // perguntar ao backend de dois em dois segundos sobre um lote que acabou.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { shortsApi, type OpcoesDoLote } from './shortsApi';
+import { FIRES_KEY } from './useFires';
 import { PRONTOS_KEY } from './useShortsProntos';
 
 export const LOTE_KEY = ['shorts', 'lote'] as const;
@@ -83,16 +84,22 @@ export function useConfirmarPublicacao(corteId?: string) {
       plataforma: string;
       url?: string;
     }) => shortsApi.confirmarPublicacao(alvoId, plataforma, url ?? ''),
-    onSuccess: () => {
-      cliente.invalidateQueries({ queryKey: LOTE_KEY });
-      // D-611: sem corte (a central mistura vários), refresca o histórico de
-      // todos — e a central sempre, porque um "publiquei" pode tirar o short dela.
-      cliente.invalidateQueries({
-        queryKey: corteId ? publicacoesKey(corteId) : ['shorts', 'publicacoes'],
-      });
-      cliente.invalidateQueries({ queryKey: PRONTOS_KEY });
-    },
+    onSuccess: () => atualizarDepoisDoPubliquei(cliente, corteId),
   });
+}
+
+/** Tudo o que mostra onde o vídeo está, refrescado depois de um "publiquei". */
+export function atualizarDepoisDoPubliquei(cliente: QueryClient, corteId?: string) {
+  cliente.invalidateQueries({ queryKey: LOTE_KEY });
+  // D-611: sem corte (a central mistura vários), refresca o histórico de
+  // todos — e a central sempre, porque um "publiquei" pode tirar o short dela.
+  cliente.invalidateQueries({
+    queryKey: corteId ? publicacoesKey(corteId) : ['shorts', 'publicacoes'],
+  });
+  cliente.invalidateQueries({ queryKey: PRONTOS_KEY });
+  // D-905: o chip da rede, no cartão do Fire, acende com este clique. Sem isto a
+  // lista seguia no cache por até 30 s — justo quando se decide finalizar.
+  cliente.invalidateQueries({ queryKey: FIRES_KEY });
 }
 
 /** O que já foi publicado deste corte — a tela de seleção nasce sabendo. */
