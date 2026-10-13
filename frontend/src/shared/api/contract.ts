@@ -1517,6 +1517,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/editorial-skills/escalonamento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ver Escalonamento */
+        get: operations["ver_escalonamento_api_editorial_skills_escalonamento_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/editorial-skills/escalonamento/destinos/{destino}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Definir Destino */
+        put: operations["definir_destino_api_editorial_skills_escalonamento_destinos__destino__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/editorial-skills/escalonamento/destinos/{destino}/sugestao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sugerir Blocos
+         * @description Os mesmos N blocos do destino, realinhados à janela forte do público.
+         */
+        get: operations["sugerir_blocos_api_editorial_skills_escalonamento_destinos__destino__sugestao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/editorial-skills/escalonamento/publico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Definir Publico */
+        put: operations["definir_publico_api_editorial_skills_escalonamento_publico_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/editorial-skills/escalonamento/reset/{chave}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resetar */
+        post: operations["resetar_api_editorial_skills_escalonamento_reset__chave__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/editorial-skills/modelos-gemini": {
         parameters: {
             query?: never;
@@ -3792,6 +3880,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shorts/lote/agenda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prever Agenda
+         * @description A data que a janela do canal propõe para cada item, antes de publicar (D-908).
+         */
+        post: operations["prever_agenda_api_shorts_lote_agenda_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shorts/lote/cancelar": {
         parameters: {
             query?: never;
@@ -4611,6 +4719,11 @@ export interface components {
             corte_id: string;
             /** Scheduled At */
             scheduled_at: string | null;
+        };
+        /** AgendaPrevistaResponse */
+        AgendaPrevistaResponse: {
+            /** Itens */
+            itens: components["schemas"]["LinhaDaAgenda"][];
         };
         /**
          * AmbienteResponse
@@ -5710,6 +5823,17 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** DestinoEscalonadoResponse */
+        DestinoEscalonadoResponse: {
+            /** Destino */
+            destino: string;
+            padrao: components["schemas"]["ParametrosDoDestinoModel"];
+            parametros: components["schemas"]["ParametrosDoDestinoModel"];
+            /** Personalizado */
+            personalizado: boolean;
+            /** Rotulo */
+            rotulo: string;
+        };
         /**
          * DesvioDoCorte
          * @description Um trecho a remover. A `categoria` sai sempre do vocabulário fechado:
@@ -5886,6 +6010,19 @@ export interface components {
             quadros_com_rosto: number;
             short: components["schemas"]["ShortResponse"];
         };
+        /** EscalonamentoResponse */
+        EscalonamentoResponse: {
+            /** Destinos */
+            destinos: components["schemas"]["DestinoEscalonadoResponse"][];
+            /** Dias Da Semana */
+            dias_da_semana: string[];
+            /** Faixas */
+            faixas: components["schemas"]["FaixaDoPublicoModel"][];
+            /** Faixas Padrao */
+            faixas_padrao: components["schemas"]["FaixaDoPublicoModel"][];
+            /** Publico Personalizado */
+            publico_personalizado: boolean;
+        };
         /**
          * EscolherPresetRequest
          * @description `""` volta ao automático (deduzir do layout do corte, ou nada).
@@ -5979,6 +6116,20 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+        };
+        /**
+         * FaixaDoPublicoModel
+         * @description Uma faixa de horas de um dia da semana (0 = segunda) e a força do público.
+         */
+        FaixaDoPublicoModel: {
+            /** Dia */
+            dia: number;
+            /** Fim */
+            fim: number;
+            /** Inicio */
+            inicio: number;
+            /** Intensidade */
+            intensidade: string;
         };
         /** FaixaSeguraCapa */
         FaixaSeguraCapa: {
@@ -6345,6 +6496,21 @@ export interface components {
              */
             indicado: boolean;
         };
+        /**
+         * ItemDaAgendaRequest
+         * @description A data de UM (alvo, plataforma), como a tela a ajustou (D-908).
+         */
+        ItemDaAgendaRequest: {
+            /**
+             * Agendar Para
+             * @default
+             */
+            agendar_para: string;
+            /** Alvo */
+            alvo: string;
+            /** Plataforma */
+            plataforma: string;
+        };
         /** ItemDoAmbiente */
         ItemDoAmbiente: {
             /** Como Resolver */
@@ -6365,6 +6531,8 @@ export interface components {
         };
         /** ItemDoLote */
         ItemDoLote: {
+            /** Agendado Para */
+            agendado_para: string;
             /** Alvo Id */
             alvo_id: string;
             /** Alvo Tipo */
@@ -6621,6 +6789,24 @@ export interface components {
             removidos: string[];
             /** Retido Mb */
             retido_mb?: number | null;
+        };
+        /**
+         * LinhaDaAgenda
+         * @description Um item do lote e a data que a janela do canal propõe para ele (D-908).
+         */
+        LinhaDaAgenda: {
+            /** Agendar Para */
+            agendar_para: string;
+            /** Alvo Id */
+            alvo_id: string;
+            /** Alvo Tipo */
+            alvo_tipo: string;
+            /** Intensidade */
+            intensidade: string;
+            /** Motivo */
+            motivo: string;
+            /** Plataforma */
+            plataforma: string;
         };
         /** LinhaDaTranscricao */
         LinhaDaTranscricao: {
@@ -6901,6 +7087,11 @@ export interface components {
          *     como a seleção acontece na prática ("estes cinco, nestas duas redes").
          */
         LoteRequest: {
+            /**
+             * Agenda
+             * @default []
+             */
+            agenda: components["schemas"]["ItemDaAgendaRequest"][];
             /**
              * Agendar Para
              * @default
@@ -7230,6 +7421,22 @@ export interface components {
              */
             secundaria: string;
         };
+        /**
+         * ParametrosDoDestinoModel
+         * @description Como um destino distribui os itens ao longo do dia.
+         */
+        ParametrosDoDestinoModel: {
+            /** Blocos */
+            blocos: string[];
+            /** Dias Ativos */
+            dias_ativos: number[];
+            /** Intervalo Minimo Min */
+            intervalo_minimo_min: number;
+            /** Itens Por Bloco */
+            itens_por_bloco: number;
+            /** Teto Por Dia */
+            teto_por_dia: number;
+        };
         /** ParteDoPrompt */
         ParteDoPrompt: {
             /** Parte */
@@ -7420,6 +7627,13 @@ export interface components {
             id: string;
             /** Nome */
             nome: string;
+        };
+        /** PreverAgendaRequest */
+        PreverAgendaRequest: {
+            /** Alvos */
+            alvos: string[];
+            /** Plataformas */
+            plataformas: string[];
         };
         /** ProcessarMultiversionRequest */
         ProcessarMultiversionRequest: {
@@ -7744,6 +7958,11 @@ export interface components {
             plataforma: string;
             /** Publicados */
             publicados: number;
+        };
+        /** ReferenciaDoPublicoRequest */
+        ReferenciaDoPublicoRequest: {
+            /** Faixas */
+            faixas: components["schemas"]["FaixaDoPublicoModel"][];
         };
         /** RegistrarAvaliacaoRequest */
         RegistrarAvaliacaoRequest: {
@@ -8516,6 +8735,11 @@ export interface components {
          * @enum {string}
          */
         StatusShort: "sugerido" | "aprovado" | "rejeitado" | "renderizado";
+        /** SugestaoDeBlocosResponse */
+        SugestaoDeBlocosResponse: {
+            /** Blocos */
+            blocos: string[];
+        };
         /**
          * SugestoesDeShortsResponse
          * @description Os candidatos que a IA propôs e, em `descartes`, por que recusou o resto.
@@ -11673,6 +11897,156 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListaSkillsResponse"];
+                };
+            };
+        };
+    };
+    ver_escalonamento_api_editorial_skills_escalonamento_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EscalonamentoResponse"];
+                };
+            };
+        };
+    };
+    definir_destino_api_editorial_skills_escalonamento_destinos__destino__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                destino: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParametrosDoDestinoModel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EscalonamentoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sugerir_blocos_api_editorial_skills_escalonamento_destinos__destino__sugestao_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                destino: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SugestaoDeBlocosResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    definir_publico_api_editorial_skills_escalonamento_publico_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferenciaDoPublicoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EscalonamentoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resetar_api_editorial_skills_escalonamento_reset__chave__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chave: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EscalonamentoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -15493,6 +15867,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoteDePublicacao"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prever_agenda_api_shorts_lote_agenda_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreverAgendaRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgendaPrevistaResponse"];
                 };
             };
             /** @description Validation Error */

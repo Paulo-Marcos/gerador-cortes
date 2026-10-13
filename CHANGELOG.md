@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Spread a batch of shorts across the channel's audience window.** The
+  batch modal gains a third "when": besides "now" and "one date for all",
+  "distribute across the channel window" places every item in the publishing
+  blocks of each network, fills a day and moves to the next, starting after the
+  last item already scheduled on that network. The computed agenda shows up in
+  the modal before you click — short, network, day and time, with how strong
+  the audience is at that hour — and any line can be adjusted on its own
+  without recomputing the rest. Items that fall outside a platform's scheduling
+  horizon (TikTok: 10 days) stay without a date and are skipped with the
+  reason. Channels → "Horários de publicação" holds the audience reference
+  (a 7 × 24 grid you copy from Studio's "When your viewers are on YouTube")
+  and, per network, the blocks, items per block, daily cap, minimum gap and
+  active days, each with a default and a reset. Instagram Reels stays out: the
+  web composer does not schedule — not even emulating a phone, where it does
+  not accept video (measured 2026-10-13) — so it publishes on the spot (D-908).
 - **Choose where the cards sit on the shared stage.** The positioning modal
   gains a "Cards" rectangle next to the crops and slots. It starts on
   "Automática" (the rule as before: left of the big screen, above the small

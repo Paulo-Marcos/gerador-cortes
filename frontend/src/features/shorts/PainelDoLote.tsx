@@ -83,6 +83,12 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
           </a>
         )}
       </div>
+      {item.agendado_para && (
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--wb-text-dim)]">
+          <Icon name="clock" />
+          {item.agendado_para}
+        </p>
+      )}
       {item.detalhe && (
         <p className="mt-0.5 truncate text-[11px] text-[var(--wb-text-mute)]" title={item.detalhe}>
           {item.detalhe}

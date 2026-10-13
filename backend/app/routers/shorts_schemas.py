@@ -7,7 +7,6 @@ como objeto (o contrato da cena é da D-725).
 
 from typing import Any, Literal
 
-from app.domain.publicacao.ritmo_publicacao import EstadoItem
 from app.models import StatusShort
 from app.routers.cortes_schemas import PassoDoBruto
 
@@ -462,51 +461,6 @@ class ResultadoDaPublicacao(RespostaComCamposOpcionais):
 
 class TiktokConfirmadoResponse(RespostaApi):
     tiktok_publicado_em: str
-
-
-class ItemDoLote(RespostaApi):
-    alvo_tipo: str
-    alvo_id: str
-    plataforma: str
-    plataforma_rotulo: str
-    rotulo: str
-    estado: EstadoItem
-    detalhe: str
-    url: str
-
-
-class RaiaDoLote(RespostaApi):
-    plataforma: str
-    rotulo: str
-    exige_humano: bool
-    aviso: str
-    itens: list[ItemDoLote]
-
-
-class LoteDePublicacao(RespostaApi):
-    """A publicação em lote, rede a rede (D-617)."""
-
-    lote_id: str
-    criado_em: str
-    cancelado: bool
-    terminou: bool
-    tiktok_assistido: bool
-    instagram_assistido: bool
-    publicar_sozinho: bool
-    raias: list[RaiaDoLote]
-
-
-class LoteAtualResponse(RespostaApi):
-    lote: LoteDePublicacao | None
-
-
-class LoteCanceladoResponse(RespostaApi):
-    cancelado: bool
-    lote: LoteDePublicacao | None
-
-
-class LoteConfirmadoResponse(RespostaApi):
-    confirmado: bool
 
 
 class PublicacaoRegistrada(RespostaApi):

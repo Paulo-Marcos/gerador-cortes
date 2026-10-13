@@ -20,12 +20,15 @@
 // saber. Marcar sozinho seria inventar um fato.
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import { motivoDoErro } from './shortsApi';
 import type { PublicacaoRegistrada } from './shortsApi';
 import { PainelDoLote } from './PainelDoLote';
+import { paraEnvio, problemasDasLinhas, resumoDaAgenda, type ModoDeQuando } from './agendaDoLote';
+import { Caixa, Interruptor, PLATAFORMAS, rotuloCurto, Secao } from './pecasDoLote';
+import { QuandoDoLote } from './QuandoDoLote';
+import { useAgendaDoLote } from './useAgendaDoLote';
 import {
   alternar,
   contarEnvios,
@@ -41,12 +44,7 @@ import {
   useLoteAtual,
   usePublicacoesDoCorte,
 } from './useLotePublicacao';
-import {
-  notasDeAgendamento,
-  PASSO_EM_SEGUNDOS,
-  problemaDoHorario,
-  sugestaoDeHorario,
-} from './agendamentoDoLote';
+import { notasDeAgendamento, problemaDoHorario, sugestaoDeHorario } from './agendamentoDoLote';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import { pedirGavetaDaFila } from '@/upgrade/useGavetaDaFila';
 
@@ -85,15 +83,6 @@ interface Props {
   plataformasIniciais?: string[];
 }
 
-// As três que recebem um short VERTICAL. O TikTok horizontal existe no backend
-// (D-470), mas ele é do MP4 16:9 do corte — não deste lote, e oferecê-lo aqui
-// faria o operador escolher um destino para um arquivo que não é o desta tela.
-const PLATAFORMAS = [
-  { id: 'youtube_shorts', rotulo: 'YouTube Shorts', nota: 'sobe sozinho, como unlisted' },
-  { id: 'tiktok', rotulo: 'TikTok', nota: 'pacote pronto; o upload é seu' },
-  { id: 'instagram_reels', rotulo: 'Instagram Reels', nota: 'pacote pronto; sobe do celular' },
-] as const;
-
 export function PublicarEmLoteModal({
   open,
   onClose,
@@ -112,9 +101,10 @@ export function PublicarEmLoteModal({
   const [tiktokAssistido, setTiktokAssistido] = useState(false);
   const [instagramAssistido, setInstagramAssistido] = useState(false);
   const [publicarSozinho, setPublicarSozinho] = useState(false);
-  // D-580: vazio é "agora", que continua sendo o padrão. A data só nasce quando
-  // o operador liga o agendamento — e nasce já dentro da grade de 5 minutos que
-  // o TikTok aceita, para ele não descobrir a regra levando erro.
+  // D-580/D-908: "agora" continua sendo o padrão. A data única só nasce quando
+  // o operador a escolhe — já na grade de 5 minutos do TikTok —, e a agenda
+  // distribuída só é calculada quando ele escolhe distribuir.
+  const [modo, setModo] = useState<ModoDeQuando>('agora');
   const [agendarPara, setAgendarPara] = useState('');
   // D-590: nasce desligado pelo mesmo motivo do "publicar sozinho" — subir de
   // novo o que já está no ar cria um segundo vídeo, e isso tem de ser pedido.
@@ -145,13 +135,35 @@ export function PublicarEmLoteModal({
   // para a pergunta fazer sentido.
   const temRobo = (temTiktok && tiktokAssistido) || (temInstagram && instagramAssistido);
   const notas = notasDeAgendamento(plataformas, { tiktokAssistido, instagramAssistido });
-  const [agora, acertarRelogio] = useAgora(open && Boolean(agendarPara));
+  const [agora, acertarRelogio] = useAgora(open && modo !== 'agora');
   // D-897: disparado, o lote se acompanha na gaveta da fila, que sobrevive à troca de projeto.
   const acompanharNaFila = () => {
     onClose();
     pedirGavetaDaFila();
   };
-  const problemaDoAgendamento = problemaDoHorario(agendarPara, plataformas, agora);
+  const problemaDoAgendamento =
+    modo === 'uma_data' ? problemaDoHorario(agendarPara, plataformas, agora) : null;
+  // D-908: a agenda distribuída, calculada antes do clique e ajustável linha a linha.
+  const alvos = useMemo(() => montarAlvos(selecionados), [selecionados]);
+  const agenda = useAgendaDoLote(alvos, plataformas, open && modo === 'distribuir');
+  const problemasDaAgenda = useMemo(
+    () => problemasDasLinhas(agenda.linhas, agora),
+    [agenda.linhas, agora],
+  );
+  const resumo = resumoDaAgenda(agenda.linhas);
+  // Sem linha com data (ou no ato) não há o que publicar; com linha com problema, não ainda.
+  const agendaPronta =
+    modo !== 'distribuir' ||
+    (!agenda.carregando && problemasDaAgenda.size === 0 && resumo.comData + resumo.noAto > 0);
+  const trocarModo = (novo: ModoDeQuando) => {
+    acertarRelogio();
+    setModo(novo);
+    setAgendarPara(novo === 'uma_data' ? sugestaoDeHorario() : '');
+  };
+  const rotuloDoAlvo = (alvoId: string) => {
+    const short = candidatos.find((c) => c.id === alvoId);
+    return short ? short.titulo || `Trecho ${short.numero}` : alvoId.slice(0, 8);
+  };
 
   return (
     <Modal
@@ -170,11 +182,13 @@ export function PublicarEmLoteModal({
             </Button>
             <Button
               size="sm"
-              disabled={envios === 0 || criar.isPending || Boolean(problemaDoAgendamento)}
+              disabled={
+                envios === 0 || criar.isPending || Boolean(problemaDoAgendamento) || !agendaPronta
+              }
               title={problemaDoAgendamento ?? undefined}
               onClick={() =>
                 criar.mutate({
-                  alvos: montarAlvos(selecionados),
+                  alvos,
                   plataformas,
                   opcoes: {
                     tiktokAssistido: temTiktok && tiktokAssistido,
@@ -182,8 +196,9 @@ export function PublicarEmLoteModal({
                     // Apertar o botão sozinho só existe DENTRO do assistido: sem
                     // robô no volante não há botão nenhum para apertar.
                     publicarSozinho: temRobo && publicarSozinho,
-                    agendarPara,
+                    agendarPara: modo === 'uma_data' ? agendarPara : '',
                     republicar: vaiRepublicar,
+                    agenda: modo === 'distribuir' ? paraEnvio(agenda.linhas) : undefined,
                   },
                 }, { onSuccess: acompanharNaFila })
               }
@@ -252,66 +267,27 @@ export function PublicarEmLoteModal({
               )}
             </Secao>
 
-            <Secao titulo="Quando">
-              <Interruptor
-                ligado={Boolean(agendarPara)}
-                onChange={(ligado) => {
-                  acertarRelogio();
-                  setAgendarPara(ligado ? sugestaoDeHorario() : '');
-                }}
-                titulo="Marcar dia e hora"
-                nota="desligado, cada destino publica assim que ficar pronto"
-              />
-              {Boolean(agendarPara) && (
-                <div className="space-y-2 rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
-                  <Input
-                    type="datetime-local"
-                    value={agendarPara}
-                    /* `step` põe o seletor do navegador na mesma grade de 5 em 5
-                       do TikTok. Não é validação — o backend recusa de todo
-                       jeito —, é não deixar o operador escolher 14:03 para
-                       depois ouvir que 14:03 não existe. */
-                    step={PASSO_EM_SEGUNDOS}
-                    onChange={(e) => {
-                      acertarRelogio();
-                      setAgendarPara(e.target.value);
-                    }}
-                    className="w-[220px]"
-                  />
-                  {problemaDoAgendamento && (
-                    <p
-                      role="alert"
-                      className="flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]"
-                    >
-                      <Icon name="triangle-alert" className="mt-px shrink-0" />
-                      {problemaDoAgendamento}
-                    </p>
-                  )}
-                  <ul className="space-y-1">
-                    {notas.map((nota) => (
-                      <li
-                        key={nota.plataforma}
-                        className="flex gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]"
-                      >
-                        <span
-                          className={
-                            nota.como === 'sozinho'
-                              ? 'text-[var(--wb-accent)]'
-                              : 'text-[var(--wb-text-mute)]'
-                          }
-                        >
-                          {nota.como === 'sozinho' ? '●' : '○'}
-                        </span>
-                        <span>
-                          <b className="font-medium text-[var(--wb-text)]">{nota.plataforma}</b> —{' '}
-                          {nota.texto}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </Secao>
+            <QuandoDoLote
+              modo={modo}
+              onModo={trocarModo}
+              agendarPara={agendarPara}
+              onAgendarPara={(valor) => {
+                acertarRelogio();
+                setAgendarPara(valor);
+              }}
+              problemaDoAgendamento={problemaDoAgendamento}
+              notas={notas}
+              linhas={agenda.linhas}
+              carregandoAgenda={agenda.carregando}
+              erroDaAgenda={agenda.erro}
+              problemasDasLinhas={problemasDaAgenda}
+              onAjustarLinha={(chave, valor) => {
+                acertarRelogio();
+                agenda.ajustar(chave, valor);
+              }}
+              onRecalcular={agenda.recalcular}
+              rotuloDoAlvo={rotuloDoAlvo}
+            />
 
             <Secao
               titulo="Quais trechos"
@@ -367,107 +343,6 @@ export function PublicarEmLoteModal({
         )}
       </div>
     </Modal>
-  );
-}
-
-function Secao({
-  titulo,
-  acao,
-  children,
-}: {
-  titulo: string;
-  acao?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-2">
-      <div className="flex items-center gap-2">
-        <h3 className="text-[12px] font-bold uppercase tracking-wide text-[var(--wb-text-mute)]">
-          {titulo}
-        </h3>
-        <div className="flex-1" />
-        {acao}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/**
- * Um interruptor de decisão, com o que ele muda escrito embaixo.
- *
- * A nota não é enfeite: "o robô sobe pelo navegador" e "o robô publica" parecem a
- * mesma frase e são responsabilidades opostas. Quem lê às onze da noite precisa
- * da consequência à vista, não do nome da opção.
- */
-function Interruptor({
-  ligado,
-  onChange,
-  titulo,
-  nota,
-  alerta = false,
-}: {
-  ligado: boolean;
-  onChange: (valor: boolean) => void;
-  titulo: string;
-  nota: string;
-  alerta?: boolean;
-}) {
-  return (
-    <label className="flex cursor-pointer items-start gap-2">
-      <input
-        type="checkbox"
-        checked={ligado}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-3.5 flex-none accent-[var(--wb-accent)]"
-      />
-      <span className="min-w-0">
-        <span className="block text-[12px] font-semibold">{titulo}</span>
-        <span
-          className={cn(
-            'block text-[11px]',
-            alerta && ligado
-              ? 'text-[var(--wb-warn-ink,var(--wb-text-dim))]'
-              : 'text-[var(--wb-text-mute)]',
-          )}
-        >
-          {nota}
-        </span>
-      </span>
-    </label>
-  );
-}
-
-function Caixa({
-  marcada,
-  onClick,
-  titulo,
-  nota,
-}: {
-  marcada: boolean;
-  onClick: () => void;
-  titulo: string;
-  nota: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={marcada}
-      aria-label={titulo}
-      className={cn(
-        'flex min-w-[180px] flex-1 flex-col items-start gap-0.5 rounded-[9px] border px-3 py-2 text-left transition-colors',
-        marcada
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-          : 'border-[var(--wb-border)] hover:bg-[var(--wb-bg-inset)]',
-      )}
-    >
-      <span className="flex items-center gap-1.5 text-[12.5px] font-bold">
-        {marcada && <Icon name="check" />}
-        {titulo}
-      </span>
-      <span className="text-[11px] text-[var(--wb-text-mute)]">{nota}</span>
-    </button>
   );
 }
 
@@ -555,8 +430,4 @@ function RodapeDoLoteEmCurso({ cancelado }: { cancelado: boolean }) {
       </Button>
     </div>
   );
-}
-
-function rotuloCurto(plataforma: string): string {
-  return PLATAFORMAS.find((p) => p.id === plataforma)?.rotulo ?? plataforma;
 }

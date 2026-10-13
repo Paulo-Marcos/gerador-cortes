@@ -44,10 +44,7 @@ Endpoints:
   POST /corte/{corte_id}/publicar/tiktok-horizontal/staging — pacote + pasta aberta
   POST /corte/{corte_id}/publicar/tiktok-horizontal/assistido — robo deixa pronto
   POST /corte/{corte_id}/publicar/tiktok-horizontal/confirmar — marca que subiu
-  POST /lote                      — publica vários, nas plataformas escolhidas
-  GET  /lote                      — o lote em andamento, raia por raia
-  POST /lote/cancelar             — interrompe o lote
-  POST /lote/confirmar            — o "publiquei" do destino manual
+  /lote, /lote/agenda, /lote/cancelar, /lote/confirmar — em `routers/shorts_lote.py`
   GET  /corte/{corte_id}/publicacoes — o que já foi publicado deste corte
   DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
@@ -67,8 +64,10 @@ from pathlib import Path
 
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.routers import fabrica_de_shorts as rotas_da_fabrica
+from app.routers import shorts_lote as rotas_do_lote
 from app.routers import shorts_schemas as esquemas
 from app.routers.cortes_schemas import PicosDaOndaResponse
+from app.routers.shorts_lote import ler_agendamento
 from app.services import publicacao_no_tiktok
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -80,6 +79,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 # D-803: primeiro, para que `/live/...` e `/lives/...` nao caiam em `/{short_id}/...`.
 router.include_router(rotas_da_fabrica.router)
+# D-908: o lote e a agenda dele moram em `shorts_lote`, pelo mesmo motivo.
+router.include_router(rotas_do_lote.router)
 
 # A pagina de upload do TikTok no desktop. Constante nomeada porque ela e um
 # fato externo que pode mudar sem aviso — e uma URL solta no meio do codigo e
@@ -1102,7 +1103,7 @@ class AssistidoRequest(BaseModel):
 
     def para_o_robo(self, plataforma: str) -> dict:
         """A data já conferida (422 se a plataforma recusaria) e o interruptor."""
-        agendamento = _ler_agendamento(self.agendar_para, plataforma)
+        agendamento = ler_agendamento(self.agendar_para, plataforma)
         return {"agendamento": agendamento, "publicar_sozinho": self.publicar_sozinho}
 
 
@@ -1133,26 +1134,6 @@ async def assistido_tiktok_do_short(short_id: str, body: AssistidoRequest | None
     # vertical publicado nao diz nada sobre o MP4 do corte.
     pedido = (body or AssistidoRequest()).para_o_robo("tiktok")
     return await _assistir_no_tiktok(await publicar(short_id, "tiktok"), **pedido)
-
-
-def _ler_agendamento(texto: str | None, plataforma: str):
-    """Le a data da tela e RECUSA aqui o que a plataforma recusaria la.
-
-    422 e nao 500: uma data no passado, ou um minuto que o seletor do TikTok nao
-    tem, nao e defeito nosso — e uma escolha que o operador refaz em dois
-    segundos, desde que alguem lhe diga qual e o problema.
-    """
-    from app.domain.publicacao.agendamento import Agendamento, AgendamentoInvalido
-
-    try:
-        agendamento = Agendamento.de_texto(texto)
-        if agendamento:
-            from app.domain.publicacao.agendamento import validar
-
-            validar(agendamento, plataforma)
-    except AgendamentoInvalido as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return agendamento
 
 
 async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", **pedido) -> dict:
@@ -1197,156 +1178,6 @@ async def publicar_corte_no_tiktok(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-class LoteRequest(BaseModel):
-    """O lote que o operador montou na tela.
-
-    `alvos` são pares `tipo:id` ("short:uuid" ou "corte:uuid") na ORDEM em que
-    ele escolheu — a ordem da tela vira a ordem da fila. `plataformas` são os
-    destinos que ele marcou; o mesmo conjunto vale para todos os alvos, que é
-    como a seleção acontece na prática ("estes cinco, nestas duas redes").
-    """
-
-    alvos: list[str]
-    plataformas: list[str]
-    # D-564: o robo do TikTok sobe pelo Chrome, em vez de so montar a pasta.
-    tiktok_assistido: bool = False
-    # D-564 onda 3: o mesmo robo, no compositor do instagram.com.
-    instagram_assistido: bool = False
-    # D-564: e, se ligado, tambem aperta o Publicar. Desligado por padrao de
-    # proposito — ate o clique tudo e reversivel com um F5.
-    publicar_sozinho: bool = False
-    # D-580: uma data para o lote inteiro. Cada destino a honra como consegue —
-    # e os que nao conseguem avisam, em vez de engolir.
-    agendar_para: str = ""
-    # D-590: sobe de novo o que ja foi publicado, em vez de pular.
-    republicar: bool = False
-
-
-@router.post("/lote", response_model=esquemas.LoteDePublicacao)
-async def criar_lote(body: LoteRequest):
-    """Dispara o lote: uma raia por plataforma, cada uma no seu passo (D-564)."""
-    from app.domain.publicacao.publicacao import Plataforma
-    from app.services import publicacao_lote
-
-    try:
-        plataformas = [Plataforma(p) for p in body.plataformas]
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=f"Plataforma desconhecida: {exc}") from exc
-    if not plataformas or not body.alvos:
-        raise HTTPException(status_code=422, detail="Escolha ao menos um video e uma plataforma.")
-
-    alvos = [_ler_alvo(bruto) for bruto in body.alvos]
-
-    # Validado contra CADA plataforma escolhida: 14:03 serve para o YouTube e
-    # nao serve para o TikTok, e o lote que mistura os dois tem de recusar.
-    agendamento = None
-    for plataforma in plataformas:
-        agendamento = _ler_agendamento(body.agendar_para, plataforma.value)
-
-    try:
-        lote = await publicacao_lote.criar(
-            alvos=alvos,
-            plataformas=plataformas,
-            opcoes=publicacao_lote.OpcoesDoLote(
-                tiktok_assistido=body.tiktok_assistido,
-                instagram_assistido=body.instagram_assistido,
-                publicar_sozinho=body.publicar_sozinho,
-                agendamento=agendamento,
-                republicar=body.republicar,
-            ),
-        )
-    except publicacao_lote.LoteEmAndamento as exc:
-        # 409 e nao 422: nao ha nada de errado com o pedido — ele so chegou na
-        # hora em que outro lote ainda esta rodando.
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-    return lote.como_dict()
-
-
-def _ler_alvo(bruto: str) -> tuple[str, str]:
-    """ "short:uuid" vira ("short", "uuid"); sem prefixo, assume short.
-
-    O prefixo existe porque o MESMO lote mistura os dois: o short vertical e o
-    MP4 horizontal do corte vao pelo mesmo contrato, e sem o tipo o servico nao
-    saberia de qual arquivo montar o pacote.
-    """
-    from app.services import publicacao_lote
-
-    tipo, _, identificador = bruto.partition(":")
-    if not identificador:
-        return publicacao_lote.ALVO_SHORT, tipo
-    if tipo not in (publicacao_lote.ALVO_SHORT, publicacao_lote.ALVO_CORTE):
-        raise HTTPException(status_code=422, detail=f"Tipo de alvo desconhecido: {tipo!r}")
-    return tipo, identificador
-
-
-@router.get("/lote", response_model=esquemas.LoteAtualResponse)
-async def ver_lote():
-    """O lote em andamento, ou o ultimo que rodou. `null` quando nunca houve um."""
-    from app.services import publicacao_lote
-
-    lote = publicacao_lote.lote_atual()
-    return {"lote": lote.como_dict() if lote else None}
-
-
-@router.post("/lote/cancelar", response_model=esquemas.LoteCanceladoResponse)
-async def cancelar_lote():
-    """Interrompe o lote na hora: os que esperam viram cancelados e o robo larga a vigilia.
-
-    Devolve o lote ja mudado (D-591), para a tela trocar sem esperar o proximo
-    ciclo do polling — o atraso era parte de o botao parecer morto.
-    """
-    from app.services import publicacao_lote
-
-    lote = await publicacao_lote.cancelar()
-    return {"cancelado": lote is not None, "lote": lote.como_dict() if lote else None}
-
-
-class ConfirmarPublicacaoRequest(BaseModel):
-    """O "publiquei" do destino manual, onde o upload acontece longe daqui."""
-
-    alvo_id: str
-    plataforma: str
-    # D-603: o tipo vem junto porque a marca pode ser o PRIMEIRO registro deste
-    # video — e ai ninguem mais sabe se o alvo e o short vertical ou o MP4 do
-    # corte. No caminho do lote o tipo ja estava gravado e o default basta.
-    alvo_tipo: str = "short"
-    # Opcional: o link do post, quando o operador tem ele a mao. Serve para a
-    # tela oferecer o "ver" do mesmo jeito que oferece no que subiu por API.
-    url: str = ""
-
-
-@router.post("/lote/confirmar", response_model=esquemas.LoteConfirmadoResponse)
-async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
-    """Marca que ESTE item subiu — o que a maquina nao tem como saber sozinha.
-
-    D-603: vale tanto para o item que esta esperando o clique quanto para o que
-    deu erro e o operador terminou na mao, no proprio app da rede. Nos dois
-    casos o fato e o mesmo ("esta no ar"), e quem sabe dele e ele.
-    """
-    from app.domain.publicacao.publicacao import Plataforma
-    from app.services import publicacao_lote
-
-    try:
-        plataforma = Plataforma(body.plataforma)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=404, detail=f"Plataforma {body.plataforma!r} desconhecida."
-        ) from exc
-
-    if body.alvo_tipo not in (publicacao_lote.ALVO_SHORT, publicacao_lote.ALVO_CORTE):
-        raise HTTPException(
-            status_code=422, detail=f"Tipo de alvo desconhecido: {body.alvo_tipo!r}"
-        )
-
-    await publicacao_lote.confirmar(
-        body.alvo_id, plataforma, alvo_tipo=body.alvo_tipo, url=body.url
-    )
-    return {"confirmado": True}
 
 
 @router.get("/corte/{corte_id}/publicacoes", response_model=esquemas.PublicacoesResponse)
