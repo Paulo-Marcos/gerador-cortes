@@ -1997,6 +1997,17 @@
             ],
             "title": "Ativo"
           },
+          "escala": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escala"
+          },
           "handle": {
             "anyOf": [
               {
@@ -2018,6 +2029,26 @@
               }
             ],
             "title": "Nome"
+          },
+          "posicao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PosicaoModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "posicao_short": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PosicaoModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "title": "CabecalhoRequest",
@@ -2028,6 +2059,10 @@
           "ativo": {
             "title": "Ativo",
             "type": "boolean"
+          },
+          "escala": {
+            "title": "Escala",
+            "type": "number"
           },
           "handle": {
             "title": "Handle",
@@ -2052,6 +2087,12 @@
           "nome_efetivo": {
             "title": "Nome Efetivo",
             "type": "string"
+          },
+          "posicao": {
+            "$ref": "#/components/schemas/PosicaoModel"
+          },
+          "posicao_short": {
+            "$ref": "#/components/schemas/PosicaoModel"
           }
         },
         "required": [
@@ -2059,6 +2100,9 @@
           "nome",
           "handle",
           "imagem",
+          "escala",
+          "posicao",
+          "posicao_short",
           "nome_efetivo",
           "handle_efetivo",
           "imagem_url"
@@ -7018,6 +7062,17 @@
               }
             ]
           },
+          "contorno_short": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contorno Short"
+          },
           "estilo": {
             "anyOf": [
               {
@@ -7074,6 +7129,10 @@
             "title": "Canal Id",
             "type": "string"
           },
+          "contorno_short": {
+            "title": "Contorno Short",
+            "type": "integer"
+          },
           "estilo": {
             "title": "Estilo",
             "type": "string"
@@ -7106,6 +7165,7 @@
           "estilos",
           "fundo",
           "fundos",
+          "contorno_short",
           "cabecalho",
           "placa"
         ],
@@ -7485,6 +7545,27 @@
               }
             ],
             "title": "Ativo"
+          },
+          "escala": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escala"
+          },
+          "posicao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PosicaoModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "title": "PlacaRequest",
@@ -7495,10 +7576,19 @@
           "ativo": {
             "title": "Ativo",
             "type": "boolean"
+          },
+          "escala": {
+            "title": "Escala",
+            "type": "number"
+          },
+          "posicao": {
+            "$ref": "#/components/schemas/PosicaoModel"
           }
         },
         "required": [
-          "ativo"
+          "ativo",
+          "escala",
+          "posicao"
         ],
         "title": "PlacaResponse",
         "type": "object"
@@ -7664,6 +7754,30 @@
           "faixas"
         ],
         "title": "PlanoDesenhavelResponse",
+        "type": "object"
+      },
+      "PosicaoModel": {
+        "description": "Onde o componente senta, em px do quadro; `automatica` = a regra do estilo.",
+        "properties": {
+          "automatica": {
+            "title": "Automatica",
+            "type": "boolean"
+          },
+          "x": {
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "automatica",
+          "x",
+          "y"
+        ],
+        "title": "PosicaoModel",
         "type": "object"
       },
       "PostDoShortResponse": {

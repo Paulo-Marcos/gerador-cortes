@@ -19,7 +19,7 @@ import {
   FundoLimpo,
   SombraDaJanela,
   janelaComContorno,
-  posicaoDoCabecalhoNoShort,
+  posicaoDoCabecalhoNoShortDe,
   raioDaJanela,
   type ComponentesDoPalco,
 } from '@/shared/palco/palcoLimpo';
@@ -77,8 +77,8 @@ export function PalcoPrevia({ plano, video, children }: Props) {
   // D-911: o estilo do palco vem do canal ativo (ver `CamadaDoPalcoLimpo`).
   const componentes = usePalcoDoCanalAtivoResolvido();
   const limpo = componentes.estilo === 'limpo';
-
-  useDesenhoDosRecortes(canvas, plano, video, limpo);
+  // No limpo o recorte recua das bordas pelo contorno do canal; fora dele, nulo.
+  useDesenhoDosRecortes(canvas, plano, video, limpo ? componentes.contorno_short : null);
 
   const { largura, altura } = plano.canvas;
   const comMoldura = plano.moldura !== 'nenhuma';
@@ -219,12 +219,14 @@ function caminhoDaJanela(
   r: { x: number; y: number; w: number; h: number },
   todas: { x: number; y: number; w: number; h: number }[],
   quadro: { largura: number; altura: number },
-  limpo: boolean,
+  contornoLimpo: number | null,
 ): Path2D {
   const { largura, altura } = quadro;
-  if (!limpo) return new Path2D(buildChromePaths(r.w, r.h, optsDa(r, largura, altura)).main);
+  if (contornoLimpo === null) {
+    return new Path2D(buildChromePaths(r.w, r.h, optsDa(r, largura, altura)).main);
+  }
   // D-911: no limpo o buraco recua das bordas (o contorno do fundo), como no PNG.
-  const buraco = janelaComContorno(r, todas, largura, altura);
+  const buraco = janelaComContorno(r, todas, largura, altura, contornoLimpo);
   const caminho = new Path2D();
   caminho.roundRect(
     buraco.x - r.x,
@@ -253,9 +255,7 @@ function CamadaDoPalcoLimpo({
   plano: PlanoDesenhavel;
   componentes: ComponentesDoPalco;
 }) {
-  const posicao = componentes.cabecalho.ativo
-    ? posicaoDoCabecalhoNoShort(plano.recortes[0]?.recorta)
-    : null;
+  const posicao = posicaoDoCabecalhoNoShortDe(componentes, plano.recortes[0]?.recorta);
   const todas = plano.recortes.map((recorte) => recorte.recorta);
   return (
     <svg
@@ -267,7 +267,7 @@ function CamadaDoPalcoLimpo({
         <div style={{ position: 'relative', width: largura, height: altura }}>
           <FundoLimpo fundo={componentes.fundo} />
           {todas.map((janela) => {
-            const buraco = janelaComContorno(janela, todas, largura, altura);
+            const buraco = janelaComContorno(janela, todas, largura, altura, componentes.contorno_short);
             return (
               <SombraDaJanela
                 key={`${janela.x}-${janela.y}-${janela.w}`}
@@ -280,6 +280,7 @@ function CamadaDoPalcoLimpo({
             <CabecalhoDoCanal
               x={posicao.x}
               y={posicao.y}
+              escala={componentes.cabecalho.escala}
               nome={componentes.cabecalho.nome}
               handle={componentes.cabecalho.handle}
               imagemSrc={componentes.cabecalho.imagemUrl || undefined}
@@ -296,7 +297,7 @@ function useDesenhoDosRecortes(
   canvas: RefObject<HTMLCanvasElement | null>,
   plano: PlanoDesenhavel,
   video: RefObject<HTMLVideoElement | null>,
-  limpo: boolean,
+  contornoLimpo: number | null,
 ) {
   useEffect(() => {
     const tela = canvas.current;
@@ -340,7 +341,7 @@ function useDesenhoDosRecortes(
         // De `plano.canvas`, e não das constantes desestruturadas lá embaixo:
         // o efeito depende de `plano`, e ler daqui mantém a dependência única.
         ctx.translate(recorta.x, recorta.y);
-        ctx.clip(caminhoDaJanela(recorta, todas, plano.canvas, limpo));
+        ctx.clip(caminhoDaJanela(recorta, todas, plano.canvas, contornoLimpo));
         // Volta ao referencial do quadro: o clip já ficou gravado onde estava,
         // e `destino` vem em coordenadas do canvas.
         ctx.translate(-recorta.x, -recorta.y);
@@ -363,7 +364,7 @@ function useDesenhoDosRecortes(
     return () => {
       vivo = false;
     };
-  }, [canvas, plano, video, limpo]);
+  }, [canvas, plano, video, contornoLimpo]);
 }
 
 export { chromeClipPath };

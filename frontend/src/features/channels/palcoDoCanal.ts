@@ -15,9 +15,17 @@ export function paraComponentesDoPalco(resposta: PalcoComponentes | undefined): 
       nome: resposta.cabecalho.nome_efetivo,
       handle: resposta.cabecalho.handle_efetivo,
       imagemUrl: urlDaImagem(resposta.cabecalho.imagem_url),
+      escala: resposta.cabecalho.escala,
+      posicao: resposta.cabecalho.posicao,
+      posicao_short: resposta.cabecalho.posicao_short,
     },
-    placa: { ativo: resposta.placa.ativo },
+    placa: {
+      ativo: resposta.placa.ativo,
+      escala: resposta.placa.escala,
+      posicao: resposta.placa.posicao,
+    },
     fundo: resposta.fundo,
+    contorno_short: resposta.contorno_short,
   };
 }
 

@@ -33,26 +33,56 @@ export {
   SombraDaJanela,
   janelaComContorno,
   posicaoDaPlaca,
+  posicaoDaPlacaDe,
+  posicaoDoCabecalho,
+  posicaoDoCabecalhoNoShortDe,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
   type FundoDoLimpo,
   type Janela,
+  type PosicaoDoComponente,
 } from '@video-renderer/public-api';
+
+/** Onde um componente senta (px do quadro); `automatica` = a regra do estilo. */
+interface Posicao {
+  automatica: boolean;
+  x: number;
+  y: number;
+}
 
 /** O que o palco recebe do canal, já resolvido para a prévia (URL em vez de staticFile). */
 export interface ComponentesDoPalco {
   estilo: 'atual' | 'limpo';
-  cabecalho: { ativo: boolean; nome: string; handle: string; imagemUrl: string };
-  placa: { ativo: boolean };
+  cabecalho: {
+    ativo: boolean;
+    nome: string;
+    handle: string;
+    imagemUrl: string;
+    escala: number;
+    posicao: Posicao;
+    posicao_short: Posicao;
+  };
+  placa: { ativo: boolean; escala: number; posicao: Posicao };
   /** O fundo do estilo limpo (`FUNDOS_DO_LIMPO`). */
   fundo: string;
+  /** Quanto as janelas do short recuam das bordas (px); 0 = sem contorno. */
+  contorno_short: number;
 }
 
 export const COMPONENTES_PADRAO: ComponentesDoPalco = {
   estilo: 'atual',
-  cabecalho: { ativo: true, nome: '', handle: '', imagemUrl: '' },
-  placa: { ativo: true },
+  cabecalho: {
+    ativo: true,
+    nome: '',
+    handle: '',
+    imagemUrl: '',
+    escala: 1,
+    posicao: { automatica: false, x: 64, y: 64 },
+    posicao_short: { automatica: true, x: 0, y: 0 },
+  },
+  placa: { ativo: true, escala: 1, posicao: { automatica: true, x: 0, y: 0 } },
   fundo: 'reticula-aurora',
+  contorno_short: 32,
 };
 
 /** A janela da prévia: recorta o vídeo com os cantos do estilo limpo e leva a sombra. */
@@ -84,10 +114,12 @@ export const CabecalhoDoCanal: FC<{
   nome: string;
   handle: string;
   imagemSrc?: string;
-}> = ({ x, y, nome, handle, imagemSrc }) => (
+  escala?: number;
+}> = ({ x, y, nome, handle, imagemSrc, escala }) => (
   <CabecalhoDoRenderer
     x={x}
     y={y}
+    escala={escala}
     nome={nome}
     handle={handle}
     imagem={

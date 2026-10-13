@@ -44,9 +44,13 @@ export {
   FUNDOS_DO_LIMPO,
   janelaComContorno,
   posicaoDaPlaca,
+  posicaoDaPlacaDe,
+  posicaoDoCabecalho,
+  posicaoDoCabecalhoNoShortDe,
   posicaoDoCabecalhoNoShort,
   raioDaJanela,
   type ComponentesDoPalco as ComponentesDoPalcoDoRenderer,
   type FundoDoLimpo,
   type Janela,
+  type PosicaoDoComponente,
 } from "./youtube-bg/palco-limpo";

@@ -8,6 +8,7 @@ import { mensagemErro } from '@/lib/mensagemErro';
 import { PALETTE } from '@/shared/palco/youtubeBackgrounds';
 import { COR_DO_ACENTO, COR_DO_FUNDO, COR_DO_TEXTO } from '@/shared/palco/palcoLimpo';
 import { Icon } from '@/upgrade/Icon';
+import { CampoNumero, CampoPosicao, CampoTamanho, type PosicaoEditavel } from './ControlesDoPalco';
 import { urlDaImagem } from './palcoDoCanal';
 import {
   useCanais,
@@ -51,20 +52,32 @@ const ESTILOS: { id: Estilo; nome: string; descricao: string }[] = [
 export interface RascunhoDoPalco {
   estilo: Estilo;
   fundo: string;
+  contornoShort: number;
   cabecalhoAtivo: boolean;
   nome: string;
   handle: string;
+  cabecalhoEscala: number;
+  cabecalhoPosicao: PosicaoEditavel;
+  cabecalhoPosicaoShort: PosicaoEditavel;
   placaAtiva: boolean;
+  placaEscala: number;
+  placaPosicao: PosicaoEditavel;
 }
 
 export function rascunhoDe(palco: PalcoComponentes): RascunhoDoPalco {
   return {
     estilo: palco.estilo === 'limpo' ? 'limpo' : 'atual',
     fundo: palco.fundo,
+    contornoShort: palco.contorno_short,
     cabecalhoAtivo: palco.cabecalho.ativo,
     nome: palco.cabecalho.nome,
     handle: palco.cabecalho.handle,
+    cabecalhoEscala: palco.cabecalho.escala,
+    cabecalhoPosicao: palco.cabecalho.posicao,
+    cabecalhoPosicaoShort: palco.cabecalho.posicao_short,
     placaAtiva: palco.placa.ativo,
+    placaEscala: palco.placa.escala,
+    placaPosicao: palco.placa.posicao,
   };
 }
 
@@ -72,10 +85,25 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
   return {
     estilo: rascunho.estilo,
     fundo: rascunho.fundo as PalcoComponentesEdicao['fundo'],
-    cabecalho: { ativo: rascunho.cabecalhoAtivo, nome: rascunho.nome, handle: rascunho.handle },
-    placa: { ativo: rascunho.placaAtiva },
+    contorno_short: rascunho.contornoShort,
+    cabecalho: {
+      ativo: rascunho.cabecalhoAtivo,
+      nome: rascunho.nome,
+      handle: rascunho.handle,
+      escala: rascunho.cabecalhoEscala,
+      posicao: rascunho.cabecalhoPosicao,
+      posicao_short: rascunho.cabecalhoPosicaoShort,
+    },
+    placa: {
+      ativo: rascunho.placaAtiva,
+      escala: rascunho.placaEscala,
+      posicao: rascunho.placaPosicao,
+    },
   };
 }
+
+const VIDEO = { largura: 1920, altura: 1080 };
+const SHORT = { largura: 1080, altura: 1920 };
 
 interface FormProps {
   rascunho: RascunhoDoPalco;
@@ -103,16 +131,18 @@ export function PalcoComponentesForm(props: FormProps) {
         <EscolhaDoFundo fundo={rascunho.fundo} onEscolher={(fundo) => onMudar({ ...rascunho, fundo })} />
       )}
       <CabecalhoDoPalco {...props} />
+      <PlacaDoPalco rascunho={rascunho} onMudar={onMudar} />
       <fieldset className="grid gap-2 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
-        <legend className="px-1 text-xs font-medium text-text-300">Placa do interlocutor</legend>
-        <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
-          <input
-            type="checkbox"
-            checked={rascunho.placaAtiva}
-            onChange={(e) => onMudar({ ...rascunho, placaAtiva: e.target.checked })}
-          />
-          Mostrar a placa (nome e papel de quem fala, preenchida em cada corte)
-        </label>
+        <legend className="px-1 text-xs font-medium text-text-300">Janelas do short</legend>
+        <CampoNumero
+          id="palco-contorno"
+          rotulo="Contorno do fundo em volta das janelas"
+          unidade="px, 0 = sem contorno"
+          valor={rascunho.contornoShort}
+          min={0}
+          max={80}
+          onMudar={(contornoShort) => onMudar({ ...rascunho, contornoShort })}
+        />
       </fieldset>
       <div className="flex justify-end">
         <Button type="submit" disabled={pendente}>
@@ -180,6 +210,77 @@ function EscolhaDoFundo({ fundo, onEscolher }: { fundo: string; onEscolher: (f: 
         ))}
       </div>
     </fieldset>
+  );
+}
+
+function PlacaDoPalco({
+  rascunho,
+  onMudar,
+}: {
+  rascunho: RascunhoDoPalco;
+  onMudar: (rascunho: RascunhoDoPalco) => void;
+}) {
+  return (
+    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
+      <legend className="px-1 text-xs font-medium text-text-300">Placa do interlocutor</legend>
+      <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
+        <input
+          type="checkbox"
+          checked={rascunho.placaAtiva}
+          onChange={(e) => onMudar({ ...rascunho, placaAtiva: e.target.checked })}
+        />
+        Mostrar a placa (nome e papel de quem fala, preenchida em cada corte)
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <CampoTamanho
+          id="palco-placa-tamanho"
+          escala={rascunho.placaEscala}
+          onMudar={(placaEscala) => onMudar({ ...rascunho, placaEscala })}
+        />
+        <CampoPosicao
+          id="palco-placa-posicao"
+          rotulo="Posição no vídeo"
+          posicao={rascunho.placaPosicao}
+          quadro={VIDEO}
+          descricaoAutomatica="acima da tela, cedendo ao cabeçalho"
+          onMudar={(placaPosicao) => onMudar({ ...rascunho, placaPosicao })}
+        />
+      </div>
+    </fieldset>
+  );
+}
+
+function PosicaoDoCabecalho({
+  rascunho,
+  onMudar,
+}: {
+  rascunho: RascunhoDoPalco;
+  onMudar: (rascunho: RascunhoDoPalco) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <CampoTamanho
+        id="palco-cabecalho-tamanho"
+        escala={rascunho.cabecalhoEscala}
+        onMudar={(cabecalhoEscala) => onMudar({ ...rascunho, cabecalhoEscala })}
+      />
+      <CampoPosicao
+        id="palco-cabecalho-posicao"
+        rotulo="Posição no vídeo"
+        posicao={rascunho.cabecalhoPosicao}
+        quadro={VIDEO}
+        podeSerAutomatica={false}
+        onMudar={(cabecalhoPosicao) => onMudar({ ...rascunho, cabecalhoPosicao })}
+      />
+      <CampoPosicao
+        id="palco-cabecalho-posicao-short"
+        rotulo="Posição no short"
+        posicao={rascunho.cabecalhoPosicaoShort}
+        quadro={SHORT}
+        descricaoAutomatica="acima da primeira janela"
+        onMudar={(cabecalhoPosicaoShort) => onMudar({ ...rascunho, cabecalhoPosicaoShort })}
+      />
+    </div>
   );
 }
 
@@ -261,6 +362,7 @@ function CabecalhoDoPalco({
           />
         </div>
       </div>
+      <PosicaoDoCabecalho rascunho={rascunho} onMudar={onMudar} />
       <p className="text-xs text-[var(--wb-text-dim)]">
         Vazio usa a identidade do canal: <strong>{palco.cabecalho.nome_efetivo || '—'}</strong>{' '}
         <span>{palco.cabecalho.handle_efetivo}</span>.

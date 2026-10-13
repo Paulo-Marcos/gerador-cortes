@@ -124,7 +124,7 @@ def test_props_para_palco_resolve_identidade_e_imagem(db: Path, monkeypatch, tmp
     monkeypatch.setattr(svc, "imagem_servida_relativa", lambda _c, **_k: "mascote/apresentador.png")
     props = svc.props_para_palco(db_path=db, channel_id="c1")
     assert props["estilo"] == "limpo"
-    assert props["cabecalho"] == {
+    assert {k: props["cabecalho"][k] for k in ("ativo", "nome", "handle", "imagem")} == {
         "ativo": True,
         "nome": "Pedro Ivo",
         "handle": "@pedroivosa",

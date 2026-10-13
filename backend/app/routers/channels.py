@@ -35,14 +35,27 @@ router = APIRouter()
 # cache do palco) são sempre os do canal ATIVO — é dele que a tela edita.
 
 
+class PosicaoModel(BaseModel):
+    """Onde o componente senta, em px do quadro; `automatica` = a regra do estilo."""
+
+    automatica: bool
+    x: int
+    y: int
+
+
 class CabecalhoRequest(BaseModel):
     ativo: bool | None = None
     nome: str | None = None
     handle: str | None = None
+    escala: float | None = None
+    posicao: PosicaoModel | None = None
+    posicao_short: PosicaoModel | None = None
 
 
 class PlacaRequest(BaseModel):
     ativo: bool | None = None
+    escala: float | None = None
+    posicao: PosicaoModel | None = None
 
 
 class PalcoComponentesRequest(BaseModel):
@@ -50,6 +63,7 @@ class PalcoComponentesRequest(BaseModel):
 
     estilo: Literal["atual", "limpo"] | None = None
     fundo: Literal["reticula-aurora", "reticula", "aurora", "linho", "chapado"] | None = None
+    contorno_short: int | None = None
     cabecalho: CabecalhoRequest | None = None
     placa: PlacaRequest | None = None
 
@@ -60,6 +74,9 @@ class CabecalhoResponse(BaseModel):
     handle: str
     imagem: str
     # Os textos como saem no palco (vazio herda da identidade do canal).
+    escala: float
+    posicao: PosicaoModel
+    posicao_short: PosicaoModel
     nome_efetivo: str
     handle_efetivo: str
     # URL da imagem que a tela mostra ao lado do @; vazia sem imagem nenhuma.
@@ -68,6 +85,8 @@ class CabecalhoResponse(BaseModel):
 
 class PlacaResponse(BaseModel):
     ativo: bool
+    escala: float
+    posicao: PosicaoModel
 
 
 class PalcoComponentesResponse(BaseModel):
@@ -76,6 +95,7 @@ class PalcoComponentesResponse(BaseModel):
     estilos: list[str]
     fundo: str
     fundos: list[str]
+    contorno_short: int
     cabecalho: CabecalhoResponse
     placa: PlacaResponse
 
@@ -97,16 +117,24 @@ def _palco_para_response(
         estilos=list(palco_dominio.ESTILOS),
         fundo=componentes.fundo,
         fundos=list(palco_dominio.FUNDOS),
+        contorno_short=componentes.contorno_short,
         cabecalho=CabecalhoResponse(
             ativo=componentes.cabecalho.ativo,
             nome=componentes.cabecalho.nome,
             handle=componentes.cabecalho.handle,
             imagem=componentes.cabecalho.imagem,
+            escala=componentes.cabecalho.escala,
+            posicao=PosicaoModel(**props["cabecalho"]["posicao"]),
+            posicao_short=PosicaoModel(**props["cabecalho"]["posicao_short"]),
             nome_efetivo=props["cabecalho"]["nome"],
             handle_efetivo=props["cabecalho"]["handle"],
             imagem_url=imagem_url,
         ),
-        placa=PlacaResponse(ativo=componentes.placa.ativo),
+        placa=PlacaResponse(
+            ativo=componentes.placa.ativo,
+            escala=componentes.placa.escala,
+            posicao=PosicaoModel(**props["placa"]["posicao"]),
+        ),
     )
 
 

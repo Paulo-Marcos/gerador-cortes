@@ -52,10 +52,29 @@ const LARGURA_MINIMA_DA_PLACA = 400;
 // na prévia e no PNG.
 const FONTE = "'Inter', 'Segoe UI', sans-serif";
 
+/** Onde um componente senta, em px do quadro; `automatica` = a regra do estilo. */
+export interface PosicaoDoComponente {
+  automatica: boolean;
+  x: number;
+  y: number;
+}
+
+// Posição, tamanho e contorno são opcionais no TIPO: um props.json gravado antes
+// deles não os traz, e o palco sai como saía — os padrões são os números de antes.
 export interface ComponentesDoPalco {
   estilo: "atual" | "limpo";
-  cabecalho: { ativo: boolean; nome: string; handle: string; imagem: string };
-  placa: { ativo: boolean };
+  cabecalho: {
+    ativo: boolean;
+    nome: string;
+    handle: string;
+    imagem: string;
+    escala?: number;
+    posicao?: PosicaoDoComponente;
+    posicao_short?: PosicaoDoComponente;
+  };
+  placa: { ativo: boolean; escala?: number; posicao?: PosicaoDoComponente };
+  /** Quanto as janelas do short recuam das bordas (px); 0 = sem contorno. */
+  contorno_short?: number;
   /** O fundo do estilo limpo (`FUNDOS_DO_LIMPO`); ausente = o padrão. */
   fundo?: string;
 }
@@ -214,12 +233,16 @@ export const CabecalhoDoCanal: FC<{
   nome: string;
   handle: string;
   imagem?: ReactNode;
-}> = ({ x, y, nome, handle, imagem }) => (
+  /** Tamanho: escala a partir do canto superior esquerdo (1 = o de sempre). */
+  escala?: number;
+}> = ({ x, y, nome, handle, imagem, escala = 1 }) => (
   <div
     style={{
       position: "absolute",
       left: x,
       top: y,
+      transform: `scale(${escala})`,
+      transformOrigin: "0 0",
       height: ALTURA_DO_CABECALHO,
       display: "flex",
       alignItems: "center",
@@ -251,7 +274,9 @@ export const PlacaLimpa: FC<{
   papel?: string;
   /** Sobre o vídeo (dentro da tela) o texto leva sombra para continuar legível. */
   sobreVideo?: boolean;
-}> = ({ x, y, nome, papel, sobreVideo = false }) => {
+  /** Tamanho: escala a partir do canto superior esquerdo (1 = o de sempre). */
+  escala?: number;
+}> = ({ x, y, nome, papel, sobreVideo = false, escala = 1 }) => {
   if (!nome && !papel) return null;
   return (
     <div
@@ -259,6 +284,8 @@ export const PlacaLimpa: FC<{
         position: "absolute",
         left: x,
         top: y,
+        transform: `scale(${escala})`,
+        transformOrigin: "0 0",
         height: ALTURA_DA_PLACA,
         display: "flex",
         alignItems: "center",
@@ -325,6 +352,7 @@ export function janelaComContorno(
   janelas: Janela[],
   canvasW: number,
   canvasH: number,
+  contorno: number = CONTORNO_DO_SHORT,
 ): Janela {
   const tocaOutra = (lado: "cima" | "baixo") =>
     janelas.some((outra) => {
@@ -336,7 +364,7 @@ export function janelaComContorno(
         : Math.abs(janela.y + janela.h - outra.y) <= 2;
     });
   const recuo = (naBorda: boolean, naVizinha: boolean) =>
-    naBorda ? CONTORNO_DO_SHORT : naVizinha ? VAO_ENTRE_JANELAS : 0;
+    naBorda ? contorno : naVizinha ? Math.min(VAO_ENTRE_JANELAS, contorno) : 0;
   const esquerda = recuo(janela.x <= 1, false);
   const direita = recuo(janela.x + janela.w >= canvasW - 1, false);
   const cima = recuo(janela.y <= 1, tocaOutra("cima"));
@@ -353,4 +381,38 @@ export function janelaComContorno(
 export function posicaoDoCabecalhoNoShort(primeiraJanela: Janela | undefined): { x: number; y: number } | null {
   if (!primeiraJanela || primeiraJanela.y < FAIXA_MINIMA_PARA_O_CABECALHO) return null;
   return { x: CABECALHO_SHORT_X, y: primeiraJanela.y - FOLGA_DO_CABECALHO_NO_SHORT };
+}
+
+/** O que os cálculos de posição leem — o render e a prévia têm tipos próprios do resto. */
+export interface ComPosicoes {
+  cabecalho: { ativo: boolean; posicao?: PosicaoDoComponente; posicao_short?: PosicaoDoComponente };
+  placa: { posicao?: PosicaoDoComponente };
+}
+
+/** Onde o cabeçalho senta no horizontal: o que o canal escolheu, ou o canto de sempre. */
+export function posicaoDoCabecalho(componentes: ComPosicoes): { x: number; y: number } {
+  const posicao = componentes.cabecalho.posicao;
+  if (!posicao || posicao.automatica) return { ...CABECALHO_HORIZONTAL };
+  return { x: posicao.x, y: posicao.y };
+}
+
+/** Onde o cabeçalho senta no short: o que o canal escolheu, ou a faixa acima da 1ª janela. */
+export function posicaoDoCabecalhoNoShortDe(
+  componentes: ComPosicoes,
+  primeiraJanela: Janela | undefined,
+): { x: number; y: number } | null {
+  if (!componentes.cabecalho.ativo) return null;
+  const posicao = componentes.cabecalho.posicao_short;
+  if (posicao && !posicao.automatica) return { x: posicao.x, y: posicao.y };
+  return posicaoDoCabecalhoNoShort(primeiraJanela);
+}
+
+/** Onde a placa senta: a que o canal fixou, ou a regra automática (`posicaoDaPlaca`). */
+export function posicaoDaPlacaDe(
+  componentes: ComPosicoes,
+  tela: Janela,
+): { x: number; y: number; dentroDaTela: boolean } {
+  const posicao = componentes.placa.posicao;
+  if (posicao && !posicao.automatica) return { x: posicao.x, y: posicao.y, dentroDaTela: false };
+  return posicaoDaPlaca(tela, componentes.cabecalho.ativo);
 }

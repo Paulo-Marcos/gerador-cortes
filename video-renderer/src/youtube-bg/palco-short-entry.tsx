@@ -15,7 +15,7 @@ import {
   COMPONENTES_PADRAO,
   FundoLimpo,
   janelaComContorno,
-  posicaoDoCabecalhoNoShort,
+  posicaoDoCabecalhoNoShortDe,
   RAIO_DA_JANELA_DO_SHORT,
   raioDaJanela,
   SombraDaJanela,
@@ -188,10 +188,11 @@ const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }
   const carregar = useCallback(carregarInter, []);
   useEsperarFontes("Fonte do palco limpo", carregar);
   // O buraco de cada janela recua das bordas: o fundo vira o contorno dela.
-  const buracos = janelas.map((j) => janelaComContorno(j, janelas, CANVAS_W, CANVAS_H));
+  const contorno = componentes.contorno_short;
+  const buracos = janelas.map((j) => janelaComContorno(j, janelas, CANVAS_W, CANVAS_H, contorno));
   const raios = buracos.map((j) => raioDaJanela(j, CANVAS_W, CANVAS_H, RAIO_DA_JANELA_DO_SHORT));
   const { cabecalho } = componentes;
-  const posicao = cabecalho.ativo ? posicaoDoCabecalhoNoShort(janelas[0]) : null;
+  const posicao = posicaoDoCabecalhoNoShortDe(componentes, janelas[0]);
 
   return (
     <AbsoluteFill style={{ fontFamily: familiaInter }}>
@@ -217,6 +218,7 @@ const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }
         <CabecalhoDoCanal
           x={posicao.x}
           y={posicao.y}
+          escala={cabecalho.escala}
           nome={cabecalho.nome}
           handle={cabecalho.handle}
           imagem={

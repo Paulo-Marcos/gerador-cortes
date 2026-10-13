@@ -15,12 +15,12 @@ import {
   type ChromeOpts,
 } from "./chrome";
 import {
-  CABECALHO_HORIZONTAL,
   CabecalhoDoCanal,
   COMPONENTES_PADRAO,
   FundoLimpo,
   PlacaLimpa,
-  posicaoDaPlaca,
+  posicaoDaPlacaDe,
+  posicaoDoCabecalho,
   RAIO_DA_FACECAM,
   RAIO_DA_TELA,
   SombraDaJanela,
@@ -237,27 +237,34 @@ const PalcoLimpo: FC<PalcoProps & { componentes: ComponentesDoPalco }> = ({
 
       {cabecalho.ativo ? (
         <CabecalhoDoCanal
-          x={CABECALHO_HORIZONTAL.x}
-          y={CABECALHO_HORIZONTAL.y}
+          {...posicaoDoCabecalho(componentes)}
+          escala={cabecalho.escala}
           nome={cabecalho.nome}
           handle={cabecalho.handle}
           imagem={cabecalho.imagem ? <ImagemDoCabecalho caminho={cabecalho.imagem} /> : null}
         />
       ) : null}
 
-      {temPlaca ? <PlacaDoLimpo tela={janelaTela} cabecalhoAtivo={cabecalho.ativo} placa={placa} /> : null}
+      {temPlaca ? <PlacaDoLimpo tela={janelaTela} componentes={componentes} placa={placa} /> : null}
     </AbsoluteFill>
   );
 };
 
 const PlacaDoLimpo: FC<{
   tela: { x: number; y: number; w: number; h: number };
-  cabecalhoAtivo: boolean;
+  componentes: ComponentesDoPalco;
   placa: { nome: string; papel: string };
-}> = ({ tela, cabecalhoAtivo, placa }) => {
-  const posicao = posicaoDaPlaca(tela, cabecalhoAtivo);
+}> = ({ tela, componentes, placa }) => {
+  const posicao = posicaoDaPlacaDe(componentes, tela);
   return (
-    <PlacaLimpa x={posicao.x} y={posicao.y} nome={placa.nome} papel={placa.papel} sobreVideo={posicao.dentroDaTela} />
+    <PlacaLimpa
+      x={posicao.x}
+      y={posicao.y}
+      nome={placa.nome}
+      papel={placa.papel}
+      sobreVideo={posicao.dentroDaTela}
+      escala={componentes.placa.escala}
+    />
   );
 };
 

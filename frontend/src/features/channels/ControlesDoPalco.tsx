@@ -1,0 +1,133 @@
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+// D-911: os controles de POSIÇÃO e TAMANHO dos componentes do palco. Todo
+// componente fixo diz onde fica e de que tamanho, em px do quadro (1920x1080
+// no vídeo, 1080x1920 no short); "automática" devolve a posição à regra do
+// estilo. Componentes "burros": recebem o valor e avisam a mudança.
+
+export interface PosicaoEditavel {
+  automatica: boolean;
+  x: number;
+  y: number;
+}
+
+/** Um número com rótulo e unidade, preso entre `min` e `max`. */
+export function CampoNumero({
+  id,
+  rotulo,
+  valor,
+  min,
+  max,
+  unidade,
+  onMudar,
+}: {
+  id: string;
+  rotulo: string;
+  valor: number;
+  min: number;
+  max: number;
+  unidade: string;
+  onMudar: (valor: number) => void;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={id}>
+        {rotulo} <span className="text-[var(--wb-text-dim)]">({unidade})</span>
+      </Label>
+      <Input
+        id={id}
+        type="number"
+        step="any"
+        min={min}
+        max={max}
+        value={valor}
+        onChange={(e) => {
+          const numero = Number(e.target.value);
+          if (Number.isFinite(numero)) onMudar(Math.max(min, Math.min(max, numero)));
+        }}
+      />
+    </div>
+  );
+}
+
+/** Tamanho em % (a escala do componente, 50 a 200). */
+export function CampoTamanho({
+  id,
+  escala,
+  onMudar,
+}: {
+  id: string;
+  escala: number;
+  onMudar: (escala: number) => void;
+}) {
+  return (
+    <CampoNumero
+      id={id}
+      rotulo="Tamanho"
+      unidade="%"
+      valor={Math.round(escala * 100)}
+      min={50}
+      max={200}
+      onMudar={(porcento) => onMudar(porcento / 100)}
+    />
+  );
+}
+
+/** Onde o componente fica: automática ou x/y no quadro do formato. */
+export function CampoPosicao({
+  id,
+  rotulo,
+  posicao,
+  quadro,
+  podeSerAutomatica = true,
+  descricaoAutomatica,
+  onMudar,
+}: {
+  id: string;
+  rotulo: string;
+  posicao: PosicaoEditavel;
+  quadro: { largura: number; altura: number };
+  podeSerAutomatica?: boolean;
+  descricaoAutomatica?: string;
+  onMudar: (posicao: PosicaoEditavel) => void;
+}) {
+  const manual = !podeSerAutomatica || !posicao.automatica;
+  return (
+    <div className="grid gap-2">
+      <span className="text-xs font-medium text-text-300">{rotulo}</span>
+      {podeSerAutomatica && (
+        <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
+          <input
+            type="checkbox"
+            checked={posicao.automatica}
+            onChange={(e) => onMudar({ ...posicao, automatica: e.target.checked })}
+          />
+          Automática{descricaoAutomatica ? ` — ${descricaoAutomatica}` : ''}
+        </label>
+      )}
+      {manual && (
+        <div className="grid grid-cols-2 gap-3">
+          <CampoNumero
+            id={`${id}-x`}
+            rotulo="X"
+            unidade={`0 a ${quadro.largura} px`}
+            valor={posicao.x}
+            min={0}
+            max={quadro.largura}
+            onMudar={(x) => onMudar({ ...posicao, x })}
+          />
+          <CampoNumero
+            id={`${id}-y`}
+            rotulo="Y"
+            unidade={`0 a ${quadro.altura} px`}
+            valor={posicao.y}
+            min={0}
+            max={quadro.altura}
+            onMudar={(y) => onMudar({ ...posicao, y })}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

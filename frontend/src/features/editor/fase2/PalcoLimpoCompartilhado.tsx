@@ -1,12 +1,12 @@
 import { AbsoluteFill, Video } from 'remotion';
 import type { YoutubePlaca, YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
 import {
-  CABECALHO_HORIZONTAL,
   CabecalhoDoCanal,
   FundoLimpo,
   JanelaLimpa,
   PlacaLimpa,
-  posicaoDaPlaca,
+  posicaoDaPlacaDe,
+  posicaoDoCabecalho,
   RAIO_DA_FACECAM,
   RAIO_DA_TELA,
   type ComponentesDoPalco,
@@ -45,7 +45,7 @@ export function PalcoLimpoCompartilhado({
   const face = renderedSize(config.crop_facecam, config.slot_facecam);
   const temPlaca = palco.placa.ativo && Boolean(placa && (placa.nome || placa.papel));
   const janelaTela = { x: config.slot_tela.x, y: config.slot_tela.y, w: tela.w, h: tela.h };
-  const posicaoPlaca = posicaoDaPlaca(janelaTela, palco.cabecalho.ativo);
+  const posicaoPlaca = posicaoDaPlacaDe(palco, janelaTela);
 
   return (
     <AbsoluteFill>
@@ -63,8 +63,8 @@ export function PalcoLimpoCompartilhado({
       ) : null}
       {palco.cabecalho.ativo ? (
         <CabecalhoDoCanal
-          x={CABECALHO_HORIZONTAL.x}
-          y={CABECALHO_HORIZONTAL.y}
+          {...posicaoDoCabecalho(palco)}
+          escala={palco.cabecalho.escala}
           nome={palco.cabecalho.nome}
           handle={palco.cabecalho.handle}
           imagemSrc={palco.cabecalho.imagemUrl || undefined}
@@ -77,6 +77,7 @@ export function PalcoLimpoCompartilhado({
           nome={placa.nome}
           papel={placa.papel}
           sobreVideo={posicaoPlaca.dentroDaTela}
+          escala={palco.placa.escala}
         />
       ) : null}
     </AbsoluteFill>

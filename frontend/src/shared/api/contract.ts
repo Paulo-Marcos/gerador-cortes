@@ -5477,15 +5477,21 @@ export interface components {
         CabecalhoRequest: {
             /** Ativo */
             ativo?: boolean | null;
+            /** Escala */
+            escala?: number | null;
             /** Handle */
             handle?: string | null;
             /** Nome */
             nome?: string | null;
+            posicao?: components["schemas"]["PosicaoModel"] | null;
+            posicao_short?: components["schemas"]["PosicaoModel"] | null;
         };
         /** CabecalhoResponse */
         CabecalhoResponse: {
             /** Ativo */
             ativo: boolean;
+            /** Escala */
+            escala: number;
             /** Handle */
             handle: string;
             /** Handle Efetivo */
@@ -5498,6 +5504,8 @@ export interface components {
             nome: string;
             /** Nome Efetivo */
             nome_efetivo: string;
+            posicao: components["schemas"]["PosicaoModel"];
+            posicao_short: components["schemas"]["PosicaoModel"];
         };
         /** CaminhoDaPastaResponse */
         CaminhoDaPastaResponse: {
@@ -7600,6 +7608,8 @@ export interface components {
          */
         PalcoComponentesRequest: {
             cabecalho?: components["schemas"]["CabecalhoRequest"] | null;
+            /** Contorno Short */
+            contorno_short?: number | null;
             /** Estilo */
             estilo?: ("atual" | "limpo") | null;
             /** Fundo */
@@ -7611,6 +7621,8 @@ export interface components {
             cabecalho: components["schemas"]["CabecalhoResponse"];
             /** Canal Id */
             canal_id: string;
+            /** Contorno Short */
+            contorno_short: number;
             /** Estilo */
             estilo: string;
             /** Estilos */
@@ -7768,11 +7780,17 @@ export interface components {
         PlacaRequest: {
             /** Ativo */
             ativo?: boolean | null;
+            /** Escala */
+            escala?: number | null;
+            posicao?: components["schemas"]["PosicaoModel"] | null;
         };
         /** PlacaResponse */
         PlacaResponse: {
             /** Ativo */
             ativo: boolean;
+            /** Escala */
+            escala: number;
+            posicao: components["schemas"]["PosicaoModel"];
         };
         /**
          * PlanoDesenhavelResponse
@@ -7835,6 +7853,18 @@ export interface components {
             slots: {
                 [key: string]: components["schemas"]["RetanguloEmPixels"];
             };
+        };
+        /**
+         * PosicaoModel
+         * @description Onde o componente senta, em px do quadro; `automatica` = a regra do estilo.
+         */
+        PosicaoModel: {
+            /** Automatica */
+            automatica: boolean;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
         };
         /** PostDoShortResponse */
         PostDoShortResponse: {

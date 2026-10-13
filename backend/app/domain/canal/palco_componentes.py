@@ -55,6 +55,26 @@ class FundoDePalcoInvalido(PedidoInvalido):
     """O fundo informado não existe."""
 
 
+# Posição e tamanho (D-911): todo componente fixo do palco diz ONDE fica e de
+# QUE tamanho, em px do quadro (1920x1080 no horizontal, 1080x1920 no short).
+# Os padrões são os números que o estilo limpo usava cravados — quem nunca
+# mexeu vê o mesmo palco.
+ESCALA_MINIMA, ESCALA_MAXIMA = 0.5, 2.0
+HORIZONTAL = (1920, 1080)
+VERTICAL = (1080, 1920)
+CONTORNO_MAXIMO = 80
+CONTORNO_PADRAO = 32
+
+
+@dataclass(frozen=True)
+class Posicao:
+    """Onde um componente senta, ou `automatica` para a regra do estilo."""
+
+    automatica: bool = True
+    x: int = 0
+    y: int = 0
+
+
 @dataclass(frozen=True)
 class Cabecalho:
     """Quem fala: imagem + nome + @, no canto do palco."""
@@ -66,6 +86,11 @@ class Cabecalho:
     """Vazio = o handle da identidade do canal."""
     imagem: str = ""
     """Nome do arquivo subido pelo operador; vazio = a pose padrão do mascote."""
+    escala: float = 1.0
+    posicao: Posicao = Posicao(automatica=False, x=64, y=64)
+    """No horizontal: sempre manual, com o canto superior esquerdo de padrão."""
+    posicao_short: Posicao = Posicao()
+    """No short: automática = na faixa acima da primeira janela."""
 
 
 @dataclass(frozen=True)
@@ -73,6 +98,9 @@ class Placa:
     """A placa do interlocutor (nome + papel), que o corte preenche."""
 
     ativo: bool = True
+    escala: float = 1.0
+    posicao: Posicao = Posicao()
+    """Automática = acima da tela, cedendo ao cabeçalho (`posicaoDaPlaca`)."""
 
 
 @dataclass(frozen=True)
@@ -82,19 +110,33 @@ class PalcoComponentes:
     placa: Placa = Placa()
     fundo: str = FUNDO_PADRAO
     """O fundo do estilo limpo (`FUNDOS`); o estilo atual tem o fundo do layout."""
+    contorno_short: int = CONTORNO_PADRAO
+    """Quanto as janelas do short recuam das bordas (px); 0 = sem contorno."""
 
     def para_dict(self) -> dict[str, Any]:
         return {
             "estilo": self.estilo,
             "fundo": self.fundo,
+            "contorno_short": self.contorno_short,
             "cabecalho": {
                 "ativo": self.cabecalho.ativo,
                 "nome": self.cabecalho.nome,
                 "handle": self.cabecalho.handle,
                 "imagem": self.cabecalho.imagem,
+                "escala": self.cabecalho.escala,
+                "posicao": _posicao_para_dict(self.cabecalho.posicao),
+                "posicao_short": _posicao_para_dict(self.cabecalho.posicao_short),
             },
-            "placa": {"ativo": self.placa.ativo},
+            "placa": {
+                "ativo": self.placa.ativo,
+                "escala": self.placa.escala,
+                "posicao": _posicao_para_dict(self.placa.posicao),
+            },
         }
+
+
+def _posicao_para_dict(posicao: Posicao) -> dict[str, Any]:
+    return {"automatica": posicao.automatica, "x": posicao.x, "y": posicao.y}
 
 
 PADRAO = PalcoComponentes()
@@ -121,6 +163,27 @@ def _estilo(valor: Any, atual: str) -> str:
             f"Estilo de palco desconhecido: {valor!r}. Use um de: {', '.join(ESTILOS)}."
         )
     return estilo
+
+
+def _numero(valor: Any, atual: float, minimo: float, maximo: float) -> float:
+    if valor is None:
+        return atual
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        return atual
+    return max(minimo, min(maximo, numero))
+
+
+def _posicao(valor: Any, atual: Posicao, quadro: tuple[int, int]) -> Posicao:
+    """A posição depois da edição, presa dentro do quadro."""
+    if not isinstance(valor, dict):
+        return atual
+    return Posicao(
+        automatica=_booleano(valor.get("automatica"), atual.automatica),
+        x=int(_numero(valor.get("x"), atual.x, 0, quadro[0])),
+        y=int(_numero(valor.get("y"), atual.y, 0, quadro[1])),
+    )
 
 
 def _fundo(valor: Any, atual: str) -> str:
@@ -151,6 +214,10 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
         ''
         >>> mesclar(PADRAO, {"fundo": "Linho"}).fundo
         'linho'
+        >>> mesclar(PADRAO, {"cabecalho": {"escala": 9}}).cabecalho.escala
+        2.0
+        >>> mesclar(PADRAO, {"placa": {"posicao": {"automatica": False, "x": 5000}}}).placa.posicao
+        Posicao(automatica=False, x=1920, y=0)
         >>> mesclar(PADRAO, None) == PADRAO
         True
     """
@@ -166,18 +233,33 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
             nome=_texto(novo_cabecalho.get("nome"), cabecalho.nome),
             handle=_texto(novo_cabecalho.get("handle"), cabecalho.handle),
             imagem=_texto(novo_cabecalho.get("imagem"), cabecalho.imagem),
+            escala=_numero(
+                novo_cabecalho.get("escala"), cabecalho.escala, ESCALA_MINIMA, ESCALA_MAXIMA
+            ),
+            posicao=_posicao(novo_cabecalho.get("posicao"), cabecalho.posicao, HORIZONTAL),
+            posicao_short=_posicao(
+                novo_cabecalho.get("posicao_short"), cabecalho.posicao_short, VERTICAL
+            ),
         )
 
     placa = atual.placa
     nova_placa = mudancas.get("placa")
     if isinstance(nova_placa, dict):
-        placa = replace(placa, ativo=_booleano(nova_placa.get("ativo"), placa.ativo))
+        placa = replace(
+            placa,
+            ativo=_booleano(nova_placa.get("ativo"), placa.ativo),
+            escala=_numero(nova_placa.get("escala"), placa.escala, ESCALA_MINIMA, ESCALA_MAXIMA),
+            posicao=_posicao(nova_placa.get("posicao"), placa.posicao, HORIZONTAL),
+        )
 
     return PalcoComponentes(
         estilo=_estilo(mudancas.get("estilo"), atual.estilo),
         cabecalho=cabecalho,
         placa=placa,
         fundo=_fundo(mudancas.get("fundo"), atual.fundo),
+        contorno_short=int(
+            _numero(mudancas.get("contorno_short"), atual.contorno_short, 0, CONTORNO_MAXIMO)
+        ),
     )
 
 
@@ -251,13 +333,21 @@ def props_para_renderer(
     return {
         "estilo": componentes.estilo,
         "fundo": componentes.fundo,
+        "contorno_short": componentes.contorno_short,
         "cabecalho": {
             "ativo": cabecalho.ativo,
             "nome": cabecalho.nome or nome_do_canal.strip(),
             "handle": com_handle(cabecalho.handle or handle_do_canal),
             "imagem": imagem_servida,
+            "escala": cabecalho.escala,
+            "posicao": _posicao_para_dict(cabecalho.posicao),
+            "posicao_short": _posicao_para_dict(cabecalho.posicao_short),
         },
-        "placa": {"ativo": componentes.placa.ativo},
+        "placa": {
+            "ativo": componentes.placa.ativo,
+            "escala": componentes.placa.escala,
+            "posicao": _posicao_para_dict(componentes.placa.posicao),
+        },
     }
 
 

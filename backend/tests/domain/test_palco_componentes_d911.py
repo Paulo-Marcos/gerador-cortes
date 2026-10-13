@@ -73,6 +73,54 @@ class TestFundo:
         assert f'FUNDO_PADRAO_DO_LIMPO: FundoDoLimpo = "{pc.FUNDO_PADRAO}"' in fonte
 
 
+class TestPosicaoETamanho:
+    def test_padroes_sao_os_numeros_de_sempre(self):
+        assert pc.PADRAO.cabecalho.posicao == pc.Posicao(automatica=False, x=64, y=64)
+        assert pc.PADRAO.cabecalho.posicao_short.automatica is True
+        assert pc.PADRAO.placa.posicao.automatica is True
+        assert pc.PADRAO.cabecalho.escala == pc.PADRAO.placa.escala == 1.0
+        assert pc.PADRAO.contorno_short == 32
+
+    def test_move_e_redimensiona_o_cabecalho(self):
+        novo = pc.mesclar(
+            pc.PADRAO,
+            {"cabecalho": {"escala": 1.5, "posicao": {"automatica": False, "x": 1500, "y": 980}}},
+        )
+        assert novo.cabecalho.escala == 1.5
+        assert (novo.cabecalho.posicao.x, novo.cabecalho.posicao.y) == (1500, 980)
+
+    def test_posicao_presa_no_quadro_de_cada_formato(self):
+        novo = pc.mesclar(
+            pc.PADRAO,
+            {"cabecalho": {"posicao_short": {"automatica": False, "x": 4000, "y": 4000}}},
+        )
+        assert (novo.cabecalho.posicao_short.x, novo.cabecalho.posicao_short.y) == (1080, 1920)
+
+    def test_placa_manual_e_volta_ao_automatico(self):
+        manual = pc.mesclar(
+            pc.PADRAO, {"placa": {"posicao": {"automatica": False, "x": 900, "y": 40}}}
+        )
+        assert manual.placa.posicao == pc.Posicao(automatica=False, x=900, y=40)
+        auto = pc.mesclar(manual, {"placa": {"posicao": {"automatica": True}}})
+        assert auto.placa.posicao.automatica is True
+
+    def test_contorno_desliga_com_zero_e_tem_teto(self):
+        assert pc.mesclar(pc.PADRAO, {"contorno_short": 0}).contorno_short == 0
+        assert pc.mesclar(pc.PADRAO, {"contorno_short": 500}).contorno_short == 80
+
+    def test_tudo_chega_ao_renderer(self):
+        props = pc.props_para_renderer(
+            pc.mesclar(pc.PADRAO, {"placa": {"escala": 0.8}, "contorno_short": 20}),
+            nome_do_canal="",
+            handle_do_canal="",
+            imagem_servida="",
+        )
+        assert props["contorno_short"] == 20
+        assert props["placa"]["escala"] == 0.8
+        assert props["cabecalho"]["posicao"] == {"automatica": False, "x": 64, "y": 64}
+        assert props["cabecalho"]["posicao_short"]["automatica"] is True
+
+
 class TestNormalizar:
     def test_estilo_desconhecido_gravado_cai_no_padrao(self):
         assert pc.normalizar({"estilo": "sumiu", "placa": {"ativo": False}}).placa.ativo is False
@@ -91,17 +139,15 @@ class TestPropsParaRenderer:
             handle_do_canal="pedroivosa",
             imagem_servida="mascote/apresentador.png",
         )
-        assert props == {
-            "estilo": "limpo",
-            "fundo": "reticula-aurora",
-            "cabecalho": {
-                "ativo": True,
-                "nome": "Pedro Ivo",
-                "handle": "@pedroivosa",
-                "imagem": "mascote/apresentador.png",
-            },
-            "placa": {"ativo": True},
+        assert props["estilo"] == "limpo"
+        assert props["fundo"] == "reticula-aurora"
+        assert {k: props["cabecalho"][k] for k in ("ativo", "nome", "handle", "imagem")} == {
+            "ativo": True,
+            "nome": "Pedro Ivo",
+            "handle": "@pedroivosa",
+            "imagem": "mascote/apresentador.png",
         }
+        assert props["placa"]["ativo"] is True
 
     def test_cabecalho_preenchido_vence_a_identidade(self):
         props = pc.props_para_renderer(
