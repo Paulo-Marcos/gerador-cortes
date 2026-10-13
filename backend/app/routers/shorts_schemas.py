@@ -10,48 +10,12 @@ from typing import Any, Literal
 from app.domain.publicacao.ritmo_publicacao import EstadoItem
 from app.models import StatusShort
 from app.routers.cortes_schemas import PassoDoBruto
+
+# D-905: a porta da fábrica mora em `fabrica_schemas`; o router segue lendo daqui.
+from app.routers.fabrica_schemas import FiresResponse as FiresResponse
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 from pydantic import ConfigDict
 from pydantic.json_schema import SkipJsonSchema
-
-
-class ContagemDeShorts(RespostaApi):
-    """Quantos shorts o corte tem, por estágio da curadoria."""
-
-    total: int
-    sugerido: int
-    aprovado: int
-    rejeitado: int
-    renderizado: int
-
-
-class FireDaFabrica(RespostaApi):
-    """Um corte na porta da fábrica: Fire ou indicado à mão (D-502)."""
-
-    corte_id: str
-    projeto_id: str
-    projeto_titulo: str
-    numero: int
-    titulo: str
-    tema_central: str
-    duracao_seg: float
-    # D-502: sem bruto o corte AINDA aparece — a tela oferece regerar.
-    tem_bruto: bool
-    bruto_mb: float
-    is_fire: bool
-    indicado: bool
-    # D-503: há MP4 final para publicar no TikTok?
-    tem_video_final: bool
-    live_em_disco: bool
-    # D-581: a mão humana já passou por aqui? Alimenta "onde eu parei".
-    tem_edicao: bool
-    # D-593: quando os shorts foram dados por publicados em todas as redes.
-    finalizado_em: str | None
-    shorts: ContagemDeShorts
-
-
-class FiresResponse(RespostaApi):
-    fires: list[FireDaFabrica]
 
 
 class SegmentoDoShort(RespostaApi):

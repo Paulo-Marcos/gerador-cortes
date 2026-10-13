@@ -3937,6 +3937,13 @@
             "title": "Projeto Titulo",
             "type": "string"
           },
+          "redes": {
+            "items": {
+              "$ref": "#/components/schemas/RedeDoCorte"
+            },
+            "title": "Redes",
+            "type": "array"
+          },
           "shorts": {
             "$ref": "#/components/schemas/ContagemDeShorts"
           },
@@ -3977,7 +3984,8 @@
           "live_em_disco",
           "tem_edicao",
           "finalizado_em",
-          "shorts"
+          "shorts",
+          "redes"
         ],
         "title": "FireDaFabrica",
         "type": "object"
@@ -7844,6 +7852,30 @@
           "recorta"
         ],
         "title": "RecorteDesenhavel",
+        "type": "object"
+      },
+      "RedeDoCorte": {
+        "description": "Uma rede do short, vista pelo corte inteiro (D-905).",
+        "properties": {
+          "completa": {
+            "title": "Completa",
+            "type": "boolean"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          },
+          "publicados": {
+            "title": "Publicados",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plataforma",
+          "publicados",
+          "completa"
+        ],
+        "title": "RedeDoCorte",
         "type": "object"
       },
       "RegistrarAvaliacaoRequest": {

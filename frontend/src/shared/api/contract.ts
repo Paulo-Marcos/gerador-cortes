@@ -6141,6 +6141,8 @@ export interface components {
             projeto_id: string;
             /** Projeto Titulo */
             projeto_titulo: string;
+            /** Redes */
+            redes: components["schemas"]["RedeDoCorte"][];
             shorts: components["schemas"]["ContagemDeShorts"];
             /** Tem Bruto */
             tem_bruto: boolean;
@@ -7730,6 +7732,18 @@ export interface components {
             recorta: components["schemas"]["RetanguloEmPixels"];
             /** Regiao */
             regiao: string;
+        };
+        /**
+         * RedeDoCorte
+         * @description Uma rede do short, vista pelo corte inteiro (D-905).
+         */
+        RedeDoCorte: {
+            /** Completa */
+            completa: boolean;
+            /** Plataforma */
+            plataforma: string;
+            /** Publicados */
+            publicados: number;
         };
         /** RegistrarAvaliacaoRequest */
         RegistrarAvaliacaoRequest: {

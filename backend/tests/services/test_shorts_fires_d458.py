@@ -7,9 +7,19 @@ o `arquivo_clip_path` pode continuar preenchido depois de alguem apagar a pasta
 por fora do app.
 """
 
+from datetime import datetime
+
 import pytest
 import pytest_asyncio
-from app.models import Base, Corte, MetadadoCorte, Projeto, Short, StatusShort
+from app.models import (
+    Base,
+    Corte,
+    MetadadoCorte,
+    Projeto,
+    PublicacaoShort,
+    Short,
+    StatusShort,
+)
 from app.services import shorts as servico
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -303,3 +313,102 @@ async def test_reabrir_apaga_o_carimbo(ambiente):
 async def test_finalizar_corte_inexistente_recusa(ambiente):
     with pytest.raises(LookupError):
         await servico.marcar_finalizado("nao-existe", True)
+
+
+# ─── D-905: as redes em que o corte ja esta inteiro ─────────────────────────
+
+
+def _publicacao(
+    short_id: str, plataforma: str, *, confirmada: bool = True, sufixo: str = ""
+) -> PublicacaoShort:
+    return PublicacaoShort(
+        id=f"{short_id}-{plataforma}{sufixo}",
+        alvo_tipo="short",
+        alvo_id=short_id,
+        plataforma=plataforma,
+        estado="publicado" if confirmada else "aguardando",
+        publicado_em=datetime(2026, 10, 1) if confirmada else None,
+    )
+
+
+def _redes(fire: dict) -> dict[str, dict]:
+    return {rede["plataforma"]: rede for rede in fire["redes"]}
+
+
+@pytest.mark.asyncio
+async def test_rede_acende_quando_todos_os_prontos_do_corte_subiram(ambiente):
+    factory, raiz = ambiente
+    await _semear(factory, corte_id="c1", fire=True, clip_path=_criar_bruto(raiz, "c1"))
+    async with factory() as db:
+        db.add(Short(id="s1", corte_id="c1", numero=1, status=StatusShort.RENDERIZADO))
+        db.add(Short(id="s2", corte_id="c1", numero=2, status=StatusShort.RENDERIZADO))
+        db.add(Short(id="s3", corte_id="c1", numero=3, status=StatusShort.SUGERIDO))
+        db.add(_publicacao("s1", "tiktok"))
+        db.add(_publicacao("s2", "tiktok"))
+        db.add(_publicacao("s1", "youtube_shorts"))
+        await db.commit()
+
+    redes = _redes((await servico.listar_fires_com_bruto())[0])
+
+    assert redes["tiktok"] == {"plataforma": "tiktok", "publicados": 2, "completa": True}
+    assert redes["youtube_shorts"] == {
+        "plataforma": "youtube_shorts",
+        "publicados": 1,
+        "completa": False,
+    }
+    assert redes["instagram_reels"]["completa"] is False
+
+
+@pytest.mark.asyncio
+async def test_publicacao_sem_confirmacao_e_republicacao_nao_inflam_a_conta(ambiente):
+    """Conta o SHORT confirmado, nao a linha: a que espera o clique nao esta no ar."""
+    factory, raiz = ambiente
+    await _semear(factory, corte_id="c1", fire=True, clip_path=_criar_bruto(raiz, "c1"))
+    async with factory() as db:
+        db.add(Short(id="s1", corte_id="c1", numero=1, status=StatusShort.RENDERIZADO))
+        db.add(Short(id="s2", corte_id="c1", numero=2, status=StatusShort.RENDERIZADO))
+        db.add(_publicacao("s1", "tiktok"))
+        db.add(_publicacao("s1", "tiktok", sufixo="-de-novo"))
+        db.add(_publicacao("s2", "tiktok", confirmada=False))
+        await db.commit()
+
+    redes = _redes((await servico.listar_fires_com_bruto())[0])
+
+    assert redes["tiktok"] == {"plataforma": "tiktok", "publicados": 1, "completa": False}
+
+
+@pytest.mark.asyncio
+async def test_corte_sem_short_pronto_nao_acende_rede_nenhuma(ambiente):
+    factory, raiz = ambiente
+    await _semear(factory, corte_id="c1", fire=True, clip_path=_criar_bruto(raiz, "c1"))
+
+    redes = _redes((await servico.listar_fires_com_bruto())[0])
+
+    assert [r["plataforma"] for r in redes.values()] == [
+        "youtube_shorts",
+        "tiktok",
+        "instagram_reels",
+    ]
+    assert not any(r["completa"] for r in redes.values())
+
+
+@pytest.mark.asyncio
+async def test_short_publicado_e_depois_rejeitado_nao_conta_para_a_rede(ambiente):
+    """A curadoria pode tirar um short do estado renderizado depois que ele subiu.
+
+    Ele sai dos prontos, e a publicacao dele tem de sair junto: senao conta a
+    favor e acende a rede com outro short pronto ainda fora dela.
+    """
+    factory, raiz = ambiente
+    await _semear(factory, corte_id="c1", fire=True, clip_path=_criar_bruto(raiz, "c1"))
+    async with factory() as db:
+        db.add(Short(id="s1", corte_id="c1", numero=1, status=StatusShort.RENDERIZADO))
+        db.add(Short(id="s2", corte_id="c1", numero=2, status=StatusShort.RENDERIZADO))
+        db.add(Short(id="s3", corte_id="c1", numero=3, status=StatusShort.REJEITADO))
+        db.add(_publicacao("s1", "tiktok"))
+        db.add(_publicacao("s3", "tiktok"))
+        await db.commit()
+
+    redes = _redes((await servico.listar_fires_com_bruto())[0])
+
+    assert redes["tiktok"] == {"plataforma": "tiktok", "publicados": 1, "completa": False}
