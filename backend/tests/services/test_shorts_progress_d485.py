@@ -9,6 +9,7 @@ a fila e o gate de RAM, e esqueceu o instrumento que torna tudo legivel.
 """
 
 import pytest
+from app.services import shorts_progress
 from app.services.shorts_progress import PASSOS_RENDER, LugarDoShort, ShortsProgress
 
 
@@ -34,14 +35,20 @@ def test_iniciar_deixa_os_tres_passos_pendentes():
     assert {p["status"] for p in estado["passos"]} == {"pendente"}
 
 
-def test_o_tempo_decorrido_anda():
-    """E a resposta para "ha quanto tempo?", que a lista de passos nao da."""
-    import time
+def test_o_tempo_decorrido_anda(monkeypatch):
+    """E a resposta para "ha quanto tempo?", que a lista de passos nao da.
+
+    D-915: o relogio e falso porque dormir 0,05 s nao prova nada no Windows com
+    Python 3.11 — la o monotonic anda de 15,6 em 15,6 ms, mede 0,046875 e o
+    arredondamento a uma casa da 0,0. Falhava 2 em 3.
+    """
+    agora = [1000.0]
+    monkeypatch.setattr(shorts_progress.time, "monotonic", lambda: agora[0])
 
     ShortsProgress.iniciar("s1", estagio="final")
-    time.sleep(0.05)
+    agora[0] += 2.0
 
-    assert ShortsProgress.get("s1")["decorrido_seg"] > 0
+    assert ShortsProgress.get("s1")["decorrido_seg"] == 2.0
 
 
 def test_marcar_move_so_o_passo_pedido():
