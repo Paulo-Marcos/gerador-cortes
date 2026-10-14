@@ -1,6 +1,6 @@
 // D-154: camada de I/O (react-query) do gerenciador de canais. Mantém a página
 // "burra" — o componente só consome estes hooks, sem tocar em fetch direto.
-import { useMemo } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
 import { paraComponentesDoPalco } from './palcoDoCanal';
@@ -146,6 +146,19 @@ export function usePalcoDoCanalAtivo() {
 export function usePalcoDoCanalAtivoResolvido(): ComponentesDoPalco {
   const { data } = usePalcoDoCanalAtivo();
   return useMemo(() => paraComponentesDoPalco(data), [data]);
+}
+
+/**
+ * D-921: o RASCUNHO do palco, quando há um sendo editado (o modal do palco do
+ * short). As prévias o preferem ao palco salvo, para a mudança aparecer antes
+ * de salvar; fora do modal o contexto é null e vale o que o canal gravou.
+ */
+export const RascunhoDoPalcoContext = createContext<ComponentesDoPalco | null>(null);
+
+/** O palco que a prévia desenha: o rascunho em edição, ou o que o canal gravou. */
+export function usePalcoParaPrevia(): ComponentesDoPalco {
+  const salvo = usePalcoDoCanalAtivoResolvido();
+  return useContext(RascunhoDoPalcoContext) ?? salvo;
 }
 
 export function useGravarPalco() {

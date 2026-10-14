@@ -364,6 +364,32 @@ def normalizar(dados: Any) -> PalcoComponentes:
     return mesclar(PADRAO, base)
 
 
+# D-921: os presets de palco (posicionamento do horizontal e palco do short)
+# lembram o estilo em que foram montados, e a tela só mostra os do estilo
+# escolhido. Os tipos que levam estilo:
+TIPOS_DE_PRESET_COM_ESTILO = ("posicionamento", "posicionamento_full", "palco_short")
+
+
+def estilo_do_preset(payload: Any) -> str | None:
+    """O estilo gravado num preset de palco, ou None quando ele não declara.
+
+    Parcial de propósito: preset salvo antes da D-921 não tem a chave e vale
+    como o estilo de sempre (quem lê decide); estilo desconhecido também é None.
+
+    Exemplos:
+        >>> estilo_do_preset({"estilo": "Limpo"})
+        'limpo'
+        >>> estilo_do_preset({}) is None
+        True
+        >>> estilo_do_preset({"estilo": "neon"}) is None
+        True
+    """
+    if not isinstance(payload, dict):
+        return None
+    estilo = str(payload.get("estilo") or "").strip().lower()
+    return estilo if estilo in ESTILOS else None
+
+
 def com_handle(handle: str) -> str:
     """O handle com UM `@` na frente, como aparece no palco.
 

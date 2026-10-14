@@ -14,7 +14,7 @@ import { CapaChatgptSection } from '@/features/capa-chatgpt/CapaChatgptSection';
 import { EstiloDaCapaSection } from '@/features/capa-chatgpt/EstiloDaCapaSection';
 import { ChannelCard } from './ChannelCard';
 import { ChannelThemeSection } from './ChannelThemeSection';
-import { PalcoComponentesSection } from './PalcoComponentesSection';
+import { PalcoComponentesSection } from './EdicaoDoPalco';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';

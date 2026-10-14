@@ -47,6 +47,8 @@ export interface GanchoShortPreset {
 
 /** O que um preset de palco de short guarda (D-509). */
 export interface PalcoShortPreset {
+  /** D-921: o estilo do palco em que o preset foi montado; ausente = o de sempre. */
+  estilo?: 'atual' | 'limpo';
   arranjo: string;
   janela_cheia: string;
   /** O que cada janela mostra da live, em pixels do quadro-FONTE. */
@@ -70,6 +72,8 @@ export interface LayoutPosicionamentoPayload {
   compartilhada: YoutubeSharedConfig;
   fundo?: YoutubeBackgroundId;
   placa?: YoutubePlaca;
+  /** D-921: o estilo do palco em que o preset foi montado; ausente = o de sempre. */
+  estilo?: 'atual' | 'limpo';
 }
 
 /** F-060: payload do preset de posicionamento FULL. */
@@ -77,6 +81,8 @@ export interface LayoutPosicionamentoFullPayload {
   full: YoutubeFullConfig;
   fundo?: YoutubeBackgroundId;
   placa?: YoutubePlaca;
+  /** D-921: o estilo do palco em que o preset foi montado; ausente = o de sempre. */
+  estilo?: 'atual' | 'limpo';
 }
 
 export interface LayoutPresetBase {

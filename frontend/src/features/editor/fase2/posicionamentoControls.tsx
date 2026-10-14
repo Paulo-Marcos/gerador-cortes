@@ -19,17 +19,11 @@ import {
   type YoutubeSharedRect,
   type YoutubeSharedScreenCount,
 } from '@/shared/palco/youtubeLayout';
-import { YoutubeBackground } from '@/shared/palco/youtubeBackgrounds';
-import {
-  ImageFrame,
-  SPEAKER_LABEL_GAP_FROM_IMAGE,
-  SPEAKER_LABEL_HEIGHT,
-  SpeakerLabelOverlay,
-  StageChrome,
-} from '@/shared/palco/youtubeChrome';
+import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
 import { limitar } from '@/lib/limitar';
 import { Icon } from '@/upgrade/Icon';
-import { CroppedStill, SlotDragOverlay, useArrastarRetangulo } from './SlotPreviewPartes';
+import { PalcoDoSlotPreview } from './PalcoDoSlotPreview';
+import { SlotDragOverlay, useArrastarRetangulo } from './SlotPreviewPartes';
 
 export type SharedRectKey = Exclude<keyof YoutubeSharedConfig, 'telas'>;
 export type CropRectKey = 'crop_facecam' | 'crop_tela';
@@ -366,6 +360,7 @@ export function SlotPreview({
   currentTime,
   fundo,
   placa,
+  palco,
   onChangeSlot,
 }: {
   className?: string;
@@ -375,6 +370,8 @@ export function SlotPreview({
   currentTime: number;
   fundo: YoutubeBackgroundId;
   placa: YoutubePlaca;
+  /** D-921: o palco do canal (o rascunho, no modal); "limpo" troca o desenho. */
+  palco?: ComponentesDoPalco;
   onChangeSlot: (key: DragRectKey, rect: YoutubeSharedRect) => void;
 }) {
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -408,26 +405,11 @@ export function SlotPreview({
     (key === 'slot_facecam' && rectKey === 'crop_facecam') ||
     (key === 'slot_tela' && rectKey === 'crop_tela');
 
-  const telaScale = Math.min(
-    config.slot_tela.w / config.crop_tela.w,
-    config.slot_tela.h / config.crop_tela.h,
-  );
-  const telaW = config.crop_tela.w * telaScale;
-  const telaH = config.crop_tela.h * telaScale;
-  const faceScale = Math.min(
-    config.slot_facecam.w / config.crop_facecam.w,
-    config.slot_facecam.h / config.crop_facecam.h,
-  );
-  const faceW = config.crop_facecam.w * faceScale;
-  const faceH = config.crop_facecam.h * faceScale;
-
   const { dragKey, startDrag, onMove, endDrag } = useArrastarRetangulo<DragRectKey>({
     frameRef,
     rectDe,
     onChange: onChangeSlot,
   });
-
-  const temPlaca = Boolean(placa && (placa.nome || placa.papel));
 
   return (
     <div className={className}>
@@ -449,56 +431,14 @@ export function SlotPreview({
             transformOrigin: '0 0',
           }}
         >
-          <YoutubeBackground fundo={fundo} />
-          <StageChrome />
-          <ImageFrame
-            left={config.slot_tela.x}
-            top={config.slot_tela.y}
-            width={telaW}
-            height={telaH}
-            chromeOpts={{ radius: 30, chamferTR: 80, chamferBR: 44, offset: 12 }}
-            outlineScale={0.3}
-          >
-            {videoSrc ? (
-              <CroppedStill
-                videoSrc={videoSrc}
-                currentTime={currentTime}
-                crop={config.crop_tela}
-                renderW={telaW}
-                renderH={telaH}
-              />
-            ) : (
-              <div className="h-full w-full bg-black" />
-            )}
-          </ImageFrame>
-          {hasFacecam && (
-            <ImageFrame
-              left={config.slot_facecam.x}
-              top={config.slot_facecam.y}
-              width={faceW}
-              height={faceH}
-            >
-              {videoSrc ? (
-                <CroppedStill
-                  videoSrc={videoSrc}
-                  currentTime={currentTime}
-                  crop={config.crop_facecam}
-                  renderW={faceW}
-                  renderH={faceH}
-                />
-              ) : (
-                <div className="h-full w-full bg-black" />
-              )}
-            </ImageFrame>
-          )}
-          {temPlaca && (
-            <SpeakerLabelOverlay
-              left={config.slot_tela.x}
-              top={config.slot_tela.y - SPEAKER_LABEL_HEIGHT - SPEAKER_LABEL_GAP_FROM_IMAGE}
-              nome={placa.nome}
-              papel={placa.papel}
-            />
-          )}
+          <PalcoDoSlotPreview
+            config={config}
+            videoSrc={videoSrc}
+            currentTime={currentTime}
+            fundo={fundo}
+            placa={placa}
+            palco={palco}
+          />
         </div>
 
         {/* Overlay clicavel/arrastavel para cada slot — em coords % para
