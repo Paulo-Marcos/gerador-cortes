@@ -1,11 +1,13 @@
 import type { CSSProperties, FC, ReactNode } from "react";
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import type { CenaRemotion } from "../schema";
 import { shouldUseSharedCardZone } from "../shared-card-zone";
 import { useSombraPadrao } from "../cenas-v2/_shared/sombra-context";
 import { resolverNivel, type SombraNivel } from "../cenas-v2/_shared/sombra-tokens";
 import { useEstiloDasCenas } from "./estilo-das-cenas";
-import { useEntrada, useFonteDoLimpo } from "./Bloco";
+import { useFonteDoLimpo } from "./Bloco";
+import { assentar, duracaoEmQuadros, opacidadeDeSaida, QUADROS } from "./movimento";
+import { TempoDaCenaContext, useContinuidade, type TempoDaCena } from "./tempo-da-cena";
 
 /**
  * D-916: onde o Bloco senta e o que vai atrás dele.
@@ -39,30 +41,47 @@ export function scrimDoNivel(nivel: SombraNivel): CSSProperties {
 /** A cena está na coluna do palco compartilhado (e não sobre o vídeo cheio). */
 export const estaNaZona = (cena: CenaRemotion): boolean => shouldUseSharedCardZone(cena);
 
+/** O tempo desta cena (D-918): fim em quadros e se ela continua a vizinha (morph). */
+function useTempoDestaCena(cena: CenaRemotion): TempoDaCena {
+  const { fps } = useVideoConfig();
+  const continuidade = useContinuidade();
+  return { ...continuidade, fim: duracaoEmQuadros(cena.tipo, cena.inicio, cena.fim, fps) };
+}
+
 export const Enquadramento: FC<{ cena: CenaRemotion; children: ReactNode }> = ({ cena, children }) => {
   const familia = useFonteDoLimpo();
   const { escala, posicao } = useEstiloDasCenas();
   const nivel = resolverNivel(cena.sombra_nivel, useSombraPadrao());
-  const entrada = useEntrada(cena.fim - cena.inicio);
-  const base: CSSProperties = { position: "absolute", fontFamily: familia, ...entrada };
+  const tempo = useTempoDestaCena(cena);
+  const quadro = useCurrentFrame();
+  // A barra inferior para em 4 s mesmo que a cena dure mais (D-918).
+  if (quadro >= tempo.fim) return null;
+  const base: CSSProperties = { position: "absolute", fontFamily: familia };
 
   if (estaNaZona(cena)) {
     return (
-      <AbsoluteFill>
-        <div style={{ ...base, left: ORIGEM_NA_ZONA.x, top: ORIGEM_NA_ZONA.y }}>{children}</div>
-      </AbsoluteFill>
+      <TempoDaCenaContext.Provider value={tempo}>
+        <AbsoluteFill>
+          <div style={{ ...base, left: ORIGEM_NA_ZONA.x, top: ORIGEM_NA_ZONA.y }}>{children}</div>
+        </AbsoluteFill>
+      </TempoDaCenaContext.Provider>
     );
   }
 
   const lugar: CSSProperties = posicao.automatica
     ? { left: AUTOMATICA_NO_CHEIO.x, bottom: AUTOMATICA_NO_CHEIO.base, transformOrigin: "0 100%" }
     : { left: posicao.x, top: posicao.y, transformOrigin: "0 0" };
+  // O scrim acompanha o texto: aparece com o traço e some com a cena.
+  const scrim = Math.min(assentar(quadro / QUADROS.traco), opacidadeDeSaida(quadro, tempo.fim, tempo.naProxima));
   return (
-    <AbsoluteFill>
-      <div style={{ ...base, ...lugar, transform: `${entrada.transform} scale(${escala})` }}>
-        <div style={scrimDoNivel(nivel)}>{children}</div>
-      </div>
-    </AbsoluteFill>
+    <TempoDaCenaContext.Provider value={tempo}>
+      <AbsoluteFill>
+        <div style={{ ...base, ...lugar, transform: `scale(${escala})` }}>
+          <div style={{ ...scrimDoNivel(nivel), position: "absolute", inset: 0, opacity: tempo.daAnterior ? 1 : scrim }} />
+          <div style={{ position: "relative", textShadow: scrimDoNivel(nivel).textShadow }}>{children}</div>
+        </div>
+      </AbsoluteFill>
+    </TempoDaCenaContext.Provider>
   );
 };
 
@@ -73,13 +92,15 @@ export const QuadroInteiro: FC<{ cena: CenaRemotion; opacidade: number; children
   children,
 }) => {
   const familia = useFonteDoLimpo();
-  const entrada = useEntrada(cena.fim - cena.inicio);
+  const tempo = useTempoDestaCena(cena);
+  const quadro = useCurrentFrame();
+  const fundo = Math.min(assentar(quadro / QUADROS.traco), opacidadeDeSaida(quadro, tempo.fim));
   return (
-    <AbsoluteFill style={{ fontFamily: familia, opacity: entrada.opacity }}>
-      <AbsoluteFill style={{ background: `rgba(${GRAFITE},${opacidade})` }} />
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", transform: entrada.transform }}>
-        {children}
+    <TempoDaCenaContext.Provider value={tempo}>
+      <AbsoluteFill style={{ fontFamily: familia }}>
+        <AbsoluteFill style={{ background: `rgba(${GRAFITE},${opacidade})`, opacity: fundo }} />
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>{children}</AbsoluteFill>
       </AbsoluteFill>
-    </AbsoluteFill>
+    </TempoDaCenaContext.Provider>
   );
 };

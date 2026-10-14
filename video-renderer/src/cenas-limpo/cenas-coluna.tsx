@@ -1,10 +1,12 @@
 import { useState, type FC } from "react";
 import { Img } from "remotion";
 import type { CenaRemotion } from "../schema";
-import { analisarNumeroDestaque } from "../cenas-v2/_shared/numeroFit";
+import { analisarNumeroDestaque, formatarNucleoDestaque } from "../cenas-v2/_shared/numeroFit";
 import { inicialDoAutor } from "../cenas-v2/CenaPerguntaChat";
 import { COR_DO_ACENTO, COR_DO_FUNDO } from "../youtube-bg/palco-limpo";
-import { Bloco, GIZ_55, GIZ_85, Kicker, TIPO } from "./Bloco";
+import { Bloco, GIZ_55, GIZ_85, Kicker, TIPO, linhasDoBloco } from "./Bloco";
+import { progressoDoSublinhado, valorDaContagem } from "./movimento";
+import { useTempoDaCena } from "./tempo-da-cena";
 import { Enquadramento, estaNaZona } from "./Enquadramento";
 
 // D-916: as cenas de COLUNA no estilo limpo (canvas "Catálogo A"). Cada uma é
@@ -113,25 +115,49 @@ export const CenaCitacaoLimpo: FC<Cena> = ({ cena }) => (
   </Enquadramento>
 );
 
-export const CenaNumeroLimpo: FC<Cena> = ({ cena }) => {
-  const numero = analisarNumeroDestaque(cena.numero ?? cena.texto ?? "");
-  const nucleo = numero.textoFinal.slice(numero.prefixo.length, numero.textoFinal.length - numero.sufixo.length);
+/** O núcleo do número contando até o valor (D-918); sem núcleo único, o texto como veio. */
+const NumeroContando: FC<{ bruto: string | number }> = ({ bruto }) => {
+  const { quadro } = useTempoDaCena();
+  const numero = analisarNumeroDestaque(bruto);
+  if (numero.valor === null) return <>{numero.textoFinal}</>;
   return (
-    <Enquadramento cena={cena}>
-      <Bloco
-        kicker={cena.subtexto || "Dado"}
-        titulo={
-          <span style={{ fontSize: 120, fontWeight: 800, lineHeight: 0.9, letterSpacing: "-0.05em" }}>
-            {numero.prefixo}
-            {nucleo || numero.textoFinal}
-            {numero.sufixo ? <span style={{ fontSize: 48, color: COR_DO_ACENTO, letterSpacing: 0 }}>{numero.sufixo}</span> : null}
-          </span>
-        }
-        corpo={cena.contexto}
-        rodape={cena.fonte}
-        gap={10}
-      />
-    </Enquadramento>
+    <>
+      {numero.prefixo}
+      {formatarNucleoDestaque(valorDaContagem(quadro, numero.valor), numero)}
+      {numero.sufixo ? <span style={{ fontSize: 48, color: COR_DO_ACENTO, letterSpacing: 0 }}>{numero.sufixo}</span> : null}
+    </>
+  );
+};
+
+export const CenaNumeroLimpo: FC<Cena> = ({ cena }) => (
+  <Enquadramento cena={cena}>
+    <Bloco
+      kicker={cena.subtexto || "Dado"}
+      titulo={
+        <span style={{ fontSize: 120, fontWeight: 800, lineHeight: 0.9, letterSpacing: "-0.05em" }}>
+          <NumeroContando bruto={cena.numero ?? cena.texto ?? ""} />
+        </span>
+      }
+      corpo={cena.contexto}
+      rodape={cena.fonte}
+      gap={10}
+    />
+  </Enquadramento>
+);
+
+/** O sublinhado da ênfase: se desenha da esquerda para a direita em 8 quadros (D-918). */
+const Sublinhado: FC = () => {
+  const { quadro } = useTempoDaCena();
+  return (
+    <div
+      style={{
+        height: 6,
+        borderRadius: 3,
+        background: COR_DO_ACENTO,
+        transformOrigin: "0 50%",
+        transform: `scaleX(${progressoDoSublinhado(quadro)})`,
+      }}
+    />
   );
 };
 
@@ -139,12 +165,20 @@ export const CenaNumeroLimpo: FC<Cena> = ({ cena }) => {
 export const CenaEnfaseLimpo: FC<Cena> = ({ cena }) => (
   <Enquadramento cena={cena}>
     <div style={{ display: "flex", flexDirection: "column", gap: 14, width: 400 }}>
-      <Kicker cor={GIZ_55}>{cena.contexto || "A palavra é"}</Kicker>
-      <div style={{ display: "inline-flex", flexDirection: "column", gap: 10, alignSelf: "flex-start" }}>
-        <div style={{ fontSize: 72, fontWeight: 800, lineHeight: 0.95, letterSpacing: "-0.04em" }}>{cena.texto}</div>
-        <div style={{ height: 6, borderRadius: 3, background: COR_DO_ACENTO }} />
-      </div>
-      {cena.subtexto ? <div style={{ fontSize: 22, fontWeight: 500, color: GIZ_85 }}>{cena.subtexto}</div> : null}
+      {linhasDoBloco([
+        <Kicker key="k" cor={GIZ_55}>
+          {cena.contexto || "A palavra é"}
+        </Kicker>,
+        <div key="p" style={{ display: "inline-flex", flexDirection: "column", gap: 10, alignSelf: "flex-start" }}>
+          <div style={{ fontSize: 72, fontWeight: 800, lineHeight: 0.95, letterSpacing: "-0.04em" }}>{cena.texto}</div>
+          <Sublinhado />
+        </div>,
+        cena.subtexto ? (
+          <div key="s" style={{ fontSize: 22, fontWeight: 500, color: GIZ_85 }}>
+            {cena.subtexto}
+          </div>
+        ) : null,
+      ])}
     </div>
   </Enquadramento>
 );

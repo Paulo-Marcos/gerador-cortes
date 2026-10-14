@@ -2,7 +2,7 @@ import type { FC } from "react";
 import type { CenaRemotion } from "../schema";
 import { Mascote } from "../Mascote";
 import { COR_DO_ACENTO } from "../youtube-bg/palco-limpo";
-import { Bloco, COLUNA, GIZ_35, GIZ_55, Kicker, TIPO, Traco } from "./Bloco";
+import { Bloco, COLUNA, GIZ_35, GIZ_55, Kicker, TIPO, Traco, linhasDoBloco } from "./Bloco";
 import { Enquadramento, QuadroInteiro, estaNaZona } from "./Enquadramento";
 
 // D-916: as cenas LARGAS, de quadro e de rodapé no estilo limpo (canvas
@@ -52,8 +52,9 @@ export const CenaComparativoLimpo: FC<Cena> = ({ cena }) => {
 export const CenaListaLimpo: FC<Cena> = ({ cena }) => (
   <Enquadramento cena={cena}>
     <div style={{ display: "flex", flexDirection: "column", gap: 22, width: COLUNA }}>
-      {cena.texto ? <Kicker>{cena.texto}</Kicker> : null}
-      {(cena.itens ?? []).slice(0, 5).map((item, i) => (
+      {linhasDoBloco([
+        cena.texto ? <Kicker key="k">{cena.texto}</Kicker> : null,
+        ...(cena.itens ?? []).slice(0, 5).map((item, i) => (
         <div key={`${i}-${item.titulo}`} style={{ display: "flex", gap: 22 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: COR_DO_ACENTO, width: 36, paddingTop: 6, flex: "0 0 auto" }}>
             {String(i + 1).padStart(2, "0")}
@@ -63,7 +64,8 @@ export const CenaListaLimpo: FC<Cena> = ({ cena }) => (
             {item.detalhe ? <div style={{ fontSize: 20, fontWeight: 500, color: "rgba(243,242,238,0.7)", marginTop: 4 }}>{item.detalhe}</div> : null}
           </div>
         </div>
-      ))}
+        )),
+      ])}
     </div>
   </Enquadramento>
 );
@@ -103,9 +105,13 @@ export const CenaFonteLimpo: FC<Cena> = ({ cena }) => (
     <div style={{ display: "flex", gap: 16, alignItems: "center", width: 360 }}>
       <Traco espessura={4} />
       <div>
-        <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: 3, color: COR_DO_ACENTO }}>FONTE</div>
-        <div style={{ fontSize: 20, fontWeight: 500, color: "rgba(243,242,238,0.7)" }}>{cena.fonte ?? cena.texto}</div>
-        {cena.subtexto ? <div style={{ ...TIPO.rodape, fontSize: 16, color: GIZ_55 }}>{cena.subtexto}</div> : null}
+        {linhasDoBloco([
+          <div key="f">
+            <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: 3, color: COR_DO_ACENTO }}>FONTE</div>
+            <div style={{ fontSize: 20, fontWeight: 500, color: "rgba(243,242,238,0.7)" }}>{cena.fonte ?? cena.texto}</div>
+            {cena.subtexto ? <div style={{ ...TIPO.rodape, fontSize: 16, color: GIZ_55 }}>{cena.subtexto}</div> : null}
+          </div>,
+        ])}
       </div>
     </div>
   </Enquadramento>
@@ -117,8 +123,16 @@ export const CenaBarraInferiorLimpo: FC<Cena> = ({ cena }) => (
     <div style={{ display: "flex", gap: 20, width: COLUNA }}>
       <Traco espessura={4} />
       <div>
-        <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.01em" }}>{cena.texto}</div>
-        {cena.subtexto ? <div style={{ fontSize: 20, fontWeight: 600, color: COR_DO_ACENTO }}>{cena.subtexto}</div> : null}
+        {linhasDoBloco([
+          <div key="n" style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.01em" }}>
+            {cena.texto}
+          </div>,
+          cena.subtexto ? (
+            <div key="p" style={{ fontSize: 20, fontWeight: 600, color: COR_DO_ACENTO }}>
+              {cena.subtexto}
+            </div>
+          ) : null,
+        ])}
       </div>
     </div>
   </Enquadramento>
@@ -136,9 +150,17 @@ export const CenaTelaCheiaLimpo: FC<Cena> = ({ cena }) => {
   return (
     <QuadroInteiro cena={cena} opacidade={0.6}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 20, maxWidth: 1200 }}>
-        <Kicker>{cena.contexto || "A tese"}</Kicker>
-        <div style={{ fontSize: 72, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em" }}>{cena.texto}</div>
-        {cena.subtexto ? <div style={{ ...TIPO.corpo, fontSize: 32 }}>{cena.subtexto}</div> : null}
+        {linhasDoBloco([
+          <Kicker key="k">{cena.contexto || "A tese"}</Kicker>,
+          <div key="t" style={{ fontSize: 72, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em" }}>
+            {cena.texto}
+          </div>,
+          cena.subtexto ? (
+            <div key="s" style={{ ...TIPO.corpo, fontSize: 32 }}>
+              {cena.subtexto}
+            </div>
+          ) : null,
+        ])}
       </div>
     </QuadroInteiro>
   );
@@ -159,8 +181,16 @@ export const CenaChamadaFinalLimpo: FC<Cena> = ({ cena }) => {
       <div style={{ display: "flex", alignItems: "center", gap: 56 }}>
         <Mascote mood={cena.mascotMood || "animado"} tamanho="pequeno" />
         <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 900 }}>
-          <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.02em" }}>{texto}</div>
-          {cena.subtexto ? <div style={{ fontSize: 30, fontWeight: 700, color: COR_DO_ACENTO }}>{cena.subtexto}</div> : null}
+          {linhasDoBloco([
+            <div key="t" style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              {texto}
+            </div>,
+            cena.subtexto ? (
+              <div key="s" style={{ fontSize: 30, fontWeight: 700, color: COR_DO_ACENTO }}>
+                {cena.subtexto}
+              </div>
+            ) : null,
+          ])}
         </div>
       </div>
     </QuadroInteiro>
