@@ -1,8 +1,9 @@
 import { useCallback, type CSSProperties, type FC, type ReactNode } from "react";
-import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { fontFamily as familiaInter, loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { useEsperarFontes } from "../theme-v2";
 import { COR_DO_ACENTO, COR_DO_TEXTO } from "../youtube-bg/palco-limpo";
+import { opacidadeDeSaida, progressoDoTraco } from "./movimento";
+import { Linha, useTempoDaCena } from "./tempo-da-cena";
 
 /**
  * D-916: o Bloco — a peça única das cenas no estilo limpo (canvas "Catálogo A").
@@ -38,19 +39,27 @@ export function useFonteDoLimpo(): string {
   return familiaInter;
 }
 
-/** Entra de baixo (10 px) em 6 quadros e sai em 6, como o sistema do limpo pede. */
-export function useEntrada(duracaoSeg: number): CSSProperties {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const fim = Math.max(12, Math.round(duracaoSeg * fps));
-  const entrada = interpolate(frame, [0, 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const saida = interpolate(frame, [fim - 6, fim], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  return { opacity: Math.min(entrada, saida), transform: `translateY(${(1 - entrada) * 10}px)` };
-}
-
-export const Traco: FC<{ cor?: string; espessura?: number }> = ({ cor = COR_DO_ACENTO, espessura = 6 }) => (
-  <div style={{ width: espessura, borderRadius: espessura / 2, background: cor, alignSelf: "stretch", flex: "0 0 auto" }} />
-);
+/**
+ * O traço: cresce de cima para baixo nos 6 primeiros quadros (D-918). No morph
+ * ele já está cheio e não sai — é a parte que fica de uma cena para a outra.
+ */
+export const Traco: FC<{ cor?: string; espessura?: number }> = ({ cor = COR_DO_ACENTO, espessura = 6 }) => {
+  const { quadro, fim, daAnterior, naProxima } = useTempoDaCena();
+  return (
+    <div
+      style={{
+        width: espessura,
+        borderRadius: espessura / 2,
+        background: cor,
+        alignSelf: "stretch",
+        flex: "0 0 auto",
+        transformOrigin: "50% 0",
+        transform: `scaleY(${progressoDoTraco(quadro, daAnterior)})`,
+        opacity: opacidadeDeSaida(quadro, fim, naProxima),
+      }}
+    />
+  );
+};
 
 export const Kicker: FC<{ children: ReactNode; cor?: string }> = ({ children, cor = COR_DO_ACENTO }) => (
   <div style={{ ...TIPO.kicker, color: cor, textTransform: "uppercase" }}>{children}</div>
@@ -87,12 +96,25 @@ export const Bloco: FC<BlocoProps> = ({
   <div style={{ display: "flex", gap: 28, width: largura, color: COR_DO_TEXTO }}>
     <Traco cor={corDoTraco} />
     <div style={{ display: "flex", flexDirection: "column", gap, minWidth: 0, flex: "1 1 auto" }}>
-      {antes}
-      {kicker ? <Kicker cor={corDoKicker}>{kicker}</Kicker> : null}
-      {titulo ? <div style={{ ...TIPO.titulo, overflowWrap: "break-word", ...tituloStyle }}>{titulo}</div> : null}
-      {corpo ? <div style={{ ...TIPO.corpo, color: GIZ_85, overflowWrap: "break-word" }}>{corpo}</div> : null}
-      {rodape ? <div style={{ ...TIPO.rodape, color: GIZ_55 }}>{rodape}</div> : null}
-      {depois}
+      {linhasDoBloco([
+        antes,
+        kicker ? <Kicker cor={corDoKicker}>{kicker}</Kicker> : null,
+        titulo ? <div style={{ ...TIPO.titulo, overflowWrap: "break-word", ...tituloStyle }}>{titulo}</div> : null,
+        corpo ? <div style={{ ...TIPO.corpo, color: GIZ_85, overflowWrap: "break-word" }}>{corpo}</div> : null,
+        rodape ? <div style={{ ...TIPO.rodape, color: GIZ_55 }}>{rodape}</div> : null,
+        depois,
+      ])}
     </div>
   </div>
 );
+
+/** As partes que existem, cada uma numa Linha, na ordem em que entram. */
+export function linhasDoBloco(partes: ReactNode[]): ReactNode[] {
+  return partes
+    .filter((parte) => parte !== null && parte !== undefined && parte !== false)
+    .map((parte, indice) => (
+      <Linha key={indice} indice={indice}>
+        {parte}
+      </Linha>
+    ));
+}
