@@ -7,18 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type {
-  CampoReset,
-  EditorialSkill,
-  ModeloGemini,
-  UpdateSkillPayload,
+import {
+  FAIXAS,
+  type CampoReset,
+  type EditorialSkill,
+  type Faixa,
+  type UpdateSkillPayload,
 } from '@/features/channels/api/skillsEditoriais';
 import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   skill: EditorialSkill;
-  /** Sugestões para o campo do modelo Gemini (lista do `agy`). */
-  modelosGemini: ModeloGemini[];
   pending: boolean;
   onSave: (payload: UpdateSkillPayload) => void;
   onReset: (campos: CampoReset[]) => void;
@@ -54,15 +53,13 @@ function ResetButton({ onClick, disabled }: { onClick: () => void; disabled: boo
 
 export function EditorialSkillForm({
   skill,
-  modelosGemini,
   pending,
   onSave,
   onReset,
   onCancel,
 }: Props) {
   const [corpo, setCorpo] = useState(skill.corpo);
-  const [modelo, setModelo] = useState(skill.params.modelo);
-  const [modeloGemini, setModeloGemini] = useState(skill.params.modelo_gemini);
+  const [faixa, setFaixa] = useState<Faixa>(skill.params.faixa);
   const [thinking, setThinking] = useState(String(skill.params.thinking_tokens));
   const [timeout, setTimeout] = useState(String(skill.params.timeout));
   const [lentesText, setLentesText] = useState(lentesParaTexto(skill.lentes));
@@ -70,8 +67,7 @@ export function EditorialSkillForm({
   // Ressincroniza quando a skill muda (troca de skill ou reset persistido).
   useEffect(() => {
     setCorpo(skill.corpo);
-    setModelo(skill.params.modelo);
-    setModeloGemini(skill.params.modelo_gemini);
+    setFaixa(skill.params.faixa);
     setThinking(String(skill.params.thinking_tokens));
     setTimeout(String(skill.params.timeout));
     setLentesText(lentesParaTexto(skill.lentes));
@@ -83,8 +79,7 @@ export function EditorialSkillForm({
     onSave({
       corpo,
       params: {
-        modelo: modelo.trim(),
-        modelo_gemini: modeloGemini.trim(),
+        faixa,
         thinking_tokens: Number(thinking) || 0,
         timeout: Number(timeout) || skill.params_default.timeout,
       },
@@ -115,7 +110,7 @@ export function EditorialSkillForm({
         </p>
       </div>
 
-      {/* Params da etapa: um modelo por provider */}
+      {/* Params da etapa: a faixa escolhe o modelo dos dois providers (D-924) */}
       <fieldset className="grid gap-2">
         <div className="flex items-center justify-between">
           <legend className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
@@ -123,36 +118,23 @@ export function EditorialSkillForm({
           </legend>
           <ResetButton onClick={() => onReset(['params'])} disabled={pending} />
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div className="grid gap-1.5">
-            <Label htmlFor="skill-modelo" className="text-xs">
-              Modelo Claude
+            <Label htmlFor="skill-faixa" className="text-xs">
+              Modelo
             </Label>
-            <Input
-              id="skill-modelo"
-              value={modelo}
-              onChange={(e) => setModelo(e.target.value)}
-              placeholder="opus | sonnet | haiku"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="skill-modelo-gemini" className="text-xs">
-              Modelo Gemini
-            </Label>
-            <Input
-              id="skill-modelo-gemini"
-              list="skill-modelos-gemini"
-              value={modeloGemini}
-              onChange={(e) => setModeloGemini(e.target.value)}
-              placeholder={skill.params_default.modelo_gemini}
-            />
-            <datalist id="skill-modelos-gemini">
-              {modelosGemini.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nome}
+            <select
+              id="skill-faixa"
+              value={faixa}
+              onChange={(e) => setFaixa(e.target.value as Faixa)}
+              className="h-9 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900 px-2 text-sm text-text-100"
+            >
+              {FAIXAS.map((f) => (
+                <option key={f.faixa} value={f.faixa}>
+                  {f.rotulo}
                 </option>
               ))}
-            </datalist>
+            </select>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="skill-thinking" className="text-xs">
@@ -180,8 +162,9 @@ export function EditorialSkillForm({
           </div>
         </div>
         <p className="text-xs text-[var(--wb-text-dim)]">
-          O botão Claude usa o modelo Claude; o botão Gemini usa o modelo Gemini, pela assinatura
-          do Antigravity. Thinking tokens só vale para o Claude; o timeout vale para os dois.
+          A faixa escolhe o modelo dos dois botões, Claude e Gemini. Qual modelo responde por
+          cada faixa se troca em Canais → Aplicação → Modelos de IA. Thinking tokens só vale para
+          o Claude; o timeout vale para os dois.
         </p>
       </fieldset>
 

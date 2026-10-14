@@ -20,7 +20,7 @@ from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
 from app.services import abertura_do_corte, retrato_wikipedia
-from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal import editorial_scaffolds, editorial_skills, modelos_ia
 from app.services.claude_ia import gerar_json, registrar_skill_usada
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -474,7 +474,7 @@ class CenasRemotionService:
                 )
                 try:
                     resultado_ia = await gemini_client.generate_json(
-                        "gemini-2.5-flash",
+                        modelos_ia.ler_modelos().gemini_api_texto,
                         prompt_info["texto"],
                         temperature=0.7,
                         contexto=gemini_client.GeminiCallContext(

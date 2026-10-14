@@ -1750,7 +1750,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/editorial-skills/modelos-gemini": {
+    "/api/editorial-skills/modelos-ia": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar Modelos Ia */
+        get: operations["listar_modelos_ia_api_editorial_skills_modelos_ia_get"];
+        /** Editar Modelos Ia */
+        put: operations["editar_modelos_ia_api_editorial_skills_modelos_ia_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/editorial-skills/modelos-ia/disponiveis": {
         parameters: {
             query?: never;
             header?: never;
@@ -1758,12 +1776,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Listar Modelos Gemini
-         * @description Os modelos que o `agy` desta máquina oferece, para a escolha no modal.
-         *
-         *     Vazio quando o CLI não está instalado ou logado — o campo aceita texto livre.
+         * Listar Modelos Disponiveis
+         * @description Pergunta ao `agy` e à API do Gemini: pode levar alguns segundos.
          */
-        get: operations["listar_modelos_gemini_api_editorial_skills_modelos_gemini_get"];
+        get: operations["listar_modelos_disponiveis_api_editorial_skills_modelos_ia_disponiveis_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6445,6 +6461,11 @@ export interface components {
             /** Projeto Id */
             projeto_id: string;
         };
+        /**
+         * Faixa
+         * @enum {string}
+         */
+        Faixa: "pesado" | "medio" | "rapido";
         /** FaixaDaMoldura */
         FaixaDaMoldura: {
             /** Cor */
@@ -7207,15 +7228,15 @@ export interface components {
             /** Chamadas */
             chamadas: components["schemas"]["LlmCallResponse"][];
         };
-        /** ListaModelosGeminiResponse */
-        ListaModelosGeminiResponse: {
-            /** Modelos */
-            modelos: components["schemas"]["ModeloGeminiResponse"][];
-        };
         /** ListaMotivosResponse */
         ListaMotivosResponse: {
             /** Motivos */
             motivos: components["schemas"]["MotivoAvaliacaoResponse"][];
+        };
+        /** ListaPapeisModeloResponse */
+        ListaPapeisModeloResponse: {
+            /** Papeis */
+            papeis: components["schemas"]["PapelModeloResponse"][];
         };
         /** ListaPromptsUtilitariosResponse */
         ListaPromptsUtilitariosResponse: {
@@ -7565,12 +7586,24 @@ export interface components {
             /** Titulo Youtube */
             titulo_youtube: string;
         };
-        /** ModeloGeminiResponse */
-        ModeloGeminiResponse: {
+        /** ModeloDisponivelResponse */
+        ModeloDisponivelResponse: {
             /** Id */
             id: string;
             /** Nome */
             nome: string;
+        };
+        /**
+         * ModelosDisponiveisResponse
+         * @description Por provedor. Lista vazia = o CLI ou a chave faltam nesta máquina.
+         */
+        ModelosDisponiveisResponse: {
+            /** Claude */
+            claude: components["schemas"]["ModeloDisponivelResponse"][];
+            /** Gemini */
+            gemini: components["schemas"]["ModeloDisponivelResponse"][];
+            /** Gemini Api */
+            gemini_api: components["schemas"]["ModeloDisponivelResponse"][];
         };
         /** MolduraAplicadaResponse */
         MolduraAplicadaResponse: {
@@ -7864,6 +7897,21 @@ export interface components {
              * @default
              */
             secundaria: string;
+        };
+        /** PapelModeloResponse */
+        PapelModeloResponse: {
+            /** Descricao */
+            descricao: string;
+            /** Key */
+            key: string;
+            /** Padrao */
+            padrao: string;
+            /** Provedor */
+            provedor: string;
+            /** Rotulo */
+            rotulo: string;
+            /** Valor */
+            valor: string;
         };
         /**
          * ParametrosDoDestinoModel
@@ -9081,19 +9129,13 @@ export interface components {
         };
         /**
          * SkillParamsModel
-         * @description Params da etapa: modelo Claude + modelo Gemini (Antigravity) + thinking + timeout.
+         * @description Params da etapa: a faixa do modelo (D-924) + thinking + timeout.
          *
-         *     `modelo_gemini` vazio no request = derivar do modelo Claude (compat com
-         *     clientes que ainda não conhecem o campo).
+         *     O nome do modelo de cada provider sai da faixa, pela configuração de modelos
+         *     do canal (`/modelos-ia`).
          */
         SkillParamsModel: {
-            /** Modelo */
-            modelo: string;
-            /**
-             * Modelo Gemini
-             * @default
-             */
-            modelo_gemini: string;
+            faixa: components["schemas"]["Faixa"];
             /** Thinking Tokens */
             thinking_tokens: number;
             /** Timeout */
@@ -9504,6 +9546,16 @@ export interface components {
             velocidade_player_padrao?: number | null;
             /** Youtube Layout Padrao Global */
             youtube_layout_padrao_global?: string | null;
+        };
+        /**
+         * UpdateModelosIaRequest
+         * @description Papel → modelo; só os informados mudam. Vazio volta ao padrão.
+         */
+        UpdateModelosIaRequest: {
+            /** Escolhas */
+            escolhas: {
+                [key: string]: string;
+            };
         };
         /** UpdatePromptUtilitarioRequest */
         UpdatePromptUtilitarioRequest: {
@@ -12944,7 +12996,7 @@ export interface operations {
             };
         };
     };
-    listar_modelos_gemini_api_editorial_skills_modelos_gemini_get: {
+    listar_modelos_ia_api_editorial_skills_modelos_ia_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -12959,7 +13011,60 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListaModelosGeminiResponse"];
+                    "application/json": components["schemas"]["ListaPapeisModeloResponse"];
+                };
+            };
+        };
+    };
+    editar_modelos_ia_api_editorial_skills_modelos_ia_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateModelosIaRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListaPapeisModeloResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_modelos_disponiveis_api_editorial_skills_modelos_ia_disponiveis_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelosDisponiveisResponse"];
                 };
             };
         };

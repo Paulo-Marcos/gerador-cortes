@@ -200,6 +200,7 @@ class DesviosService:
     async def analisar_ia(corte_id: str) -> Corte:
         """Analisa desvios e repetições via Gemini IA."""
         from app.infrastructure import gemini_client
+        from app.services.canal import modelos_ia
 
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
@@ -251,7 +252,7 @@ class DesviosService:
 
                 try:
                     resultado = await gemini_client.generate_json(
-                        "gemini-2.5-flash",
+                        modelos_ia.ler_modelos().gemini_api_texto,
                         prompt,
                         temperature=0.7,
                         contexto=gemini_client.GeminiCallContext(

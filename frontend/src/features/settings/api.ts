@@ -10,6 +10,8 @@ export type AtualizarSettingsBody = Schema<'UpdateAppSettingsRequest'>;
 export type LayoutCapaTiktok = Schema<'LayoutCapaTiktokResponse'>;
 export type Navegador = Schema<'NavegadorDoRobo'>['navegador'];
 export type RoboDoStudio = Schema<'RoboDoStudio'>;
+export type PapelModelo = Schema<'PapelModeloResponse'>;
+export type ModelosDisponiveis = Schema<'ModelosDisponiveisResponse'>;
 
 export const settingsApi = {
   obterSettings: () => dados(api.GET('/api/settings')),
@@ -34,4 +36,11 @@ export const settingsApi = {
   obterRoboDoStudio: () => dados(api.GET('/api/channels/ativo/robo-do-studio')),
   gravarRoboDoStudio: (body: RoboDoStudio) =>
     dados(api.PUT('/api/channels/ativo/robo-do-studio', { body })),
+
+  /** D-924: que modelo atende cada faixa de IA, no canal ativo. Vazio = padrão. */
+  obterModelosIa: () => dados(api.GET('/api/editorial-skills/modelos-ia')),
+  gravarModelosIa: (escolhas: Record<string, string>) =>
+    dados(api.PUT('/api/editorial-skills/modelos-ia', { body: { escolhas } })),
+  /** Pergunta ao `agy` e à API do Gemini: leva alguns segundos. */
+  listarModelosDisponiveis: () => dados(api.GET('/api/editorial-skills/modelos-ia/disponiveis')),
 };

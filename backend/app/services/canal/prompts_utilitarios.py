@@ -41,8 +41,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.core import channel_paths
+from app.domain.compartilhado.modelos_ia import Faixa
 from app.infrastructure import settings_store
-from app.services.canal import editorial_scaffolds
+from app.services.canal import editorial_scaffolds, modelos_ia
 
 # app -> backend -> raiz do repo (mesma ancoragem de editorial_scaffolds).
 _REPO_ROOT = Path(__file__).resolve().parents[4]  # canal → services → app → backend → repo
@@ -58,8 +59,8 @@ class PromptUtilitario:
     - `placeholders`: os campos `{...}` OBRIGATÓRIOS que o serviço injeta.
     - `opcionais`: campos `{...}` PERMITIDOS mas não obrigatórios.
     - `marcador`: token que o contrato de saída exige (checado case-insensitive).
-    - `modelo_setting`: nome do atributo em `app.config.settings` que define o
-      modelo do Claude usado (informativo — o modelo NÃO é editável por canal).
+    - `faixa`: a faixa de modelo da etapa (D-924) — o nome do modelo sai da
+      configuração de modelos do canal; a faixa NÃO é editável por canal.
 
     Os campos `placeholders`/`opcionais`/`marcador` espelham `ScaffoldCatalogo`
     de propósito, para reusar `editorial_scaffolds.validar_scaffold` como guardrail.
@@ -71,7 +72,7 @@ class PromptUtilitario:
     arquivo: str
     placeholders: tuple[str, ...]
     marcador: str
-    modelo_setting: str
+    faixa: Faixa
     opcionais: tuple[str, ...] = ()
 
 
@@ -88,7 +89,7 @@ _CATALOGO: tuple[PromptUtilitario, ...] = (
         arquivo="sentimento-ranking.txt",
         placeholders=("comentarios",),
         marcador="JSON",
-        modelo_setting="claude_model_ranking_sentimento",
+        faixa=Faixa.RAPIDO,
     ),
     PromptUtilitario(
         key="padroes-thumbnail",
@@ -101,7 +102,7 @@ _CATALOGO: tuple[PromptUtilitario, ...] = (
         arquivo="padroes-thumbnail.txt",
         placeholders=("total_melhores", "com_tags", "eixos", "exemplos"),
         marcador="JSON",
-        modelo_setting="claude_model_metadados",
+        faixa=Faixa.MEDIO,
     ),
 )
 
@@ -118,6 +119,13 @@ def _exigir_catalogo(key: str) -> PromptUtilitario:
     if cat is None:
         raise KeyError(f"Prompt utilitário desconhecido: {key!r}.")
     return cat
+
+
+def modelos_do_prompt(key: str) -> tuple[str, str]:
+    """O modelo Claude e o Gemini que atendem a faixa da etapa (D-924)."""
+    faixa = _exigir_catalogo(key).faixa
+    modelos = modelos_ia.ler_modelos()
+    return modelos.claude(faixa), modelos.gemini(faixa)
 
 
 # --------------------------------------------------------------------------- #

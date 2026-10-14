@@ -88,7 +88,7 @@ class TestGerarJson:
         proc = _FakePopen(stdout=_envelope('{"ok": true, "n": 42}'))
         _patch_popen(monkeypatch, proc)
 
-        data = asyncio.run(cli.generate_json("gere"))
+        data = asyncio.run(cli.generate_json("gere", model="sonnet"))
 
         assert data == {"ok": True, "n": 42}
 
@@ -98,7 +98,7 @@ class TestGerarTexto:
         proc = _FakePopen(stdout=_envelope("texto livre de saída"))
         _patch_popen(monkeypatch, proc)
 
-        texto = asyncio.run(cli.generate_text("oi"))
+        texto = asyncio.run(cli.generate_text("oi", model="sonnet"))
 
         assert texto == "texto livre de saída"
 
@@ -115,7 +115,7 @@ class TestThinkingTokens:
 
         monkeypatch.setattr(cli.subprocess, "Popen", fake_popen)
         monkeypatch.setattr(cli.subprocess, "run", lambda *_a, **_k: None)
-        asyncio.run(cli.generate_text("oi", **gen_kwargs))
+        asyncio.run(cli.generate_text("oi", model="sonnet", **gen_kwargs))
         return capturado["env"]
 
     def test_default_herda_o_global(self, monkeypatch):
@@ -149,7 +149,7 @@ class TestEnvIsolamentoApi:
 
         monkeypatch.setattr(cli.subprocess, "Popen", fake_popen)
         monkeypatch.setattr(cli.subprocess, "run", lambda *_a, **_k: None)
-        asyncio.run(cli.generate_text("oi"))
+        asyncio.run(cli.generate_text("oi", model="sonnet"))
         return capturado["env"]
 
     @pytest.mark.parametrize("var", cli._ENV_FORCA_API)
@@ -208,7 +208,7 @@ class TestErros:
         _patch_popen(monkeypatch, proc)
 
         with pytest.raises(ClaudeCliError):
-            asyncio.run(cli.generate_text("oi"))
+            asyncio.run(cli.generate_text("oi", model="sonnet"))
 
     def test_returncode_nao_zero_levanta(self, monkeypatch):
         monkeypatch.setattr(cli.settings, "claude_cli_retries", 0)
@@ -216,7 +216,7 @@ class TestErros:
         _patch_popen(monkeypatch, proc)
 
         with pytest.raises(ClaudeCliError, match="código 1"):
-            asyncio.run(cli.generate_text("oi"))
+            asyncio.run(cli.generate_text("oi", model="sonnet"))
 
     def test_exit_nao_zero_com_envelope_de_sucesso_retorna(self, monkeypatch):
         # Cenário do bug: a geração concluiu (envelope is_error=False no stdout),
@@ -231,7 +231,7 @@ class TestErros:
         )
         _patch_popen(monkeypatch, proc)
 
-        texto = asyncio.run(cli.generate_text("oi"))
+        texto = asyncio.run(cli.generate_text("oi", model="sonnet"))
 
         assert texto == "resultado bom"
 
@@ -243,7 +243,7 @@ class TestErros:
         _patch_popen(monkeypatch, proc)
 
         with pytest.raises(ClaudeCliError, match="subtype"):
-            asyncio.run(cli.generate_text("oi"))
+            asyncio.run(cli.generate_text("oi", model="sonnet"))
 
     def test_stdout_nao_json_levanta(self, monkeypatch):
         monkeypatch.setattr(cli.settings, "claude_cli_retries", 0)
@@ -251,7 +251,7 @@ class TestErros:
         _patch_popen(monkeypatch, proc)
 
         with pytest.raises(ClaudeCliError):
-            asyncio.run(cli.generate_text("oi"))
+            asyncio.run(cli.generate_text("oi", model="sonnet"))
 
     def test_retry_em_erro_transitorio_depois_sucesso(self, monkeypatch):
         # 1ª chamada erra (is_error), 2ª retorna sucesso → generate_text deve
@@ -272,7 +272,7 @@ class TestErros:
         monkeypatch.setattr(cli.subprocess, "run", lambda *_a, **_k: None)
         monkeypatch.setattr(cli.asyncio, "sleep", fake_sleep)
 
-        texto = asyncio.run(cli.generate_text("oi"))
+        texto = asyncio.run(cli.generate_text("oi", model="sonnet"))
 
         assert chamadas["n"] == 2
         assert texto == "ok depois do retry"
@@ -309,7 +309,7 @@ class TestErros:
         monkeypatch.setattr(cli.settings, "claude_cli_retries", 0)
 
         with pytest.raises(ClaudeCliError, match="timeout"):
-            asyncio.run(cli.generate_text("oi", timeout=0.01))
+            asyncio.run(cli.generate_text("oi", model="sonnet", timeout=0.01))
 
         assert matou["arvore"], "deve matar a árvore de processos no timeout"
 
@@ -317,7 +317,7 @@ class TestErros:
         monkeypatch.setattr(cli.settings, "claude_cli_enabled", False)
 
         with pytest.raises(ClaudeCliError, match="desabilitado"):
-            asyncio.run(cli.generate_text("oi"))
+            asyncio.run(cli.generate_text("oi", model="sonnet"))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -343,7 +343,10 @@ class TestExpertiseInjetada:
         capturado = self._capturar_run(monkeypatch)
         texto = asyncio.run(
             cli.generate_text(
-                "PROMPT DO CORTE", skill="metadados-expert", expertise="EXPERTISE DO BANCO"
+                "PROMPT DO CORTE",
+                model="sonnet",
+                skill="metadados-expert",
+                expertise="EXPERTISE DO BANCO",
             )
         )
 
@@ -356,14 +359,16 @@ class TestExpertiseInjetada:
     def test_sem_expertise_mantem_ativacao_nativa(self, monkeypatch):
         # Fallback: corpo vazio → ativa `/<skill>` nativa (semântica preservada).
         capturado = self._capturar_run(monkeypatch)
-        asyncio.run(cli.generate_text("PROMPT", skill="metadados-expert", expertise=""))
+        asyncio.run(
+            cli.generate_text("PROMPT", model="sonnet", skill="metadados-expert", expertise="")
+        )
 
         assert capturado["entrada"].startswith("/metadados-expert")
         assert capturado["skill_mode"] is True
 
     def test_sem_skill_nem_expertise_manda_prompt_puro(self, monkeypatch):
         capturado = self._capturar_run(monkeypatch)
-        asyncio.run(cli.generate_text("PROMPT PURO"))
+        asyncio.run(cli.generate_text("PROMPT PURO", model="sonnet"))
 
         assert capturado["entrada"] == "PROMPT PURO"
         assert capturado["skill_mode"] is False
@@ -438,7 +443,7 @@ class TestRetry529:
         monkeypatch.setattr(cli.subprocess, "run", lambda *_a, **_k: None)
         monkeypatch.setattr(cli.asyncio, "sleep", fake_sleep)
 
-        texto = asyncio.run(cli.generate_text("gere as cenas"))
+        texto = asyncio.run(cli.generate_text("gere as cenas", model="sonnet"))
 
         assert chamadas["n"] == 3
         assert texto == "cenas geradas"
@@ -460,7 +465,7 @@ class TestRetry529:
         monkeypatch.setattr(cli.asyncio, "sleep", fake_sleep)
 
         with pytest.raises(ClaudeCliError, match="529"):
-            asyncio.run(cli.generate_text("oi"))
+            asyncio.run(cli.generate_text("oi", model="sonnet"))
         assert chamadas["n"] == 3  # tentou todas antes de desistir
 
 

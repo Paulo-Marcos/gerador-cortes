@@ -10,7 +10,7 @@ Cada caso de uso de IA mora no service do agregado dono dele (a análise, o cort
 
 A interface da ferramenta é `gerar_json` e `gerar_texto` (mais `registrar_skill_usada`, que loga qual skill rodou). As duas recebem `provider: ProviderIA` (`"claude" | "gemini"`), montam um `PedidoIA` e o entregam à porta `GeradorIA` (`backend/app/domain/compartilhado/gerador_ia.py`). A escolha do provider fica num lugar só, `gerador_para` (`backend/app/infrastructure/gerador_ia.py`), que devolve um dos adaptadores:
 - **Claude** (`GeradorClaudeCli`): `backend/app/infrastructure/claude_cli_client.py`. A skill vai como expertise do CLI.
-- **Gemini** (`GeradorAntigravityCli`): `backend/app/infrastructure/antigravity_cli_client.py`, que roda `agy -p` com o prompt pela entrada padrão (`stream-json`). A skill vai como expertise, e o modelo é o `modelo_gemini` da skill, editável em Canais → Skills. O padrão deriva do modelo Claude: Haiku → `AGY_MODEL_RAPIDO` (`gemini-3.8-flash-medium`); Opus/Sonnet → `AGY_MODEL_QUALIDADE` (`gemini-3.1-pro-high`).
+- **Gemini** (`GeradorAntigravityCli`): `backend/app/infrastructure/antigravity_cli_client.py`, que roda `agy -p` com o prompt pela entrada padrão (`stream-json`). A skill vai como expertise. A skill escolhe só a **faixa** (pesado, médio, rápido); que modelo do Claude e do Gemini atende cada faixa é a configuração do canal em Canais → Aplicação → Modelos de IA (`services/canal/modelos_ia.py`, padrões em `domain/compartilhado/modelos_ia.py`), junto com os modelos de texto e imagem da API do Gemini (D-924). Nenhum outro arquivo escreve nome de modelo: `test_modelos_ia_d924.py` reprova.
 
 **Pré-requisito do Gemini:** instalar o Antigravity CLI e rodar `agy` uma vez no terminal para logar com a conta Google. Cada chamada consome ~37 mil tokens fixos da cota (prompt de sistema do agente) além do prompt. A geração de **imagem** da capa continua no `gemini_client.py` (API), porque o `agy` não devolve imagem.
 
@@ -93,7 +93,7 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 - **UI**: `CapaTikTokSlot.tsx`
 
 ### 2.13 Padrões de thumbnail
-- **Descrição**: lê as capas melhor avaliadas e propõe ajuste na skill do capista. Não tem skill editorial no banco: o modelo Gemini sai da faixa equivalente ao Claude desta etapa.
+- **Descrição**: lê as capas melhor avaliadas e propõe ajuste na skill do capista. Não tem skill editorial no banco: os modelos saem da faixa do prompt utilitário (`prompts_utilitarios.modelos_do_prompt`).
 - **Rota**: `POST /api/avaliacoes-thumbnail/padroes?provider=`
 - **Service**: `PadroesThumbnailService.analisar` → `_ler_padroes`
 - **UI**: `ThumbnailPadroesPage.tsx`

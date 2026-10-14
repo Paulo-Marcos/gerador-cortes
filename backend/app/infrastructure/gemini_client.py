@@ -89,13 +89,13 @@ async def generate_json(
 async def generate_image(
     prompt: str,
     *,
-    model: str = "gemini-2.5-flash-image",
+    model: str,
     contexto: GeminiCallContext | None = None,
 ) -> bytes:
     """Gera uma imagem via Gemini e retorna os bytes.
 
     Exemplo:
-        >>> img_bytes = await generate_image("Um gato laranja")
+        >>> img_bytes = await generate_image("Um gato laranja", model="gemini-2.5-flash-image")
     """
 
     def _call_sync() -> bytes:
@@ -110,6 +110,26 @@ async def generate_image(
         raise ValueError("Gemini retornou sucesso mas sem imagem no response.parts")
 
     return await _com_anuncio(asyncio.to_thread(_call_sync), contexto)
+
+
+def listar_modelos() -> list[tuple[str, str]]:
+    """Os modelos que a chave do Gemini alcança e que geram conteúdo, como (id, nome).
+
+    Lista vazia sem chave ou quando a API não responde: a tela mostra o que está
+    escolhido e segue funcionando.
+    """
+    if not os.environ.get("GEMINI_API_KEY", settings.gemini_api_key):
+        return []
+    try:
+        modelos = [
+            (m.name.removeprefix("models/"), m.display_name or m.name)
+            for m in _get_client().models.list()
+            if m.name and "generateContent" in (m.supported_actions or [])
+        ]
+    except Exception as exc:  # noqa: BLE001 — rede, chave revogada, cota: a tela não cai
+        logger.warning("[GeminiClient] não foi possível listar os modelos: %s", exc)
+        return []
+    return sorted(modelos)
 
 
 async def _com_anuncio(chamada: Awaitable[Any], contexto: GeminiCallContext | None) -> Any:

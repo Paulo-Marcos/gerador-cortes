@@ -37,7 +37,9 @@ from app.config import settings
 from app.core import channel_paths
 from app.core.channel_paths import editorial_dir
 from app.domain.canal import variacao_prompt
+from app.domain.compartilhado.modelos_ia import Faixa, ModelosIa, faixa_de
 from app.infrastructure import settings_store
+from app.services.canal import modelos_ia
 
 # app -> backend -> raiz do repo (mesma ancoragem de channel_paths/channels).
 _REPO_ROOT = Path(__file__).resolve().parents[4]  # canal → services → app → backend → repo
@@ -50,17 +52,18 @@ class SkillCatalogo:
 
     - `arquivo`: nome do `.md` em `editorial/` (corpo/espelho).
     - `etapa`/`descricao`: rótulo e explicação funcional para a UI.
-    - `model_setting`/`thinking_setting`/`timeout_setting`: nomes dos atributos em
-      `config.settings` de onde vêm os DEFAULTS de modelo, thinking tokens e
-      timeout da etapa. `timeout_setting` tem default (`claude_cli_timeout`, o
-      global) — só a etapa cortes aponta para um setting próprio (D-300: thinking
+    - `faixa`: a faixa padrão da etapa (D-924); o modelo de cada provider sai da
+      configuração de modelos do canal.
+    - `thinking_setting`/`timeout_setting`: nomes dos atributos em
+      `config.settings` de onde vêm os DEFAULTS de thinking tokens e timeout.
+      `timeout_setting` tem default (`claude_cli_timeout`, o global) — só a etapa cortes aponta para um setting próprio (D-300: thinking
       estendido aumenta latência, então cortes precisa de mais fôlego).
     - `lentes_tipo`: chave em `variacao_prompt` das lentes default (None = etapa
       sem lentes — trechos/thumbnail (consistência/anti-mode-collapse) e cortes
       (D-301: o ângulo de titulação deriva do conteúdo de cada corte, não de
       um cardápio sorteado) por design).
 
-    Só params do Claude (modelo/thinking/timeout): as 5 skills são geração de TEXTO
+    Só params do Claude (faixa/thinking/timeout): as 5 skills são geração de TEXTO
     via `claude -p`, que não tem `temperature` — esta vive só nas etapas Gemini
     (cenas_remotion/desvios/shorts), fora do escopo destas skills.
     """
@@ -69,7 +72,7 @@ class SkillCatalogo:
     arquivo: str
     etapa: str
     descricao: str
-    model_setting: str
+    faixa: Faixa
     thinking_setting: str
     lentes_tipo: str | None
     timeout_setting: str = "claude_cli_timeout"
@@ -88,7 +91,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "sorteio por design (D-301): a variação do ângulo do título nasce do "
             "conteúdo de cada corte, não de um cardápio sorteado."
         ),
-        model_setting="claude_model_analise",
+        faixa=Faixa.PESADO,
         thinking_setting="claude_cli_thinking_tokens_analise",
         timeout_setting="claude_cli_timeout_analise",
         lentes_tipo=None,
@@ -103,7 +106,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "regerar os desvios de um corte. Sem lentes por design (a remoção deve "
             "ser consistente, não variada)."
         ),
-        model_setting="claude_model_analise",
+        faixa=Faixa.PESADO,
         thinking_setting="claude_cli_thinking_tokens_trechos",
         lentes_tipo=None,
     ),
@@ -115,7 +118,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "Gera as cenas Remotion de um corte (ênfases, citações, fichas, "
             "perguntas de transição) a partir da transcrição final."
         ),
-        model_setting="claude_model_cenas",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_max_thinking_tokens",
         lentes_tipo="cenas",
     ),
@@ -127,7 +130,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "Gera título, descrição e texto de capa do corte para o YouTube, "
             "seguindo as regras editoriais do canal e evitando repetir a série."
         ),
-        model_setting="claude_model_metadados",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_max_thinking_tokens",
         lentes_tipo="metadados",
     ),
@@ -141,7 +144,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "qualidade. Sem lentes de sorteio por design (a variação vem da memória "
             "global das capas anteriores, anti-mode-collapse)."
         ),
-        model_setting="claude_model_thumbnail",
+        faixa=Faixa.PESADO,
         thinking_setting="claude_cli_thinking_tokens_thumbnail",
         lentes_tipo=None,
     ),
@@ -157,7 +160,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "Sem lentes por design: avaliação precisa ser comparável entre "
             "cortes, não variada."
         ),
-        model_setting="claude_model_avaliacao",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_thinking_tokens_avaliacao",
         lentes_tipo=None,
     ),
@@ -173,7 +176,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "de Shorts. Sem lentes por design: a selecao precisa ser comparavel "
             "entre cortes, nao variada."
         ),
-        model_setting="claude_model_shorts",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_thinking_tokens_shorts",
         lentes_tipo=None,
     ),
@@ -191,7 +194,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "YouTube: aqui repetir o assunto entre cortes e o que da coerencia a "
             "grade."
         ),
-        model_setting="claude_model_capa_tiktok",
+        faixa=Faixa.RAPIDO,
         thinking_setting="claude_cli_thinking_tokens_capa_tiktok",
         lentes_tipo=None,
     ),
@@ -207,7 +210,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "interesse — na grade do perfil a capa chega a menos de um terco da "
             "largura da tela, e composicao detalhada some."
         ),
-        model_setting="claude_model_capa_tiktok_imagem",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_thinking_tokens_capa_tiktok_imagem",
         lentes_tipo=None,
     ),
@@ -223,7 +226,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "declarados. E a composicao tem de sobreviver a TRES recortes — a "
             "grade do Instagram e a do TikTok mostram so o quadrado central."
         ),
-        model_setting="claude_model_capa_short",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_thinking_tokens_capa_short",
         lentes_tipo=None,
     ),
@@ -239,7 +242,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "outro: la sao fichas e enfases num video de 10 minutos, aqui sao "
             "quatro cartoes disputando 30 segundos de tela vertical."
         ),
-        model_setting="claude_model_cenas_short",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_thinking_tokens_cenas_short",
         lentes_tipo=None,
     ),
@@ -257,7 +260,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "aqui e uma frase de 4-7 palavras que abre uma pergunta, e repetir "
             "entre shorts parece robo no feed."
         ),
-        model_setting="claude_model_gancho_short",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_thinking_tokens_gancho_short",
         lentes_tipo=None,
     ),
@@ -274,7 +277,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "vira a primeira linha da legenda no TikTok e no Instagram, que nao "
             "tem campo de titulo."
         ),
-        model_setting="claude_model_metadados_short",
+        faixa=Faixa.MEDIO,
         thinking_setting="claude_cli_thinking_tokens_metadados_short",
         lentes_tipo=None,
     ),
@@ -288,6 +291,7 @@ class SkillResolvida:
     """Skill de um canal já resolvida para consumo em runtime.
 
     `lentes` é a lista (possivelmente vazia) de lentes de variação da etapa.
+    `modelo` e `modelo_gemini` já vêm da faixa, pela configuração do canal (D-924).
     """
 
     key: str
@@ -296,9 +300,10 @@ class SkillResolvida:
     thinking_tokens: int
     timeout: float
     lentes: list[str]
-    # Modelo do provider "Gemini" (Antigravity CLI). O default vazio só existe para
-    # quem constrói a skill à mão; a resolução pelo banco sempre preenche.
+    # O default vazio só existe para quem constrói a skill à mão; a resolução
+    # pelo banco sempre preenche.
     modelo_gemini: str = ""
+    faixa: Faixa = Faixa.MEDIO
 
 
 def catalogo() -> tuple[SkillCatalogo, ...]:
@@ -327,23 +332,10 @@ def _default_corpo(cat: SkillCatalogo, exemplo_root: Path | None) -> str:
     return caminho.read_text(encoding="utf-8").strip()
 
 
-def modelo_gemini_equivalente(modelo_claude: str) -> str:
-    """Modelo Gemini padrão para a faixa do modelo Claude da skill.
-
-    Haiku é escolha de rapidez → modelo rápido; Opus e Sonnet são de qualidade →
-    modelo de qualidade. É só o PADRÃO: cada skill troca na tela de Canais.
-    """
-    if "haiku" in (modelo_claude or "").lower():
-        return settings.agy_model_rapido
-    return settings.agy_model_qualidade
-
-
 def _default_params(cat: SkillCatalogo) -> dict:
-    """Params default a partir dos globais de `config.settings`."""
-    modelo = str(getattr(settings, cat.model_setting))
+    """Params default: a faixa da etapa e os globais de `config.settings`."""
     return {
-        "modelo": modelo,
-        "modelo_gemini": modelo_gemini_equivalente(modelo),
+        "faixa": cat.faixa.value,
         "thinking_tokens": int(getattr(settings, cat.thinking_setting)),
         "timeout": float(getattr(settings, cat.timeout_setting)),
     }
@@ -382,11 +374,11 @@ def _coerce_params(raw: dict, cat: SkillCatalogo) -> dict:
     defaults = _default_params(cat)
     if not isinstance(raw, dict):
         return defaults
-    modelo = str(raw.get("modelo") or defaults["modelo"])
     return {
-        "modelo": modelo,
-        # Linhas gravadas antes do Antigravity não têm o campo: derivam do Claude.
-        "modelo_gemini": str(raw.get("modelo_gemini") or modelo_gemini_equivalente(modelo)),
+        # Linhas gravadas antes da D-924 têm o modelo Claude: a família diz a faixa.
+        "faixa": faixa_de(
+            raw.get("faixa"), modelo_legado=raw.get("modelo"), padrao=cat.faixa
+        ).value,
         "thinking_tokens": _coerce_int(
             raw.get("thinking_tokens"), defaults["thinking_tokens"], minimo=0
         ),
@@ -431,7 +423,7 @@ def _corpo_atual_do_canal(cat: SkillCatalogo, editorial_root: Path | None) -> st
     return _default_corpo(cat, None)
 
 
-def _linha_para_resolvida(cat: SkillCatalogo, linha: dict) -> SkillResolvida:
+def _linha_para_resolvida(cat: SkillCatalogo, linha: dict, modelos: ModelosIa) -> SkillResolvida:
     """Constrói `SkillResolvida` a partir de uma linha do banco (JSON coagido)."""
     try:
         params_raw = json.loads(linha.get("params_json") or "{}")
@@ -442,14 +434,16 @@ def _linha_para_resolvida(cat: SkillCatalogo, linha: dict) -> SkillResolvida:
     except json.JSONDecodeError:
         lentes_raw = []
     params = _coerce_params(params_raw, cat)
+    faixa = Faixa(params["faixa"])
     return SkillResolvida(
         key=cat.key,
         corpo=str(linha.get("corpo") or "").strip(),
-        modelo=params["modelo"],
+        modelo=modelos.claude(faixa),
         thinking_tokens=params["thinking_tokens"],
         timeout=params["timeout"],
         lentes=_coerce_lentes(lentes_raw, cat),
-        modelo_gemini=params["modelo_gemini"],
+        modelo_gemini=modelos.gemini(faixa),
+        faixa=faixa,
     )
 
 
@@ -495,7 +489,7 @@ def resolver_skill(
     linha = settings_store.ler_skill(db, cid, skill_key)
     if linha is None:
         linha = _semear(cat, db, cid, editorial_root)
-    return _linha_para_resolvida(cat, linha)
+    return _linha_para_resolvida(cat, linha, modelos_ia.ler_modelos(db_path=db, channel_id=cid))
 
 
 # --------------------------------------------------------------------------- #
@@ -600,8 +594,7 @@ def definir_skill(
 def _params_de(resolvida: SkillResolvida) -> dict:
     """Extrai o dict de params de uma `SkillResolvida` (para regravar/descrever)."""
     return {
-        "modelo": resolvida.modelo,
-        "modelo_gemini": resolvida.modelo_gemini,
+        "faixa": resolvida.faixa.value,
         "thinking_tokens": resolvida.thinking_tokens,
         "timeout": resolvida.timeout,
     }

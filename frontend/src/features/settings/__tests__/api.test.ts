@@ -50,4 +50,20 @@ describe('settingsApi sobre o cliente gerado', () => {
 
     expect(chamadas[0].url).toBe('http://api.test/api/settings/capa-tiktok/layout');
   });
+
+  it('D-924: grava só o papel do modelo que mudou', async () => {
+    await (await settings()).gravarModelosIa({ gemini_pesado: 'gemini-3.8-flash-high' });
+
+    expect(chamadas[0].method).toBe('PUT');
+    expect(chamadas[0].url).toBe('http://api.test/api/editorial-skills/modelos-ia');
+    expect(await chamadas[0].json()).toEqual({
+      escolhas: { gemini_pesado: 'gemini-3.8-flash-high' },
+    });
+  });
+
+  it('D-924: lista os modelos que cada provedor oferece', async () => {
+    await (await settings()).listarModelosDisponiveis();
+
+    expect(chamadas[0].url).toBe('http://api.test/api/editorial-skills/modelos-ia/disponiveis');
+  });
 });

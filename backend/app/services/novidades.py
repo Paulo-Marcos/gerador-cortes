@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from app.core import channel_paths
 from app.domain.compartilhado.erros import NaoEncontrado, ServicoExternoFalhou
+from app.domain.compartilhado.modelos_ia import Faixa
 from app.domain.novidades import traducao
 from app.domain.novidades.changelog import (
     SEM_VERSAO,
@@ -22,6 +23,7 @@ from app.domain.novidades.changelog import (
     ler_fragmentos,
 )
 from app.infrastructure import claude_cli_client, novidades_store
+from app.services.canal import modelos_ia
 
 
 @dataclass(frozen=True)
@@ -97,7 +99,7 @@ async def traduzir(versao: str) -> tuple[int, int]:
     try:
         resposta = await claude_cli_client.generate_json(
             traducao.montar_pedido(lote),
-            model="sonnet",
+            model=modelos_ia.ler_modelos().claude(Faixa.MEDIO),
             contexto=claude_cli_client.LlmCallContext(etapa="novidades"),
         )
     except (claude_cli_client.ClaudeCliError, ValueError) as erro:

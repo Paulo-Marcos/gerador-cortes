@@ -36,7 +36,7 @@ def _stub_run(monkeypatch, *, resultado: str = "ok", excecao: Exception | None =
 async def test_chamada_bem_sucedida_entra_e_sai_como_concluida(monkeypatch):
     _stub_run(monkeypatch, resultado="texto gerado")
 
-    await claude_cli_client.generate_text("prompt", contexto=CONTEXTO)
+    await claude_cli_client.generate_text("prompt", model="sonnet", contexto=CONTEXTO)
 
     tarefa = TarefasAtivas.listar()[0]
     assert tarefa.chave == CHAVE
@@ -51,7 +51,7 @@ async def test_falha_do_cli_deixa_o_job_em_erro_com_a_mensagem(monkeypatch):
     _stub_run(monkeypatch, excecao=claude_cli_client.ClaudeCliError("binário não encontrado"))
 
     with pytest.raises(claude_cli_client.ClaudeCliError):
-        await claude_cli_client.generate_text("prompt", contexto=CONTEXTO)
+        await claude_cli_client.generate_text("prompt", model="sonnet", contexto=CONTEXTO)
 
     tarefa = TarefasAtivas.listar()[0]
     assert tarefa.estado == "erro"
@@ -63,7 +63,7 @@ async def test_erro_inesperado_nao_deixa_o_job_preso_em_rodando(monkeypatch):
     _stub_run(monkeypatch, excecao=RuntimeError("event loop morreu"))
 
     with pytest.raises(RuntimeError):
-        await claude_cli_client.generate_text("prompt", contexto=CONTEXTO)
+        await claude_cli_client.generate_text("prompt", model="sonnet", contexto=CONTEXTO)
 
     assert TarefasAtivas.listar()[0].estado == "erro"
 
@@ -75,7 +75,7 @@ async def test_cancelamento_tambem_encerra_o_job(monkeypatch):
     _stub_run(monkeypatch, excecao=asyncio.CancelledError())
 
     with pytest.raises(asyncio.CancelledError):
-        await claude_cli_client.generate_text("prompt", contexto=CONTEXTO)
+        await claude_cli_client.generate_text("prompt", model="sonnet", contexto=CONTEXTO)
 
     assert TarefasAtivas.listar()[0].estado == "erro"
 
@@ -86,7 +86,7 @@ async def test_resposta_que_nao_e_json_conta_como_falha(monkeypatch):
     _stub_run(monkeypatch, resultado="isto não é json")
 
     with pytest.raises(ValueError):
-        await claude_cli_client.generate_json("prompt", contexto=CONTEXTO)
+        await claude_cli_client.generate_json("prompt", model="sonnet", contexto=CONTEXTO)
 
     assert TarefasAtivas.listar()[0].estado == "erro"
 
@@ -97,6 +97,7 @@ async def test_skill_sem_mapeamento_ainda_aparece_como_ia_generica(monkeypatch):
 
     await claude_cli_client.generate_text(
         "prompt",
+        model="sonnet",
         contexto=claude_cli_client.LlmCallContext(etapa="skill-inedita", corte_id="c9"),
     )
 
@@ -117,4 +118,7 @@ async def test_falha_ao_registrar_na_fila_nao_quebra_a_geracao(monkeypatch):
     monkeypatch.setattr(TarefasAtivas, "iniciar", _explode)
     monkeypatch.setattr(TarefasAtivas, "encerrar", _explode)
 
-    assert await claude_cli_client.generate_text("prompt", contexto=CONTEXTO) == "texto gerado"
+    assert (
+        await claude_cli_client.generate_text("prompt", model="sonnet", contexto=CONTEXTO)
+        == "texto gerado"
+    )

@@ -84,7 +84,7 @@ class TestSucessoRegistra:
         monkeypatch.setattr(cli, "_run", _fake_run_ok({"result": "ok"}))
         capturados = _capturar_store(monkeypatch)
 
-        asyncio.run(cli.generate_text("P", skill="metadados-expert"))
+        asyncio.run(cli.generate_text("P", model="sonnet", skill="metadados-expert"))
 
         assert capturados[0]["etapa"] == "metadados-expert"
         assert capturados[0]["tokens_in"] is None  # sem usage no envelope
@@ -94,7 +94,9 @@ class TestSucessoRegistra:
         capturados = _capturar_store(monkeypatch)
 
         data = asyncio.run(
-            cli.generate_json("P", contexto=LlmCallContext(etapa="padroes-thumbnail"))
+            cli.generate_json(
+                "P", model="sonnet", contexto=LlmCallContext(etapa="padroes-thumbnail")
+            )
         )
 
         assert data == {"ok": True}
@@ -110,7 +112,11 @@ class TestErroRegistra:
         capturados = _capturar_store(monkeypatch)
 
         with pytest.raises(ClaudeCliError):
-            asyncio.run(cli.generate_text("P", contexto=LlmCallContext(etapa="cenas-expert")))
+            asyncio.run(
+                cli.generate_text(
+                    "P", model="sonnet", contexto=LlmCallContext(etapa="cenas-expert")
+                )
+            )
 
         assert len(capturados) == 1
         assert capturados[0]["sucesso"] is False
@@ -129,7 +135,7 @@ class TestNaoFatal:
         monkeypatch.setattr(llm_calls_store, "gravar_llm_call", gravar_explode)
 
         # A gravação explode, mas a geração deve retornar normalmente.
-        texto = asyncio.run(cli.generate_text("P", skill="cortador-expert"))
+        texto = asyncio.run(cli.generate_text("P", model="sonnet", skill="cortador-expert"))
         assert texto == "resultado bom"
 
     def test_falha_na_telemetria_no_erro_preserva_o_erro_original(self, monkeypatch):
@@ -146,7 +152,7 @@ class TestNaoFatal:
 
         # A telemetria falha, mas o ClaudeCliError original deve chegar ao caller.
         with pytest.raises(ClaudeCliError, match="erro real"):
-            asyncio.run(cli.generate_text("P"))
+            asyncio.run(cli.generate_text("P", model="sonnet"))
 
 
 class TestPlumbingEditorial:

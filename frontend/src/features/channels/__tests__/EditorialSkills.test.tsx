@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { EditorialSkill, SkillVersao } from '@/features/channels/api/skillsEditoriais';
 import { EditorialSkillCard } from '../EditorialSkillCard';
+import { EditorialSkillForm } from '../EditorialSkillForm';
 import { EditorialSkillHistory, formatarData } from '../EditorialSkillHistory';
 import { skillCustomizada } from '../EditorialSkillsSection';
 
@@ -10,20 +11,10 @@ const base: EditorialSkill = {
   etapa: 'Propor cortes',
   descricao: 'Analisa a live e propõe os cortes.',
   corpo: 'CORPO',
-  params: {
-    modelo: 'opus',
-    modelo_gemini: 'gemini-3.1-pro-high',
-    thinking_tokens: 0,
-    timeout: 300,
-  },
+  params: { faixa: 'pesado', thinking_tokens: 0, timeout: 300 },
   lentes: ['a', 'b'],
   corpo_default: 'CORPO',
-  params_default: {
-    modelo: 'opus',
-    modelo_gemini: 'gemini-3.1-pro-high',
-    thinking_tokens: 0,
-    timeout: 300,
-  },
+  params_default: { faixa: 'pesado', thinking_tokens: 0, timeout: 300 },
   lentes_default: ['a', 'b'],
 };
 
@@ -36,13 +27,8 @@ describe('skillCustomizada', () => {
     expect(skillCustomizada({ ...base, corpo: 'OUTRO' })).toBe(true);
   });
 
-  it('detecta modelo alterado', () => {
-    expect(skillCustomizada({ ...base, params: { ...base.params, modelo: 'haiku' } })).toBe(true);
-  });
-
-  it('detecta modelo Gemini alterado', () => {
-    const params = { ...base.params, modelo_gemini: 'gemini-3.8-flash-low' };
-    expect(skillCustomizada({ ...base, params })).toBe(true);
+  it('detecta faixa de modelo alterada', () => {
+    expect(skillCustomizada({ ...base, params: { ...base.params, faixa: 'rapido' } })).toBe(true);
   });
 
   it('detecta lentes alteradas', () => {
@@ -50,15 +36,39 @@ describe('skillCustomizada', () => {
   });
 });
 
+describe('EditorialSkillForm', () => {
+  // D-924: a skill escolhe a faixa; o nome do modelo mora em Modelos de IA.
+  const html = renderToStaticMarkup(
+    <EditorialSkillForm
+      skill={base}
+      pending={false}
+      onSave={vi.fn()}
+      onReset={vi.fn()}
+      onCancel={vi.fn()}
+    />,
+  );
+
+  it('oferece as três faixas, com a da skill escolhida', () => {
+    expect(html).toContain('<option value="pesado" selected="">Pesado</option>');
+    expect(html).toContain('<option value="medio">Médio</option>');
+    expect(html).toContain('<option value="rapido">Rápido</option>');
+  });
+
+  it('não pede mais o nome do modelo de cada provider', () => {
+    expect(html).not.toContain('Modelo Claude');
+    expect(html).not.toContain('Modelo Gemini');
+    expect(html).toContain('Modelos de IA');
+  });
+});
+
 describe('EditorialSkillCard', () => {
-  it('mostra a etapa, a descrição e o modelo de cada provider', () => {
+  it('mostra a etapa, a descrição e a faixa de modelo', () => {
     const html = renderToStaticMarkup(
       <EditorialSkillCard skill={base} customizada={false} onEditar={vi.fn()} />,
     );
     expect(html).toContain('Propor cortes');
     expect(html).toContain('Analisa a live e propõe os cortes.');
-    expect(html).toContain('claude: opus');
-    expect(html).toContain('gemini: gemini-3.1-pro-high');
+    expect(html).toContain('modelo: Pesado');
     expect(html).toContain('Padrão');
   });
 

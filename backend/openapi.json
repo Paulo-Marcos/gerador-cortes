@@ -4007,6 +4007,15 @@
         "title": "FabricaDaLiveResponse",
         "type": "object"
       },
+      "Faixa": {
+        "enum": [
+          "pesado",
+          "medio",
+          "rapido"
+        ],
+        "title": "Faixa",
+        "type": "string"
+      },
       "FaixaDaMoldura": {
         "properties": {
           "cor": {
@@ -5801,22 +5810,6 @@
         "title": "ListaLlmCallsResponse",
         "type": "object"
       },
-      "ListaModelosGeminiResponse": {
-        "properties": {
-          "modelos": {
-            "items": {
-              "$ref": "#/components/schemas/ModeloGeminiResponse"
-            },
-            "title": "Modelos",
-            "type": "array"
-          }
-        },
-        "required": [
-          "modelos"
-        ],
-        "title": "ListaModelosGeminiResponse",
-        "type": "object"
-      },
       "ListaMotivosResponse": {
         "properties": {
           "motivos": {
@@ -5831,6 +5824,22 @@
           "motivos"
         ],
         "title": "ListaMotivosResponse",
+        "type": "object"
+      },
+      "ListaPapeisModeloResponse": {
+        "properties": {
+          "papeis": {
+            "items": {
+              "$ref": "#/components/schemas/PapelModeloResponse"
+            },
+            "title": "Papeis",
+            "type": "array"
+          }
+        },
+        "required": [
+          "papeis"
+        ],
+        "title": "ListaPapeisModeloResponse",
         "type": "object"
       },
       "ListaPromptsUtilitariosResponse": {
@@ -6744,7 +6753,7 @@
         "title": "MetadadoDoCorteResponse",
         "type": "object"
       },
-      "ModeloGeminiResponse": {
+      "ModeloDisponivelResponse": {
         "properties": {
           "id": {
             "title": "Id",
@@ -6759,7 +6768,40 @@
           "id",
           "nome"
         ],
-        "title": "ModeloGeminiResponse",
+        "title": "ModeloDisponivelResponse",
+        "type": "object"
+      },
+      "ModelosDisponiveisResponse": {
+        "description": "Por provedor. Lista vazia = o CLI ou a chave faltam nesta máquina.",
+        "properties": {
+          "claude": {
+            "items": {
+              "$ref": "#/components/schemas/ModeloDisponivelResponse"
+            },
+            "title": "Claude",
+            "type": "array"
+          },
+          "gemini": {
+            "items": {
+              "$ref": "#/components/schemas/ModeloDisponivelResponse"
+            },
+            "title": "Gemini",
+            "type": "array"
+          },
+          "gemini_api": {
+            "items": {
+              "$ref": "#/components/schemas/ModeloDisponivelResponse"
+            },
+            "title": "Gemini Api",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claude",
+          "gemini",
+          "gemini_api"
+        ],
+        "title": "ModelosDisponiveisResponse",
         "type": "object"
       },
       "MolduraAplicadaResponse": {
@@ -7579,6 +7621,44 @@
           }
         },
         "title": "PaletaModel",
+        "type": "object"
+      },
+      "PapelModeloResponse": {
+        "properties": {
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "padrao": {
+            "title": "Padrao",
+            "type": "string"
+          },
+          "provedor": {
+            "title": "Provedor",
+            "type": "string"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "valor": {
+            "title": "Valor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "provedor",
+          "rotulo",
+          "descricao",
+          "valor",
+          "padrao"
+        ],
+        "title": "PapelModeloResponse",
         "type": "object"
       },
       "ParametrosDoDestinoModel": {
@@ -10541,16 +10621,10 @@
         "type": "object"
       },
       "SkillParamsModel": {
-        "description": "Params da etapa: modelo Claude + modelo Gemini (Antigravity) + thinking + timeout.\n\n`modelo_gemini` vazio no request = derivar do modelo Claude (compat com\nclientes que ainda não conhecem o campo).",
+        "description": "Params da etapa: a faixa do modelo (D-924) + thinking + timeout.\n\nO nome do modelo de cada provider sai da faixa, pela configuração de modelos\ndo canal (`/modelos-ia`).",
         "properties": {
-          "modelo": {
-            "title": "Modelo",
-            "type": "string"
-          },
-          "modelo_gemini": {
-            "default": "",
-            "title": "Modelo Gemini",
-            "type": "string"
+          "faixa": {
+            "$ref": "#/components/schemas/Faixa"
           },
           "thinking_tokens": {
             "title": "Thinking Tokens",
@@ -10562,7 +10636,7 @@
           }
         },
         "required": [
-          "modelo",
+          "faixa",
           "thinking_tokens",
           "timeout"
         ],
@@ -11738,6 +11812,23 @@
           }
         },
         "title": "UpdateAppSettingsRequest",
+        "type": "object"
+      },
+      "UpdateModelosIaRequest": {
+        "description": "Papel → modelo; só os informados mudam. Vazio volta ao padrão.",
+        "properties": {
+          "escolhas": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Escolhas",
+            "type": "object"
+          }
+        },
+        "required": [
+          "escolhas"
+        ],
+        "title": "UpdateModelosIaRequest",
         "type": "object"
       },
       "UpdatePromptUtilitarioRequest": {
@@ -17141,23 +17232,83 @@
         ]
       }
     },
-    "/api/editorial-skills/modelos-gemini": {
+    "/api/editorial-skills/modelos-ia": {
       "get": {
-        "description": "Os modelos que o `agy` desta máquina oferece, para a escolha no modal.\n\nVazio quando o CLI não está instalado ou logado — o campo aceita texto livre.",
-        "operationId": "listar_modelos_gemini_api_editorial_skills_modelos_gemini_get",
+        "operationId": "listar_modelos_ia_api_editorial_skills_modelos_ia_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListaModelosGeminiResponse"
+                  "$ref": "#/components/schemas/ListaPapeisModeloResponse"
                 }
               }
             },
             "description": "Successful Response"
           }
         },
-        "summary": "Listar Modelos Gemini",
+        "summary": "Listar Modelos Ia",
+        "tags": [
+          "Skills editoriais"
+        ]
+      },
+      "put": {
+        "operationId": "editar_modelos_ia_api_editorial_skills_modelos_ia_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateModelosIaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaPapeisModeloResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Editar Modelos Ia",
+        "tags": [
+          "Skills editoriais"
+        ]
+      }
+    },
+    "/api/editorial-skills/modelos-ia/disponiveis": {
+      "get": {
+        "description": "Pergunta ao `agy` e à API do Gemini: pode levar alguns segundos.",
+        "operationId": "listar_modelos_disponiveis_api_editorial_skills_modelos_ia_disponiveis_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelosDisponiveisResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Listar Modelos Disponiveis",
         "tags": [
           "Skills editoriais"
         ]

@@ -14,8 +14,9 @@ import json
 from pathlib import Path
 
 from app.config import settings
+from app.domain.compartilhado.modelos_ia import PADRAO, Faixa
 from app.infrastructure import settings_store
-from app.services.canal import editorial_skills
+from app.services.canal import editorial_skills, modelos_ia
 
 _CANAL = "canal-teste"
 _SKILL = "cortador-expert"
@@ -69,7 +70,8 @@ def test_seed_le_corpo_do_md_e_params_globais(tmp_path: Path):
     assert skill.corpo == "CORPO DO CANAL"
     # Params default vêm dos globais de config (preserva comportamento atual).
     # D-300: cortes tem thinking/timeout próprios — não os globais de cenas/metadados.
-    assert skill.modelo == settings.claude_model_analise
+    assert skill.faixa is Faixa.PESADO
+    assert skill.modelo == PADRAO["claude_pesado"]
     assert skill.thinking_tokens == settings.claude_cli_thinking_tokens_analise
     assert skill.timeout == settings.claude_cli_timeout_analise
     # Efeito colateral: o banco foi semeado (migração).
@@ -127,7 +129,7 @@ def test_thumbnail_tem_thinking_proprio(tmp_path: Path):
 
     # Thumbnail usa o thinking próprio (maior), não o global.
     assert skill.thinking_tokens == settings.claude_cli_thinking_tokens_thumbnail
-    assert skill.modelo == settings.claude_model_thumbnail
+    assert skill.modelo == PADRAO["claude_pesado"]
 
 
 def test_trechos_tem_thinking_proprio_mas_timeout_global(tmp_path: Path):
@@ -183,7 +185,7 @@ def test_definir_params_faz_merge_sem_tocar_corpo(tmp_path: Path):
 
     editorial_skills.definir_skill(
         _SKILL,
-        params={"modelo": "haiku", "thinking_tokens": 5000, "timeout": 120.0},
+        params={"faixa": "rapido", "thinking_tokens": 5000, "timeout": 120.0},
         db_path=db,
         channel_id=_CANAL,
         editorial_root=editorial,
@@ -192,7 +194,8 @@ def test_definir_params_faz_merge_sem_tocar_corpo(tmp_path: Path):
     skill = editorial_skills.resolver_skill(
         _SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial
     )
-    assert skill.modelo == "haiku"
+    assert skill.faixa is Faixa.RAPIDO
+    assert skill.modelo == PADRAO["claude_rapido"]
     assert skill.thinking_tokens == 5000
     assert skill.corpo == "CORPO"  # corpo intacto
 
@@ -266,7 +269,7 @@ def test_descrever_skills_traz_todas_com_default_e_atual(tmp_path: Path):
         "metadados-short-expert",
     ]
     thumb = next(d for d in descritas if d.key == "thumbnail-prompt-expert")
-    assert set(thumb.params) == {"modelo", "modelo_gemini", "thinking_tokens", "timeout"}
+    assert set(thumb.params) == {"faixa", "thinking_tokens", "timeout"}
     trechos = next(d for d in descritas if d.key == "trechos-expert")
     assert trechos.lentes_default == []  # sem lentes por design
     cortador = next(d for d in descritas if d.key == "cortador-expert")
@@ -427,7 +430,7 @@ def test_listar_versoes_traz_resumo_do_que_mudou(tmp_path: Path):
     )
     editorial_skills.definir_skill(
         _SKILL,
-        params={"modelo": "haiku", "thinking_tokens": 10, "timeout": 120.0},
+        params={"faixa": "rapido", "thinking_tokens": 10, "timeout": 120.0},
         db_path=db,
         channel_id=_CANAL,
         editorial_root=editorial,
@@ -491,19 +494,12 @@ def test_listar_versoes_skill_desconhecida_levanta(tmp_path: Path):
 
 
 # --------------------------------------------------------------------------- #
-# Modelo Gemini (Antigravity CLI) por skill
+# Faixa de modelo por skill (D-924)
 # --------------------------------------------------------------------------- #
 
 
-def test_modelo_gemini_padrao_segue_a_faixa_do_modelo_claude():
-    """Haiku é escolha de rapidez; Opus e Sonnet, de qualidade."""
-    assert editorial_skills.modelo_gemini_equivalente("opus") == settings.agy_model_qualidade
-    assert editorial_skills.modelo_gemini_equivalente("sonnet") == settings.agy_model_qualidade
-    assert editorial_skills.modelo_gemini_equivalente("haiku") == settings.agy_model_rapido
-
-
-def test_linha_gravada_antes_do_antigravity_deriva_o_modelo_gemini(tmp_path: Path):
-    """Linhas antigas não têm `modelo_gemini`: sem migração, o valor sai do Claude."""
+def test_linha_gravada_antes_da_d924_vira_faixa_pela_familia_do_modelo(tmp_path: Path):
+    """Linhas antigas guardam o modelo Claude: sem migração, a família diz a faixa."""
     db = _db(tmp_path)
     _semear_linha_crua(db, _SKILL, thinking_tokens=0, timeout=300.0, modelo="haiku")
 
@@ -511,21 +507,36 @@ def test_linha_gravada_antes_do_antigravity_deriva_o_modelo_gemini(tmp_path: Pat
         _SKILL, db_path=db, channel_id=_CANAL, editorial_root=_editorial(tmp_path)
     )
 
-    assert skill.modelo_gemini == settings.agy_model_rapido
+    assert skill.faixa is Faixa.RAPIDO
+    assert skill.modelo == PADRAO["claude_rapido"]
+    assert skill.modelo_gemini == PADRAO["gemini_rapido"]
 
 
-def test_modelo_gemini_editado_pela_ui_e_preservado(tmp_path: Path):
+def test_trocar_o_modelo_da_faixa_na_configuracao_muda_a_skill(tmp_path: Path):
+    """O pedido da D-924: trocar o modelo é só mudar a configuração."""
+    db = _db(tmp_path)
+    modelos_ia.definir_modelos(
+        {"claude_pesado": "claude-opus-5-5", "gemini_pesado": "gemini-3.8-flash-low"},
+        db_path=db,
+        channel_id=_CANAL,
+    )
+
+    skill = editorial_skills.resolver_skill(
+        _SKILL, db_path=db, channel_id=_CANAL, editorial_root=_editorial(tmp_path)
+    )
+
+    assert skill.faixa is Faixa.PESADO
+    assert skill.modelo == "claude-opus-5-5"
+    assert skill.modelo_gemini == "gemini-3.8-flash-low"
+
+
+def test_faixa_desconhecida_volta_ao_padrao_da_etapa(tmp_path: Path):
     db = _db(tmp_path)
     editorial = _editorial(tmp_path)
 
     editorial_skills.definir_skill(
         _SKILL,
-        params={
-            "modelo": "opus",
-            "modelo_gemini": "gemini-3.8-flash-low",
-            "thinking_tokens": 0,
-            "timeout": 300.0,
-        },
+        params={"faixa": "turbo", "thinking_tokens": 0, "timeout": 300.0},
         db_path=db,
         channel_id=_CANAL,
         editorial_root=editorial,
@@ -534,5 +545,4 @@ def test_modelo_gemini_editado_pela_ui_e_preservado(tmp_path: Path):
         _SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial
     )
 
-    assert skill.modelo == "opus"
-    assert skill.modelo_gemini == "gemini-3.8-flash-low"
+    assert skill.faixa is Faixa.PESADO

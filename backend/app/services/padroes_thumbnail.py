@@ -14,7 +14,6 @@ no loop. Aditivo: não altera o fluxo de geração/avaliação existente.
 import json
 import logging
 
-from app.config import settings
 from app.domain.compartilhado.gerador_ia import PedidoIA
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte.padroes_thumbnail import (
@@ -89,16 +88,11 @@ def _resposta_insuficiente(total: int, melhores: list[dict]) -> dict:
 async def _ler_padroes(prompt: str, provider: ProviderIA) -> dict:
     """A leitura semântica dos padrões, pelo provider escolhido.
 
-    Esta etapa não tem skill editorial no banco — o prompt nasce aqui —, então o
-    modelo do Gemini vem da faixa equivalente ao modelo Claude dela.
+    Esta etapa não tem skill editorial no banco — o prompt nasce aqui —, então os
+    modelos vêm da faixa do prompt utilitário (D-924).
     """
-    from app.services.canal.editorial_skills import modelo_gemini_equivalente
-
-    pedido = PedidoIA(
-        etapa="padroes-thumbnail",
-        modelo=settings.claude_model_metadados,
-        modelo_gemini=modelo_gemini_equivalente(settings.claude_model_metadados),
-    )
+    modelo, modelo_gemini = prompts_utilitarios.modelos_do_prompt("padroes-thumbnail")
+    pedido = PedidoIA(etapa="padroes-thumbnail", modelo=modelo, modelo_gemini=modelo_gemini)
     return await gerador_para(provider).gerar_json(prompt, pedido)
 
 
