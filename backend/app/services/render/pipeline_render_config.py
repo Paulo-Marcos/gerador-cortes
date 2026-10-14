@@ -5,6 +5,8 @@ dependência de I/O — decide qual composição Remotion (V2) e quais props ext
 (sombra/layout/fonte) cada render usa.
 """
 
+from typing import Any
+
 from app.models import Projeto
 
 # Presets tipograficos suportados pelo renderer Remotion (theme-v2.ts).
@@ -50,6 +52,14 @@ class ProjetoRenderConfig:
             layout_card_padrao=getattr(projeto, "layout_card_padrao", "vertical") or "vertical",
             fonte_preset=getattr(projeto, "fonte_preset", "atual") or "atual",
         )
+
+    @classmethod
+    def preparar(cls, projeto: Projeto | None, corte: Any) -> "ProjetoRenderConfig":
+        """A config do render de um corte, com o estilo do palco dele no contexto (D-923)."""
+        from app.services import palco_por_escopo
+
+        palco_por_escopo.fixar_para_render(getattr(projeto, "id", None), corte.id, "horizontal")
+        return cls.from_projeto(projeto)
 
     @property
     def overlay_composition(self) -> str:

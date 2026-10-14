@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
+import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
 import type { PalcoShortPreset } from '@/types/presets';
 import { temPalcoProprio } from './aplicarPalco';
 import { temColagem } from './segmentosDoShort';
@@ -74,7 +74,7 @@ export function LinhaDeAjuste({
   // Agora o short guarda de qual preset os valores vieram, e este select mostra
   // isso. Os presets de recorte foram para dentro do modal, que é onde se
   // define de onde vem cada janela.
-  const presets = useLayoutPresets({ tipo: 'palco_short' });
+  const presets = useLayoutPresetsDoEstilo({ tipo: 'palco_short' });
 
   return (
     <div

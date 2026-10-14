@@ -2019,6 +2019,39 @@
             ],
             "title": "Handle"
           },
+          "mostrar_handle": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mostrar Handle"
+          },
+          "mostrar_imagem": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mostrar Imagem"
+          },
+          "mostrar_nome": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mostrar Nome"
+          },
           "nome": {
             "anyOf": [
               {
@@ -2080,6 +2113,18 @@
             "title": "Imagem Url",
             "type": "string"
           },
+          "mostrar_handle": {
+            "title": "Mostrar Handle",
+            "type": "boolean"
+          },
+          "mostrar_imagem": {
+            "title": "Mostrar Imagem",
+            "type": "boolean"
+          },
+          "mostrar_nome": {
+            "title": "Mostrar Nome",
+            "type": "boolean"
+          },
           "nome": {
             "title": "Nome",
             "type": "string"
@@ -2103,6 +2148,9 @@
           "escala",
           "posicao",
           "posicao_short",
+          "mostrar_imagem",
+          "mostrar_nome",
+          "mostrar_handle",
           "nome_efetivo",
           "handle_efetivo",
           "imagem_url"
@@ -7367,6 +7415,101 @@
           "placa"
         ],
         "title": "PalcoComponentesResponse",
+        "type": "object"
+      },
+      "PalcoDoEscopoRequest": {
+        "properties": {
+          "componentes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PalcoComponentesRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "corte_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corte Id"
+          },
+          "escopo": {
+            "enum": [
+              "projeto",
+              "corte"
+            ],
+            "title": "Escopo",
+            "type": "string"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "tipo": {
+            "enum": [
+              "horizontal",
+              "short"
+            ],
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "escopo",
+          "tipo",
+          "projeto_id"
+        ],
+        "title": "PalcoDoEscopoRequest",
+        "type": "object"
+      },
+      "PalcoDoEscopoResponse": {
+        "properties": {
+          "corte": {
+            "additionalProperties": true,
+            "title": "Corte",
+            "type": "object"
+          },
+          "efetivo": {
+            "$ref": "#/components/schemas/PalcoComponentesResponse"
+          },
+          "origem": {
+            "enum": [
+              "canal",
+              "projeto",
+              "corte"
+            ],
+            "title": "Origem",
+            "type": "string"
+          },
+          "projeto": {
+            "additionalProperties": true,
+            "title": "Projeto",
+            "type": "object"
+          },
+          "tipo": {
+            "enum": [
+              "horizontal",
+              "short"
+            ],
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "origem",
+          "efetivo",
+          "projeto",
+          "corte"
+        ],
+        "title": "PalcoDoEscopoResponse",
         "type": "object"
       },
       "PalcoPadraoRequest": {
@@ -13701,6 +13844,138 @@
           }
         },
         "summary": "Gravar Palco Do Canal",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/{canal_id}/palco/do-escopo": {
+      "get": {
+        "description": "D-923: o palco que vale no corte (ou no projeto) para o tipo, e de onde ele vem.",
+        "operationId": "obter_palco_do_escopo_api_channels__canal_id__palco_do_escopo_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "canal_id",
+            "required": true,
+            "schema": {
+              "title": "Canal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "projeto_id",
+            "required": true,
+            "schema": {
+              "title": "Projeto Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tipo",
+            "required": true,
+            "schema": {
+              "enum": [
+                "horizontal",
+                "short"
+              ],
+              "title": "Tipo",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "corte_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Corte Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PalcoDoEscopoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Obter Palco Do Escopo",
+        "tags": [
+          "Canais"
+        ]
+      },
+      "put": {
+        "description": "D-923: ajusta o palco só do projeto ou só do corte — o do canal não muda.",
+        "operationId": "gravar_palco_do_escopo_api_channels__canal_id__palco_do_escopo_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "canal_id",
+            "required": true,
+            "schema": {
+              "title": "Canal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PalcoDoEscopoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PalcoDoEscopoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gravar Palco Do Escopo",
         "tags": [
           "Canais"
         ]

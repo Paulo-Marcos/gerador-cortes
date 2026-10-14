@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
+import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 import { Icon } from '@/upgrade/Icon';
 
@@ -38,7 +38,7 @@ export function DefinirSplitButton({
   pending,
   compact = false,
 }: DefinirSplitButtonProps) {
-  const { data: presets = [], isLoading } = useLayoutPresets({ tipo: presetTipo });
+  const { data: presets = [], isLoading } = useLayoutPresetsDoEstilo({ tipo: presetTipo });
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 

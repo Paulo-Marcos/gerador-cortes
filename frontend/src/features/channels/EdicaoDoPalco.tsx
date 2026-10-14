@@ -5,7 +5,7 @@ import { mensagemErro } from '@/lib/mensagemErro';
 import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
 import { Icon } from '@/upgrade/Icon';
 import { PalcoComponentesForm, edicaoDe, rascunhoDe, type RascunhoDoPalco } from './PalcoComponentesSection';
-import { paraComponentesDoPalco } from './palcoDoCanal';
+import { paraComponentesDoPalco, urlDaImagem } from './palcoDoCanal';
 import {
   useCanais,
   useEnviarImagemDoPalco,
@@ -15,9 +15,8 @@ import {
 } from './useChannels';
 
 // D-921: a edição do palco do canal — o rascunho, o salvar e a imagem — num
-// hook só, para a tela de Canais e o modal de posição do pós usarem o MESMO
-// formulário e o mesmo rascunho. O modal desenha a prévia a partir do
-// rascunho (`componentes`), então cada mudança aparece antes de salvar.
+// hook só. A prévia sai do rascunho (`componentesDoRascunho`), que os modais de
+// posição também usam para o palco do corte (D-923, `usePalcoDoModal`).
 
 /** O que a prévia desenha a partir do rascunho, antes de salvar. */
 export function componentesDoRascunho(palco: PalcoComponentes, rascunho: RascunhoDoPalco): ComponentesDoPalco {
@@ -35,9 +34,10 @@ export function componentesDoRascunho(palco: PalcoComponentes, rascunho: Rascunh
     cabecalho: {
       ...base.cabecalho,
       ativo: rascunho.cabecalhoAtivo,
-      // Vazio herda da identidade do canal, como no render.
-      nome: rascunho.nome.trim() || base.cabecalho.nome,
-      handle: handle ? `@${handle}` : base.cabecalho.handle,
+      // Vazio herda da identidade do canal, como no render; desligado some (D-923).
+      nome: rascunho.mostrarNome ? rascunho.nome.trim() || palco.cabecalho.nome_efetivo : '',
+      handle: rascunho.mostrarHandle ? (handle ? `@${handle}` : palco.cabecalho.handle_efetivo) : '',
+      imagemUrl: rascunho.mostrarImagem ? urlDaImagem(palco.cabecalho.imagem_url) : '',
       escala: rascunho.cabecalhoEscala,
       posicao: rascunho.cabecalhoPosicao,
       posicao_short: rascunho.cabecalhoPosicaoShort,
@@ -127,7 +127,7 @@ export function PalcoComponentesSection() {
 }
 
 /** Carregando, sem canal ativo ou erro: o que aparece no lugar do formulário. */
-export function EstadoDoPalco({
+function EstadoDoPalco({
   canaisCarregados,
   temCanal,
   palcoQuery,
@@ -151,30 +151,4 @@ export function EstadoDoPalco({
     return <p className="text-sm text-[var(--wb-err)]">{mensagemErro(palcoQuery.error, 'Não foi possível carregar o palco.')}</p>;
   }
   return null;
-}
-
-/**
- * D-921: o palco do canal dentro de um modal (o de posição do pós e o do palco
- * do short) — o mesmo formulário da tela de Canais. A prévia do modal desenha o
- * rascunho, então a mudança aparece antes de salvar; salvar vale para o canal.
- */
-export function PalcoDoCanalNoModal({ edicao }: { edicao: ReturnType<typeof useEdicaoDoPalco> }): ReactNode {
-  return (
-    <details className="mt-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2" open>
-      <summary className="cursor-pointer font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        Palco do canal — estilo e componentes
-      </summary>
-      <p className="my-2 text-[11.5px] leading-snug text-[var(--wb-text-mute)]">
-        A prévia ao lado mostra o que você muda aqui. <strong>Salvar palco</strong> vale para o canal
-        inteiro (todos os cortes e shorts), como na tela de Canais; o fundo acima só vale no estilo de
-        sempre.
-      </p>
-      <EstadoDoPalco
-        canaisCarregados={edicao.canaisQuery.isSuccess}
-        temCanal={Boolean(edicao.canalAtivo)}
-        palcoQuery={edicao.palcoQuery}
-      />
-      {edicao.formulario}
-    </details>
-  );
 }

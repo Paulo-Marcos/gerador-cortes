@@ -112,6 +112,10 @@ class Cabecalho:
     """No horizontal: sempre manual, com o canto superior esquerdo de padrão."""
     posicao_short: Posicao = Posicao()
     """No short: automática = na faixa acima da primeira janela."""
+    mostrar_imagem: bool = True
+    mostrar_nome: bool = True
+    mostrar_handle: bool = True
+    """D-923: desligado = o item some (o vazio continua herdando do canal)."""
 
 
 @dataclass(frozen=True)
@@ -168,6 +172,9 @@ class PalcoComponentes:
                 "escala": self.cabecalho.escala,
                 "posicao": _posicao_para_dict(self.cabecalho.posicao),
                 "posicao_short": _posicao_para_dict(self.cabecalho.posicao_short),
+                "mostrar_imagem": self.cabecalho.mostrar_imagem,
+                "mostrar_nome": self.cabecalho.mostrar_nome,
+                "mostrar_handle": self.cabecalho.mostrar_handle,
             },
             "placa": {
                 "ativo": self.placa.ativo,
@@ -293,6 +300,10 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
             posicao_short=_posicao(
                 novo_cabecalho.get("posicao_short"), cabecalho.posicao_short, VERTICAL
             ),
+            **{
+                chave: _booleano(novo_cabecalho.get(chave), getattr(cabecalho, chave))
+                for chave in ("mostrar_imagem", "mostrar_nome", "mostrar_handle")
+            },
         )
 
     placa = atual.placa
@@ -426,6 +437,12 @@ def props_para_renderer(
         ...     imagem_servida="mascote/apresentador.png")
         >>> props["estilo"], props["cabecalho"]["nome"], props["cabecalho"]["handle"]
         ('limpo', 'Pedro Ivo', '@pedroivosa')
+        >>> so_imagem = {"mostrar_nome": False, "mostrar_handle": False}
+        >>> props = props_para_renderer(
+        ...     mesclar(PADRAO, {"cabecalho": so_imagem}),
+        ...     nome_do_canal="Pedro Ivo", handle_do_canal="@pedroivosa", imagem_servida="x.png")
+        >>> props["cabecalho"]["nome"], props["cabecalho"]["handle"], props["cabecalho"]["imagem"]
+        ('', '', 'x.png')
     """
     cabecalho = componentes.cabecalho
     return {
@@ -437,9 +454,11 @@ def props_para_renderer(
         "eco_no_short": componentes.eco_no_short,
         "cabecalho": {
             "ativo": cabecalho.ativo,
-            "nome": cabecalho.nome or nome_do_canal.strip(),
-            "handle": com_handle(cabecalho.handle or handle_do_canal),
-            "imagem": imagem_servida,
+            "nome": (cabecalho.nome or nome_do_canal.strip()) if cabecalho.mostrar_nome else "",
+            "handle": com_handle(cabecalho.handle or handle_do_canal)
+            if cabecalho.mostrar_handle
+            else "",
+            "imagem": imagem_servida if cabecalho.mostrar_imagem else "",
             "escala": cabecalho.escala,
             "posicao": _posicao_para_dict(cabecalho.posicao),
             "posicao_short": _posicao_para_dict(cabecalho.posicao_short),

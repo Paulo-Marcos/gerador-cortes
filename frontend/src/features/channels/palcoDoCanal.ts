@@ -12,9 +12,10 @@ export function paraComponentesDoPalco(resposta: PalcoComponentes | undefined): 
     estilo: resposta.estilo === 'limpo' ? 'limpo' : 'atual',
     cabecalho: {
       ativo: resposta.cabecalho.ativo,
-      nome: resposta.cabecalho.nome_efetivo,
-      handle: resposta.cabecalho.handle_efetivo,
-      imagemUrl: urlDaImagem(resposta.cabecalho.imagem_url),
+      // D-923: o item desligado não aparece (como no render).
+      nome: resposta.cabecalho.mostrar_nome ? resposta.cabecalho.nome_efetivo : '',
+      handle: resposta.cabecalho.mostrar_handle ? resposta.cabecalho.handle_efetivo : '',
+      imagemUrl: resposta.cabecalho.mostrar_imagem ? urlDaImagem(resposta.cabecalho.imagem_url) : '',
       escala: resposta.cabecalho.escala,
       posicao: resposta.cabecalho.posicao,
       posicao_short: resposta.cabecalho.posicao_short,

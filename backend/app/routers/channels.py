@@ -11,15 +11,26 @@ serviço e mapeia os erros de domínio para os status corretos.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from app.domain.canal import palco_componentes as palco_dominio
 from app.domain.canal import theme_library
 from app.domain.canal.cards_do_canal import TIPOS_DE_CENA
 from app.domain.canal.identidade import Canal, IdCanalInvalido
+from app.routers.channels_palco_schemas import (
+    CabecalhoResponse,
+    CardsResponse,
+    PalcoComponentesRequest,
+    PalcoComponentesResponse,
+    PalcoDoEscopoRequest,
+    PalcoDoEscopoResponse,
+    PlacaResponse,
+    PosicaoModel,
+    TipoDeCenaModel,
+)
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
-from app.services import navegador_do_robo, palco_componentes, studio_youtube
+from app.services import navegador_do_robo, palco_componentes, palco_por_escopo, studio_youtube
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -34,99 +45,6 @@ router = APIRouter()
 # Estilo do palco, cabeçalho (imagem + nome + @) e placa: o que o operador liga,
 # desliga, renomeia e ilustra na tela de Canais. Os arquivos (imagem subida,
 # cache do palco) são sempre os do canal ATIVO — é dele que a tela edita.
-
-
-class PosicaoModel(BaseModel):
-    """Onde o componente senta, em px do quadro; `automatica` = a regra do estilo."""
-
-    automatica: bool
-    x: int
-    y: int
-
-
-class CabecalhoRequest(BaseModel):
-    ativo: bool | None = None
-    nome: str | None = None
-    handle: str | None = None
-    escala: float | None = None
-    posicao: PosicaoModel | None = None
-    posicao_short: PosicaoModel | None = None
-
-
-class PlacaRequest(BaseModel):
-    ativo: bool | None = None
-    escala: float | None = None
-    posicao: PosicaoModel | None = None
-
-
-class CardsRequest(BaseModel):
-    """D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio."""
-
-    ocultos: list[str] | None = None
-    escala: float | None = None
-    posicao: PosicaoModel | None = None
-
-
-class TipoDeCenaModel(BaseModel):
-    id: str
-    nome: str
-
-
-class CardsResponse(BaseModel):
-    ocultos: list[str]
-    escala: float
-    posicao: PosicaoModel
-
-
-class PalcoComponentesRequest(BaseModel):
-    """Edição parcial: campo ausente não muda."""
-
-    estilo: Literal["atual", "limpo"] | None = None
-    fundo: Literal["reticula-aurora", "reticula", "aurora", "linho", "chapado"] | None = None
-    contorno_short: int | None = None
-    fundo_short: Literal["palco", "eco"] | None = None
-    estilo_da_legenda: Literal["contorno", "sombra"] | None = None
-    cards: CardsRequest | None = None
-    cabecalho: CabecalhoRequest | None = None
-    placa: PlacaRequest | None = None
-
-
-class CabecalhoResponse(BaseModel):
-    ativo: bool
-    nome: str
-    handle: str
-    imagem: str
-    # Os textos como saem no palco (vazio herda da identidade do canal).
-    escala: float
-    posicao: PosicaoModel
-    posicao_short: PosicaoModel
-    nome_efetivo: str
-    handle_efetivo: str
-    # URL da imagem que a tela mostra ao lado do @; vazia sem imagem nenhuma.
-    imagem_url: str
-
-
-class PlacaResponse(BaseModel):
-    ativo: bool
-    escala: float
-    posicao: PosicaoModel
-
-
-class PalcoComponentesResponse(BaseModel):
-    canal_id: str
-    estilo: str
-    estilos: list[str]
-    fundo: str
-    fundos: list[str]
-    contorno_short: int
-    fundo_short: str
-    fundos_do_short: list[str]
-    estilo_da_legenda: str
-    estilos_da_legenda: list[str]
-    cards: CardsResponse
-    tipos_de_cena: list[TipoDeCenaModel]
-    cabecalho: CabecalhoResponse
-    placa: PlacaResponse
 
 
 def _palco_para_response(
@@ -161,8 +79,11 @@ def _palco_para_response(
             escala=componentes.cabecalho.escala,
             posicao=PosicaoModel(**props["cabecalho"]["posicao"]),
             posicao_short=PosicaoModel(**props["cabecalho"]["posicao_short"]),
-            nome_efetivo=props["cabecalho"]["nome"],
-            handle_efetivo=props["cabecalho"]["handle"],
+            mostrar_imagem=componentes.cabecalho.mostrar_imagem,
+            mostrar_nome=componentes.cabecalho.mostrar_nome,
+            mostrar_handle=componentes.cabecalho.mostrar_handle,
+            nome_efetivo=componentes.cabecalho.nome or nome.strip(),
+            handle_efetivo=palco_dominio.com_handle(componentes.cabecalho.handle or handle),
             imagem_url=imagem_url,
         ),
         placa=PlacaResponse(
@@ -200,6 +121,39 @@ async def gravar_palco_do_canal(canal_id: str, body: PalcoComponentesRequest):
     _identidade_para_o_palco(canal_id)
     componentes = palco_componentes.gravar(body.model_dump(exclude_none=True), channel_id=canal_id)
     return _palco_para_response(canal_id, componentes)
+
+
+def _palco_do_escopo(canal_id: str, resolvido: dict[str, Any]) -> PalcoDoEscopoResponse:
+    efetivo = _palco_para_response(canal_id, resolvido["efetivo"])
+    return PalcoDoEscopoResponse(**{**resolvido, "efetivo": efetivo})
+
+
+@router.get("/{canal_id}/palco/do-escopo", response_model=PalcoDoEscopoResponse)
+async def obter_palco_do_escopo(
+    canal_id: str,
+    projeto_id: str,
+    tipo: Literal["horizontal", "short"],
+    corte_id: str | None = None,
+):
+    """D-923: o palco que vale no corte (ou no projeto) para o tipo, e de onde ele vem."""
+    _identidade_para_o_palco(canal_id)
+    return _palco_do_escopo(canal_id, palco_por_escopo.resolver(projeto_id, corte_id, tipo))
+
+
+@router.put("/{canal_id}/palco/do-escopo", response_model=PalcoDoEscopoResponse)
+async def gravar_palco_do_escopo(canal_id: str, body: PalcoDoEscopoRequest):
+    """D-923: ajusta o palco só do projeto ou só do corte — o do canal não muda."""
+    _identidade_para_o_palco(canal_id)
+    alvo = body.projeto_id if body.escopo == "projeto" else body.corte_id
+    if not alvo:
+        raise HTTPException(status_code=422, detail="Escopo de corte sem corte_id.")
+    componentes = body.componentes.model_dump(exclude_none=True) if body.componentes else None
+    palco_por_escopo.gravar_escolha(
+        body.escopo, alvo, body.tipo, componentes, projeto_id=body.projeto_id
+    )
+    return _palco_do_escopo(
+        canal_id, palco_por_escopo.resolver(body.projeto_id, body.corte_id, body.tipo)
+    )
 
 
 @router.post("/{canal_id}/palco/imagem", response_model=PalcoComponentesResponse)

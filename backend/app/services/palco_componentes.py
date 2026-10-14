@@ -20,12 +20,14 @@ os componentes novos, e nenhum render usa um palco de antes da edição.
 from __future__ import annotations
 
 import io
+import json
 import logging
 from pathlib import Path
 from typing import Any
 
 from app.core import channel_paths
 from app.domain.canal import palco_componentes as dominio
+from app.domain.canal import palco_do_escopo
 from app.domain.canal.palco_componentes import PalcoComponentes
 from app.domain.compartilhado.erros import PedidoInvalido
 from app.infrastructure import channel_assets_sync, palco_componentes_store
@@ -52,6 +54,13 @@ def _canal(channel_id: str | None) -> str:
 
 
 def ler(*, db_path: Path | None = None, channel_id: str | None = None) -> PalcoComponentes:
+    """Os componentes do canal — com a escolha do corte em render por cima (D-923)."""
+    escolha = channel_paths.PALCO_DO_CORTE_NO_RENDER.get()
+    canal = ler_do_canal(db_path=db_path, channel_id=channel_id)
+    return palco_do_escopo.aplicar(canal, *json.loads(escolha)) if escolha else canal
+
+
+def ler_do_canal(*, db_path: Path | None = None, channel_id: str | None = None) -> PalcoComponentes:
     """Os componentes do canal, ou o padrão do domínio se ele nunca editou."""
     banco = _db(db_path)
     if not banco.exists():
@@ -69,7 +78,7 @@ def gravar(
     cache_dir: Path | None = None,
 ) -> PalcoComponentes:
     """Funde a edição com o que estava gravado, persiste e invalida o cache do palco."""
-    novo = dominio.mesclar(ler(db_path=db_path, channel_id=channel_id), mudancas)
+    novo = dominio.mesclar(ler_do_canal(db_path=db_path, channel_id=channel_id), mudancas)
     palco_componentes_store.gravar_palco_componentes(
         _db(db_path), _canal(channel_id), novo.para_dict()
     )
@@ -88,7 +97,8 @@ def invalidar_cache_do_palco(cache_dir: Path | None = None) -> int:
     if not pasta.is_dir():
         return 0
     apagados = 0
-    for png in pasta.glob("*.png"):
+    # D-923: e as pastas de cada escolha de estilo de projeto/corte (`escopo-*`)
+    for png in [*pasta.glob("*.png"), *pasta.glob("escopo-*/*.png")]:
         try:
             png.unlink()
             apagados += 1

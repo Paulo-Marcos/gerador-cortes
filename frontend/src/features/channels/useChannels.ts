@@ -142,10 +142,18 @@ export function usePalcoDoCanalAtivo() {
   return usePalcoDoCanal(ativo?.id);
 }
 
+/**
+ * D-923: o palco do corte em foco (projeto/corte por cima do canal, no tipo da
+ * página: horizontal no pós, short nas telas de shorts). As prévias o desenham.
+ */
+export const PalcoDoCorteContext = createContext<ComponentesDoPalco | null>(null);
+
 /** O mesmo, já resolvido para o que o palco desenha (estável entre renders). */
 export function usePalcoDoCanalAtivoResolvido(): ComponentesDoPalco {
   const { data } = usePalcoDoCanalAtivo();
-  return useMemo(() => paraComponentesDoPalco(data), [data]);
+  const doCorte = useContext(PalcoDoCorteContext);
+  const doCanal = useMemo(() => paraComponentesDoPalco(data), [data]);
+  return doCorte ?? doCanal;
 }
 
 /**

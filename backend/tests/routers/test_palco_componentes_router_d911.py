@@ -202,3 +202,23 @@ def test_put_esconde_tipos_e_ajusta_os_cards_d916(client: TestClient):
     assert {"id": "pergunta_chat", "nome": "Pergunta do chat"} in corpo["tipos_de_cena"]
     recusado = client.put("/api/channels/default/palco", json={"cards": {"ocultos": ["neon"]}})
     assert recusado.status_code == 400
+
+
+def test_palco_do_escopo_troca_so_o_corte_do_tipo_d923(client: TestClient):
+    url = "/api/channels/default/palco/do-escopo"
+    consulta = {"projeto_id": "p1", "corte_id": "c1", "tipo": "horizontal"}
+    assert client.get(url, params=consulta).json()["origem"] == "canal"
+    corpo = {"escopo": "corte", "projeto_id": "p1", "corte_id": "c1", "tipo": "horizontal"}
+    so_imagem = {"estilo": "limpo", "cabecalho": {"mostrar_nome": False, "mostrar_handle": False}}
+    resp = client.put(url, json={**corpo, "componentes": so_imagem})
+    assert resp.status_code == 200
+    efetivo = resp.json()["efetivo"]
+    assert (efetivo["estilo"], resp.json()["origem"]) == ("limpo", "corte")
+    assert efetivo["cabecalho"]["mostrar_nome"] is False
+    assert efetivo["cabecalho"]["nome_efetivo"] == "Seu Canal"
+    assert client.get(url, params={**consulta, "tipo": "short"}).json()["origem"] == "canal"
+    assert client.get("/api/channels/default/palco").json()["estilo"] == "atual"
+    volta = client.put(url, json={**corpo, "componentes": None})
+    assert volta.json()["origem"] == "canal"
+    sem_corte = client.put(url, json={**corpo, "corte_id": None, "componentes": so_imagem})
+    assert sem_corte.status_code == 422
