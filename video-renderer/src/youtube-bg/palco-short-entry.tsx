@@ -208,7 +208,7 @@ const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }
       </svg>
 
       <div style={{ position: "absolute", inset: 0, maskImage: "url(#palcoLimpoShortCut)", WebkitMaskImage: "url(#palcoLimpoShortCut)" }}>
-        <FundoLimpo fundo={componentes.fundo} />
+        {componentes.eco_no_short ? null : <FundoLimpo fundo={componentes.fundo} />}
         {buracos.map((j, i) => (
           <SombraDaJanela key={i} janela={j} raio={raios[i]} />
         ))}

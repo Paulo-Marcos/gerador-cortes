@@ -11,7 +11,7 @@ from pathlib import Path
 from app.domain.short.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
 from app.domain.short.palco_short import montar_plano
 from app.infrastructure.imagem.mascara_arredondada import mascara_arredondada
-from app.infrastructure.render.ffmpeg_short import build_palco_vertical_cmd
+from app.infrastructure.render.ffmpeg_short import Molde, build_palco_vertical_cmd
 from PIL import Image
 
 REGIOES = {
@@ -50,7 +50,7 @@ def test_comando_aplica_a_mascara_so_no_recorte_sobreposto(tmp_path: Path):
         duracao_seg=5.0,
         plano=_plano_insert(),
         palco_png=palco,
-        mascaras={1: mascara},
+        moldes={1: Molde(mascara=mascara)},
         filtro=None,
     )
     grafo = cmd[cmd.index("-filter_complex") + 1]
@@ -74,3 +74,28 @@ def test_sem_mascara_o_comando_e_o_de_sempre():
     )
     assert "alphamerge" not in com[com.index("-filter_complex") + 1]
     assert "-loop" not in com
+
+
+def test_buraco_apara_o_video_e_reposiciona_o_overlay(tmp_path: Path):
+    """D-913: com eco, o vídeo para no contorno, e a máscara tem o tamanho do buraco."""
+    plano = _plano_insert()
+    janela = plano.recortes[0].janela
+    buraco = {
+        "x": janela["x"] + 32,
+        "y": janela["y"] + 32,
+        "w": janela["w"] - 64,
+        "h": janela["h"] - 64,
+    }
+    cmd = build_palco_vertical_cmd(
+        Path("b.mkv"),
+        Path("o.mp4"),
+        inicio_seg=0.0,
+        duracao_seg=5.0,
+        plano=plano,
+        palco_png=tmp_path / "palco.png",
+        moldes={0: Molde(buraco=buraco)},
+        filtro=None,
+    )
+    grafo = cmd[cmd.index("-filter_complex") + 1]
+    assert f"crop={buraco['w']}:{buraco['h']}:32:32[r0]" in grafo
+    assert f"overlay=x={buraco['x']}:y={buraco['y']}" in grafo

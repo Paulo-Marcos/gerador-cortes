@@ -26,7 +26,7 @@ import {
 } from './ganchoDoShort';
 import type { GanchoShortPreset } from '@/types/presets';
 import { GanchoPrevia } from './GanchoPrevia';
-import { LegendaPrevia } from './LegendaPrevia';
+import { LegendaDoCanal } from './LegendaPrevia';
 import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
@@ -250,7 +250,7 @@ export function GanchoModal({
         onMover={mover}
       />
       {palavras.length > 0 && (
-        <LegendaPrevia
+        <LegendaDoCanal
           palavras={palavras}
           inicioSeg={short.inicio_seg}
           fimSeg={short.fim_seg}
@@ -286,7 +286,7 @@ export function GanchoModal({
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               rows={2}
-              placeholder="ninguém te conta isso sobre juros"
+              placeholder="ninguém te conta isso sobre *juros* (entre * fica no acento)"
               className="w-full resize-none rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2.5 py-2 font-display text-[15px] font-bold leading-snug text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)]"
             />
             <div className="flex items-baseline gap-2">

@@ -167,3 +167,18 @@ def test_canal_que_nao_e_o_ativo_e_409_e_nao_mexe_no_ativo(client: TestClient, t
     # O cabeçalho do ativo continua o dele.
     assert client.get("/api/channels/default/palco/imagem").content == MINHA
     assert client.get("/api/channels/default/palco").json()["estilo"] == "atual"
+
+
+def test_put_escolhe_eco_e_legenda_com_sombra(client: TestClient):
+    resp = client.put(
+        "/api/channels/default/palco",
+        json={"fundo_short": "eco", "estilo_da_legenda": "sombra"},
+    )
+    assert resp.status_code == 200
+    corpo = resp.json()
+    assert (corpo["fundo_short"], corpo["estilo_da_legenda"]) == ("eco", "sombra")
+    assert corpo["fundos_do_short"] == ["palco", "eco"]
+    assert corpo["estilos_da_legenda"] == ["contorno", "sombra"]
+    assert (
+        client.put("/api/channels/default/palco", json={"fundo_short": "neon"}).status_code == 422
+    )

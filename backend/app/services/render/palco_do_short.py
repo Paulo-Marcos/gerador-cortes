@@ -17,8 +17,11 @@ from app.core import channel_paths
 from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
 from app.domain.corte.youtube_layout import _normalizar_fundo as textura_valida
 from app.domain.short import moldura_short
+from app.domain.short.contorno_short import janela_com_contorno, raio_da_janela
+from app.domain.short.fundo_short import para_ffmpeg
 from app.domain.short.palco_short import PlanoPalco
 from app.infrastructure.imagem.mascara_arredondada import mascara_arredondada
+from app.infrastructure.render.ffmpeg_short import FUNDO_ECO, Molde
 from app.services import palco_componentes, palco_short_png
 
 
@@ -63,13 +66,31 @@ def textura_do_short(palco: dict) -> str:
 RAIO_DA_JANELA_DO_SHORT = 24
 
 
+def fundo_do_quadro(palco: dict) -> str:
+    """O que o FFmpeg pinta por baixo das janelas: a cor do canal, ou o eco (D-913).
+
+    O eco só vale com o palco ligado e um plano de janelas: sem palco o short é o
+    recorte cru, e sem plano não há janela principal de onde tirar o eco.
+    """
+    tem_palco = moldura_short.Moldura(palco["moldura"]) is not moldura_short.Moldura.NENHUMA
+    if tem_palco and isinstance(palco.get("plano"), PlanoPalco):
+        if palco_componentes.ler().eco_no_short:
+            return FUNDO_ECO
+    return para_ffmpeg(palco["fundo"])
+
+
 def pasta_das_mascaras() -> Path:
     """O cache das máscaras: regenerável, junto do cache do palco do canal."""
     return channel_paths.palco_cache_dir() / "mascaras"
 
 
-def mascaras_do_insert(palco: dict) -> dict[int, Path]:
-    """`{índice do recorte: PNG da máscara}` das janelas que ficam POR CIMA de outra.
+def moldes_do_short(palco: dict) -> dict[int, Molde]:
+    """`{índice do recorte: Molde}`: o que o FFmpeg faz com cada janela além do recorte.
+
+    - Estilo limpo com fundo de palco: só a janela que fica POR CIMA de outra (o
+      insert) ganha máscara de canto — as outras, o PNG arredonda.
+    - Com eco (D-913): TODA janela é aparada ao seu buraco com contorno e ganha
+      os cantos, porque o PNG ficou transparente e não cobre mais a borda.
 
     Vazio fora do estilo limpo, sem palco (moldura desligada) ou sem plano: o
     short sai como saía, sem passo extra no FFmpeg.
@@ -79,15 +100,31 @@ def mascaras_do_insert(palco: dict) -> dict[int, Path]:
         return {}
     if moldura_short.Moldura(palco["moldura"]) is moldura_short.Moldura.NENHUMA:
         return {}
-    if palco_componentes.ler().estilo != "limpo":
+    componentes = palco_componentes.ler()
+    if componentes.estilo != "limpo":
         return {}
     pasta = pasta_das_mascaras()
+    if componentes.eco_no_short:
+        janelas = [r.janela for r in plano.recortes]
+        return {
+            indice: _molde_com_contorno(janela, janelas, componentes.contorno_short, pasta)
+            for indice, janela in enumerate(janelas)
+        }
     return {
-        indice: mascara_arredondada(
-            plano.recortes[indice].janela["w"],
-            plano.recortes[indice].janela["h"],
-            RAIO_DA_JANELA_DO_SHORT,
-            pasta,
+        indice: Molde(
+            mascara=mascara_arredondada(
+                plano.recortes[indice].janela["w"],
+                plano.recortes[indice].janela["h"],
+                RAIO_DA_JANELA_DO_SHORT,
+                pasta,
+            )
         )
         for indice in plano.sobrepostos()
     }
+
+
+def _molde_com_contorno(janela: dict, janelas: list[dict], contorno: int, pasta: Path) -> Molde:
+    buraco = janela_com_contorno(janela, janelas, contorno)
+    raio = raio_da_janela(buraco)
+    mascara = mascara_arredondada(buraco["w"], buraco["h"], raio, pasta) if raio else None
+    return Molde(mascara=mascara, buraco=buraco)

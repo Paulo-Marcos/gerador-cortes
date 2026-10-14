@@ -77,6 +77,12 @@ export interface ComponentesDoPalco {
   contorno_short?: number;
   /** O fundo do estilo limpo (`FUNDOS_DO_LIMPO`); ausente = o padrão. */
   fundo?: string;
+  /**
+   * D-913: o short leva o eco do vídeo nas faixas. O PNG então NÃO pinta fundo
+   * (fica transparente fora das sombras e do cabeçalho), e quem mostra as faixas
+   * é o vídeo desfocado que o FFmpeg põe por baixo.
+   */
+  eco_no_short?: boolean;
 }
 
 /**

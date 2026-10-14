@@ -172,3 +172,39 @@ class TestImagem:
     def test_formato_recusado(self):
         with pytest.raises(PedidoInvalido):
             pc.extensao_da_imagem("image/gif")
+
+
+class TestFundoDoShortELegenda:
+    """D-913: o eco nas faixas do short e o estilo da legenda, por canal."""
+
+    def test_padrao_e_o_de_sempre(self):
+        assert pc.PADRAO.fundo_short == "palco"
+        assert pc.PADRAO.estilo_da_legenda == "contorno"
+        assert not pc.PADRAO.eco_no_short
+
+    def test_eco_so_vale_no_limpo(self):
+        eco = pc.mesclar(pc.PADRAO, {"fundo_short": "Eco"})
+        assert eco.fundo_short == "eco"
+        assert not eco.eco_no_short
+        assert pc.mesclar(eco, {"estilo": "limpo"}).eco_no_short
+
+    def test_legenda_com_sombra(self):
+        assert pc.mesclar(pc.PADRAO, {"estilo_da_legenda": "sombra"}).estilo_da_legenda == "sombra"
+
+    @pytest.mark.parametrize("campo", ["fundo_short", "estilo_da_legenda"])
+    def test_escolha_desconhecida_e_recusada_na_edicao(self, campo):
+        with pytest.raises(pc.OpcaoDePalcoInvalida):
+            pc.mesclar(pc.PADRAO, {campo: "neon"})
+
+    def test_gravado_desconhecido_cai_no_padrao(self):
+        lido = pc.normalizar({"fundo_short": "sumiu", "estilo_da_legenda": "sumiu"})
+        assert (lido.fundo_short, lido.estilo_da_legenda) == ("palco", "contorno")
+
+    def test_props_do_renderer_levam_o_eco(self):
+        props = pc.props_para_renderer(
+            pc.mesclar(pc.PADRAO, {"estilo": "limpo", "fundo_short": "eco"}),
+            nome_do_canal="C",
+            handle_do_canal="@c",
+            imagem_servida="",
+        )
+        assert props["eco_no_short"] is True

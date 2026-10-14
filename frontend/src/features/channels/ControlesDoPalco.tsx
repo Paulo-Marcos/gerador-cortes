@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -129,5 +130,101 @@ export function CampoPosicao({
         </div>
       )}
     </div>
+  );
+}
+
+/** Um grupo de botões exclusivos: a escolha marcada fica preenchida. */
+export function CampoEscolha<T extends string>({
+  rotulo,
+  valor,
+  opcoes,
+  onEscolher,
+}: {
+  rotulo: string;
+  valor: T;
+  opcoes: ReadonlyArray<{ id: T; nome: string }>;
+  onEscolher: (valor: T) => void;
+}) {
+  return (
+    <div className="grid gap-1.5" role="group" aria-label={rotulo}>
+      <span className="text-xs font-medium text-text-300">{rotulo}</span>
+      <div className="flex flex-wrap gap-2">
+        {opcoes.map((opcao) => (
+          <Button
+            key={opcao.id}
+            type="button"
+            size="sm"
+            variant={valor === opcao.id ? 'default' : 'outline'}
+            aria-pressed={valor === opcao.id}
+            onClick={() => onEscolher(opcao.id)}
+          >
+            {opcao.nome}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export type FundoDoShort = 'palco' | 'eco';
+export type EstiloDaLegenda = 'contorno' | 'sombra';
+
+const FUNDOS_DO_SHORT: ReadonlyArray<{ id: FundoDoShort; nome: string }> = [
+  { id: 'palco', nome: 'Fundo do palco' },
+  { id: 'eco', nome: 'Eco do vídeo (desfocado)' },
+];
+
+const ESTILOS_DA_LEGENDA: ReadonlyArray<{ id: EstiloDaLegenda; nome: string }> = [
+  { id: 'contorno', nome: 'Contorno' },
+  { id: 'sombra', nome: 'Só sombra' },
+];
+
+export interface ShortDoPalco {
+  contornoShort: number;
+  fundoShort: FundoDoShort;
+  estiloDaLegenda: EstiloDaLegenda;
+}
+
+/**
+ * D-911/D-913: o que o canal escolhe para o short — o contorno em volta das
+ * janelas, o que aparece nele (o fundo do palco ou o eco do vídeo) e como a
+ * legenda se separa do vídeo. O eco só existe no estilo limpo.
+ */
+export function JanelasDoShort({
+  valor,
+  limpo,
+  onMudar,
+}: {
+  valor: ShortDoPalco;
+  limpo: boolean;
+  onMudar: (valor: ShortDoPalco) => void;
+}) {
+  return (
+    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
+      <legend className="px-1 text-xs font-medium text-text-300">Short</legend>
+      <CampoNumero
+        id="palco-contorno"
+        rotulo="Contorno do fundo em volta das janelas"
+        unidade="px, 0 = sem contorno"
+        valor={valor.contornoShort}
+        min={0}
+        max={80}
+        onMudar={(contornoShort) => onMudar({ ...valor, contornoShort })}
+      />
+      {limpo && (
+        <CampoEscolha
+          rotulo="Em volta das janelas"
+          valor={valor.fundoShort}
+          opcoes={FUNDOS_DO_SHORT}
+          onEscolher={(fundoShort) => onMudar({ ...valor, fundoShort })}
+        />
+      )}
+      <CampoEscolha
+        rotulo="Legenda"
+        valor={valor.estiloDaLegenda}
+        opcoes={ESTILOS_DA_LEGENDA}
+        onEscolher={(estiloDaLegenda) => onMudar({ ...valor, estiloDaLegenda })}
+      />
+    </fieldset>
   );
 }

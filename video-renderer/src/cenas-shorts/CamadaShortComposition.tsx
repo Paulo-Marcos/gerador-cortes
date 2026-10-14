@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill } from "remotion";
 import { z } from "zod";
+import { ESTILOS_DA_LEGENDA } from "./sombrasDaLegenda";
 import { CamadaShort } from "./index";
 import { useFontesDaLegenda } from "./LegendaShort";
 import { TIPOS_CENA_SHORT } from "./schema";
@@ -68,6 +69,8 @@ export const camadaShortSchema = z.object({
   legendaFonte: z.string().default(""),
   /** D-605: onde a legenda senta, ja com a heranca resolvida pelo backend. */
   legendaLugar: lugarDaLegendaSchema.default({ x: 50, y: 82, largura: 80 }),
+  /** D-913: contorno (o de sempre) ou só sombra. Ausente = contorno. */
+  legendaEstilo: z.enum(ESTILOS_DA_LEGENDA).default("contorno"),
   /** Duração do short em segundos — define o tamanho da composição. */
   duracaoSeg: z.number(),
 });
@@ -81,6 +84,7 @@ export const CamadaShortComposition: React.FC<CamadaShortSchema> = ({
   legendaCor,
   legendaFonte,
   legendaLugar,
+  legendaEstilo,
 }) => {
   // D-642: o short é quem pede estas fontes, e só ele. As cenas usam as
   // variáveis do preset "atual" (não há `FontPresetProvider` aqui, então valem
@@ -98,6 +102,7 @@ export const CamadaShortComposition: React.FC<CamadaShortSchema> = ({
         legendaCor={legendaCor}
         legendaFonte={legendaFonte}
         legendaLugar={legendaLugar}
+        legendaEstilo={legendaEstilo}
       />
     </AbsoluteFill>
   );

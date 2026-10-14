@@ -3,6 +3,7 @@ import { useCurrentFrame, useVideoConfig } from "remotion";
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
 import { COLORS_V2, FONTS_V2 } from "../theme-v2";
 import type { LugarDaLegenda } from "./schema";
+import { SOMBRAS_DA_LEGENDA, type EstiloDaLegenda } from "./sombrasDaLegenda";
 import { useEsperarFontes } from "../theme-v2";
 import {
   fontFamily as familiaAnton,
@@ -158,6 +159,8 @@ export interface LegendaShortProps {
    * corte.
    */
   lugar?: LugarDaLegenda;
+  /** D-913: contorno (o de sempre) ou só sombra — escolha do canal. */
+  estilo?: EstiloDaLegenda;
 }
 
 export const LegendaShort: React.FC<LegendaShortProps> = ({
@@ -166,6 +169,7 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
   cor = "",
   fonte = "",
   lugar = LUGAR_PADRAO,
+  estilo = "contorno",
 }) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
@@ -210,10 +214,9 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
         // D-568: palavra longa QUEBRA em vez de furar a caixa. Sem isto ela
         // saía por fora do quadro e aparecia cortada pela borda.
         overflowWrap: "break-word",
-        // Contorno em vez de caixa: a caixa esconde o vídeo, e o vídeo é o que
-        // segura o dedo. O contorno mantém o contraste sobre qualquer fundo.
-        textShadow:
-          "0 2px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 2px 0 0 rgba(0,0,0,0.85), -2px 0 0 rgba(0,0,0,0.85), 0 6px 18px rgba(0,0,0,0.55)",
+        // Contorno (ou sombra, D-913) em vez de caixa: a caixa esconde o vídeo,
+        // e o vídeo é o que segura o dedo.
+        textShadow: SOMBRAS_DA_LEGENDA[estilo] ?? SOMBRAS_DA_LEGENDA.contorno,
       }}
     >
       {pagina.tokens.map((token, indice) => {

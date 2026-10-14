@@ -1,8 +1,10 @@
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useMemo, useRef, useState, type ComponentProps, type PointerEvent as ReactPointerEvent } from 'react';
+import { usePalcoDoCanalAtivoResolvido } from '@/features/channels/useChannels';
 import { lugarArrastado, lugarEfetivo, paginaEm, paginasDoTrecho } from './previaLegenda';
 import { comOffsets, noShort, type Segmento } from './segmentosDoShort';
 import type { LugarDaLegenda } from './previaLegenda';
 import type { PalavraTranscrita } from './shortsApi';
+import { SOMBRAS_DA_LEGENDA, type EstiloDaLegenda } from '@video-renderer/public-api';
 
 // D-479: a legenda desenhada por cima do player, como sairá no arquivo.
 //
@@ -113,6 +115,8 @@ interface Props {
    * pela qual o ponteiro só passou.
    */
   onSoltar?: (lugar: LugarDaLegenda) => void;
+  /** D-913: contorno (o de sempre) ou só sombra — a mesma sombra do render. */
+  estilo?: EstiloDaLegenda;
 }
 
 export function LegendaPrevia({
@@ -126,6 +130,7 @@ export function LegendaPrevia({
   lugar,
   onMover,
   onSoltar,
+  estilo = 'contorno',
 }: Props) {
   const quadro = useRef<HTMLDivElement>(null);
   const [arrastando, setArrastando] = useState(false);
@@ -251,8 +256,7 @@ export function LegendaPrevia({
             overflowWrap: 'break-word',
             // Vazio cai na `font-display` da classe, que e a do canal.
             fontFamily: fonte || undefined,
-            textShadow:
-              '0 2px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 2px 0 0 rgba(0,0,0,0.85), -2px 0 0 rgba(0,0,0,0.85), 0 6px 18px rgba(0,0,0,0.55)',
+            textShadow: SOMBRAS_DA_LEGENDA[estilo],
           }}
         >
           {/* `pagina` pode ser nula em modo arraste: no silêncio da fala fica só
@@ -276,4 +280,14 @@ export function LegendaPrevia({
       </div>
     </div>
   );
+}
+
+/**
+ * D-913: a prévia da legenda no estilo que o CANAL escolheu (contorno ou só
+ * sombra), como o render desenha. Quem chama passa o resto, igual à
+ * `LegendaPrevia` — que continua sem depender do canal e testável sozinha.
+ */
+export function LegendaDoCanal(props: Omit<ComponentProps<typeof LegendaPrevia>, 'estilo'>) {
+  const { estilo_da_legenda } = usePalcoDoCanalAtivoResolvido();
+  return <LegendaPrevia {...props} estilo={estilo_da_legenda} />;
 }

@@ -67,6 +67,10 @@ export interface ComponentesDoPalco {
   fundo: string;
   /** Quanto as janelas do short recuam das bordas (px); 0 = sem contorno. */
   contorno_short: number;
+  /** D-913: o que o short mostra em volta das janelas: o fundo do palco ou o eco do vídeo. */
+  fundo_short: 'palco' | 'eco';
+  /** D-913: a legenda do short com contorno (o de sempre) ou só sombra. */
+  estilo_da_legenda: 'contorno' | 'sombra';
 }
 
 export const COMPONENTES_PADRAO: ComponentesDoPalco = {
@@ -83,6 +87,8 @@ export const COMPONENTES_PADRAO: ComponentesDoPalco = {
   placa: { ativo: true, escala: 1, posicao: { automatica: true, x: 0, y: 0 } },
   fundo: 'reticula-aurora',
   contorno_short: 32,
+  fundo_short: 'palco',
+  estilo_da_legenda: 'contorno',
 };
 
 /** A janela da prévia: recorta o vídeo com os cantos do estilo limpo e leva a sombra. */
@@ -139,3 +145,8 @@ export const CabecalhoDoCanal: FC<{
     }
   />
 );
+
+/** D-913: o short leva o eco do vídeo nas faixas (só no estilo limpo, como no render). */
+export function temEcoNoShort(componentes: ComponentesDoPalco): boolean {
+  return componentes.estilo === 'limpo' && componentes.fundo_short === 'eco';
+}

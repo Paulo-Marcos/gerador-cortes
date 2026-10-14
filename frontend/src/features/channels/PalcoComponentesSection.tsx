@@ -8,7 +8,14 @@ import { mensagemErro } from '@/lib/mensagemErro';
 import { PALETTE } from '@/shared/palco/youtubeBackgrounds';
 import { COR_DO_ACENTO, COR_DO_FUNDO, COR_DO_TEXTO } from '@/shared/palco/palcoLimpo';
 import { Icon } from '@/upgrade/Icon';
-import { CampoNumero, CampoPosicao, CampoTamanho, type PosicaoEditavel } from './ControlesDoPalco';
+import {
+  CampoPosicao,
+  CampoTamanho,
+  JanelasDoShort,
+  type EstiloDaLegenda,
+  type FundoDoShort,
+  type PosicaoEditavel,
+} from './ControlesDoPalco';
 import { urlDaImagem } from './palcoDoCanal';
 import {
   useCanais,
@@ -53,6 +60,8 @@ export interface RascunhoDoPalco {
   estilo: Estilo;
   fundo: string;
   contornoShort: number;
+  fundoShort: FundoDoShort;
+  estiloDaLegenda: EstiloDaLegenda;
   cabecalhoAtivo: boolean;
   nome: string;
   handle: string;
@@ -69,6 +78,8 @@ export function rascunhoDe(palco: PalcoComponentes): RascunhoDoPalco {
     estilo: palco.estilo === 'limpo' ? 'limpo' : 'atual',
     fundo: palco.fundo,
     contornoShort: palco.contorno_short,
+    fundoShort: palco.fundo_short === 'eco' ? 'eco' : 'palco',
+    estiloDaLegenda: palco.estilo_da_legenda === 'sombra' ? 'sombra' : 'contorno',
     cabecalhoAtivo: palco.cabecalho.ativo,
     nome: palco.cabecalho.nome,
     handle: palco.cabecalho.handle,
@@ -86,6 +97,8 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
     estilo: rascunho.estilo,
     fundo: rascunho.fundo as PalcoComponentesEdicao['fundo'],
     contorno_short: rascunho.contornoShort,
+    fundo_short: rascunho.fundoShort,
+    estilo_da_legenda: rascunho.estiloDaLegenda,
     cabecalho: {
       ativo: rascunho.cabecalhoAtivo,
       nome: rascunho.nome,
@@ -132,18 +145,11 @@ export function PalcoComponentesForm(props: FormProps) {
       )}
       <CabecalhoDoPalco {...props} />
       <PlacaDoPalco rascunho={rascunho} onMudar={onMudar} />
-      <fieldset className="grid gap-2 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
-        <legend className="px-1 text-xs font-medium text-text-300">Janelas do short</legend>
-        <CampoNumero
-          id="palco-contorno"
-          rotulo="Contorno do fundo em volta das janelas"
-          unidade="px, 0 = sem contorno"
-          valor={rascunho.contornoShort}
-          min={0}
-          max={80}
-          onMudar={(contornoShort) => onMudar({ ...rascunho, contornoShort })}
-        />
-      </fieldset>
+      <JanelasDoShort
+        valor={rascunho}
+        limpo={rascunho.estilo === 'limpo'}
+        onMudar={(short) => onMudar({ ...rascunho, ...short })}
+      />
       <div className="flex justify-end">
         <Button type="submit" disabled={pendente}>
           {pendente ? 'Salvando…' : 'Salvar palco'}

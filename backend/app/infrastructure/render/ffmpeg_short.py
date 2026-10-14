@@ -20,6 +20,7 @@ Sem I/O: só monta argv.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from app.domain.short.formato_video import (
@@ -47,6 +48,32 @@ CODEC_OVERLAY = "prores_ks"
 # existir em dois lugares e o canal poder trocar a paleta sem deixar um deles
 # para tras.
 FUNDO_PADRAO = fundo_ffmpeg(FUNDO_DE_ULTIMO_RECURSO)
+
+
+@dataclass(frozen=True)
+class Molde:
+    """Como uma janela entra no quadro além do recorte (D-911, D-913).
+
+    `buraco`: o retângulo (px do quadro) a que o vídeo é aparado — o contorno do
+    estilo limpo quando o PNG não cobre a borda (com eco). `mascara`: o PNG em
+    tons de cinza que arredonda os cantos, do tamanho do que sobrou.
+    """
+
+    mascara: Path | None = None
+    buraco: dict | None = None
+
+
+# D-913: o "fundo" que não é cor — o eco do vídeo. Quem passa este valor em
+# `fundo_cor` pede que as faixas mostrem a janela principal desfocada.
+FUNDO_ECO = "eco"
+
+# O eco: a janela principal reduzida a 1/4, desfocada ali (o mesmo desfoque de
+# 40 px no quadro cheio, por uma fração do custo), e devolvida ao quadro com 60%
+# da saturação e 35% do brilho — presente, mas abaixo do vídeo de verdade.
+_ECO_REDUCAO = 4
+_ECO_DESFOQUE = 10
+_ECO_SATURACAO = 0.6
+_ECO_BRILHO = 0.35
 
 
 def build_recorte_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg: cada argumento é uma dimensão do comando, todos por nome
@@ -131,7 +158,7 @@ def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg:
     plano: PlanoPalco,
     moldura: list[Faixa] | None = None,
     palco_png: Path | None = None,
-    mascaras: dict[int, Path] | None = None,
+    moldes: dict[int, Molde] | None = None,
     fundo_cor: str = FUNDO_PADRAO,
     filtro: str | None = "cinematic_iii",
     crf: int = 18,
@@ -160,17 +187,13 @@ def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg:
         >>> print(cmd[cmd.index("-filter_complex") + 1])
         color=c=0x0f1410:s=1080x1920:r=30:d=30.0,format=rgba[palco];[0:v]crop=340:260:24:410,scale=2510:1920,crop=1080:1920:715:0,setsar=1,format=rgba[r0];[palco][r0]overlay=x=0:y=0:format=auto[comp];[comp]format=yuv420p[v]
     """
-    partes = [
-        # `d=` NAO e opcional: fonte `color` e infinita, e sem duracao o encode
-        # so termina pelo -t — licao que este projeto ja pagou com um render de
-        # base preta que nunca fechava.
-        f"color=c={fundo_cor}:s={VERTICAL.largura}x{VERTICAL.altura}:r=30:"
-        f"d={duracao_seg},format=rgba[palco]"
-    ]
+    partes = [_base_do_palco(plano, fundo_cor, duracao_seg)]
 
-    # D-911: um recorte com máscara (o insert) tem os cantos arredondados pelo
-    # alfa dela. As máscaras entram depois do PNG do palco, uma entrada cada.
-    mascaras = mascaras or {}
+    # D-911: um recorte com máscara (o insert; com eco, todos) tem os cantos
+    # arredondados pelo alfa dela. As máscaras entram depois do PNG do palco,
+    # uma entrada cada. D-913: com buraco, o vídeo é aparado a ele antes.
+    moldes = moldes or {}
+    mascaras = {i: m.mascara for i, m in moldes.items() if m.mascara is not None}
     primeira_mascara = 2 if palco_png else 1
     entrada_da_mascara = {
         indice: primeira_mascara + ordem for ordem, indice in enumerate(sorted(mascaras))
@@ -178,13 +201,19 @@ def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg:
 
     acumulador = "[palco]"
     for indice, recorte in enumerate(plano.recortes):
+        cadeia = _cadeia_do_recorte(recorte)
+        x, y = recorte.posicao
+        buraco = moldes[indice].buraco if indice in moldes else None
+        if buraco:
+            # Apara o vídeo ao buraco: o que fica fora seria visto sobre o eco.
+            cadeia += f",crop={buraco['w']}:{buraco['h']}:{buraco['x'] - x}:{buraco['y'] - y}"
+            x, y = buraco["x"], buraco["y"]
         if indice in entrada_da_mascara:
-            partes.append(f"[0:v]{_cadeia_do_recorte(recorte)}[s{indice}]")
+            partes.append(f"[0:v]{cadeia}[s{indice}]")
             partes.append(f"[{entrada_da_mascara[indice]}:v]format=gray[m{indice}]")
             partes.append(f"[s{indice}][m{indice}]alphamerge[r{indice}]")
         else:
-            partes.append(f"[0:v]{_cadeia_do_recorte(recorte)}[r{indice}]")
-        x, y = recorte.posicao
+            partes.append(f"[0:v]{cadeia}[r{indice}]")
         saida_overlay = "[comp]" if indice == len(plano.recortes) - 1 else f"[c{indice}]"
         partes.append(f"{acumulador}[r{indice}]overlay=x={x}:y={y}:format=auto{saida_overlay}")
         acumulador = saida_overlay
@@ -256,6 +285,47 @@ def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg:
 def _desenhar_faixa(faixa: Faixa) -> str:
     """Uma barra da moldura, opaca, sobre o quadro composto."""
     return f"drawbox=x={faixa.x}:y={faixa.y}:w={faixa.w}:h={faixa.h}:color={faixa.cor}@1.0:t=fill"
+
+
+def _base_do_palco(plano: PlanoPalco, fundo_cor: str, duracao_seg: float) -> str:
+    """O que fica por baixo das janelas: uma cor, ou o eco do vídeo (D-913).
+
+    Exemplo (o eco da janela principal, já no quadro vertical):
+        >>> from app.domain.short.arranjo_short import Arranjo, montar_modelo
+        >>> from app.domain.short.palco_short import montar_plano
+        >>> regioes = {"pessoa": {"x": 24, "y": 410, "w": 340, "h": 260}}
+        >>> plano = montar_plano(montar_modelo(Arranjo(), regioes), regioes)
+        >>> print(_base_do_palco(plano, FUNDO_ECO, 30.0))
+        [0:v]crop=340:260:24:410,scale=270:480:force_original_aspect_ratio=increase,crop=270:480,boxblur=10:2,scale=1080:1920,eq=saturation=0.6,colorchannelmixer=rr=0.35:gg=0.35:bb=0.35,fps=30,setsar=1,format=rgba[palco]
+    """
+    if fundo_cor != FUNDO_ECO or not plano.recortes:
+        # `d=` NAO e opcional: fonte `color` e infinita, e sem duracao o encode
+        # so termina pelo -t — licao que este projeto ja pagou com um render de
+        # base preta que nunca fechava.
+        cor = FUNDO_PADRAO if fundo_cor == FUNDO_ECO else fundo_cor
+        return (
+            f"color=c={cor}:s={VERTICAL.largura}x{VERTICAL.altura}:r=30:"
+            f"d={duracao_seg},format=rgba[palco]"
+        )
+    # A janela que mais ocupa o quadro é a que o olho já está vendo: o eco dela
+    # emenda com o vídeo em vez de trazer outra cena para as faixas. A fonte é o
+    # próprio bruto, finita, e o `-t` da saída fecha o encode.
+    principal = max(plano.recortes, key=lambda r: r.janela["w"] * r.janela["h"])
+    crop = principal.crop
+    largura, altura = VERTICAL.largura // _ECO_REDUCAO, VERTICAL.altura // _ECO_REDUCAO
+    cadeia = [
+        f"crop={int(crop['w'])}:{int(crop['h'])}:{int(crop['x'])}:{int(crop['y'])}",
+        f"scale={largura}:{altura}:force_original_aspect_ratio=increase",
+        f"crop={largura}:{altura}",
+        f"boxblur={_ECO_DESFOQUE}:2",
+        f"scale={VERTICAL.largura}:{VERTICAL.altura}",
+        f"eq=saturation={_ECO_SATURACAO}",
+        f"colorchannelmixer=rr={_ECO_BRILHO}:gg={_ECO_BRILHO}:bb={_ECO_BRILHO}",
+        "fps=30",
+        "setsar=1",
+        "format=rgba",
+    ]
+    return f"[0:v]{','.join(cadeia)}[palco]"
 
 
 def _cadeia_do_recorte(recorte: Recorte) -> str:

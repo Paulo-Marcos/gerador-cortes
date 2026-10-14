@@ -6,6 +6,7 @@ import { CenaCtaShort } from "./CenaCtaShort";
 import { GanchoAbertura } from "./GanchoAbertura";
 import { CenaHook } from "./CenaHook";
 import { CenaNumeroShort } from "./CenaNumeroShort";
+import type { EstiloDaLegenda } from "./sombrasDaLegenda";
 import { LegendaShort } from "./LegendaShort";
 import {
   ehTipoCenaShort,
@@ -50,6 +51,8 @@ export interface CamadaShortProps {
   legendaFonte?: string;
   /** D-605: onde a legenda senta, ja com a heranca resolvida pelo backend. */
   legendaLugar?: LugarDaLegenda;
+  /** D-913: contorno (o de sempre) ou só sombra. */
+  legendaEstilo?: EstiloDaLegenda;
 }
 
 /**
@@ -66,6 +69,7 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
   legendaCor = "",
   legendaFonte = "",
   legendaLugar,
+  legendaEstilo = "contorno",
 }) => {
   const { fps } = useVideoConfig();
 
@@ -106,6 +110,7 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
         cor={legendaCor}
         fonte={legendaFonte}
         lugar={legendaLugar}
+        estilo={legendaEstilo}
       />
     </>
   );

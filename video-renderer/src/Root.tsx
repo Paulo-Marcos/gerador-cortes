@@ -266,6 +266,8 @@ export const RemotionRoot: React.FC = () => {
           gancho: null,
           legendaCor: "",
           legendaFonte: "",
+          // D-913: mesmo motivo do `legendaLugar`.
+          legendaEstilo: "contorno",
           // D-605: mesmo motivo — o schema tem default, mas `defaultProps` e
           // tipado pela saida do zod, entao omitir deixa o Studio vermelho.
           legendaLugar: { x: 50, y: 82, largura: 80 },

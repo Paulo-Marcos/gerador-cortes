@@ -3,6 +3,7 @@ import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { COLORS_V2 as C, FONTS_V2 as F } from "../theme-v2";
 import { SAFE_ZONE } from "./_shared";
 import { FONTES_CARREGADAS } from "./LegendaShort";
+import { TextoComDestaque } from "./destaqueDoGancho";
 
 // D-565: o título-gancho da abertura.
 //
@@ -167,7 +168,7 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
             ...estilo.texto,
           }}
         >
-          {texto}
+          <TextoComDestaque texto={texto} cor={C.azulAcento} />
         </p>
       </div>
     </>

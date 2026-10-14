@@ -7088,6 +7088,21 @@
             ],
             "title": "Estilo"
           },
+          "estilo_da_legenda": {
+            "anyOf": [
+              {
+                "enum": [
+                  "contorno",
+                  "sombra"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estilo Da Legenda"
+          },
           "fundo": {
             "anyOf": [
               {
@@ -7105,6 +7120,21 @@
               }
             ],
             "title": "Fundo"
+          },
+          "fundo_short": {
+            "anyOf": [
+              {
+                "enum": [
+                  "palco",
+                  "eco"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fundo Short"
           },
           "placa": {
             "anyOf": [
@@ -7137,6 +7167,10 @@
             "title": "Estilo",
             "type": "string"
           },
+          "estilo_da_legenda": {
+            "title": "Estilo Da Legenda",
+            "type": "string"
+          },
           "estilos": {
             "items": {
               "type": "string"
@@ -7144,8 +7178,19 @@
             "title": "Estilos",
             "type": "array"
           },
+          "estilos_da_legenda": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Estilos Da Legenda",
+            "type": "array"
+          },
           "fundo": {
             "title": "Fundo",
+            "type": "string"
+          },
+          "fundo_short": {
+            "title": "Fundo Short",
             "type": "string"
           },
           "fundos": {
@@ -7153,6 +7198,13 @@
               "type": "string"
             },
             "title": "Fundos",
+            "type": "array"
+          },
+          "fundos_do_short": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fundos Do Short",
             "type": "array"
           },
           "placa": {
@@ -7166,6 +7218,10 @@
           "fundo",
           "fundos",
           "contorno_short",
+          "fundo_short",
+          "fundos_do_short",
+          "estilo_da_legenda",
+          "estilos_da_legenda",
           "cabecalho",
           "placa"
         ],

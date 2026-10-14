@@ -27,7 +27,7 @@ import { CabecalhoDoFire } from './CabecalhoDoFire';
 import { ColunaDeDecisoes } from './ColunaDeDecisoes';
 import { PainelDaRegua } from './PainelDaRegua';
 import { PlayerDoBruto } from './PlayerDoBruto';
-import { LegendaPrevia } from './LegendaPrevia';
+import { LegendaDoCanal } from './LegendaPrevia';
 import { lugarDaLegenda } from './previaLegenda';
 import { efetivos, type Segmento } from './segmentosDoShort';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
@@ -299,7 +299,7 @@ export default function FireDetalhePage() {
         )}
       />
       {legendaAtiva && transcricao.data && (
-        <LegendaPrevia
+        <LegendaDoCanal
           palavras={transcricao.data.palavras}
           inicioSeg={emQuadro.inicio_seg}
           fimSeg={emQuadro.fim_seg}

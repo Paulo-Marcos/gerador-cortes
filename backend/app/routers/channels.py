@@ -64,6 +64,8 @@ class PalcoComponentesRequest(BaseModel):
     estilo: Literal["atual", "limpo"] | None = None
     fundo: Literal["reticula-aurora", "reticula", "aurora", "linho", "chapado"] | None = None
     contorno_short: int | None = None
+    fundo_short: Literal["palco", "eco"] | None = None
+    estilo_da_legenda: Literal["contorno", "sombra"] | None = None
     cabecalho: CabecalhoRequest | None = None
     placa: PlacaRequest | None = None
 
@@ -96,6 +98,10 @@ class PalcoComponentesResponse(BaseModel):
     fundo: str
     fundos: list[str]
     contorno_short: int
+    fundo_short: str
+    fundos_do_short: list[str]
+    estilo_da_legenda: str
+    estilos_da_legenda: list[str]
     cabecalho: CabecalhoResponse
     placa: PlacaResponse
 
@@ -118,6 +124,10 @@ def _palco_para_response(
         fundo=componentes.fundo,
         fundos=list(palco_dominio.FUNDOS),
         contorno_short=componentes.contorno_short,
+        fundo_short=componentes.fundo_short,
+        fundos_do_short=list(palco_dominio.FUNDOS_DO_SHORT),
+        estilo_da_legenda=componentes.estilo_da_legenda,
+        estilos_da_legenda=list(palco_dominio.ESTILOS_DA_LEGENDA),
         cabecalho=CabecalhoResponse(
             ativo=componentes.cabecalho.ativo,
             nome=componentes.cabecalho.nome,

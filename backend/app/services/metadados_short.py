@@ -25,6 +25,7 @@ from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.publicacao.publicacao import LIMITES, Plataforma
 from app.domain.short import segmentos_short
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
+from app.domain.short.destaque_do_gancho import sem_marcas
 from app.domain.short.metadados_short import (
     PostDoShort,
     hashtags_gravadas,
@@ -127,7 +128,7 @@ async def montar_contexto(short_id: str) -> ContextoDoPost:
             tema_central=corte.tema_central or "",
             duracao_seg=round(fim - inicio, 2),
             texto_transcricao=montar_texto_transcricao(janela),
-            gancho_na_tela=short.gancho_tela or "(este short nao tem gancho)",
+            gancho_na_tela=sem_marcas(short.gancho_tela or "") or "(este short nao tem gancho)",
             titulos_recentes="\n".join(f"- {t}" for t in recentes) or "(nenhum ainda)",
             titulo_visivel=limites.titulo_visivel,
             titulo_max=limites.titulo_max,

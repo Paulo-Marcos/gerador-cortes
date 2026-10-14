@@ -75,7 +75,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/shorts/DefinirPalcoModal.tsx": 1,
   "src/features/shorts/GanchoModal.tsx": 3,
   "src/features/shorts/GanchoPrevia.tsx": 5,
-  "src/features/shorts/LegendaPrevia.tsx": 15,
+  "src/features/shorts/LegendaPrevia.tsx": 10,
   "src/features/shorts/LinhaDoTempo.tsx": 2,
   "src/features/shorts/MascaraEnquadramento.tsx": 4,
   "src/features/shorts/PalcoPrevia.tsx": 1,

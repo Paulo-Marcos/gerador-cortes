@@ -89,3 +89,20 @@ describe('onde a legenda e desenhada', () => {
     expect(desenhar()).not.toContain('cursor-grab');
   });
 });
+
+describe('estilo da legenda (D-913)', () => {
+  const comEstilo = (estilo?: 'contorno' | 'sombra') =>
+    renderToStaticMarkup(
+      <LegendaPrevia palavras={palavras} inicioSeg={10} fimSeg={40} tempoAtualSeg={10.5} estilo={estilo} />,
+    );
+
+  it('sem escolha, o contorno de sempre: quatro sombras duras de 2px', () => {
+    expect(comEstilo()).toContain('0 -2px 0 rgba(0,0,0,0.85)');
+  });
+
+  it('com sombra, só a sombra suave — sem a borda preta em volta das letras', () => {
+    const html = comEstilo('sombra');
+    expect(html).toContain('0 4px 24px rgba(0,0,0,0.7)');
+    expect(html).not.toContain('0 -2px 0');
+  });
+});
