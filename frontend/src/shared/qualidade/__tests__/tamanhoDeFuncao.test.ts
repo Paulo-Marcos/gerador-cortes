@@ -137,7 +137,7 @@ const EXCECOES: Record<string, number> = {
   "src/shared/palco/youtubeLayout.ts::normalizeYoutubeLayout": 116,
   "src/upgrade/ActionBar.tsx::ActionBar": 132,
   "src/upgrade/GavetaDaFila.tsx::GavetaDaFila": 126,
-  "src/upgrade/GlobalRail.tsx::GlobalRail": 244,
+  "src/upgrade/GlobalRail.tsx::GlobalRail": 239,
   "src/upgrade/KitScreen.tsx::KitScreen": 208,
   "src/upgrade/KitScreen.tsx::ModalDemo": 146,
   "src/upgrade/PaletaDeComandos.tsx::PaletaDeComandos": 351,

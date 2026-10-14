@@ -61,6 +61,11 @@ def instance_root() -> Path:
     return _instance_root()
 
 
+def repo_root() -> Path:
+    """Raiz do repositório: onde moram o `CHANGELOG.md` e o `changelog.d/` (D-922)."""
+    return _REPO_ROOT
+
+
 def settings_db_path() -> Path:
     """Banco de configurações da aplicação (`instance/settings.db`, D-191).
 

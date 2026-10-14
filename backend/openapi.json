@@ -6807,6 +6807,58 @@
         "title": "NavegadorDoRobo",
         "type": "object"
       },
+      "NovidadeResponse": {
+        "properties": {
+          "categoria": {
+            "title": "Categoria",
+            "type": "string"
+          },
+          "chave": {
+            "title": "Chave",
+            "type": "string"
+          },
+          "demandas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Demandas",
+            "type": "array"
+          },
+          "nova": {
+            "title": "Nova",
+            "type": "boolean"
+          },
+          "texto_original": {
+            "title": "Texto Original",
+            "type": "string"
+          },
+          "titulo_original": {
+            "title": "Titulo Original",
+            "type": "string"
+          },
+          "traducao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraducaoDaNovidade"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "chave",
+          "categoria",
+          "titulo_original",
+          "texto_original",
+          "demandas",
+          "traducao",
+          "nova"
+        ],
+        "title": "NovidadeResponse",
+        "type": "object"
+      },
       "OcorrenciaDoEixo": {
         "properties": {
           "contagem": {
@@ -9201,6 +9253,19 @@
         "title": "ResumoAvaliacoesThumbnail",
         "type": "object"
       },
+      "ResumoDasNovidades": {
+        "properties": {
+          "novas": {
+            "title": "Novas",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "novas"
+        ],
+        "title": "ResumoDasNovidades",
+        "type": "object"
+      },
       "RetanguloCapa": {
         "description": "Um componente da capa do TikTok, em pixels do quadro (inteiros: o domínio\npassa cada coordenada por `_inteiro`).",
         "properties": {
@@ -11229,6 +11294,60 @@
         "title": "TipoDeCenaModel",
         "type": "object"
       },
+      "TraducaoDaNovidade": {
+        "properties": {
+          "como_usar": {
+            "title": "Como Usar",
+            "type": "string"
+          },
+          "resumo": {
+            "title": "Resumo",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "titulo",
+          "resumo",
+          "como_usar"
+        ],
+        "title": "TraducaoDaNovidade",
+        "type": "object"
+      },
+      "TraducaoFeita": {
+        "properties": {
+          "pendentes": {
+            "title": "Pendentes",
+            "type": "integer"
+          },
+          "traduzidas": {
+            "title": "Traduzidas",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "traduzidas",
+          "pendentes"
+        ],
+        "title": "TraducaoFeita",
+        "type": "object"
+      },
+      "TraduzirRequest": {
+        "properties": {
+          "versao": {
+            "title": "Versao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "versao"
+        ],
+        "title": "TraduzirRequest",
+        "type": "object"
+      },
       "TranscricaoDoBrutoResponse": {
         "description": "As palavras com tempo do bruto; `fonte` diz de onde vieram (D-479).",
         "properties": {
@@ -11705,6 +11824,39 @@
           "tamanho_mb"
         ],
         "title": "VersaoExport",
+        "type": "object"
+      },
+      "VersaoResponse": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "novidades": {
+            "items": {
+              "$ref": "#/components/schemas/NovidadeResponse"
+            },
+            "title": "Novidades",
+            "type": "array"
+          },
+          "versao": {
+            "title": "Versao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "versao",
+          "data",
+          "novidades"
+        ],
+        "title": "VersaoResponse",
         "type": "object"
       },
       "VersoesResponse": {
@@ -18587,6 +18739,108 @@
         "summary": "Toggle Fire",
         "tags": [
           "Metadados"
+        ]
+      }
+    },
+    "/api/novidades": {
+      "get": {
+        "operationId": "listar_novidades_api_novidades_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VersaoResponse"
+                  },
+                  "title": "Response Listar Novidades Api Novidades Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Listar Novidades",
+        "tags": [
+          "Novidades"
+        ]
+      }
+    },
+    "/api/novidades/resumo": {
+      "get": {
+        "description": "Barato: o trilho consulta para acender o ponto de \"tem novidade\".",
+        "operationId": "resumo_das_novidades_api_novidades_resumo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumoDasNovidades"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Resumo Das Novidades",
+        "tags": [
+          "Novidades"
+        ]
+      }
+    },
+    "/api/novidades/traduzir": {
+      "post": {
+        "operationId": "traduzir_novidades_api_novidades_traduzir_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TraduzirRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraducaoFeita"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Traduzir Novidades",
+        "tags": [
+          "Novidades"
+        ]
+      }
+    },
+    "/api/novidades/vistas": {
+      "post": {
+        "operationId": "marcar_novidades_vistas_api_novidades_vistas_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Marcar Novidades Vistas",
+        "tags": [
+          "Novidades"
         ]
       }
     },

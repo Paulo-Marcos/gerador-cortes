@@ -54,6 +54,8 @@ const WorkspaceDoFirePage = lazy(() =>
 const ShortsProntosPage = lazy(() =>
   import('./features/shorts/ShortsProntosPage').then((m) => ({ default: m.default })),
 );
+// D-922: as novidades de cada versão, em português.
+const NovidadesPage = lazy(() => import('@/features/novidades/NovidadesPage'));
 const AtalhosPage = lazy(() =>
   import('@/features/atalhos/AtalhosPage').then((m) => ({ default: m.AtalhosPage })),
 );
@@ -106,6 +108,7 @@ export const router = createBrowserRouter([
       { path: 'shorts/:corteId', element: <FireDetalhePage /> },
       { path: 'shorts/:corteId/workspace', element: <WorkspaceDoFirePage /> },
       { path: 'atalhos', element: <AtalhosPage /> },
+      { path: 'novidades', element: <NovidadesPage /> },
       { path: 'fila', element: <FilaPage /> },
       {
         path: '*',
