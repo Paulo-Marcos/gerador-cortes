@@ -42,7 +42,7 @@ export type FilaDoTrilho = {
   onAbrir?: () => void;
 };
 
-type GlobalRailProps = {
+export type GlobalRailProps = {
   expandido: boolean;
   onAlternar: () => void;
   telaAtual: TelaId;
@@ -55,21 +55,26 @@ type GlobalRailProps = {
   /** D-746: "Onde eu estava" — os lugares recentes, sem o atual. A posição
    *  na lista é o atalho (⌘1…⌘4). */
   lugares?: Lugar[];
+  /** D-922: um ponto no item, com o motivo no `title` (ex.: novidades não
+   *  vistas). Sem entrada, o item fica como sempre. */
+  avisos?: Partial<Record<TelaId, string>>;
 };
 
 function ItemBotao({
   item,
   ativo,
   mostrarTexto,
+  aviso,
 }: {
   item: DestinoDeMenu;
   ativo: boolean;
   mostrarTexto: boolean;
+  aviso?: string;
 }) {
   return (
     <NavLink
       to={item.to}
-      title={item.texto}
+      title={aviso ? `${item.texto} · ${aviso}` : item.texto}
       aria-current={ativo ? 'page' : undefined}
       style={{
         display: 'flex',
@@ -86,14 +91,53 @@ function ItemBotao({
         textAlign: 'left',
         boxShadow: ativo ? 'var(--hi)' : 'none',
         flex: 'none',
+        position: 'relative',
       }}
     >
       <Icon name={item.icone} size={16} />
       {mostrarTexto ? (
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>{item.texto}</span>
       ) : null}
+      {/* Largo, o ponto fica no fim da linha; recolhido, no canto do ícone. */}
+      {aviso ? (
+        <span
+          data-aviso
+          aria-label={aviso}
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: 99,
+            background: 'var(--accent)',
+            flex: 'none',
+            ...(mostrarTexto ? { marginLeft: 'auto' } : { position: 'absolute', top: 5, right: 7 }),
+          }}
+        />
+      ) : null}
     </NavLink>
   );
+}
+
+/** Os itens de um bloco do trilho, cada um com o seu aviso, se houver. */
+function ItensDoBloco({
+  itens,
+  aceso,
+  mostrarTexto,
+  avisos,
+}: {
+  itens: DestinoDeMenu[];
+  aceso: (item: DestinoDeMenu) => boolean;
+  mostrarTexto: boolean;
+  avisos: Partial<Record<TelaId, string>>;
+}) {
+  return itens.map((i) => (
+    <ItemBotao
+      key={i.to}
+      item={i}
+      ativo={aceso(i)}
+      mostrarTexto={mostrarTexto}
+      aviso={avisos[i.id]}
+    />
+  ));
 }
 
 export function GlobalRail({
@@ -104,10 +148,12 @@ export function GlobalRail({
   fila,
   filaAtiva = false,
   lugares = [],
+  avisos = {},
 }: GlobalRailProps) {
   const navigate = useNavigate();
   const mostrarTexto = expandido;
   const aceso = (item: DestinoDeMenu) => item.telas.includes(telaAtual);
+  const bloco = { aceso, mostrarTexto, avisos };
 
   return (
     <aside
@@ -199,18 +245,14 @@ export function GlobalRail({
             Produção
           </span>
         ) : null}
-        {menu.producao.map((i) => (
-          <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
-        ))}
+        <ItensDoBloco itens={menu.producao} {...bloco} />
 
         {mostrarTexto ? (
           <span className="lbl" style={{ padding: '12px 4px 4px' }}>
             Inteligência
           </span>
         ) : null}
-        {menu.inteligencia.map((i) => (
-          <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
-        ))}
+        <ItensDoBloco itens={menu.inteligencia} {...bloco} />
 
         {/* D-746: o trabalho real é lateral (short → outro short → uma live
             → volta), e a trilha só sabia subir na hierarquia. Só com o trilho
@@ -333,10 +375,7 @@ export function GlobalRail({
           Ferramentas
         </span>
       ) : null}
-      {menu.ferramentas.map((i) => (
-        <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
-      ))}
-
+      <ItensDoBloco itens={menu.ferramentas} {...bloco} />
     </aside>
   );
 }

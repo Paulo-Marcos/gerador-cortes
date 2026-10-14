@@ -123,7 +123,7 @@ describe('menuDoTrilho', () => {
       'thumbs',
       'analises',
     ]);
-    expect(menu.ferramentas.map((i) => i.id)).toEqual(['atalhos', 'config']);
+    expect(menu.ferramentas.map((i) => i.id)).toEqual(['atalhos', 'novidades', 'config']);
   });
 
   it('acende "Biblioteca" em todas as telas de dentro de uma live', () => {

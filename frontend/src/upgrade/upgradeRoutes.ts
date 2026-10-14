@@ -34,6 +34,7 @@ export type TelaId =
   | 'analises'
   | 'config'
   | 'atalhos'
+  | 'novidades'
   | 'fila'
   | 'kit'
   | 'erro';
@@ -228,6 +229,16 @@ export const TELAS: Record<TelaId, Def> = {
     paleta: true,
     trilha: ['Atalhos'],
   },
+  // D-922: o que entrou em cada versão, para o operador saber o que usar.
+  novidades: {
+    icone: 'sparkles',
+    titulo: 'Novidades',
+    rota: () => '/novidades',
+    padroes: [/^\/novidades/],
+    grupo: 'ferramentas',
+    paleta: true,
+    trilha: ['Novidades'],
+  },
   config: {
     icone: 'settings',
     titulo: 'Configurações',
@@ -274,6 +285,7 @@ const ORDEM: TelaId[] = [
   'analises',
   'config',
   'atalhos',
+  'novidades',
   'fila',
   'kit',
 ];
@@ -413,6 +425,7 @@ const TELA_DA_MIGALHA: Record<string, TelaId> = {
   Fila: 'fila',
   Configurações: 'config',
   Atalhos: 'atalhos',
+  Novidades: 'novidades',
 };
 
 /**

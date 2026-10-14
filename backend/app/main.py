@@ -29,6 +29,7 @@ from app.routers import (
     export,
     mascot,
     metadados,
+    novidades,
     ordem_cortes,
     presets,
     projetos,
@@ -155,6 +156,8 @@ app.include_router(capa_no_chatgpt.router, prefix="/api/capa-chatgpt", tags=["Ca
 # backend velho no ar, npm install faltando, coluna que so nasce no boot. Este
 # router torna visivel a diferenca entre o que roda e o que esta no disco.
 app.include_router(sincronizacao.router, prefix="/api/sincronizacao", tags=["Sincronizacao"])
+# D-922: o que entrou em cada versão, em português, para o operador saber o que usar.
+app.include_router(novidades.router, prefix="/api/novidades", tags=["Novidades"])
 # D-448: pin explícito de posição — a ordem padrão (cronológica) não tem endpoint.
 app.include_router(ordem_cortes.router, prefix="/api/ordem-cortes", tags=["Ordem dos Cortes"])
 app.include_router(channels.router, prefix="/api/channels", tags=["Canais"])

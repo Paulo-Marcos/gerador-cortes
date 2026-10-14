@@ -8,9 +8,16 @@ import { overlayAberto } from '@/shared/atalhos/shortcuts';
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { useCanais } from '@/features/channels/useChannels';
+import { useAvisosDasNovidades } from '@/features/novidades/useNovidades';
 import { filaDoTrilho, resumoDoLote } from './cartaoDaFila';
 import { GavetaDaFila } from './GavetaDaFila';
-import { GlobalRail, TRILHO_ESTREITO, TRILHO_LARGO, type FilaDoTrilho } from './GlobalRail';
+import {
+  GlobalRail,
+  TRILHO_ESTREITO,
+  TRILHO_LARGO,
+  type FilaDoTrilho,
+  type GlobalRailProps,
+} from './GlobalRail';
 import {
   useAtalhosDeHistorico,
   useHistoricoDaCasca,
@@ -136,6 +143,12 @@ type CascaProps = {
   fila?: FilaDoTrilho;
 };
 
+/** D-922: o trilho com o ponto de "tem novidade". Fora da `Casca`, que já
+ *  está no teto de tamanho, e o trilho continua sem buscar dado nenhum. */
+function TrilhoComAvisos(props: Omit<GlobalRailProps, 'avisos'>) {
+  return <GlobalRail {...props} avisos={useAvisosDasNovidades()} />;
+}
+
 function Casca({ children, fila }: CascaProps) {
   const { pathname } = useLocation();
   const { theme, toggleTheme, glass } = useUpgradeTheme();
@@ -215,7 +228,7 @@ function Casca({ children, fila }: CascaProps) {
         overflow: 'hidden',
       }}
     >
-      <GlobalRail
+      <TrilhoComAvisos
         expandido={expandido}
         onAlternar={alternar}
         telaAtual={tela}

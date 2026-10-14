@@ -2540,6 +2540,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/novidades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar Novidades */
+        get: operations["listar_novidades_api_novidades_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/novidades/resumo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resumo Das Novidades
+         * @description Barato: o trilho consulta para acender o ponto de "tem novidade".
+         */
+        get: operations["resumo_das_novidades_api_novidades_resumo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/novidades/traduzir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Traduzir Novidades */
+        post: operations["traduzir_novidades_api_novidades_traduzir_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/novidades/vistas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marcar Novidades Vistas */
+        post: operations["marcar_novidades_vistas_api_novidades_vistas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ordem-cortes/corte/{corte_id}/posicao": {
         parameters: {
             query?: never;
@@ -7504,6 +7575,22 @@ export interface components {
              */
             navegador: "chrome" | "edge";
         };
+        /** NovidadeResponse */
+        NovidadeResponse: {
+            /** Categoria */
+            categoria: string;
+            /** Chave */
+            chave: string;
+            /** Demandas */
+            demandas: string[];
+            /** Nova */
+            nova: boolean;
+            /** Texto Original */
+            texto_original: string;
+            /** Titulo Original */
+            titulo_original: string;
+            traducao: components["schemas"]["TraducaoDaNovidade"] | null;
+        };
         /** OcorrenciaDoEixo */
         OcorrenciaDoEixo: {
             /** Contagem */
@@ -8451,6 +8538,11 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ResumoDasNovidades */
+        ResumoDasNovidades: {
+            /** Novas */
+            novas: number;
+        };
         /**
          * RetanguloCapa
          * @description Um componente da capa do TikTok, em pixels do quadro (inteiros: o domínio
@@ -9245,6 +9337,27 @@ export interface components {
             /** Nome */
             nome: string;
         };
+        /** TraducaoDaNovidade */
+        TraducaoDaNovidade: {
+            /** Como Usar */
+            como_usar: string;
+            /** Resumo */
+            resumo: string;
+            /** Titulo */
+            titulo: string;
+        };
+        /** TraducaoFeita */
+        TraducaoFeita: {
+            /** Pendentes */
+            pendentes: number;
+            /** Traduzidas */
+            traduzidas: number;
+        };
+        /** TraduzirRequest */
+        TraduzirRequest: {
+            /** Versao */
+            versao: string;
+        };
         /**
          * TranscricaoDoBrutoResponse
          * @description As palavras com tempo do bruto; `fonte` diz de onde vieram (D-479).
@@ -9405,6 +9518,15 @@ export interface components {
             preview?: boolean | null;
             /** Tamanho Mb */
             tamanho_mb: number;
+        };
+        /** VersaoResponse */
+        VersaoResponse: {
+            /** Data */
+            data: string | null;
+            /** Novidades */
+            novidades: components["schemas"]["NovidadeResponse"][];
+            /** Versao */
+            versao: string;
         };
         /** VersoesResponse */
         VersoesResponse: {
@@ -14035,6 +14157,97 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    listar_novidades_api_novidades_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersaoResponse"][];
+                };
+            };
+        };
+    };
+    resumo_das_novidades_api_novidades_resumo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumoDasNovidades"];
+                };
+            };
+        };
+    };
+    traduzir_novidades_api_novidades_traduzir_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TraduzirRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraducaoFeita"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    marcar_novidades_vistas_api_novidades_vistas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

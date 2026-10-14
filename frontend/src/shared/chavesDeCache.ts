@@ -6,3 +6,7 @@ export const corteKey = (id: string) => ['corte', id] as const;
 export const cortesProjetoKey = (id: string) => ['cortes', 'projeto', id] as const;
 export const projetoKey = (id: string) => ['projeto', id] as const;
 export const exportStatusKey = (id: string) => ['projeto', id, 'export-status'] as const;
+
+// D-922: a tela de Novidades as lê; o trilho lê o resumo para acender o ponto.
+export const novidadesKey = ['novidades', 'lista'] as const;
+export const novidadesResumoKey = ['novidades', 'resumo'] as const;
