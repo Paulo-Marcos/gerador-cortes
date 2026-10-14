@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toaster';
 import type { PalcoComponentes, PalcoComponentesEdicao } from '@/features/channels/api/canais';
-import { mensagemErro } from '@/lib/mensagemErro';
 import { PALETTE } from '@/shared/palco/youtubeBackgrounds';
 import { COR_DO_ACENTO, COR_DO_FUNDO, COR_DO_TEXTO } from '@/shared/palco/palcoLimpo';
 import { Icon } from '@/upgrade/Icon';
@@ -18,13 +16,6 @@ import {
 } from './ControlesDoPalco';
 import { CardsDoCanal, type CardsEditaveis } from './CardsDoCanal';
 import { urlDaImagem } from './palcoDoCanal';
-import {
-  useCanais,
-  useEnviarImagemDoPalco,
-  useGravarPalco,
-  usePalcoDoCanal,
-  useRemoverImagemDoPalco,
-} from './useChannels';
 
 // D-911: os componentes do palco do canal ativo — estilo, cabeçalho e placa —
 // editáveis na tela de Canais. O formulário é "burro" (recebe valor e avisa);
@@ -407,83 +398,5 @@ function AmostraDoEstilo({ estilo }: { estilo: Estilo }) {
       <path d="M8 12 H34 L38 16 V46 H8 Z" fill={PALETTE.green} stroke={PALETTE.lineSoft} strokeWidth="0.6" />
       <path d="M4 10 H10 M4 10 V16 M156 80 H150 M156 80 V74" stroke={PALETTE.bracket} strokeWidth="2" fill="none" />
     </svg>
-  );
-}
-
-export function PalcoComponentesSection() {
-  const { notify } = useToast();
-  const canaisQuery = useCanais();
-  const canalAtivo = canaisQuery.data?.canais.find((c) => c.ativo);
-  const palcoQuery = usePalcoDoCanal(canalAtivo?.id);
-  const gravar = useGravarPalco();
-  const enviarImagem = useEnviarImagemDoPalco();
-  const removerImagem = useRemoverImagemDoPalco();
-
-  const [rascunho, setRascunho] = useState<RascunhoDoPalco | null>(null);
-  const palco = palcoQuery.data;
-  useEffect(() => {
-    if (palco) setRascunho(rascunhoDe(palco));
-  }, [palco]);
-
-  const aoSalvar = () => {
-    if (!canalAtivo || !rascunho) return;
-    gravar.mutate(
-      { canalId: canalAtivo.id, edicao: edicaoDe(rascunho) },
-      {
-        onSuccess: () =>
-          notify('O próximo render já sai com o palco novo.', { tone: 'success', title: 'Palco salvo' }),
-        onError: (erro) => notify(mensagemErro(erro, 'Erro ao salvar o palco.'), { tone: 'error' }),
-      },
-    );
-  };
-
-  return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <div className="flex items-center gap-2">
-        <Icon name="layout-template" size={20} className="text-[var(--wb-accent)]" />
-        <h2 className="text-lg font-semibold text-[var(--wb-text)]">Palco do canal</h2>
-      </div>
-      <p className="text-sm text-[var(--wb-text-mute)]">
-        O <strong>estilo</strong> do palco (fundo, molduras das janelas) e os componentes fixos que
-        ele leva: o <strong>cabeçalho</strong> com imagem, nome e @, e a <strong>placa</strong> do
-        interlocutor. Vale para o horizontal e para os shorts do <strong>canal ativo</strong>, no
-        próximo render; a geometria das janelas continua a de cada corte.
-      </p>
-
-      {canaisQuery.isSuccess && !canalAtivo && (
-        <p className="text-sm text-[var(--wb-text-dim)]">Nenhum canal ativo. Selecione um canal para editar o palco.</p>
-      )}
-      {palcoQuery.isLoading && (
-        <p className="flex items-center gap-2 text-sm text-[var(--wb-text-mute)]">
-          <Icon name="loader-2" size={16} className="animate-spin" />
-          Carregando o palco…
-        </p>
-      )}
-      {palcoQuery.isError && (
-        <p className="text-sm text-[var(--wb-err)]">{mensagemErro(palcoQuery.error, 'Não foi possível carregar o palco.')}</p>
-      )}
-
-      {canalAtivo && palco && rascunho && (
-        <PalcoComponentesForm
-          rascunho={rascunho}
-          palco={palco}
-          pendente={gravar.isPending}
-          enviandoImagem={enviarImagem.isPending || removerImagem.isPending}
-          onMudar={setRascunho}
-          onSalvar={aoSalvar}
-          onEnviarImagem={(arquivo) =>
-            enviarImagem.mutate(
-              { canalId: canalAtivo.id, arquivo },
-              { onError: (erro) => notify(mensagemErro(erro, 'Erro ao enviar a imagem.'), { tone: 'error' }) },
-            )
-          }
-          onRemoverImagem={() =>
-            removerImagem.mutate(canalAtivo.id, {
-              onError: (erro) => notify(mensagemErro(erro, 'Erro ao remover a imagem.'), { tone: 'error' }),
-            })
-          }
-        />
-      )}
-    </section>
   );
 }

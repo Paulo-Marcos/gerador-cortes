@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AbsoluteFill, Video } from 'remotion';
 import type { YoutubePlaca, YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
 import {
@@ -35,12 +36,17 @@ export function PalcoLimpoCompartilhado({
   config,
   placa,
   palco,
+  midia,
 }: {
   videoSrc: string;
   config: ConfigCompartilhada;
   placa?: YoutubePlaca;
   palco: ComponentesDoPalco;
+  /** D-921: o que vai dentro da janela; o padrão é o vídeo (o modal passa o quadro parado). */
+  midia?: (crop: YoutubeSharedRect, slot: YoutubeSharedRect, muted: boolean) => ReactNode;
 }) {
+  const conteudo =
+    midia ?? ((crop, slot, muted) => <CropVideo videoSrc={videoSrc} crop={crop} slot={slot} muted={muted} />);
   const tela = renderedSize(config.crop_tela, config.slot_tela);
   const face = renderedSize(config.crop_facecam, config.slot_facecam);
   const temPlaca = palco.placa.ativo && Boolean(placa && (placa.nome || placa.papel));
@@ -51,14 +57,14 @@ export function PalcoLimpoCompartilhado({
     <AbsoluteFill>
       <FundoLimpo fundo={palco.fundo} />
       <JanelaLimpa janela={janelaTela} raio={RAIO_DA_TELA}>
-        <CropVideo videoSrc={videoSrc} crop={config.crop_tela} slot={config.slot_tela} muted={false} />
+        {conteudo(config.crop_tela, config.slot_tela, false)}
       </JanelaLimpa>
       {config.telas !== 1 ? (
         <JanelaLimpa
           janela={{ x: config.slot_facecam.x, y: config.slot_facecam.y, w: face.w, h: face.h }}
           raio={RAIO_DA_FACECAM}
         >
-          <CropVideo videoSrc={videoSrc} crop={config.crop_facecam} slot={config.slot_facecam} muted />
+          {conteudo(config.crop_facecam, config.slot_facecam, true)}
         </JanelaLimpa>
       ) : null}
       {palco.cabecalho.ativo ? (

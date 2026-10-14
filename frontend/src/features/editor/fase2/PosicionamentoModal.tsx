@@ -17,7 +17,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
@@ -41,6 +40,9 @@ import {
 } from './posicionamentoControls';
 import { NomeDoPresetDialog } from './NomeDoPresetDialog';
 import { ZonaCardsControle } from './ZonaCardsControle';
+import { FundoEPlacaDoCorte } from './FundoEPlacaDoCorte';
+import { PalcoDoCanalNoModal, useEdicaoDoPalco } from '@/features/channels/EdicaoDoPalco';
+import { presetsDoEstilo } from '@/shared/palco/presetsPorEstilo';
 import {
   useDeleteLayoutPreset,
   useLayoutPresets,
@@ -62,7 +64,6 @@ import {
   type YoutubeSharedRect,
   type YoutubeSharedScreenCount,
 } from '@/shared/palco/youtubeLayout';
-import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/shared/palco/youtubeBackgrounds';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 import { ICONE_DO_CONCEITO, Icon } from '@/upgrade/Icon';
 
@@ -113,7 +114,7 @@ export function PosicionamentoModal({
   const { notify } = useToast();
   const isFullMode = mode === 'full';
   const presetTipo: LayoutPresetTipo = isFullMode ? 'posicionamento_full' : 'posicionamento';
-  const { data: presets = [] } = useLayoutPresets({ tipo: presetTipo });
+  const { data: todosOsPresets = [] } = useLayoutPresets({ tipo: presetTipo });
   const savePreset = useSaveLayoutPreset();
   const updatePreset = useUpdateLayoutPreset();
   const deletePreset = useDeleteLayoutPreset();
@@ -121,6 +122,11 @@ export function PosicionamentoModal({
   const [config, setConfig] = useState<YoutubeSharedConfig>(initialConfig);
   const [draftFundo, setDraftFundo] = useState<YoutubeBackgroundId>(fundo);
   const [draftPlaca, setDraftPlaca] = useState<YoutubePlaca>(placa);
+  // D-921: o palco do canal (estilo, componentes) editado aqui com prévia ao vivo.
+  const edicaoDoPalco = useEdicaoDoPalco();
+  // D-921: só os presets do estilo escolhido (o rascunho, então trocar o estilo já filtra).
+  const estiloDoPalco = edicaoDoPalco.componentes?.estilo ?? 'atual';
+  const presets = presetsDoEstilo(todosOsPresets, estiloDoPalco);
   const [rectKey, setRectKey] = useState<SharedRectKey>(isFullMode ? 'crop_tela' : 'crop_facecam');
   const [drawingEnabled, setDrawingEnabled] = useState(false);
   const [presetSelecionado, setPresetSelecionado] = useState<string>('');
@@ -316,8 +322,9 @@ export function PosicionamentoModal({
           full: { crop: { ...config.crop_tela }, slot: { ...config.slot_tela } },
           fundo: draftFundo,
           placa: { ...draftPlaca },
+          estilo: estiloDoPalco,
         }
-      : { compartilhada: config, fundo: draftFundo, placa: { ...draftPlaca } };
+      : { compartilhada: config, fundo: draftFundo, placa: { ...draftPlaca }, estilo: estiloDoPalco };
 
   // F-048: detecta o preset selecionado e se o config atual divergiu dele,
   // habilitando "Atualizar preset".
@@ -528,76 +535,15 @@ export function PosicionamentoModal({
                 aqui, nao mais na pagina de Layout. Segmentos herdam do corte. */}
             {fundoPlacaEditavel && (
               <>
-                <section className="mt-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2">
-                  <div className="mb-1.5 font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                    Fundo
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {YOUTUBE_BACKGROUND_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        aria-pressed={draftFundo === opt.id}
-                        title={opt.descricao}
-                        onClick={() => setDraftFundo(opt.id)}
-                        className={cn(
-                          'flex h-[58px] flex-col items-stretch justify-between gap-1 overflow-hidden rounded-[var(--radius-xs)] border p-1.5 pt-1 text-left transition-colors',
-                          draftFundo === opt.id
-                            ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-                            : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'flex flex-1 items-center justify-center overflow-hidden rounded-[3px] border border-[var(--wb-border-soft)]',
-                            draftFundo === opt.id
-                              ? 'bg-[var(--wb-bg-card)]'
-                              : 'bg-[var(--wb-bg-inset)]',
-                          )}
-                        >
-                          <FundoThumb id={opt.id} />
-                        </span>
-                        <span className="truncate text-center text-[9px] font-semibold leading-[1.05]">
-                          {opt.label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2">
-                  <div className="mb-1.5 font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                    Placa de nome
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <label className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                      Nome
-                      <Input
-                        value={draftPlaca.nome}
-                        maxLength={80}
-                        placeholder="Ex.: Nome do Apresentador"
-                        onChange={(event) =>
-                          setDraftPlaca((current) => ({ ...current, nome: event.target.value }))
-                        }
-                        className="h-7 text-[11.5px]"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                      Papel
-                      <Input
-                        value={draftPlaca.papel}
-                        maxLength={80}
-                        placeholder="Ex.: CTO"
-                        onChange={(event) =>
-                          setDraftPlaca((current) => ({ ...current, papel: event.target.value }))
-                        }
-                        className="h-7 text-[11.5px]"
-                      />
-                    </label>
-                  </div>
-                </section>
+                <FundoEPlacaDoCorte
+                  fundo={draftFundo}
+                  placa={draftPlaca}
+                  onFundo={setDraftFundo}
+                  onPlaca={setDraftPlaca}
+                />
               </>
             )}
+            <PalcoDoCanalNoModal edicao={edicaoDoPalco} />
           </div>
 
           {/* Coluna preview — Recorte mostra video pra desenhar; Encaixe
@@ -628,6 +574,7 @@ export function PosicionamentoModal({
                   currentTime={currentTime}
                   fundo={draftFundo}
                   placa={draftPlaca}
+                  palco={edicaoDoPalco.componentes ?? undefined}
                   onChangeSlot={(key, rect) => updateRect(key, rect)}
                 />
                 <p className="font-code text-[10px] leading-snug text-[var(--wb-text-dim)]">

@@ -1,3 +1,4 @@
+import { presetsDoEstilo, type EstiloDoPalco } from '@/shared/palco/presetsPorEstilo';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,10 +31,12 @@ interface Props {
   /** Aplicar COPIA os valores e marca a origem (D-552). */
   onAplicar: (id: string, payload: PalcoShortPreset) => void;
   ocupado: boolean;
+  /** D-921: só os presets montados neste estilo do palco aparecem. */
+  estilo?: EstiloDoPalco;
 }
 
-export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
-  const presets = useLayoutPresets({ tipo: 'palco_short' });
+export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atual' }: Props) {
+  const doEstilo = presetsDoEstilo(useLayoutPresets({ tipo: 'palco_short' }).data ?? [], estilo);
   const salvar = useSaveLayoutPreset();
   const renomear = useUpdateLayoutPreset();
   // D-561: instância separada da do rename de propósito. As duas chamam o mesmo
@@ -71,7 +74,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
       </div>
 
       <ul className="mt-2 space-y-1">
-        {(presets.data ?? []).map((preset) => (
+        {doEstilo.map((preset) => (
           <li
             key={preset.id}
             className="flex flex-wrap items-center gap-1.5 rounded-[7px] border border-[var(--wb-border-soft)] px-2 py-1.5"
@@ -160,7 +163,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado }: Props) {
             )}
           </li>
         ))}
-        {(presets.data ?? []).length === 0 && (
+        {doEstilo.length === 0 && (
           <li className="text-[11.5px] text-[var(--wb-text-mute)]">
             Nenhum preset de short ainda. Os do horizontal têm nomes de cena do OBS e continuam
             servindo de atalho para os recortes — estes aqui são seus.

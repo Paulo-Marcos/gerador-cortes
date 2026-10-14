@@ -208,3 +208,16 @@ class TestFundoDoShortELegenda:
             imagem_servida="",
         )
         assert props["eco_no_short"] is True
+
+
+class TestEstiloDoPreset:
+    """D-921: o preset de palco lembra o estilo em que foi montado."""
+
+    def test_le_o_estilo_declarado(self):
+        assert pc.estilo_do_preset({"estilo": "limpo"}) == "limpo"
+        assert pc.estilo_do_preset({"estilo": " ATUAL "}) == "atual"
+
+    def test_ausente_ou_desconhecido_e_none(self):
+        assert pc.estilo_do_preset({}) is None
+        assert pc.estilo_do_preset({"estilo": "neon"}) is None
+        assert pc.estilo_do_preset("nao e dict") is None

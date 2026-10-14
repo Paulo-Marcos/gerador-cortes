@@ -59,7 +59,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase2/CenaPlayerPanel.tsx": 15,
   "src/features/editor/fase2/PosicionamentoModal.tsx": 1,
   "src/features/editor/fase2/SceneTimeline.tsx": 6,
-  "src/features/editor/fase2/posicionamentoControls.tsx": 7,
+  "src/features/editor/fase2/posicionamentoControls.tsx": 5,
   "src/features/editor/fase2/sceneTypes.ts": 68,
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx": 1,
   "src/features/final-review/FinalReviewPage.tsx": 6,

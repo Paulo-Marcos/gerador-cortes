@@ -24,6 +24,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from app.database import get_db
+from app.domain.canal.palco_componentes import TIPOS_DE_PRESET_COM_ESTILO, estilo_do_preset
 from app.domain.corte.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
@@ -86,6 +87,13 @@ class AtualizarPresetRequest(BaseModel):
 
 
 def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
+    """O payload normalizado do tipo, com o estilo do palco quando ele o declara (D-921)."""
+    normalizado = _normalizar_payload_do_tipo(tipo, payload)
+    estilo = estilo_do_preset(payload) if tipo in TIPOS_DE_PRESET_COM_ESTILO else None
+    return {**normalizado, "estilo": estilo} if estilo else normalizado
+
+
+def _normalizar_payload_do_tipo(tipo: str, payload: Any) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="payload deve ser objeto JSON")
 

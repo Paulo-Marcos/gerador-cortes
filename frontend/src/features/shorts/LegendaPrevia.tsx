@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ComponentProps, type PointerEvent as ReactPointerEvent } from 'react';
-import { usePalcoDoCanalAtivoResolvido } from '@/features/channels/useChannels';
+import { usePalcoParaPrevia } from '@/features/channels/useChannels';
 import { lugarArrastado, lugarEfetivo, paginaEm, paginasDoTrecho } from './previaLegenda';
 import { comOffsets, noShort, type Segmento } from './segmentosDoShort';
 import type { LugarDaLegenda } from './previaLegenda';
@@ -288,6 +288,6 @@ export function LegendaPrevia({
  * `LegendaPrevia` — que continua sem depender do canal e testável sozinha.
  */
 export function LegendaDoCanal(props: Omit<ComponentProps<typeof LegendaPrevia>, 'estilo'>) {
-  const { estilo_da_legenda } = usePalcoDoCanalAtivoResolvido();
+  const { estilo_da_legenda } = usePalcoParaPrevia();
   return <LegendaPrevia {...props} estilo={estilo_da_legenda} />;
 }

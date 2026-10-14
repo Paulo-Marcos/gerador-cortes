@@ -25,7 +25,7 @@ import {
   temEcoNoShort,
   type ComponentesDoPalco,
 } from '@/shared/palco/palcoLimpo';
-import { usePalcoDoCanalAtivoResolvido } from '@/features/channels/useChannels';
+import { usePalcoParaPrevia } from '@/features/channels/useChannels';
 
 // E-036/D-489: o palco desenhado ao vivo, como o arquivo vai sair.
 //
@@ -77,7 +77,7 @@ const PAD_DO_TRILHO = 40;
 export function PalcoPrevia({ plano, video, children }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // D-911: o estilo do palco vem do canal ativo (ver `CamadaDoPalcoLimpo`).
-  const componentes = usePalcoDoCanalAtivoResolvido();
+  const componentes = usePalcoParaPrevia();
   const limpo = componentes.estilo === 'limpo';
   // No limpo o recorte recua das bordas pelo contorno do canal; fora dele, nulo.
   useDesenhoDosRecortes(canvas, plano, video, limpo ? componentes.contorno_short : null);

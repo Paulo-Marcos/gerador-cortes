@@ -7,7 +7,10 @@ import { EditorDeRecorte } from './EditorDeRecorte';
 import { PresetsDoPalco } from './PresetsDoPalco';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
-import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA, LegendaDoCanal } from './LegendaPrevia';
+import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA } from './LegendaPrevia';
+import { LegendaArrastavel } from './LegendaArrastavel';
+import { PalcoDoCanalNoModal, useEdicaoDoPalco } from '@/features/channels/EdicaoDoPalco';
+import { RascunhoDoPalcoContext } from '@/features/channels/useChannels';
 import {
   LARGURA_MAX,
   LARGURA_MIN,
@@ -178,6 +181,9 @@ export function DefinirPalcoModal({
   // gastar um PATCH por pixel, do mesmo jeito que a simulação do palco faz.
   const [arrastandoLegenda, setArrastandoLegenda] = useState<LugarDaLegenda | null>(null);
   const lugarDaLegenda = arrastandoLegenda ?? lugarGravado;
+  // D-921: o palco do canal editado aqui, com a prévia desenhando o rascunho.
+  const edicaoDoPalco = useEdicaoDoPalco();
+  const estiloDoPalco = edicaoDoPalco.componentes?.estilo ?? 'atual';
   const legendaNoLugarDela = temLugarProprio(short);
 
   /** Ajuste é PARCIAL: mandar só o bloco na mão apagaria a posição dos outros. */
@@ -640,12 +646,14 @@ export function DefinirPalcoModal({
                 agora, que so ele sabe tirar porque so ele conhece os sete
                 controles que a compoem. */}
             <PresetsDoPalco
-              comoEstaHoje={comoEstaHoje}
+              comoEstaHoje={() => ({ ...comoEstaHoje(), estilo: estiloDoPalco })}
+              estilo={estiloDoPalco}
               onAplicar={aplicarPreset}
               ocupado={ocupado}
             />
           </Secao>
           )}
+          <PalcoDoCanalNoModal edicao={edicaoDoPalco} />
         </div>
 
         {/* A prévia acompanha cada decisão. Decidir olhando para o resultado é
@@ -669,34 +677,17 @@ export function DefinirPalcoModal({
             // às outras. Foi por isso que redimensionar em tela cheia era
             // impossível de acertar com a mão antes da D-559.
             <div className={cn('w-full', movendo ? 'max-w-[300px]' : 'max-w-[220px]')}>
+              <RascunhoDoPalcoContext.Provider value={edicaoDoPalco.componentes}>
               <PalcoPrevia plano={planoNaTela} video={video}>
                 {transcricao.data && (
-                  <LegendaDoCanal
+                  <LegendaArrastavel
                     palavras={transcricao.data.palavras}
-                    inicioSeg={short.inicio_seg}
-                    fimSeg={short.fim_seg}
+                    short={short}
                     tempoAtualSeg={tempoAtualSeg}
-                    cor={short.legenda_cor}
-                    fonte={short.legenda_fonte}
-                    segmentos={short.segmentos}
                     lugar={lugarDaLegenda}
-                    // D-605: um gesto por vez. O editor de palco e a legenda
-                    // arrastam no MESMO quadro, e com os dois ativos a caixa da
-                    // legenda roubaria o ponteiro de quem está movendo um bloco
-                    // — sem nada na tela explicando por que o bloco não anda.
-                    onMover={movendo ? undefined : setArrastandoLegenda}
-                    // O gesto grava os TRÊS campos, inclusive a largura: uma
-                    // caixa que anda sem levar o próprio tamanho voltaria a
-                    // herdá-lo na primeira troca de palco, e o operador veria a
-                    // legenda que ele posicionou mudar de forma sozinha.
-                    onSoltar={(lugar) => {
-                      setArrastandoLegenda(null);
-                      onAplicar({
-                        legenda_x: lugar.x,
-                        legenda_y: lugar.y,
-                        legenda_largura: lugar.largura,
-                      });
-                    }}
+                    movendo={movendo}
+                    onArrastando={setArrastandoLegenda}
+                    onAplicar={onAplicar}
                   />
                 )}
                 <EditorDePalco
@@ -707,6 +698,7 @@ export function DefinirPalcoModal({
                   onSoltou={simulacao.encerrar}
                 />
               </PalcoPrevia>
+              </RascunhoDoPalcoContext.Provider>
             </div>
           ) : (
             <p className="text-[11.5px] text-[var(--wb-text-mute)]">
