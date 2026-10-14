@@ -528,7 +528,7 @@ def _anunciar_inicio(contexto: LlmCallContext | None, skill: str | None) -> str:
 async def generate_text(
     prompt: str,
     *,
-    model: str = "sonnet",
+    model: str,
     skill: str | None = None,
     expertise: str | None = None,
     max_turns: int = 1,
@@ -613,7 +613,7 @@ async def generate_text(
 async def generate_json(
     prompt: str,
     *,
-    model: str = "sonnet",
+    model: str,
     skill: str | None = None,
     expertise: str | None = None,
     max_turns: int = 1,

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 from app.config import settings
+from app.domain.compartilhado.modelos_ia import PADRAO
 from app.services.canal import editorial_scaffolds, editorial_skills
 
 _CANAL = "canal-teste"
@@ -48,7 +49,7 @@ def test_resolver_semeia_corpo_e_params_do_default_versionado(tmp_path: Path):
     resolvida = editorial_skills.resolver_skill(_SKILL, **_kw(tmp_path))
 
     assert "auto-contido" in resolvida.corpo.lower()
-    assert resolvida.modelo == settings.claude_model_shorts
+    assert resolvida.modelo == PADRAO["claude_medio"]
     assert resolvida.thinking_tokens == settings.claude_cli_thinking_tokens_shorts
     assert resolvida.timeout == settings.claude_cli_timeout
     assert resolvida.lentes == []

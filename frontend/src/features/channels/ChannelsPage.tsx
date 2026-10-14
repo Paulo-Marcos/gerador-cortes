@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import type { Canal, IdentidadeCanal } from '@/features/channels/api/canais';
-import { AppSettingsControls } from '@/features/settings';
+import { AppSettingsControls, ModelosDeIa } from '@/features/settings';
 import { CapaChatgptSection } from '@/features/capa-chatgpt/CapaChatgptSection';
 import { EstiloDaCapaSection } from '@/features/capa-chatgpt/EstiloDaCapaSection';
 import { ChannelCard } from './ChannelCard';
@@ -262,22 +262,7 @@ export function ChannelsPage() {
       </header>
 
       <main className="grid flex-1 content-start gap-4 overflow-auto p-4">
-        {aba === 'aplicacao' && (
-          <>
-            {/* D-599: com a casca nova a aparencia que vale e a DELA (tema e
-                superficie). A secao antiga controla o tema das cascas
-                anteriores e seria um controle que nao muda nada na tela. */}
-            <AparenciaDaCasca />
-            <PreRequisitosSection />
-            <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-              <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>
-              <p className="text-sm text-[var(--wb-text-mute)]">
-                Preferências de processamento aplicadas às renderizações do canal ativo.
-              </p>
-              <AppSettingsControls />
-            </section>
-          </>
-        )}
+        {aba === 'aplicacao' && <AbaAplicacao />}
 
         {aba === 'canal' && secao !== null && (
           <>
@@ -373,6 +358,26 @@ export function ChannelsPage() {
 }
 
 /** As seções de aparência do canal: tema, capas no ChatGPT e estilo das capas (D-909). */
+function AbaAplicacao() {
+  return (
+    <>
+      {/* D-599: com a casca nova a aparencia que vale e a DELA (tema e
+          superficie). A secao antiga controla o tema das cascas
+          anteriores e seria um controle que nao muda nada na tela. */}
+      <AparenciaDaCasca />
+      <PreRequisitosSection />
+      <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+        <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>
+        <p className="text-sm text-[var(--wb-text-mute)]">
+          Preferências de processamento aplicadas às renderizações do canal ativo.
+        </p>
+        <AppSettingsControls />
+      </section>
+      <ModelosDeIa />
+    </>
+  );
+}
+
 function AparenciaECapasDoCanal() {
   return (
     <>

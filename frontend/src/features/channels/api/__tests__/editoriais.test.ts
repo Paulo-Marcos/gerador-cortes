@@ -42,13 +42,6 @@ describe('clientes editoriais sobre o cliente gerado', () => {
   it.each([
     ['listar skills', async () => (await skills()).listar(), 'GET', '/api/editorial-skills', undefined],
     [
-      'modelos do Gemini',
-      async () => (await skills()).listarModelosGemini(),
-      'GET',
-      '/api/editorial-skills/modelos-gemini',
-      undefined,
-    ],
-    [
       'editar skill',
       async () => (await skills()).editar('cortador-expert', { corpo: 'novo' }),
       'PUT',

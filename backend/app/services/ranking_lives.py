@@ -167,7 +167,7 @@ async def avaliar_sentimento_dos_comentarios(
     try:
         bruto = await claude_cli_client.generate_json(
             prompt,
-            model=settings.claude_model_ranking_sentimento,
+            model=prompts_utilitarios.modelos_do_prompt("sentimento-ranking")[0],
             contexto=claude_cli_client.LlmCallContext(
                 etapa="sentimento-ranking",
                 # Varredura de fundo: cede a vez para o editor na fila do CLI.

@@ -14,11 +14,12 @@ from __future__ import annotations
 
 import asyncio
 
+from app.domain.compartilhado.modelos_ia import Faixa
 from app.routers import escalonamento_publicacao
-from app.services import ambiente
 from app.services.canal import (
     editorial_scaffolds,
     editorial_skills,
+    modelos_ia,
     prompts_utilitarios,
     ranking_settings,
 )
@@ -29,25 +30,15 @@ router = APIRouter()
 
 
 class SkillParamsModel(BaseModel):
-    """Params da etapa: modelo Claude + modelo Gemini (Antigravity) + thinking + timeout.
+    """Params da etapa: a faixa do modelo (D-924) + thinking + timeout.
 
-    `modelo_gemini` vazio no request = derivar do modelo Claude (compat com
-    clientes que ainda não conhecem o campo).
+    O nome do modelo de cada provider sai da faixa, pela configuração de modelos
+    do canal (`/modelos-ia`).
     """
 
-    modelo: str
-    modelo_gemini: str = ""
+    faixa: Faixa
     thinking_tokens: int
     timeout: float
-
-
-class ModeloGeminiResponse(BaseModel):
-    id: str
-    nome: str
-
-
-class ListaModelosGeminiResponse(BaseModel):
-    modelos: list[ModeloGeminiResponse]
 
 
 class SkillDescritaResponse(BaseModel):
@@ -103,15 +94,81 @@ async def listar_skills():
     )
 
 
-@router.get("/modelos-gemini", response_model=ListaModelosGeminiResponse)
-async def listar_modelos_gemini():
-    """Os modelos que o `agy` desta máquina oferece, para a escolha no modal.
+# --------------------------------------------------------------------------- #
+# Modelos de IA por faixa (D-924)
+# --------------------------------------------------------------------------- #
+# A skill escolhe a faixa; aqui o canal diz que modelo atende cada uma. Mesmo
+# router (sem registro novo em `main.py`, travado) e ANTES de `PUT /{skill_key}`,
+# que capturaria o `PUT /modelos-ia` (D-374).
 
-    Vazio quando o CLI não está instalado ou logado — o campo aceita texto livre.
-    """
-    modelos = await asyncio.to_thread(ambiente.listar_modelos_gemini)
-    return ListaModelosGeminiResponse(
-        modelos=[ModeloGeminiResponse(id=id_, nome=nome) for id_, nome in modelos]
+
+class PapelModeloResponse(BaseModel):
+    key: str
+    provedor: str
+    rotulo: str
+    descricao: str
+    valor: str
+    padrao: str
+
+
+class ListaPapeisModeloResponse(BaseModel):
+    papeis: list[PapelModeloResponse]
+
+
+class UpdateModelosIaRequest(BaseModel):
+    """Papel → modelo; só os informados mudam. Vazio volta ao padrão."""
+
+    escolhas: dict[str, str]
+
+
+class ModeloDisponivelResponse(BaseModel):
+    id: str
+    nome: str
+
+
+class ModelosDisponiveisResponse(BaseModel):
+    """Por provedor. Lista vazia = o CLI ou a chave faltam nesta máquina."""
+
+    claude: list[ModeloDisponivelResponse]
+    gemini: list[ModeloDisponivelResponse]
+    gemini_api: list[ModeloDisponivelResponse]
+
+
+def _para_response_papeis(papeis: list[modelos_ia.PapelDescrito]) -> ListaPapeisModeloResponse:
+    return ListaPapeisModeloResponse(
+        papeis=[
+            PapelModeloResponse(
+                key=p.papel.key,
+                provedor=p.papel.provedor,
+                rotulo=p.papel.rotulo,
+                descricao=p.papel.descricao,
+                valor=p.valor,
+                padrao=p.padrao,
+            )
+            for p in papeis
+        ]
+    )
+
+
+@router.get("/modelos-ia", response_model=ListaPapeisModeloResponse)
+async def listar_modelos_ia():
+    return _para_response_papeis(modelos_ia.descrever_modelos())
+
+
+@router.put("/modelos-ia", response_model=ListaPapeisModeloResponse)
+async def editar_modelos_ia(body: UpdateModelosIaRequest):
+    return _para_response_papeis(modelos_ia.definir_modelos(body.escolhas))
+
+
+@router.get("/modelos-ia/disponiveis", response_model=ModelosDisponiveisResponse)
+async def listar_modelos_disponiveis():
+    """Pergunta ao `agy` e à API do Gemini: pode levar alguns segundos."""
+    por_provedor = await asyncio.to_thread(modelos_ia.listar_disponiveis)
+    return ModelosDisponiveisResponse(
+        **{
+            provedor: [ModeloDisponivelResponse(id=id_, nome=nome) for id_, nome in modelos]
+            for provedor, modelos in por_provedor.items()
+        }
     )
 
 

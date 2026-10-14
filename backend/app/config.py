@@ -117,35 +117,7 @@ class Settings(BaseSettings):
     # 1 = serializa: cada chamada já gasta ~37k tokens fixos da cota.
     agy_cli_max_concurrent: int = 1
     agy_cli_retries: int = 1
-    # Modelo Gemini padrão de cada skill, derivado da faixa do modelo Claude dela:
-    # Haiku (rapidez) → rápido; Opus/Sonnet (qualidade) → qualidade. Editável por
-    # skill na tela de Canais.
-    agy_model_qualidade: str = "gemini-3.1-pro-high"
-    agy_model_rapido: str = "gemini-3.8-flash-medium"
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
-    # Modelos por etapa (alias do CLI: opus | sonnet | haiku, ou nome completo)
-    claude_model_analise: str = "opus"
-    claude_model_cenas: str = "sonnet"
-    claude_model_metadados: str = "sonnet"
-    claude_model_thumbnail: str = "opus"
-    claude_model_ranking_sentimento: str = "haiku"
-    claude_model_avaliacao: str = "sonnet"
-    # D-453: roda a cada bruto de corte Fire, sobre texto ja curado — sonnet da
-    # conta e mantem o custo da esteira baixo.
-    claude_model_shorts: str = "sonnet"
-    claude_model_cenas_short: str = "sonnet"
-    # D-520: nomear o assunto de um corte ja resumido cabe no modelo mais barato.
-    claude_model_capa_tiktok: str = "haiku"
-    # D-523: escrever a cena da capa e trabalho de capista, nao de etiqueta —
-    # mesmo peso que o prompt da thumbnail do YouTube.
-    claude_model_capa_tiktok_imagem: str = "sonnet"
-    # D-581: o capista da capa do short. Mesmo default dos vizinhos — a etapa e
-    # de redacao curta sobre material que ja veio mastigado.
-    claude_model_capa_short: str = "sonnet"
-    # D-565: escrever o gancho e redacao curta sobre um texto que ja veio
-    # recortado — sonnet da conta, e esta etapa roda uma vez por candidato.
-    claude_model_gancho_short: str = "sonnet"
-    claude_model_metadados_short: str = "sonnet"
     # D-454: faixa que o operador aceita num candidato a short. 15-30s serve
     # Reels, ate 90s serve conteudo denso; abaixo de 15 nao entrega ideia e acima
     # de 90 e o corte de novo. A quantidade e TETO de trabalho, nao cota: a skill

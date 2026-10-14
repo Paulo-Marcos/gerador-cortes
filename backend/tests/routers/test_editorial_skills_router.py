@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app.infrastructure import antigravity_cli_client
+from app.infrastructure import antigravity_cli_client, gemini_client
 from app.routers import editorial_skills as router_mod
 from app.services.canal import editorial_skills
 from fastapi import FastAPI
@@ -56,7 +56,8 @@ def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
         "metadados-short-expert",
     ]
     cortador = skills[0]
-    assert set(cortador["params"]) == {"modelo", "modelo_gemini", "thinking_tokens", "timeout"}
+    # D-924: a skill escolhe a faixa; o nome do modelo é da configuração do canal.
+    assert set(cortador["params"]) == {"faixa", "thinking_tokens", "timeout"}
     assert "corpo_default" in cortador and "params_default" in cortador
     assert cortador["descricao"]  # explicação funcional presente
 
@@ -64,13 +65,13 @@ def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
 def test_put_edita_corpo_e_params_e_reflete(client: TestClient):
     payload = {
         "corpo": "NOVO CORPO DO CANAL",
-        "params": {"modelo": "haiku", "thinking_tokens": 4000, "timeout": 90.0},
+        "params": {"faixa": "rapido", "thinking_tokens": 4000, "timeout": 90.0},
     }
     resp = client.put("/editorial-skills/cortador-expert", json=payload)
     assert resp.status_code == 200
     body = resp.json()
     assert body["corpo"] == "NOVO CORPO DO CANAL"
-    assert body["params"]["modelo"] == "haiku"
+    assert body["params"]["faixa"] == "rapido"
 
     # Releitura reflete o persistido.
     depois = client.get("/editorial-skills").json()["skills"][0]
@@ -174,14 +175,15 @@ def test_get_ranking_pesos_reset_funciona(client: TestClient):
     assert "criterios" in resp.json()
 
 
-def test_modelos_gemini_chegam_pelo_service_de_ambiente(client: TestClient, monkeypatch):
+def test_modelos_disponiveis_chegam_pelo_service(client: TestClient, monkeypatch):
     # Troca o cliente na ponta: se a rota voltasse a falar com ele por outro
     # caminho, ou deixasse de repassar a lista, este teste acusa (D-694).
     monkeypatch.setattr(
         antigravity_cli_client, "listar_modelos", lambda: [("gemini-2.5-pro", "Gemini 2.5 Pro")]
     )
+    monkeypatch.setattr(gemini_client, "listar_modelos", lambda: [])
 
-    resposta = client.get("/editorial-skills/modelos-gemini")
+    resposta = client.get("/editorial-skills/modelos-ia/disponiveis")
 
     assert resposta.status_code == 200
-    assert resposta.json() == {"modelos": [{"id": "gemini-2.5-pro", "nome": "Gemini 2.5 Pro"}]}
+    assert resposta.json()["gemini"] == [{"id": "gemini-2.5-pro", "nome": "Gemini 2.5 Pro"}]

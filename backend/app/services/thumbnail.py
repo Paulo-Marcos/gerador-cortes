@@ -23,6 +23,7 @@ from app.infrastructure import gemini_client
 from app.infrastructure.imagem.moldura import emoldurar
 from app.infrastructure.imagem.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
 from app.models import Corte, MetadadoCorte
+from app.services.canal import modelos_ia
 from sqlalchemy import select
 
 
@@ -374,6 +375,7 @@ class ThumbnailService:
             prompt_para_gerador = strip_variation_tags(meta.prompt_thumbnail)
             imagem_bytes = await gemini_client.generate_image(
                 prompt_para_gerador,
+                model=modelos_ia.ler_modelos().gemini_api_imagem,
                 contexto=gemini_client.GeminiCallContext(
                     etapa="thumbnail-imagem",
                     projeto_id=corte.projeto_id,

@@ -1,8 +1,8 @@
 // E-021: card "burro" de uma skill editorial na lista de gestão. Mostra a etapa,
-// a explicação funcional, o modelo em uso e se o canal customizou (vs. o padrão),
+// a explicação funcional, a faixa de modelo e se o canal customizou (vs. o padrão),
 // com o botão de editar. Sem I/O — o container decide o que fazer no clique.
 import { Button } from '@/components/ui/button';
-import type { EditorialSkill } from '@/features/channels/api/skillsEditoriais';
+import { FAIXAS, type EditorialSkill } from '@/features/channels/api/skillsEditoriais';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
@@ -37,10 +37,7 @@ export function EditorialSkillCard({ skill, customizada, onEditar }: Props) {
       </div>
       <div className="flex flex-wrap gap-1.5 text-[11px] text-[var(--wb-text-dim)]">
         <span className="rounded border border-[var(--wb-border-soft)] px-1.5 py-0.5">
-          claude: {skill.params.modelo}
-        </span>
-        <span className="rounded border border-[var(--wb-border-soft)] px-1.5 py-0.5">
-          gemini: {skill.params.modelo_gemini}
+          modelo: {FAIXAS.find((f) => f.faixa === skill.params.faixa)?.rotulo}
         </span>
         <span className="rounded border border-[var(--wb-border-soft)] px-1.5 py-0.5">
           thinking: {skill.params.thinking_tokens}
