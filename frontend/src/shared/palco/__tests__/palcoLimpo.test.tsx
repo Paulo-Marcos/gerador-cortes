@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import {
   CabecalhoDoCanal,
+  COMPONENTES_PADRAO,
+  estiloDasCenasDe,
   JanelaLimpa,
   janelaComContorno,
   PlacaLimpa,
@@ -95,5 +97,28 @@ describe('palco limpo (D-911)', () => {
     expect(html).toContain('border-radius:20px');
     expect(html).toContain('left:500px');
     expect(html).toContain('<span>video</span>');
+  });
+});
+
+
+describe('estilo das cenas da prévia (D-916)', () => {
+  it('sem palco, as cenas saem no estilo de sempre', () => {
+    expect(estiloDasCenasDe()).toEqual({
+      estilo: 'atual',
+      ocultos: [],
+      escala: 1,
+      posicao: { automatica: true, x: 96, y: 112 },
+    });
+  });
+
+  it('esconder o comparativo esconde também o apelido dele, como o backend', () => {
+    const estilo = estiloDasCenasDe({
+      ...COMPONENTES_PADRAO,
+      estilo: 'limpo',
+      cards: { ocultos: ['comparativo_contraponto'], escala: 1.3, posicao: { automatica: true, x: 96, y: 112 } },
+    });
+    expect(estilo.estilo).toBe('limpo');
+    expect(estilo.ocultos).toEqual(['comparativo_contraponto', 'comparativo_enfase']);
+    expect(estilo.escala).toBe(1.3);
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { cenaSchema } from "./schema";
+import { ESTILO_DAS_CENAS_PADRAO, estiloDasCenasSchema } from "./cenas-limpo/estilo-das-cenas-schema";
 
 // Manter sincronizado com FONT_PRESETS_V2 (theme-v2.ts) e FONTE_PRESETS_VALIDOS
 // no backend (pipeline_render.py). Se o backend mandar um valor fora desta lista,
@@ -28,6 +29,8 @@ export const overlaySchema = z.object({
   layoutCardPadrao: z.enum(["horizontal", "vertical"]).default("vertical"),
   /** Preset tipografico default dos cards/cenas v2. */
   fontPreset: fontPresetEnum.default("atual"),
+  /** D-916: estilo das cenas do canal (limpo/atual), tipos escondidos, tamanho e posição. */
+  estiloCenas: estiloDasCenasSchema.default(ESTILO_DAS_CENAS_PADRAO),
 });
 
 export type OverlayProps = z.infer<typeof overlaySchema>;
@@ -43,6 +46,8 @@ export const overlayTimelineSchema = z.object({
   layoutCardPadrao: z.enum(["horizontal", "vertical"]).default("vertical"),
   /** Preset tipografico default dos cards/cenas v2. */
   fontPreset: fontPresetEnum.default("atual"),
+  /** D-916: estilo das cenas do canal (limpo/atual), tipos escondidos, tamanho e posição. */
+  estiloCenas: estiloDasCenasSchema.default(ESTILO_DAS_CENAS_PADRAO),
 });
 
 export type OverlayTimelineProps = z.infer<typeof overlayTimelineSchema>;

@@ -8,6 +8,7 @@ import { normalizarCenaRemotion, YouTubeProps } from "./schema";
 import { FrameOffsetContext } from "./frame-context";
 import { renderCenaV2 } from "./cenas-v2";
 import { CardLayoutContext, FontPresetProvider, SombraContext } from "./cenas-v2/_shared";
+import { EstiloDasCenasProvider } from "./cenas-limpo";
 
 /**
  * Versão v2 do CenaYouTube — usa as cenas da `cenas-v2/` (nova identidade
@@ -22,6 +23,7 @@ export const CenaYouTubeV2: React.FC<YouTubeProps> = ({
   sombraNivelPadrao,
   layoutCardPadrao,
   fontPreset,
+  estiloCenas,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -47,6 +49,7 @@ export const CenaYouTubeV2: React.FC<YouTubeProps> = ({
 
       <AbsoluteFill>
         <FontPresetProvider preset={fontPreset}>
+          <EstiloDasCenasProvider valor={estiloCenas}>
           <SombraContext.Provider value={sombraNivelPadrao}>
             <CardLayoutContext.Provider value={layoutCardPadrao}>
               <FrameOffsetContext.Provider value={startOffset}>
@@ -65,6 +68,7 @@ export const CenaYouTubeV2: React.FC<YouTubeProps> = ({
               </FrameOffsetContext.Provider>
             </CardLayoutContext.Provider>
           </SombraContext.Provider>
+          </EstiloDasCenasProvider>
         </FontPresetProvider>
       </AbsoluteFill>
     </AbsoluteFill>

@@ -1,3 +1,4 @@
+import { ESTILO_DAS_CENAS_PADRAO } from "./cenas-limpo/estilo-das-cenas-schema";
 import "./index.css";
 import { Composition } from "remotion";
 // V1 (CenaYouTube / OverlayScene / OverlayTimeline) está DESATIVADA — as
@@ -31,6 +32,7 @@ const DEFAULTS_V2 = {
   sombraNivelPadrao: "nenhuma" as const,
   layoutCardPadrao: "vertical" as const,
   fontPreset: "atual" as const,
+  estiloCenas: ESTILO_DAS_CENAS_PADRAO,
 };
 
 function preferirExplicito<T>(valor: T, padrao: T, doServidor: unknown): T {
@@ -191,6 +193,7 @@ export const RemotionRoot: React.FC = () => {
           sombraNivelPadrao: "nenhuma" as const,
           layoutCardPadrao: "vertical" as const,
           fontPreset: "atual" as const,
+          estiloCenas: ESTILO_DAS_CENAS_PADRAO,
         }}
         width={1920}
         height={1080}
@@ -222,6 +225,7 @@ export const RemotionRoot: React.FC = () => {
           sombraNivelPadrao: "nenhuma" as const,
           layoutCardPadrao: "vertical" as const,
           fontPreset: "atual" as const,
+          estiloCenas: ESTILO_DAS_CENAS_PADRAO,
         }}
         width={1920}
         height={1080}

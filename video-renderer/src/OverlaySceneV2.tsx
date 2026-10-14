@@ -4,6 +4,7 @@ import { FrameOffsetContext } from "./frame-context";
 import { normalizarCenaRemotion } from "./schema";
 import { renderCenaV2 } from "./cenas-v2";
 import { CardLayoutContext, FontPresetProvider, SombraContext } from "./cenas-v2/_shared";
+import { EstiloDasCenasProvider } from "./cenas-limpo";
 import { SharedCardZoneFrame } from "./shared-card-zone";
 
 /**
@@ -16,6 +17,7 @@ export const OverlaySceneV2: React.FC<OverlayProps> = ({
   sombraNivelPadrao,
   layoutCardPadrao,
   fontPreset,
+  estiloCenas,
 }) => {
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -28,6 +30,7 @@ export const OverlaySceneV2: React.FC<OverlayProps> = ({
   return (
     <AbsoluteFill>
       <FontPresetProvider preset={fontPreset}>
+        <EstiloDasCenasProvider valor={estiloCenas}>
         <SombraContext.Provider value={sombraNivelPadrao}>
           <CardLayoutContext.Provider value={layoutCardPadrao}>
             <FrameOffsetContext.Provider value={0}>
@@ -37,6 +40,7 @@ export const OverlaySceneV2: React.FC<OverlayProps> = ({
             </FrameOffsetContext.Provider>
           </CardLayoutContext.Provider>
         </SombraContext.Provider>
+        </EstiloDasCenasProvider>
       </FontPresetProvider>
     </AbsoluteFill>
   );

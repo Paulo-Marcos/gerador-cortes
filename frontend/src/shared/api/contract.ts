@@ -5639,6 +5639,25 @@ export interface components {
             nome: string;
         };
         /**
+         * CardsRequest
+         * @description D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio.
+         */
+        CardsRequest: {
+            /** Escala */
+            escala?: number | null;
+            /** Ocultos */
+            ocultos?: string[] | null;
+            posicao?: components["schemas"]["PosicaoModel"] | null;
+        };
+        /** CardsResponse */
+        CardsResponse: {
+            /** Escala */
+            escala: number;
+            /** Ocultos */
+            ocultos: string[];
+            posicao: components["schemas"]["PosicaoModel"];
+        };
+        /**
          * CenaDoCorte
          * @description Uma cena do roteiro visual. O `_corte_to_dict` garante os quatro tempos;
          *     o resto varia por tipo de cena (até o `numero` vem int, float ou str).
@@ -7608,6 +7627,7 @@ export interface components {
          */
         PalcoComponentesRequest: {
             cabecalho?: components["schemas"]["CabecalhoRequest"] | null;
+            cards?: components["schemas"]["CardsRequest"] | null;
             /** Contorno Short */
             contorno_short?: number | null;
             /** Estilo */
@@ -7625,6 +7645,7 @@ export interface components {
             cabecalho: components["schemas"]["CabecalhoResponse"];
             /** Canal Id */
             canal_id: string;
+            cards: components["schemas"]["CardsResponse"];
             /** Contorno Short */
             contorno_short: number;
             /** Estilo */
@@ -7644,6 +7665,8 @@ export interface components {
             /** Fundos Do Short */
             fundos_do_short: string[];
             placa: components["schemas"]["PlacaResponse"];
+            /** Tipos De Cena */
+            tipos_de_cena: components["schemas"]["TipoDeCenaModel"][];
         };
         /** PalcoPadraoRequest */
         PalcoPadraoRequest: {
@@ -9214,6 +9237,13 @@ export interface components {
             rotulo: string;
             /** Slug */
             slug: string;
+        };
+        /** TipoDeCenaModel */
+        TipoDeCenaModel: {
+            /** Id */
+            id: string;
+            /** Nome */
+            nome: string;
         };
         /**
          * TranscricaoDoBrutoResponse

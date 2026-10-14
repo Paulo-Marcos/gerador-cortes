@@ -275,12 +275,50 @@ const scenarios = [
   }),
 ];
 
+// D-916: as cenas no estilo limpo (o Bloco). Um cenário por tipo, com o
+// conteúdo do catálogo; o contrato confere que cada um desenha algo e que sai
+// diferente do estilo de sempre.
+const LIMPO = { estilo: "limpo", ocultos: [], escala: 1, posicao: { automatica: true, x: 96, y: 112 } };
+const ATUAL = { estilo: "atual", ocultos: [], escala: 1, posicao: { automatica: true, x: 96, y: 112 } };
+const CENAS_LIMPAS = {
+  card_informacao: { contexto: "Contexto", texto: "Franco tinha a Igreja como aliada", subtexto: "A carta dos bispos legitimou o golpe." },
+  definicao_termo: { texto: "Clericalismo", contexto: "Doutrina que defende a influencia do clero sobre o Estado.", subtexto: "s.m." },
+  pergunta_transicao: { texto: "E se a Igreja nunca tivesse apoiado Franco?" },
+  ficha_biografica: { texto: "Aristoteles", ano: "384-322 a.C.", contexto: "Politica" },
+  marco_historico: { ano: "1936", texto: "Comeca a Guerra Civil Espanhola", contexto: "Espanha" },
+  citacao_autor: { texto: "O homem esta condenado a ser livre.", autor: "Sartre", obra: "O Ser e o Nada", ano: "1943" },
+  destaque_numerico: { numero: "45,7%", contexto: "dos eleitores do grupo", fonte: "Datafolha" },
+  enfase: { texto: "based", subtexto: "a palavra do dia" },
+  comparativo_contraponto: { texto: "Determinismo", subtexto: "Livre-arbitrio" },
+  lista_enumerada: { texto: "Tres aliancas", itens: [{ titulo: "Igreja aliada" }, { titulo: "Nacional-catolicismo" }] },
+  linha_tempo: { texto: "Espanha", marcos: [{ data: "1931", titulo: "Republica" }, { data: "1936", titulo: "Guerra" }, { data: "1975", titulo: "Morte de Franco" }] },
+  fonte_referencia: { fonte: "Stanford Encyclopedia of Philosophy" },
+  barra_inferior: { texto: "Rodrigo", subtexto: "Insider" },
+  tela_cheia: { contexto: "A tese", texto: "Nao e fe. E poder com batina." },
+  chamada_final: { texto: "A live completa esta no canal", subtexto: "@canal" },
+  pergunta_chat: { autor: "@Fulano_de_Tal", texto: "o Franco era fascista mesmo?" },
+};
+for (const [tipo, campos] of Object.entries(CENAS_LIMPAS)) {
+  scenarios.push(scene(`${tipo}-limpo`, { ...base, tipo, ...campos }, "vertical", "media", LIMPO));
+  scenarios.push(scene(`${tipo}-atual`, { ...base, tipo, ...campos }, "vertical", "media", ATUAL));
+}
+// Sem `estiloCenas` nenhum: tem de sair igual ao "atual" explícito.
+scenarios.push(scene("card_informacao-sem-estilo", { ...base, tipo: "card_informacao", ...CENAS_LIMPAS.card_informacao }));
+// Tipo escondido pelo canal: o quadro sai vazio. Dois tipos diferentes,
+// escondidos, têm de dar o MESMO quadro (o vazio) — e diferente do visível.
+scenarios.push(
+  scene("enfase-escondida", { ...base, tipo: "enfase", ...CENAS_LIMPAS.enfase }, "vertical", "media", { ...LIMPO, ocultos: ["enfase"] }),
+  scene("card_informacao-escondido", { ...base, tipo: "card_informacao", ...CENAS_LIMPAS.card_informacao }, "vertical", "media", { ...LIMPO, ocultos: ["card_informacao"] }),
+);
+
 const distinctPairs = [
   ["tela_cheia-card-v", "tela_cheia-card-h", "tela_cheia card deve mudar com layout_card"],
   ["comparativo_contraponto-padrao", "comparativo_contraponto-card-v", "comparativo_contraponto deve mudar quando modelo_cena=card"],
   ["comparativo_contraponto-card-v", "comparativo_contraponto-card-h", "comparativo_contraponto card deve mudar com layout_card"],
   ["comparativo_contraponto-padrao", "comparativo_enfase-legado-card-v", "comparativo_enfase legado deve respeitar modelo_cena=card"],
   ...layoutTypes().map((type) => [`${type}-v`, `${type}-h`, `${type} deve mudar com layout_card`]),
+  ...Object.keys(CENAS_LIMPAS).map((tipo) => [`${tipo}-limpo`, `${tipo}-atual`, `${tipo} no estilo limpo deve sair pelo Bloco`]),
+  ["enfase-escondida", "enfase-limpo", "tipo escondido pelo canal não pode desenhar a cena"],
 ];
 
 const identicalPairs = [
@@ -291,10 +329,14 @@ const identicalPairs = [
   ["tela_cheia-auto-longo-default-forte", "tela_cheia-card-longo-forte-v", "tela_cheia longa automatica renderiza como card respeitando sombra"],
   // D-910: avatar que não carrega não derruba o render, vira a inicial do nome.
   ["pergunta_chat-avatar-quebrado", "pergunta_chat-v", "pergunta_chat com avatar quebrado desenha a inicial"],
+  // D-916: o estilo de sempre não muda um byte com o estilo das cenas existindo.
+  ["card_informacao-sem-estilo", "card_informacao-atual", "sem estiloCenas a cena sai como no estilo atual"],
+  ["enfase-escondida", "card_informacao-escondido", "dois tipos escondidos dão o mesmo quadro vazio"],
 ];
 
-function scene(id, cena, layoutCardPadrao = "vertical", sombraNivelPadrao = "media") {
-  return { id, props: { cena, durationFrames: 150, sombraNivelPadrao, layoutCardPadrao } };
+function scene(id, cena, layoutCardPadrao = "vertical", sombraNivelPadrao = "media", estiloCenas = undefined) {
+  const props = { cena, durationFrames: 150, sombraNivelPadrao, layoutCardPadrao };
+  return { id, props: estiloCenas ? { ...props, estiloCenas } : props };
 }
 
 function layoutPair(type, cena) {

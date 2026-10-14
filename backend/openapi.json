@@ -2381,6 +2381,73 @@
         "title": "CapaTiktokMontadaResponse",
         "type": "object"
       },
+      "CardsRequest": {
+        "description": "D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio.",
+        "properties": {
+          "escala": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escala"
+          },
+          "ocultos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocultos"
+          },
+          "posicao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PosicaoModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "CardsRequest",
+        "type": "object"
+      },
+      "CardsResponse": {
+        "properties": {
+          "escala": {
+            "title": "Escala",
+            "type": "number"
+          },
+          "ocultos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ocultos",
+            "type": "array"
+          },
+          "posicao": {
+            "$ref": "#/components/schemas/PosicaoModel"
+          }
+        },
+        "required": [
+          "ocultos",
+          "escala",
+          "posicao"
+        ],
+        "title": "CardsResponse",
+        "type": "object"
+      },
       "CenaDoCorte": {
         "additionalProperties": true,
         "description": "Uma cena do roteiro visual. O `_corte_to_dict` garante os quatro tempos;\no resto varia por tipo de cena (até o `numero` vem int, float ou str).",
@@ -7062,6 +7129,16 @@
               }
             ]
           },
+          "cards": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardsRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "contorno_short": {
             "anyOf": [
               {
@@ -7159,6 +7236,9 @@
             "title": "Canal Id",
             "type": "string"
           },
+          "cards": {
+            "$ref": "#/components/schemas/CardsResponse"
+          },
           "contorno_short": {
             "title": "Contorno Short",
             "type": "integer"
@@ -7209,6 +7289,13 @@
           },
           "placa": {
             "$ref": "#/components/schemas/PlacaResponse"
+          },
+          "tipos_de_cena": {
+            "items": {
+              "$ref": "#/components/schemas/TipoDeCenaModel"
+            },
+            "title": "Tipos De Cena",
+            "type": "array"
           }
         },
         "required": [
@@ -7222,6 +7309,8 @@
           "fundos_do_short",
           "estilo_da_legenda",
           "estilos_da_legenda",
+          "cards",
+          "tipos_de_cena",
           "cabecalho",
           "placa"
         ],
@@ -11120,6 +11209,24 @@
           "rotulo"
         ],
         "title": "TipoApontamentoResponse",
+        "type": "object"
+      },
+      "TipoDeCenaModel": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ],
+        "title": "TipoDeCenaModel",
         "type": "object"
       },
       "TranscricaoDoBrutoResponse": {

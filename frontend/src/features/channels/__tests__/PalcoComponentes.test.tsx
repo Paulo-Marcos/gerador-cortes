@@ -29,6 +29,11 @@ function palco(extra: Partial<PalcoComponentes> = {}): PalcoComponentes {
     fundos_do_short: ['palco', 'eco'],
     estilo_da_legenda: 'contorno',
     estilos_da_legenda: ['contorno', 'sombra'],
+    cards: { ocultos: [], escala: 1, posicao: { automatica: true, x: 96, y: 112 } },
+    tipos_de_cena: [
+      { id: 'card_informacao', nome: 'Card de informação' },
+      { id: 'pergunta_chat', nome: 'Pergunta do chat' },
+    ],
     ...extra,
   };
 }
@@ -53,6 +58,7 @@ describe('rascunho e edição do palco (D-911)', () => {
         contornoShort: 0,
         fundoShort: 'eco',
         estiloDaLegenda: 'sombra',
+        cards: { ocultos: ['pergunta_chat'], escala: 1.2, posicao: { automatica: false, x: 1200, y: 80 } },
       }),
     ).toEqual({
       estilo: 'limpo',
@@ -60,6 +66,7 @@ describe('rascunho e edição do palco (D-911)', () => {
       contorno_short: 0,
       fundo_short: 'eco',
       estilo_da_legenda: 'sombra',
+      cards: { ocultos: ['pergunta_chat'], escala: 1.2, posicao: { automatica: false, x: 1200, y: 80 } },
       cabecalho: {
         ativo: true,
         nome: 'Pedro',
@@ -111,6 +118,10 @@ describe('PalcoComponentesForm', () => {
     expect(html).toContain('Posição no short');
     expect(html).toContain('Tamanho');
     expect(html).toContain('Contorno do fundo em volta das janelas');
+    // D-916: os cards — um interruptor por tipo, tamanho e posição sobre o vídeo cheio.
+    expect(html).toContain('Cards (cenas)');
+    expect(html).toContain('Pergunta do chat');
+    expect(html).toContain('Posição sobre o vídeo cheio');
     // D-913: no limpo, o eco e o estilo da legenda são escolhas do canal.
     expect(html).toContain('Eco do vídeo (desfocado)');
     expect(html).toContain('Só sombra');

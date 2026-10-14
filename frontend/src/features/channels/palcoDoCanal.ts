@@ -28,6 +28,7 @@ export function paraComponentesDoPalco(resposta: PalcoComponentes | undefined): 
     contorno_short: resposta.contorno_short,
     fundo_short: resposta.fundo_short === 'eco' ? 'eco' : 'palco',
     estilo_da_legenda: resposta.estilo_da_legenda === 'sombra' ? 'sombra' : 'contorno',
+    cards: resposta.cards,
   };
 }
 
