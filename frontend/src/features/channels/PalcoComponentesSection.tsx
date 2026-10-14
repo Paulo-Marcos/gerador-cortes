@@ -25,7 +25,7 @@ import { urlDaImagem } from './palcoDoCanal';
 type Estilo = 'atual' | 'limpo';
 
 // Os fundos do estilo limpo, com o nome que a tela mostra (ids do renderer).
-const FUNDOS: { id: string; nome: string }[] = [
+export const FUNDOS: { id: string; nome: string }[] = [
   { id: 'reticula-aurora', nome: 'Retícula + aurora' },
   { id: 'reticula', nome: 'Retícula' },
   { id: 'aurora', nome: 'Aurora' },
@@ -33,7 +33,7 @@ const FUNDOS: { id: string; nome: string }[] = [
   { id: 'chapado', nome: 'Chapado' },
 ];
 
-const ESTILOS: { id: Estilo; nome: string; descricao: string }[] = [
+export const ESTILOS: { id: Estilo; nome: string; descricao: string }[] = [
   {
     id: 'atual',
     nome: 'Atual',
@@ -56,6 +56,10 @@ export interface RascunhoDoPalco {
   estiloDaLegenda: EstiloDaLegenda;
   cards: CardsEditaveis;
   cabecalhoAtivo: boolean;
+  /** D-923: desligado = o item some do cabeçalho (só a imagem, por exemplo). */
+  mostrarImagem: boolean;
+  mostrarNome: boolean;
+  mostrarHandle: boolean;
   nome: string;
   handle: string;
   cabecalhoEscala: number;
@@ -75,6 +79,9 @@ export function rascunhoDe(palco: PalcoComponentes): RascunhoDoPalco {
     estiloDaLegenda: palco.estilo_da_legenda === 'sombra' ? 'sombra' : 'contorno',
     cards: palco.cards,
     cabecalhoAtivo: palco.cabecalho.ativo,
+    mostrarImagem: palco.cabecalho.mostrar_imagem,
+    mostrarNome: palco.cabecalho.mostrar_nome,
+    mostrarHandle: palco.cabecalho.mostrar_handle,
     nome: palco.cabecalho.nome,
     handle: palco.cabecalho.handle,
     cabecalhoEscala: palco.cabecalho.escala,
@@ -96,6 +103,9 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
     cards: rascunho.cards,
     cabecalho: {
       ativo: rascunho.cabecalhoAtivo,
+      mostrar_imagem: rascunho.mostrarImagem,
+      mostrar_nome: rascunho.mostrarNome,
+      mostrar_handle: rascunho.mostrarHandle,
       nome: rascunho.nome,
       handle: rascunho.handle,
       escala: rascunho.cabecalhoEscala,
@@ -308,6 +318,7 @@ function CabecalhoDoPalco({
         />
         Mostrar o cabeçalho (imagem, nome e @) no palco
       </label>
+      <ItensDoCabecalho rascunho={rascunho} onMudar={onMudar} />
       <div className="flex items-center gap-3">
         {imagem ? (
           <img src={imagem} alt="Imagem do cabeçalho" className="h-14 w-14 rounded-full object-cover" />
@@ -367,9 +378,41 @@ function CabecalhoDoPalco({
       <PosicaoDoCabecalho rascunho={rascunho} onMudar={onMudar} />
       <p className="text-xs text-[var(--wb-text-dim)]">
         Vazio usa a identidade do canal: <strong>{palco.cabecalho.nome_efetivo || '—'}</strong>{' '}
-        <span>{palco.cabecalho.handle_efetivo}</span>.
+        <span>{palco.cabecalho.handle_efetivo}</span>. Para não mostrar, desmarque o item acima.
       </p>
     </fieldset>
+  );
+}
+
+const ITENS_DO_CABECALHO = [
+  { chave: 'mostrarImagem', nome: 'Imagem' },
+  { chave: 'mostrarNome', nome: 'Nome' },
+  { chave: 'mostrarHandle', nome: '@' },
+] as const;
+
+/** D-923: cada item do cabeçalho liga e desliga sozinho (só a imagem, só o nome…). */
+export function ItensDoCabecalho({
+  rascunho,
+  onMudar,
+}: {
+  rascunho: RascunhoDoPalco;
+  onMudar: (rascunho: RascunhoDoPalco) => void;
+}) {
+  return (
+    <div role="group" aria-label="Itens do cabeçalho" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--wb-text)]">
+      <span className="text-xs text-[var(--wb-text-dim)]">Mostrar:</span>
+      {ITENS_DO_CABECALHO.map((item) => (
+        <label key={item.chave} className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            checked={rascunho[item.chave]}
+            disabled={!rascunho.cabecalhoAtivo}
+            onChange={(e) => onMudar({ ...rascunho, [item.chave]: e.target.checked })}
+          />
+          {item.nome}
+        </label>
+      ))}
+    </div>
   );
 }
 

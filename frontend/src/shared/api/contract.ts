@@ -497,6 +497,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/channels/{canal_id}/palco/do-escopo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obter Palco Do Escopo
+         * @description D-923: o palco que vale no corte (ou no projeto) para o tipo, e de onde ele vem.
+         */
+        get: operations["obter_palco_do_escopo_api_channels__canal_id__palco_do_escopo_get"];
+        /**
+         * Gravar Palco Do Escopo
+         * @description D-923: ajusta o palco só do projeto ou só do corte — o do canal não muda.
+         */
+        put: operations["gravar_palco_do_escopo_api_channels__canal_id__palco_do_escopo_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels/{canal_id}/palco/imagem": {
         parameters: {
             query?: never;
@@ -5552,6 +5576,12 @@ export interface components {
             escala?: number | null;
             /** Handle */
             handle?: string | null;
+            /** Mostrar Handle */
+            mostrar_handle?: boolean | null;
+            /** Mostrar Imagem */
+            mostrar_imagem?: boolean | null;
+            /** Mostrar Nome */
+            mostrar_nome?: boolean | null;
             /** Nome */
             nome?: string | null;
             posicao?: components["schemas"]["PosicaoModel"] | null;
@@ -5571,6 +5601,12 @@ export interface components {
             imagem: string;
             /** Imagem Url */
             imagem_url: string;
+            /** Mostrar Handle */
+            mostrar_handle: boolean;
+            /** Mostrar Imagem */
+            mostrar_imagem: boolean;
+            /** Mostrar Nome */
+            mostrar_nome: boolean;
             /** Nome */
             nome: string;
             /** Nome Efetivo */
@@ -7754,6 +7790,46 @@ export interface components {
             placa: components["schemas"]["PlacaResponse"];
             /** Tipos De Cena */
             tipos_de_cena: components["schemas"]["TipoDeCenaModel"][];
+        };
+        /** PalcoDoEscopoRequest */
+        PalcoDoEscopoRequest: {
+            componentes?: components["schemas"]["PalcoComponentesRequest"] | null;
+            /** Corte Id */
+            corte_id?: string | null;
+            /**
+             * Escopo
+             * @enum {string}
+             */
+            escopo: "projeto" | "corte";
+            /** Projeto Id */
+            projeto_id: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "horizontal" | "short";
+        };
+        /** PalcoDoEscopoResponse */
+        PalcoDoEscopoResponse: {
+            /** Corte */
+            corte: {
+                [key: string]: unknown;
+            };
+            efetivo: components["schemas"]["PalcoComponentesResponse"];
+            /**
+             * Origem
+             * @enum {string}
+             */
+            origem: "canal" | "projeto" | "corte";
+            /** Projeto */
+            projeto: {
+                [key: string]: unknown;
+            };
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "horizontal" | "short";
         };
         /** PalcoPadraoRequest */
         PalcoPadraoRequest: {
@@ -10719,6 +10795,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PalcoComponentesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_palco_do_escopo_api_channels__canal_id__palco_do_escopo_get: {
+        parameters: {
+            query: {
+                projeto_id: string;
+                tipo: "horizontal" | "short";
+                corte_id?: string | null;
+            };
+            header?: never;
+            path: {
+                canal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PalcoDoEscopoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gravar_palco_do_escopo_api_channels__canal_id__palco_do_escopo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PalcoDoEscopoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PalcoDoEscopoResponse"];
                 };
             };
             /** @description Validation Error */

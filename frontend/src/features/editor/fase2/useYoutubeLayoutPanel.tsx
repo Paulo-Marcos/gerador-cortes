@@ -40,7 +40,7 @@ import {
   type YoutubeSharedConfig,
 } from '@/shared/palco/youtubeLayout';
 import { modoPadraoDoEscopo, montarPadraoJson } from './youtubeLayoutPadrao';
-import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
+import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import { MODE_LABEL, round } from './youtubeLayoutPanel/shared';
@@ -129,9 +129,9 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
     const padraoGlobalJson = appSettings?.youtube_layout_padrao_global;
 
     // F-048: presets disponiveis para identificar qual esta em uso por escopo.
-    const { data: presetsDisponiveis = [] } = useLayoutPresets({ tipo: 'posicionamento' });
+    const { data: presetsDisponiveis = [] } = useLayoutPresetsDoEstilo({ tipo: 'posicionamento' });
     // F-060: presets do posicionamento FULL.
-    const { data: presetsFullDisponiveis = [] } = useLayoutPresets({ tipo: 'posicionamento_full' });
+    const { data: presetsFullDisponiveis = [] } = useLayoutPresetsDoEstilo({ tipo: 'posicionamento_full' });
 
     // Modal de confirmacao generico. Usado por Usar/Definir × Projeto/Global.
     const [confirm, setConfirm] = useState<null | {

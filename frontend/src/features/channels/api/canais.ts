@@ -75,6 +75,9 @@ export const youtubeAuthApi = {
 
 export type PalcoComponentes = Schema<'PalcoComponentesResponse'>;
 export type PalcoComponentesEdicao = Schema<'PalcoComponentesRequest'>;
+export type PalcoDoEscopo = Schema<'PalcoDoEscopoResponse'>;
+export type PalcoDoEscopoEdicao = Schema<'PalcoDoEscopoRequest'>;
+export type TipoDoPalco = PalcoDoEscopo['tipo'];
 
 const comoImagem = (arquivo: File) => ({
   body: { arquivo: arquivo as unknown as string },
@@ -96,4 +99,15 @@ export const palcoApi = {
 
   removerImagem: (id: string) =>
     dados(api.DELETE('/api/channels/{canal_id}/palco/imagem', doCanal(id))),
+
+  // D-923: o palco de um projeto ou de um corte, por tipo (o do canal não muda).
+  doEscopo: (id: string, tipo: TipoDoPalco, projetoId: string, corteId?: string) =>
+    dados(
+      api.GET('/api/channels/{canal_id}/palco/do-escopo', {
+        params: { path: { canal_id: id }, query: { projeto_id: projetoId, corte_id: corteId, tipo } },
+      }),
+    ),
+
+  gravarDoEscopo: (id: string, body: PalcoDoEscopoEdicao) =>
+    dados(api.PUT('/api/channels/{canal_id}/palco/do-escopo', { ...doCanal(id), body })),
 };

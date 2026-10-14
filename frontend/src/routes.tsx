@@ -1,3 +1,4 @@
+import { PalcoDoCortePelaRota } from '@/features/channels/palcoDoEscopo';
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from '@/App';
@@ -88,7 +89,7 @@ export const router = createBrowserRouter([
       { path: 'projetos/:id/cortes', element: <EditorPage /> },
       { path: 'projetos/:id/cortes/:corteId', element: <EditorPage /> },
       { path: 'projetos/:id/metadados', element: <MetadataPage /> },
-      { path: 'projetos/:id/post-production', element: <ScenesPostProductionPage /> },
+      { path: 'projetos/:id/post-production', element: <PalcoDoCortePelaRota tipo="horizontal"><ScenesPostProductionPage /></PalcoDoCortePelaRota> },
       { path: 'projetos/:id/final-review', element: <FinalReviewPage /> },
       // /export foi aposentada (A6d): redireciona para a tela viva de pos-producao,
       // preservando favoritos antigos em vez de devolver 404. O relative="path" e
@@ -105,8 +106,8 @@ export const router = createBrowserRouter([
       { path: 'analises', element: <AnalisesPage /> },
       { path: 'shorts', element: <ShortsPage /> },
       { path: 'prontos', element: <ShortsProntosPage /> },
-      { path: 'shorts/:corteId', element: <FireDetalhePage /> },
-      { path: 'shorts/:corteId/workspace', element: <WorkspaceDoFirePage /> },
+      { path: 'shorts/:corteId', element: <PalcoDoCortePelaRota tipo="short"><FireDetalhePage /></PalcoDoCortePelaRota> },
+      { path: 'shorts/:corteId/workspace', element: <PalcoDoCortePelaRota tipo="short"><WorkspaceDoFirePage /></PalcoDoCortePelaRota> },
       { path: 'atalhos', element: <AtalhosPage /> },
       { path: 'novidades', element: <NovidadesPage /> },
       { path: 'fila', element: <FilaPage /> },

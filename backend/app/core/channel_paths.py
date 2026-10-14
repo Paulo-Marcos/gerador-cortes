@@ -21,8 +21,10 @@ ponteiro ainda não exista (ex.: primeiro boot antes do migrador rodar).
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
+from contextvars import ContextVar
 from pathlib import Path
 
 # Raiz do repositório, derivada do próprio arquivo (backend/app/core/channel_paths.py):
@@ -276,6 +278,23 @@ def palco_cache_dir() -> Path:
     Centralizamos aqui a resolução do nome do diretório (`_palco_cache`).
     """
     return projetos_dir() / "_palco_cache"
+
+
+# D-923: o palco escolhido para o corte em render (as escolhas do projeto e do
+# corte, em JSON), fixado no começo do render de um corte ou de um short. Quem
+# lê os componentes do palco durante o render vê a escolha por cima do canal, e
+# o cache do PNG vai para uma pasta por escolha: a chave do PNG é a do layout,
+# e dois cortes de mesmo layout e palcos diferentes não podem dividir arquivo.
+# Vazio (o padrão, fora de um render) = só o canal.
+PALCO_DO_CORTE_NO_RENDER: ContextVar[str] = ContextVar("palco_do_corte_no_render", default="")
+
+
+def palco_cache_dir_do_render() -> Path:
+    """A pasta do cache do palco para o render em curso (uma por escolha, D-923)."""
+    escolha = PALCO_DO_CORTE_NO_RENDER.get()
+    if not escolha:
+        return palco_cache_dir()
+    return palco_cache_dir() / f"escopo-{hashlib.sha1(escolha.encode()).hexdigest()[:12]}"
 
 
 def _projetos_legado() -> Path:

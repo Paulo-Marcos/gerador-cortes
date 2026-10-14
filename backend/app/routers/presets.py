@@ -24,7 +24,12 @@ from datetime import datetime
 from typing import Any, Literal
 
 from app.database import get_db
-from app.domain.canal.palco_componentes import TIPOS_DE_PRESET_COM_ESTILO, estilo_do_preset
+from app.domain.canal.palco_componentes import (
+    PADRAO,
+    TIPOS_DE_PRESET_COM_ESTILO,
+    estilo_do_preset,
+    mesclar,
+)
 from app.domain.corte.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
@@ -89,8 +94,18 @@ class AtualizarPresetRequest(BaseModel):
 def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
     """O payload normalizado do tipo, com o estilo do palco quando ele o declara (D-921)."""
     normalizado = _normalizar_payload_do_tipo(tipo, payload)
-    estilo = estilo_do_preset(payload) if tipo in TIPOS_DE_PRESET_COM_ESTILO else None
-    return {**normalizado, "estilo": estilo} if estilo else normalizado
+    if tipo not in TIPOS_DE_PRESET_COM_ESTILO:
+        return normalizado
+    estilo = estilo_do_preset(payload)
+    if estilo:
+        normalizado["estilo"] = estilo
+    # D-923: o palco do tipo (cabeçalho, placa, cards, janelas do short) viaja
+    # com o preset, validado e inteiro: aplicar o preset reproduz o palco salvo.
+    if isinstance(payload.get("palco"), dict):
+        palco = mesclar(PADRAO, payload["palco"]).para_dict()
+        palco["cabecalho"].pop("imagem", None)  # a imagem é do canal, não do preset
+        normalizado["palco"] = palco
+    return normalizado
 
 
 def _normalizar_payload_do_tipo(tipo: str, payload: Any) -> dict[str, Any]:

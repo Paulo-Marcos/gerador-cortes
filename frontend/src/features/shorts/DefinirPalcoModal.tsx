@@ -9,7 +9,8 @@ import { PalcoDoCorte } from './PalcoDoCorte';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA } from './LegendaPrevia';
 import { LegendaArrastavel } from './LegendaArrastavel';
-import { PalcoDoCanalNoModal, useEdicaoDoPalco } from '@/features/channels/EdicaoDoPalco';
+import { EstiloNoModal } from '@/features/channels/EstiloNoModal';
+import { PalcoDoShortNoModal, tituloDoPalco, usePalcoDoShort } from './PalcoDoShortNoModal';
 import { RascunhoDoPalcoContext } from '@/features/channels/useChannels';
 import {
   LARGURA_MAX,
@@ -138,7 +139,7 @@ export function DefinirPalcoModal({
   // qualquer um destes campos por fora (o backend cuida disso), porque um
   // rótulo que sobrevive à edição do que descreve passa a mentir.
   const aplicarPreset = (id: string, payload: PalcoShortPreset) =>
-    onAplicar(mudancaDoPalco(id, payload));
+    onAplicar(mudancaDoPalco(id, palco.comPalcoDoPreset(payload)));
 
   const presetDoCorte = usePalcoDoCorte(corteId);
   // D-563: escolher a cor do realce sem ver a legenda seria escolher no escuro —
@@ -181,9 +182,7 @@ export function DefinirPalcoModal({
   // gastar um PATCH por pixel, do mesmo jeito que a simulação do palco faz.
   const [arrastandoLegenda, setArrastandoLegenda] = useState<LugarDaLegenda | null>(null);
   const lugarDaLegenda = arrastandoLegenda ?? lugarGravado;
-  // D-921: o palco do canal editado aqui, com a prévia desenhando o rascunho.
-  const edicaoDoPalco = useEdicaoDoPalco();
-  const estiloDoPalco = edicaoDoPalco.componentes?.estilo ?? 'atual';
+  const palco = usePalcoDoShort(corteId, open); // D-923: o palco do short DESTE corte (o canal não muda)
   const legendaNoLugarDela = temLugarProprio(short);
 
   /** Ajuste é PARCIAL: mandar só o bloco na mão apagaria a posição dos outros. */
@@ -210,6 +209,7 @@ export function DefinirPalcoModal({
       title={rascunho?.titulo ?? 'Definir o palco deste short'}
       size="2xl"
     >
+      {!rascunho && <EstiloNoModal alvo="corte" estilo={palco.estilo} origem={palco.origem} onEstilo={palco.setEstilo} />}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="space-y-4">
           <Secao numero={1} titulo="Como a tela monta">
@@ -646,14 +646,14 @@ export function DefinirPalcoModal({
                 agora, que so ele sabe tirar porque so ele conhece os sete
                 controles que a compoem. */}
             <PresetsDoPalco
-              comoEstaHoje={() => ({ ...comoEstaHoje(), estilo: estiloDoPalco })}
-              estilo={estiloDoPalco}
+              comoEstaHoje={() => ({ ...comoEstaHoje(), estilo: palco.estilo, palco: palco.paraPreset() })}
+              estilo={palco.estilo}
               onAplicar={aplicarPreset}
               ocupado={ocupado}
             />
           </Secao>
           )}
-          <PalcoDoCanalNoModal edicao={edicaoDoPalco} />
+          {!rascunho && <Secao numero={8} titulo={tituloDoPalco(palco.estilo)}><PalcoDoShortNoModal palco={palco} /></Secao>}
         </div>
 
         {/* A prévia acompanha cada decisão. Decidir olhando para o resultado é
@@ -677,7 +677,7 @@ export function DefinirPalcoModal({
             // às outras. Foi por isso que redimensionar em tela cheia era
             // impossível de acertar com a mão antes da D-559.
             <div className={cn('w-full', movendo ? 'max-w-[300px]' : 'max-w-[220px]')}>
-              <RascunhoDoPalcoContext.Provider value={edicaoDoPalco.componentes}>
+              <RascunhoDoPalcoContext.Provider value={palco.componentes}>
               <PalcoPrevia plano={planoNaTela} video={video}>
                 {transcricao.data && (
                   <LegendaArrastavel

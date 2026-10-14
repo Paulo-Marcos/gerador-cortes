@@ -78,7 +78,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase2/CenasPanel.tsx": 6,
   "src/features/editor/fase2/DefinirSplitButton.tsx": 3,
   "src/features/editor/fase2/EditorFase2.tsx": 6,
-  "src/features/editor/fase2/PosicionamentoModal.tsx": 4,
+  "src/features/editor/fase2/PosicionamentoModal.tsx": 3,
   "src/features/editor/fase2/RendererConfigControls.tsx": 1,
   "src/features/editor/fase2/SceneTimeline.tsx": 13,
   "src/features/editor/fase2/SegmentoDetectadoPopover.tsx": 3,

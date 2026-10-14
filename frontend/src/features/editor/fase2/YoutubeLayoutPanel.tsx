@@ -1,3 +1,4 @@
+import { alvoDoEstiloPara } from '@/features/channels/palcoDoEscopo';
 import {
   forwardRef,
   
@@ -96,9 +97,7 @@ export interface YoutubeLayoutPanelHandle {
 }
 
 export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
-  function YoutubeLayoutPanel(
-    props: Props, ref,
-  ) {
+  function YoutubeLayoutPanel(props: Props, ref) {
   const { corteId,   currentTime, duration, onSeek } = props;
   const { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto } = useYoutubeLayoutPanel(props, ref);
 
@@ -392,6 +391,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
             fundo={modal.initialFundo}
             placa={modal.initialPlaca}
             fundoPlacaEditavel={modal.fundoPlacaEditavel}
+            projetoId={props.projetoId} corteId={corteId} alvoDoEstilo={alvoDoEstiloPara(modal.scope)}
           />
         )}
       </section>

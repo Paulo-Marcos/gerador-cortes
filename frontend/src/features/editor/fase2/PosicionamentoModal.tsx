@@ -40,8 +40,11 @@ import {
 } from './posicionamentoControls';
 import { NomeDoPresetDialog } from './NomeDoPresetDialog';
 import { ZonaCardsControle } from './ZonaCardsControle';
-import { FundoEPlacaDoCorte } from './FundoEPlacaDoCorte';
-import { PalcoDoCanalNoModal, useEdicaoDoPalco } from '@/features/channels/EdicaoDoPalco';
+import { AjustesDoEstilo } from './AjustesDoEstilo';
+import { BarraDePresets } from './BarraDePresets';
+import { EstiloNoModal } from '@/features/channels/EstiloNoModal';
+import type { AlvoDoEstilo } from '@/features/channels/palcoDoEscopo';
+import { usePalcoDoModal } from '@/features/channels/usePalcoDoModal';
 import { presetsDoEstilo } from '@/shared/palco/presetsPorEstilo';
 import {
   useDeleteLayoutPreset,
@@ -96,6 +99,10 @@ interface PosicionamentoModalProps {
   placa: YoutubePlaca;
   /** F-060: escopos de segmento herdam fundo/placa do corte — nao editam aqui. */
   fundoPlacaEditavel?: boolean;
+  /** D-923: o corte e o projeto do modal, e onde a troca de estilo grava. */
+  projetoId?: string;
+  corteId?: string;
+  alvoDoEstilo?: AlvoDoEstilo;
 }
 
 export function PosicionamentoModal({
@@ -110,6 +117,9 @@ export function PosicionamentoModal({
   fundo,
   placa,
   fundoPlacaEditavel = true,
+  projetoId,
+  corteId,
+  alvoDoEstilo = 'corte',
 }: PosicionamentoModalProps) {
   const { notify } = useToast();
   const isFullMode = mode === 'full';
@@ -122,10 +132,10 @@ export function PosicionamentoModal({
   const [config, setConfig] = useState<YoutubeSharedConfig>(initialConfig);
   const [draftFundo, setDraftFundo] = useState<YoutubeBackgroundId>(fundo);
   const [draftPlaca, setDraftPlaca] = useState<YoutubePlaca>(placa);
-  // D-921: o palco do canal (estilo, componentes) editado aqui com prévia ao vivo.
-  const edicaoDoPalco = useEdicaoDoPalco();
-  // D-921: só os presets do estilo escolhido (o rascunho, então trocar o estilo já filtra).
-  const estiloDoPalco = edicaoDoPalco.componentes?.estilo ?? 'atual';
+  // D-923: o palco do horizontal deste corte (ou projeto) em rascunho; a prévia e
+  // a lista de presets seguem ele, e o "Aplicar" grava só naquele escopo.
+  const palco = usePalcoDoModal({ tipo: 'horizontal', projetoId, corteId, alvo: alvoDoEstilo, aberto: open });
+  const estiloDoPalco = palco.estilo;
   const presets = presetsDoEstilo(todosOsPresets, estiloDoPalco);
   const [rectKey, setRectKey] = useState<SharedRectKey>(isFullMode ? 'crop_tela' : 'crop_facecam');
   const [drawingEnabled, setDrawingEnabled] = useState(false);
@@ -252,6 +262,7 @@ export function PosicionamentoModal({
     setConfig(presetConfig);
     // F-060: preset carrega fundo/placa. Presets legados (sem fundo/placa)
     // mantem o que esta no editor.
+    palco.dePreset((preset.payload as { palco?: unknown } | null)?.palco);
     if (fundoPlacaEditavel) {
       const extras = fundoPlacaDoPreset(preset);
       if (extras.fundo) setDraftFundo(extras.fundo);
@@ -261,8 +272,8 @@ export function PosicionamentoModal({
     notify(`Preset "${preset.nome}" aplicado.`, { tone: 'success' });
   };
 
-  const handleAplicarPresetSelecionado = () => {
-    const preset = presets.find((p) => p.id === presetSelecionado);
+  const handleAplicarPreset = (id: string) => {
+    const preset = presets.find((p) => p.id === id);
     if (preset) aplicarPreset(preset);
   };
 
@@ -323,8 +334,9 @@ export function PosicionamentoModal({
           fundo: draftFundo,
           placa: { ...draftPlaca },
           estilo: estiloDoPalco,
+          palco: palco.paraPreset(),
         }
-      : { compartilhada: config, fundo: draftFundo, placa: { ...draftPlaca }, estilo: estiloDoPalco };
+      : { compartilhada: config, fundo: draftFundo, placa: { ...draftPlaca }, estilo: estiloDoPalco, palco: palco.paraPreset() };
 
   // F-048: detecta o preset selecionado e se o config atual divergiu dele,
   // habilitando "Atualizar preset".
@@ -388,6 +400,7 @@ export function PosicionamentoModal({
   };
 
   const handleConfirm = () => {
+    palco.aplicar();
     onSave({ config, fundo: draftFundo, placa: draftPlaca });
     onClose();
   };
@@ -406,7 +419,7 @@ export function PosicionamentoModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <div className="flex max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
         {/* Header */}
         <header className="flex items-center gap-3 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-5 py-3">
           <strong className="font-editorial text-[16px] font-medium text-[var(--wb-ink)]">
@@ -426,76 +439,27 @@ export function PosicionamentoModal({
           </button>
         </header>
 
-        {/* Body — duas colunas: controles a esquerda, preview do video a direita */}
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,360px)_1fr] gap-0 overflow-hidden">
+        <EstiloNoModal
+          alvo={alvoDoEstilo}
+          estilo={estiloDoPalco}
+          origem={palco.origem}
+          onEstilo={palco.setEstilo}
+        />
+
+        {/* Body — duas colunas: controles a esquerda, preview e ajustes do estilo a direita */}
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-0 overflow-hidden">
           {/* Coluna controles */}
-          <div className="flex min-h-0 flex-col gap-2 overflow-y-auto border-r border-[var(--wb-border-soft)] p-4">
-            {/* Preset bar */}
-            <section className="rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2">
-              <div className="mb-1.5 flex items-center gap-1.5">
-                <Icon name="bookmark" className="text-[var(--wb-text-dim)]" />
-                <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                  Presets
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <select
-                  value={presetSelecionado}
-                  onChange={(event) => setPresetSelecionado(event.target.value)}
-                  className="h-7 min-w-0 flex-1 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-1.5 font-code text-[11px] text-[var(--wb-text)]"
-                >
-                  <option value="">
-                    {presets.length === 0 ? 'Nenhum preset salvo' : 'Selecione um preset…'}
-                  </option>
-                  {presets.map((preset) => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.nome}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAplicarPresetSelecionado}
-                  disabled={!presetSelecionado}
-                >
-                  Aplicar
-                </Button>
-                <Tooltip label="Renomear preset selecionado" side="top">
-                  <span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={abrirRenomearPreset}
-                      disabled={!presetSelecionado || updatePreset.isPending}
-                      aria-label="Renomear preset selecionado"
-                    >
-                      <Icon name={ICONE_DO_CONCEITO.renomear} />
-                    </Button>
-                  </span>
-                </Tooltip>
-                <Tooltip label="Remover preset selecionado" side="top">
-                  <span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDeletePreset}
-                      disabled={!presetSelecionado || deletePreset.isPending}
-                      aria-label="Remover preset selecionado"
-                    >
-                      {deletePreset.isPending ? (
-                        <Icon name="loader-2" className="animate-spin" />
-                      ) : (
-                        <Icon name="x" />
-                      )}
-                    </Button>
-                  </span>
-                </Tooltip>
-              </div>
-            </section>
+          <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto border-r border-[var(--wb-border-soft)] p-4">
+            <BarraDePresets
+              presets={presets}
+              selecionado={presetSelecionado}
+              onAplicar={handleAplicarPreset}
+              onRenomear={abrirRenomearPreset}
+              onRemover={handleDeletePreset}
+              renomeando={updatePreset.isPending}
+              removendo={deletePreset.isPending}
+              estilo={estiloDoPalco}
+            />
 
             {!isFullMode && (
               <SharedScreenCountToggle value={sharedScreenCount} onChange={handleScreenCount} />
@@ -531,24 +495,11 @@ export function PosicionamentoModal({
               />
             )}
 
-            {/* F-060: Fundo + Placa fazem parte do preset/escopo — editados
-                aqui, nao mais na pagina de Layout. Segmentos herdam do corte. */}
-            {fundoPlacaEditavel && (
-              <>
-                <FundoEPlacaDoCorte
-                  fundo={draftFundo}
-                  placa={draftPlaca}
-                  onFundo={setDraftFundo}
-                  onPlaca={setDraftPlaca}
-                />
-              </>
-            )}
-            <PalcoDoCanalNoModal edicao={edicaoDoPalco} />
           </div>
 
           {/* Coluna preview — Recorte mostra video pra desenhar; Encaixe
               mostra previa do palco com slots arrastaveis. */}
-          <div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-4">
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto p-4">
             {selectedCropKey ? (
               <>
                 <CropPicker
@@ -574,7 +525,7 @@ export function PosicionamentoModal({
                   currentTime={currentTime}
                   fundo={draftFundo}
                   placa={draftPlaca}
-                  palco={edicaoDoPalco.componentes ?? undefined}
+                  palco={palco.componentes ?? undefined}
                   onChangeSlot={(key, rect) => updateRect(key, rect)}
                 />
                 <p className="font-code text-[10px] leading-snug text-[var(--wb-text-dim)]">
@@ -584,6 +535,15 @@ export function PosicionamentoModal({
                 </p>
               </>
             )}
+            <AjustesDoEstilo
+              palco={palco}
+              global={alvoDoEstilo === 'global'}
+              editavel={fundoPlacaEditavel}
+              fundo={draftFundo}
+              placa={draftPlaca}
+              onFundo={setDraftFundo}
+              onPlaca={setDraftPlaca}
+            />
           </div>
         </div>
 

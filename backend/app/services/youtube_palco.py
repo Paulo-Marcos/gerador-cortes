@@ -45,7 +45,7 @@ _TIMEOUT_DO_GERADOR_SEG = 300
 
 
 def _cache_dir() -> Path:
-    return channel_paths.palco_cache_dir()
+    return channel_paths.palco_cache_dir_do_render()
 
 
 # Quantos bytes do final da saída do gen-youtube-palco.mjs entram no diagnóstico.

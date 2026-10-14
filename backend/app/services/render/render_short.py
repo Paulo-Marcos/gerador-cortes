@@ -50,7 +50,7 @@ from app.infrastructure.worker_queue import (
     WorkerJobCategory,
 )
 from app.models import Corte, Short, StatusShort
-from app.services import legendas_short, palco_shorts
+from app.services import legendas_short, palco_por_escopo
 from app.services.app_settings import AppSettingsService
 from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.render.camada_short import props_da_camada
@@ -356,7 +356,7 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
 
         origem = await _medir(bruto)
 
-    palco = await palco_shorts.resolver_para_render(short_id)
+    palco = await palco_por_escopo.resolver_palco_do_short(short_id, corte)
 
     async with AsyncSessionLocal() as db:
         short = await db.get(Short, short_id)

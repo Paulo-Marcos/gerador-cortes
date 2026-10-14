@@ -311,7 +311,7 @@ async def _preparar_contexto(
         raise ValueError(f"Corte '{corte_id}' não encontrado")
 
     projeto = await db.get(Projeto, corte.projeto_id)
-    render_config = ProjetoRenderConfig.from_projeto(projeto)
+    render_config = ProjetoRenderConfig.preparar(projeto, corte)
     logger.info(
         "[Pipeline] Render config: versao=%s sombra_padrao=%s",
         render_config.versao,
