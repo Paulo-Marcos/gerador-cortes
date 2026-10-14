@@ -166,9 +166,9 @@ def normalizar_gancho(texto: str) -> str:
     rotulo de prateleira; o gancho e uma frase que alguem le, e caixa alta em
     sete palavras cansa mais do que destaca.
 
-    Mas a frase comeca com MAIUSCULA. O exemplo da skill vinha todo em
-    minusculo, a IA imitava, e o short abria com um texto que parecia digitado
-    as pressas. So a primeira letra muda: o resto (siglas, nomes) fica como veio.
+    Mas a frase comeca com MAIUSCULA (o exemplo da skill vinha em minusculo e a
+    IA imitava). So a primeira LETRA muda, pulando a marca do destaque (D-919:
+    "*ninguem* te conta" vira "*Ninguem*..."); o resto fica como veio.
 
     >>> normalizar_gancho('  ninguem   te   conta   isso  ')
     'Ninguem te conta isso'
@@ -184,8 +184,8 @@ def normalizar_gancho(texto: str) -> str:
     while len(palavras) > 1 and len(" ".join(palavras)) > MAX_CARACTERES:
         palavras.pop()
 
-    frase = " ".join(palavras)
-    return frase[0].upper() + frase[1:]
+    resto = (frase := " ".join(palavras)).lstrip("* ")
+    return frase[: len(frase) - len(resto)] + resto[:1].upper() + resto[1:]
 
 
 def contar_palavras(texto: str) -> int:
