@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
@@ -394,11 +395,66 @@ function bundleOnce() {
   }
 }
 
+// D-920: corrida do Remotion 4.0.x. O selectComposition dá a aba por pronta
+// num requestAnimationFrame, mas as <Composition> se registram num useEffect;
+// com 4 abas disputando a CPU (D-917) o rAF às vezes chega antes e a lista sai
+// vazia. A lista vazia é a assinatura da corrida e nada mais a produz depois do
+// registerRoot (que tem erro próprio): só ela se repete.
+const tentativasDeSelecao = 3;
+const listaVazia = /^Could not find composition with ID \S+\. Available compositions:\s*$/;
+
+async function selecionarComposicao(selecionar, opcoes, avisar = console.warn) {
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      return await selecionar(opcoes);
+    } catch (erro) {
+      if (tentativa === tentativasDeSelecao || !listaVazia.test(erro?.message ?? "")) {
+        throw erro;
+      }
+      avisar(`selectComposition voltou sem composições (tentativa ${tentativa}); repetindo`);
+    }
+  }
+}
+
+// D-920: a repetição tem de valer só para a lista VAZIA; composição sumida de
+// verdade (lista com outras) ou outro erro falham na primeira.
+async function verificarRepeticaoDaSelecao() {
+  const corrida = new Error("Could not find composition with ID OverlaySceneV2. Available compositions: ");
+  const falhaAntes = (erros) => {
+    const fila = [...erros];
+    const selecionar = async () => {
+      selecionar.chamadas += 1;
+      const erro = fila.shift();
+      if (erro) throw erro;
+      return "composicao";
+    };
+    selecionar.chamadas = 0;
+    return selecionar;
+  };
+  const semLog = () => {};
+
+  const umaCorrida = falhaAntes([corrida]);
+  assert.equal(await selecionarComposicao(umaCorrida, {}, semLog), "composicao");
+  assert.equal(umaCorrida.chamadas, 2);
+
+  const sempreCorrida = falhaAntes([corrida, corrida, corrida, corrida]);
+  await assert.rejects(selecionarComposicao(sempreCorrida, {}, semLog), corrida);
+  assert.equal(sempreCorrida.chamadas, 3);
+
+  const sumiu = falhaAntes([new Error("Could not find composition with ID OverlaySceneV2. Available compositions: Outra")]);
+  await assert.rejects(selecionarComposicao(sumiu, {}, semLog), /Available compositions: Outra/);
+  assert.equal(sumiu.chamadas, 1);
+
+  const outroErro = falhaAntes([new Error("Target closed")]);
+  await assert.rejects(selecionarComposicao(outroErro, {}, semLog), /Target closed/);
+  assert.equal(outroErro.chamadas, 1);
+}
+
 async function runStill(scenario, browser) {
   const outputPath = path.join(outDir, `${scenario.id}.png`);
   writeFileSync(path.join(outDir, `${scenario.id}.json`), JSON.stringify(scenario.props, null, 2), "utf8");
 
-  const composition = await selectComposition({
+  const composition = await selecionarComposicao(selectComposition, {
     serveUrl: bundleDir,
     id: "OverlaySceneV2",
     inputProps: scenario.props,
@@ -428,6 +484,7 @@ async function runStill(scenario, browser) {
 }
 
 async function main() {
+  await verificarRepeticaoDaSelecao();
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
   bundleOnce();
