@@ -386,8 +386,7 @@ function bundleOnce() {
   });
   if (result.status !== 0) {
     if (result.error) {
-      process.stderr.write(`${result.error.message}
-`);
+      process.stderr.write(`${result.error.message}\n`);
     }
     process.stderr.write(result.stdout ?? "");
     process.stderr.write(result.stderr ?? "");
