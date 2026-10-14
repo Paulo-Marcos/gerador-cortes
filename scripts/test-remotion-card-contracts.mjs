@@ -1,15 +1,21 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rendererDir = path.join(repoRoot, "video-renderer");
 const outDir = path.join(tmpdir(), "gerador-cortes-remotion-card-contracts");
+const bundleDir = path.join(tmpdir(), "gerador-cortes-remotion-card-contracts-bundle");
 const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
-const frame = "45";
+const frame = 45;
+// D-917: os stills saem do renderer instalado no video-renderer, não do da raiz.
+const { openBrowser, renderStill, selectComposition } = createRequire(path.join(rendererDir, "package.json"))(
+  "@remotion/renderer",
+);
 const minPngBytes = 2500;
 
 const base = {
@@ -367,25 +373,48 @@ function hashFile(file) {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
 }
 
-function runStill(scenario) {
-  const propsPath = path.join(outDir, `${scenario.id}.json`);
-  const outputPath = path.join(outDir, `${scenario.id}.png`);
-  writeFileSync(propsPath, JSON.stringify(scenario.props, null, 2), "utf8");
-
-  const result = spawnSync(
-    npxBin,
-    ["remotion", "still", "OverlaySceneV2", outputPath, `--frame=${frame}`, `--props=${propsPath}`],
-    { cwd: rendererDir, encoding: "utf8", shell: process.platform === "win32" },
-  );
-
+// D-917: empacotar uma vez pela CLI (que aplica o remotion.config.ts: Tailwind
+// e o gate do mascote) e renderizar todos os stills no mesmo navegador. Antes era
+// um `remotion still` por cenário, que reempacotava e abria um Chrome a cada
+// still: 5 minutos do CI só nisso.
+function bundleOnce() {
+  const result = spawnSync(npxBin, ["remotion", "bundle", `--out-dir=${bundleDir}`], {
+    cwd: rendererDir,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+    timeout: 300_000,
+  });
   if (result.status !== 0) {
     if (result.error) {
-      process.stderr.write(`${result.error.message}\n`);
+      process.stderr.write(`${result.error.message}
+`);
     }
     process.stderr.write(result.stdout ?? "");
     process.stderr.write(result.stderr ?? "");
-    throw new Error(`Falha ao renderizar ${scenario.id}`);
+    throw new Error("Falha ao empacotar o video-renderer");
   }
+}
+
+async function runStill(scenario, browser) {
+  const outputPath = path.join(outDir, `${scenario.id}.png`);
+  writeFileSync(path.join(outDir, `${scenario.id}.json`), JSON.stringify(scenario.props, null, 2), "utf8");
+
+  const composition = await selectComposition({
+    serveUrl: bundleDir,
+    id: "OverlaySceneV2",
+    inputProps: scenario.props,
+    puppeteerInstance: browser,
+  });
+  await renderStill({
+    composition,
+    serveUrl: bundleDir,
+    output: outputPath,
+    frame,
+    imageFormat: "png",
+    inputProps: scenario.props,
+    puppeteerInstance: browser,
+    overwrite: true,
+  });
 
   if (!existsSync(outputPath)) {
     throw new Error(`PNG nao criado: ${scenario.id}`);
@@ -399,15 +428,26 @@ function runStill(scenario) {
   return { id: scenario.id, outputPath, bytes, hash: hashFile(outputPath) };
 }
 
-function main() {
+async function main() {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
+  bundleOnce();
 
   const results = new Map();
-  for (const scenario of scenarios) {
-    const result = runStill(scenario);
-    results.set(result.id, result);
-    console.log(`ok ${result.id} (${result.bytes} bytes)`);
+  const browser = await openBrowser("chrome");
+  // Cada still abre a própria aba; algumas em paralelo dividem o navegador.
+  const pendentes = [...scenarios];
+  const renderizarPendentes = async () => {
+    for (let scenario = pendentes.shift(); scenario; scenario = pendentes.shift()) {
+      const result = await runStill(scenario, browser);
+      results.set(result.id, result);
+      console.log(`ok ${result.id} (${result.bytes} bytes)`);
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: Math.min(4, availableParallelism()) }, renderizarPendentes));
+  } finally {
+    await browser.close({ silent: true });
   }
 
   for (const [leftId, rightId, reason] of distinctPairs) {
@@ -435,4 +475,4 @@ function main() {
   console.log(`\nCard contracts OK: ${scenarios.length} stills em ${outDir}`);
 }
 
-main();
+await main();
