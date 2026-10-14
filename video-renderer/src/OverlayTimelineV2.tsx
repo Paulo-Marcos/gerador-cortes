@@ -4,6 +4,7 @@ import { FrameOffsetContext } from "./frame-context";
 import { renderCenaV2 } from "./cenas-v2";
 import { normalizarCenaRemotion } from "./schema";
 import { CardLayoutContext, FontPresetProvider, SombraContext } from "./cenas-v2/_shared";
+import { EstiloDasCenasProvider } from "./cenas-limpo";
 import { SharedCardZoneFrame } from "./shared-card-zone";
 
 /**
@@ -16,12 +17,14 @@ export const OverlayTimelineV2: React.FC<OverlayTimelineProps> = ({
   sombraNivelPadrao,
   layoutCardPadrao,
   fontPreset,
+  estiloCenas,
 }) => {
   const { fps } = useVideoConfig();
 
   return (
     <AbsoluteFill>
       <FontPresetProvider preset={fontPreset}>
+        <EstiloDasCenasProvider valor={estiloCenas}>
         <SombraContext.Provider value={sombraNivelPadrao}>
           <CardLayoutContext.Provider value={layoutCardPadrao}>
             {cenas.map((cena, index) => {
@@ -49,6 +52,7 @@ export const OverlayTimelineV2: React.FC<OverlayTimelineProps> = ({
             })}
           </CardLayoutContext.Provider>
         </SombraContext.Provider>
+        </EstiloDasCenasProvider>
       </FontPresetProvider>
     </AbsoluteFill>
   );

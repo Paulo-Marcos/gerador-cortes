@@ -182,3 +182,23 @@ def test_put_escolhe_eco_e_legenda_com_sombra(client: TestClient):
     assert (
         client.put("/api/channels/default/palco", json={"fundo_short": "neon"}).status_code == 422
     )
+
+
+def test_put_esconde_tipos_e_ajusta_os_cards_d916(client: TestClient):
+    resp = client.put(
+        "/api/channels/default/palco",
+        json={
+            "cards": {
+                "ocultos": ["pergunta_chat"],
+                "escala": 1.2,
+                "posicao": {"automatica": False, "x": 1300, "y": 90},
+            }
+        },
+    )
+    assert resp.status_code == 200
+    corpo = resp.json()
+    assert corpo["cards"]["ocultos"] == ["pergunta_chat"]
+    assert corpo["cards"]["posicao"] == {"automatica": False, "x": 1300, "y": 90}
+    assert {"id": "pergunta_chat", "nome": "Pergunta do chat"} in corpo["tipos_de_cena"]
+    recusado = client.put("/api/channels/default/palco", json={"cards": {"ocultos": ["neon"]}})
+    assert recusado.status_code == 400

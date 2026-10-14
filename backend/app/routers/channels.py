@@ -15,6 +15,7 @@ from typing import Literal
 
 from app.domain.canal import palco_componentes as palco_dominio
 from app.domain.canal import theme_library
+from app.domain.canal.cards_do_canal import TIPOS_DE_CENA
 from app.domain.canal.identidade import Canal, IdCanalInvalido
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
@@ -58,6 +59,25 @@ class PlacaRequest(BaseModel):
     posicao: PosicaoModel | None = None
 
 
+class CardsRequest(BaseModel):
+    """D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio."""
+
+    ocultos: list[str] | None = None
+    escala: float | None = None
+    posicao: PosicaoModel | None = None
+
+
+class TipoDeCenaModel(BaseModel):
+    id: str
+    nome: str
+
+
+class CardsResponse(BaseModel):
+    ocultos: list[str]
+    escala: float
+    posicao: PosicaoModel
+
+
 class PalcoComponentesRequest(BaseModel):
     """Edição parcial: campo ausente não muda."""
 
@@ -66,6 +86,7 @@ class PalcoComponentesRequest(BaseModel):
     contorno_short: int | None = None
     fundo_short: Literal["palco", "eco"] | None = None
     estilo_da_legenda: Literal["contorno", "sombra"] | None = None
+    cards: CardsRequest | None = None
     cabecalho: CabecalhoRequest | None = None
     placa: PlacaRequest | None = None
 
@@ -102,6 +123,8 @@ class PalcoComponentesResponse(BaseModel):
     fundos_do_short: list[str]
     estilo_da_legenda: str
     estilos_da_legenda: list[str]
+    cards: CardsResponse
+    tipos_de_cena: list[TipoDeCenaModel]
     cabecalho: CabecalhoResponse
     placa: PlacaResponse
 
@@ -128,6 +151,8 @@ def _palco_para_response(
         fundos_do_short=list(palco_dominio.FUNDOS_DO_SHORT),
         estilo_da_legenda=componentes.estilo_da_legenda,
         estilos_da_legenda=list(palco_dominio.ESTILOS_DA_LEGENDA),
+        cards=CardsResponse(**componentes.cards.para_dict()),
+        tipos_de_cena=[TipoDeCenaModel(id=tipo, nome=nome) for tipo, nome in TIPOS_DE_CENA.items()],
         cabecalho=CabecalhoResponse(
             ativo=componentes.cabecalho.ativo,
             nome=componentes.cabecalho.nome,

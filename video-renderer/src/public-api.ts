@@ -70,3 +70,11 @@ export {
   semMarcas,
   type PartesDoGancho,
 } from "./cenas-shorts/destaqueDoGancho";
+
+// D-916: o estilo das cenas do canal (limpo/atual, tipos escondidos, tamanho e posição).
+export {
+  ESTILO_DAS_CENAS_PADRAO,
+  EstiloDasCenasProvider,
+  estiloDasCenasSchema,
+  type EstiloDasCenas,
+} from "./cenas-limpo";

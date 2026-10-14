@@ -9,6 +9,7 @@ import {
   SharedCardZoneFrame,
   SombraContext,
   SOMBRA_TOKENS,
+  EstiloDasCenasProvider,
   renderCenaV2,
   resolverNivel,
 } from '@video-renderer/public-api';
@@ -36,7 +37,7 @@ import {
   SPEAKER_LABEL_HEIGHT,
   StageChrome,
 } from '@/shared/palco/youtubeChrome';
-import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
+import { estiloDasCenasDe, type ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
 import { CropVideo, PalcoLimpoCompartilhado, renderedSize } from './PalcoLimpoCompartilhado';
 
 export type SombraNivelPadrao = 'nenhuma' | 'leve' | 'media' | 'forte';
@@ -216,7 +217,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
       <AbsoluteFill>
         <FontPresetProvider preset={fontPreset}>
           <SombraContext.Provider value={sombraNivelPadrao}>
-            <CardLayoutContext.Provider value={layoutCardPadrao}>{overlayCenas}</CardLayoutContext.Provider>
+            <CardLayoutContext.Provider value={layoutCardPadrao}><EstiloDasCenasProvider valor={estiloDasCenasDe(palco)}>{overlayCenas}</EstiloDasCenasProvider></CardLayoutContext.Provider>
           </SombraContext.Provider>
         </FontPresetProvider>
       </AbsoluteFill>

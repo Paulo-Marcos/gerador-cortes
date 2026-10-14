@@ -70,8 +70,19 @@ class ProjetoRenderConfig:
                 "sombraNivelPadrao": self.sombra_padrao,
                 "layoutCardPadrao": self.layout_card_padrao,
                 "fontPreset": self._preset_efetivo(),
+                "estiloCenas": self._estilo_das_cenas(),
             }
         return {}
+
+    def _estilo_das_cenas(self) -> dict:
+        """D-916: o estilo das cenas do canal (limpo/atual), tipos escondidos,
+        tamanho e posição dos cards — tudo do palco do canal ativo."""
+        # Import tardio pelo mesmo motivo do tema: o palco lê o settings.db.
+        from app.domain.canal import cards_do_canal
+        from app.services import palco_componentes
+
+        componentes = palco_componentes.ler()
+        return cards_do_canal.props_para_renderer(componentes.estilo, componentes.cards)
 
     def _preset_efetivo(self) -> str:
         """Preset tipográfico do render: o do projeto quando escolhido explicitamente,

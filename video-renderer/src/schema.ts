@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ESTILO_DAS_CENAS_PADRAO, estiloDasCenasSchema } from "./cenas-limpo/estilo-das-cenas-schema";
 
 // ─── Tipos de Cena em Português ──────────────────────────────────────────
 const tipoCenaEnum = z.enum([
@@ -203,6 +204,8 @@ export const youtubeSchema = z.object({
   sombraNivelPadrao: z.enum(["nenhuma", "leve", "media", "forte"]).default("nenhuma"),
   layoutCardPadrao: z.enum(["horizontal", "vertical"]).default("vertical"),
   fontPreset: fontPresetEnum.default("atual"),
+  /** D-916: estilo das cenas do canal (limpo/atual), tipos escondidos, tamanho e posição. */
+  estiloCenas: estiloDasCenasSchema.default(ESTILO_DAS_CENAS_PADRAO),
 });
 
 export type YouTubeProps = z.infer<typeof youtubeSchema>;

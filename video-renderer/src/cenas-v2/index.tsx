@@ -16,6 +16,7 @@ export { CenaLista } from "./CenaLista";
 export { CenaPerguntaChat } from "./CenaPerguntaChat";
 
 import type { CenaRemotion } from "../schema";
+import { CenaNoEstilo } from "../cenas-limpo";
 import { CenaFullscreen } from "./CenaFullscreen";
 import { CenaLowerThird } from "./CenaLowerThird";
 import { CenaCard } from "./CenaCard";
@@ -33,8 +34,19 @@ import { CenaFonte } from "./CenaFonte";
 import { CenaLista } from "./CenaLista";
 import { CenaPerguntaChat } from "./CenaPerguntaChat";
 
-/** Mapa de `tipo` → componente da v2 (nova identidade). */
+/**
+ * A cena no estilo do canal (D-916): escondida, no Bloco do estilo limpo, ou no
+ * desenho de sempre (`renderCenaAtual`). Fora de um `EstiloDasCenasProvider`
+ * vale o estilo de sempre, então quem não passa o estilo renderiza como antes.
+ */
 export function renderCenaV2(cena: CenaRemotion): React.ReactNode {
+  // Tipo sem desenho (o legado `mostrar_imagem`) continua não desenhando nada.
+  const atual = renderCenaAtual(cena);
+  return atual === null ? null : <CenaNoEstilo cena={cena} atual={atual} />;
+}
+
+/** Mapa de `tipo` → componente da v2 (nova identidade). */
+export function renderCenaAtual(cena: CenaRemotion): React.ReactNode {
   switch (cena.tipo) {
     case "tela_cheia":
       return <CenaFullscreen cena={cena} />;

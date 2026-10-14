@@ -23,6 +23,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Any
 
+from app.domain.canal import cards_do_canal
+from app.domain.canal.cards_do_canal import Cards
 from app.domain.compartilhado.erros import PedidoInvalido
 
 ESTILO_ATUAL = "atual"
@@ -135,6 +137,8 @@ class PalcoComponentes:
     """O que o short mostra em volta das janelas (`FUNDOS_DO_SHORT`)."""
     estilo_da_legenda: str = LEGENDA_CONTORNO
     """Como a legenda do short se separa do vídeo (`ESTILOS_DA_LEGENDA`)."""
+    cards: Cards = Cards()
+    """D-916: tipos de cena escondidos, tamanho e posição dos cards (`cards_do_canal`)."""
 
     @property
     def eco_no_short(self) -> bool:
@@ -155,6 +159,7 @@ class PalcoComponentes:
             "contorno_short": self.contorno_short,
             "fundo_short": self.fundo_short,
             "estilo_da_legenda": self.estilo_da_legenda,
+            "cards": self.cards.para_dict(),
             "cabecalho": {
                 "ativo": self.cabecalho.ativo,
                 "nome": self.cabecalho.nome,
@@ -317,6 +322,7 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
             ESTILOS_DA_LEGENDA,
             "Estilo da legenda",
         ),
+        cards=cards_do_canal.mesclar(atual.cards, mudancas.get("cards")),
     )
 
 
@@ -352,6 +358,9 @@ def normalizar(dados: Any) -> PalcoComponentes:
     ):
         if base.get(campo) is not None and str(base[campo]).strip().lower() not in opcoes:
             base.pop(campo)
+    if isinstance(base.get("cards"), dict):
+        # Lido do banco: tipo que deixou de existir some em vez de recusar.
+        base["cards"] = cards_do_canal.mesclar(Cards(), base["cards"], tolerante=True).para_dict()
     return mesclar(PADRAO, base)
 
 

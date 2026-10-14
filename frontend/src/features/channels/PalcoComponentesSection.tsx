@@ -16,6 +16,7 @@ import {
   type FundoDoShort,
   type PosicaoEditavel,
 } from './ControlesDoPalco';
+import { CardsDoCanal, type CardsEditaveis } from './CardsDoCanal';
 import { urlDaImagem } from './palcoDoCanal';
 import {
   useCanais,
@@ -62,6 +63,7 @@ export interface RascunhoDoPalco {
   contornoShort: number;
   fundoShort: FundoDoShort;
   estiloDaLegenda: EstiloDaLegenda;
+  cards: CardsEditaveis;
   cabecalhoAtivo: boolean;
   nome: string;
   handle: string;
@@ -80,6 +82,7 @@ export function rascunhoDe(palco: PalcoComponentes): RascunhoDoPalco {
     contornoShort: palco.contorno_short,
     fundoShort: palco.fundo_short === 'eco' ? 'eco' : 'palco',
     estiloDaLegenda: palco.estilo_da_legenda === 'sombra' ? 'sombra' : 'contorno',
+    cards: palco.cards,
     cabecalhoAtivo: palco.cabecalho.ativo,
     nome: palco.cabecalho.nome,
     handle: palco.cabecalho.handle,
@@ -99,6 +102,7 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
     contorno_short: rascunho.contornoShort,
     fundo_short: rascunho.fundoShort,
     estilo_da_legenda: rascunho.estiloDaLegenda,
+    cards: rascunho.cards,
     cabecalho: {
       ativo: rascunho.cabecalhoAtivo,
       nome: rascunho.nome,
@@ -150,6 +154,7 @@ export function PalcoComponentesForm(props: FormProps) {
         limpo={rascunho.estilo === 'limpo'}
         onMudar={(short) => onMudar({ ...rascunho, ...short })}
       />
+      <CardsDoCanal valor={rascunho.cards} tipos={props.palco.tipos_de_cena} onMudar={(cards) => onMudar({ ...rascunho, cards })} />
       <div className="flex justify-end">
         <Button type="submit" disabled={pendente}>
           {pendente ? 'Salvando…' : 'Salvar palco'}

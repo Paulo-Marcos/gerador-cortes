@@ -71,6 +71,8 @@ export interface ComponentesDoPalco {
   fundo_short: 'palco' | 'eco';
   /** D-913: a legenda do short com contorno (o de sempre) ou só sombra. */
   estilo_da_legenda: 'contorno' | 'sombra';
+  /** D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio. */
+  cards: { ocultos: string[]; escala: number; posicao: Posicao };
 }
 
 export const COMPONENTES_PADRAO: ComponentesDoPalco = {
@@ -89,6 +91,7 @@ export const COMPONENTES_PADRAO: ComponentesDoPalco = {
   contorno_short: 32,
   fundo_short: 'palco',
   estilo_da_legenda: 'contorno',
+  cards: { ocultos: [], escala: 1, posicao: { automatica: true, x: 96, y: 112 } },
 };
 
 /** A janela da prévia: recorta o vídeo com os cantos do estilo limpo e leva a sombra. */
@@ -149,4 +152,15 @@ export const CabecalhoDoCanal: FC<{
 /** D-913: o short leva o eco do vídeo nas faixas (só no estilo limpo, como no render). */
 export function temEcoNoShort(componentes: ComponentesDoPalco): boolean {
   return componentes.estilo === 'limpo' && componentes.fundo_short === 'eco';
+}
+
+/**
+ * D-916: o `estiloCenas` que a prévia do editor passa às cenas — o mesmo que o
+ * backend manda ao render (`cards_do_canal.props_para_renderer`). Esconder o
+ * comparativo esconde também o apelido dele.
+ */
+export function estiloDasCenasDe(componentes: ComponentesDoPalco = COMPONENTES_PADRAO) {
+  const { ocultos, escala, posicao } = componentes.cards;
+  const comApelido = ocultos.includes('comparativo_contraponto') ? [...ocultos, 'comparativo_enfase'] : ocultos;
+  return { estilo: componentes.estilo, ocultos: comApelido, escala, posicao };
 }
