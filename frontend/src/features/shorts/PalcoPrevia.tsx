@@ -152,13 +152,13 @@ export function PalcoPrevia({ plano, video, children }: Props) {
             <div style={{ position: 'relative', width: largura, height: altura }}>
               {plano.recortes.map((recorte) => (
                 <div
-                  key={`${recorte.recorta.x}-${recorte.recorta.y}-${recorte.recorta.w}`}
+                  key={`${recorte.janela.x}-${recorte.janela.y}-${recorte.janela.w}`}
                   style={{
                     position: 'absolute',
-                    left: recorte.recorta.x,
-                    top: recorte.recorta.y,
-                    width: recorte.recorta.w,
-                    height: recorte.recorta.h,
+                    left: recorte.janela.x,
+                    top: recorte.janela.y,
+                    width: recorte.janela.w,
+                    height: recorte.janela.h,
                   }}
                 >
                   {/* D-559: linha fina e SEM brackets — os mesmos parâmetros
@@ -172,9 +172,9 @@ export function PalcoPrevia({ plano, video, children }: Props) {
                       dentro da outra. Os cantos são a assinatura do PALCO; o
                       que a janela leva é só o fio que a separa do fundo. */}
                   <CardChrome
-                    width={recorte.recorta.w}
-                    height={recorte.recorta.h}
-                    opts={optsDa(recorte.recorta, largura, altura)}
+                    width={recorte.janela.w}
+                    height={recorte.janela.h}
+                    opts={optsDa(recorte.janela, largura, altura)}
                     outlineScale={0.3}
                     showBrackets={false}
                   />
@@ -259,8 +259,16 @@ function CamadaDoPalcoLimpo({
   componentes: ComponentesDoPalco;
   video: RefObject<HTMLVideoElement | null>;
 }) {
-  const posicao = posicaoDoCabecalhoNoShortDe(componentes, plano.recortes[0]?.recorta);
-  const todas = plano.recortes.map((recorte) => recorte.recorta);
+  // D-936: as janelas do RENDER (o que o vídeo ocupa), não o slot reservado —
+  // em CABER os dois diferem pela tarja, e a prévia mentia os pixels dela.
+  const todas = plano.recortes.map((recorte) => recorte.janela);
+  const posicao = posicaoDoCabecalhoNoShortDe(
+    componentes,
+    todas,
+    largura,
+    altura,
+    componentes.contorno_short,
+  );
   // D-913: com eco, o fundo é o vídeo desfocado por baixo, e não a textura.
   const eco = temEcoNoShort(componentes);
   return (
@@ -292,6 +300,7 @@ function CamadaDoPalcoLimpo({
               nome={componentes.cabecalho.nome}
               handle={componentes.cabecalho.handle}
               imagemSrc={componentes.cabecalho.imagemUrl || undefined}
+              comPilula={posicao.sobreOVideo}
             />
           ) : null}
         </div>
@@ -328,10 +337,10 @@ function useDesenhoDosRecortes(
       // LIMPA, não preenche: o que estiver fora dos recortes tem de deixar a
       // textura do fundo aparecer, como as janelas vazadas do PNG do render.
       ctx.clearRect(0, 0, tela.width, tela.height);
-      const todas = plano.recortes.map((recorte) => recorte.recorta);
+      const todas = plano.recortes.map((recorte) => recorte.janela);
 
       for (const recorte of plano.recortes) {
-        const { origem, destino, recorta } = recorte;
+        const { origem, destino, janela } = recorte;
         ctx.save();
         // O clip é o que faz o excesso do COBRIR ficar de fora — o destino
         // começa fora do slot de propósito, exatamente como no filtergraph.
@@ -349,11 +358,11 @@ function useDesenhoDosRecortes(
         // a mesma dos dois lados — nada de reimplementar o chanfro em canvas.
         // De `plano.canvas`, e não das constantes desestruturadas lá embaixo:
         // o efeito depende de `plano`, e ler daqui mantém a dependência única.
-        ctx.translate(recorta.x, recorta.y);
-        ctx.clip(caminhoDaJanela(recorta, todas, plano.canvas, contornoLimpo));
+        ctx.translate(janela.x, janela.y);
+        ctx.clip(caminhoDaJanela(janela, todas, plano.canvas, contornoLimpo));
         // Volta ao referencial do quadro: o clip já ficou gravado onde estava,
         // e `destino` vem em coordenadas do canvas.
-        ctx.translate(-recorta.x, -recorta.y);
+        ctx.translate(-janela.x, -janela.y);
         ctx.drawImage(
           fonte,
           origem.x,

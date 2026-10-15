@@ -9308,6 +9308,9 @@
           "destino": {
             "$ref": "#/components/schemas/RetanguloEmPixels"
           },
+          "janela": {
+            "$ref": "#/components/schemas/RetanguloEmPixels"
+          },
           "origem": {
             "$ref": "#/components/schemas/RetanguloEmPixels"
           },
@@ -9323,7 +9326,8 @@
           "regiao",
           "origem",
           "destino",
-          "recorta"
+          "recorta",
+          "janela"
         ],
         "title": "RecorteDesenhavel",
         "type": "object"

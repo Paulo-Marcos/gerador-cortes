@@ -295,6 +295,7 @@ class RecorteDesenhavel(RespostaApi):
     origem: RetanguloEmPixels
     destino: RetanguloEmPixels
     recorta: RetanguloEmPixels
+    janela: RetanguloEmPixels
 
 
 class FaixaDaMoldura(RetanguloEmPixels):
