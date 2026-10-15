@@ -43,7 +43,7 @@ export function MenuDoModal({
           className={cn(
             'flex flex-col items-center gap-1 rounded-[var(--radius-sm)] px-1 py-2 text-[11px] font-semibold transition-colors',
             ativo === grupo
-              ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+              ? 'bg-[var(--sel-bg)] text-[var(--sel-ink)]'
               : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]',
           )}
         >

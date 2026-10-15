@@ -87,7 +87,7 @@ export function ComponentesArrastaveis({
             onPointerCancel={arraste.soltar}
             className={cn(
               'absolute cursor-grab border-2 border-dashed transition-colors',
-              selecionado ? 'border-[var(--wb-accent)]' : 'border-transparent hover:border-[var(--wb-border)]',
+              selecionado ? 'border-[var(--sel-line)]' : 'border-transparent hover:border-[var(--wb-border)]',
             )}
             style={{
               left: `${(caixa.x / 1920) * 100}%`,
@@ -98,7 +98,7 @@ export function ComponentesArrastaveis({
           >
             {selecionado && (
               <>
-                <span className="pointer-events-none absolute -top-5 left-0 rounded-sm bg-[var(--wb-accent)] px-1 font-code text-[11px] font-bold text-[var(--wb-accent-fg)]">
+                <span className="pointer-events-none absolute -top-5 left-0 rounded-sm bg-[var(--sel-bg)] px-1 font-code text-[11px] font-bold text-[var(--sel-ink)]">
                   {NOMES[componente]} {Math.round(edicao.escala(componente) * 100)}%
                 </span>
                 <AlcaDeTamanho
@@ -116,6 +116,15 @@ export function ComponentesArrastaveis({
   );
 }
 
+/** Prende o ponteiro no elemento; um ponteiro que já não existe não derruba o arraste. */
+export function capturar(event: PointerEvent<HTMLElement>) {
+  try {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  } catch {
+    // ponteiro já solto (ou sintético): segue sem captura
+  }
+}
+
 /** Mover leva o canto de cima à esquerda junto com o mouse; a alça escala pela largura. */
 function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edicao: EdicaoDosComponentes) {
   const atual = useRef<{
@@ -130,10 +139,11 @@ function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edica
     comecar:
       (componente: ComponenteDoPalco, caixa: Caixa, modo: 'mover' | 'redimensionar') =>
       (event: PointerEvent<HTMLElement>) => {
+        // A alça fica dentro da caixa: parar antes de tudo, senão o "mover" da caixa assume.
+        event.stopPropagation();
         atual.current = { componente, modo, x0: event.clientX, y0: event.clientY, caixa, escala: edicao.escala(componente) };
         edicao.onSelecionar?.(componente);
-        event.currentTarget.setPointerCapture(event.pointerId);
-        event.stopPropagation();
+        capturar(event);
       },
     mover: (event: PointerEvent<HTMLElement>) => {
       const a = atual.current;

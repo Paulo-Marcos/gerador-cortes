@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
+import { AjustesDosCards, TiposDeCard } from '@/features/channels/CardsDoCanal';
 import { PainelDoComponente } from '@/features/channels/PalcoDoTipoNoModal';
 import type { usePalcoDoModal } from '@/features/channels/usePalcoDoModal';
 import { cn } from '@/lib/utils';
@@ -46,7 +47,23 @@ export function PainelDoPalco({ grupo, ...ctx }: ContextoDoPalco & { grupo: 'fun
       </div>
     );
   }
+  if (grupo === 'cards') {
+    return doCanal ?? (palco.rascunho ? <AjustesDosCards valor={palco.rascunho.cards} onMudar={(cards) => palco.mudar((r) => r && { ...r, cards })} /> : null);
+  }
   return doCanal ?? componente(grupo);
+}
+
+/** D-927: embaixo da prévia, o que não cabe na coluna — os tipos de card, em várias colunas. */
+export function AbaixoDaPrevia({ grupo, palco, global }: Pick<ContextoDoPalco, 'palco' | 'global'> & { grupo: string }) {
+  if (grupo !== 'cards' || global || !palco.rascunho || !palco.efetivo) return null;
+  return (
+    <TiposDeCard
+      valor={palco.rascunho.cards}
+      tipos={palco.efetivo.tipos_de_cena}
+      colunas="grid-cols-3 xl:grid-cols-5"
+      onMudar={(cards) => palco.mudar((r) => r && { ...r, cards })}
+    />
+  );
 }
 
 function AjusteNoCanal() {

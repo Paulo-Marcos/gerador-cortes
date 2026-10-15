@@ -34,7 +34,7 @@ import {
   type SharedRectKey,
 } from './posicionamentoControls';
 import { NomeDoPresetDialog } from './NomeDoPresetDialog';
-import { PainelDoPalco } from './PaineisDoPalco';
+import { AbaixoDaPrevia, PainelDoPalco } from './PaineisDoPalco';
 import { PainelDasTelas } from './PainelDasTelas';
 import { MenuDoModal, gruposDoModal, type GrupoDoModal } from './MenuDoModal';
 import { PreviaQueCabe } from './PreviaQueCabe';
@@ -517,6 +517,7 @@ export function PosicionamentoModal({
                 />
               )}
             </PreviaQueCabe>
+            <AbaixoDaPrevia grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} />
             <p className="font-code text-[11px] leading-snug text-[var(--wb-text-dim)]">
               {cropNaPrevia
                 ? 'Quadro do vídeo no tempo atual: clique Desenhar e arraste para definir o recorte.'

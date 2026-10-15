@@ -14,6 +14,16 @@ export interface PosicaoEditavel {
   y: number;
 }
 
+/**
+ * D-927: o número que o campo confirma ao sair dele — preso entre `min` e `max`;
+ * vazio ou texto inválido não muda nada (null).
+ */
+export function numeroConfirmado(texto: string | null, min: number, max: number): number | null {
+  if (texto === null || texto.trim() === '') return null;
+  const numero = Number(texto);
+  return Number.isFinite(numero) ? Math.max(min, Math.min(max, numero)) : null;
+}
+
 /** Um número com rótulo e unidade, preso entre `min` e `max`. */
 export function CampoNumero({
   id,
@@ -36,10 +46,8 @@ export function CampoNumero({
   // do campo — prender a cada tecla fazia o "3" de "300" virar o mínimo.
   const [texto, setTexto] = useState<string | null>(null);
   const confirmar = () => {
-    const numero = Number(texto);
-    if (texto !== null && texto.trim() !== '' && Number.isFinite(numero)) {
-      onMudar(Math.max(min, Math.min(max, numero)));
-    }
+    const numero = numeroConfirmado(texto, min, max);
+    if (numero !== null) onMudar(numero);
     setTexto(null);
   };
   return (

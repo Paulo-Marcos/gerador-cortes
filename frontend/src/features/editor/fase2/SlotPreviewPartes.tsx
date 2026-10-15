@@ -44,11 +44,15 @@ export function useArrastarRetangulo<K extends string>({
   const [dragKey, setDragKey] = useState<K | null>(null);
 
   const comecar = (key: K, modo: 'mover' | 'redimensionar') => (event: PointerEvent<HTMLElement>) => {
+    event.stopPropagation();
     if (!frameRef.current) return;
     dragRef.current = { key, modo, startX: event.clientX, startY: event.clientY, inicial: rectDe(key) };
     setDragKey(key);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    event.stopPropagation();
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // ponteiro já solto (ou sintético): segue sem captura
+    }
   };
 
   const onMove = (event: PointerEvent<HTMLElement>) => {
