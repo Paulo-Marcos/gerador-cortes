@@ -80,16 +80,17 @@ describe('rascunho do estilo da capa', () => {
 
 describe('prévia da capa', () => {
   it('monta os props do renderer: arte vira frame e o texto em caixa alta', () => {
-    const props = propsDaPrevia(painel(), 'o juro composto');
+    const props = propsDaPrevia(painel(), 'o juro composto', 'data:image/png;base64,AAA');
     expect(props.faixas.frame).toEqual(faixa(512));
     expect(props.etiqueta).toBe('O JURO COMPOSTO');
     expect(props.estilo).toBe('atual');
     expect(props.cabecalho).toBeUndefined();
+    expect(props.frameDataUri).toBe('data:image/png;base64,AAA');
   });
 
   it('com o cabeçalho ligado no limpo, ele segue para a composição', () => {
     const visiveis = { etiqueta: true, arte: true, selo: true, cabecalho: true, acento: false };
-    const props = propsDaPrevia(painel({ estilo: 'limpo', visiveis }), 'x');
+    const props = propsDaPrevia(painel({ estilo: 'limpo', visiveis }), 'x', '');
     expect(props.estilo).toBe('limpo');
     expect(props.cabecalho?.nome).toBe('Canal');
   });

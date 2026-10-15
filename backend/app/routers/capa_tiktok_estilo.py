@@ -69,7 +69,9 @@ class PainelDoEstiloDaCapaTiktok(RespostaApi):
 async def _painel(corte_id: str, rascunho: dict | None = None) -> dict:
     # O projeto vem do banco, nunca da requisição: ele vira caminho de arquivo.
     projeto_id, corte_id = await estilo_da_capa.corte_conferido(corte_id)
-    arte = capa_tiktok.arte_do_corte(projeto_id, corte_id)
+    # A prévia é pedida a cada gesto do modal: a arte (megabytes em base64) já
+    # veio no GET e não viaja de novo.
+    arte = None if rascunho is not None else capa_tiktok.arte_do_corte(projeto_id, corte_id)
     # Lê a arte e o settings.db: fora do event loop.
     painel = await asyncio.to_thread(estilo_da_capa.painel, projeto_id, corte_id, arte, rascunho)
     return {

@@ -32,6 +32,8 @@ export function PresetsDaCapa({
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [nome, setNome] = useState('');
 
+  const erro = salvar.error ?? atualizar.error ?? remover.error;
+
   const abrir = (qual: Exclude<Dialogo, null>) => {
     setNome(qual === 'renomear' ? (presets.find((p) => p.id === selecionado)?.nome ?? '') : '');
     setDialogo(qual);
@@ -69,6 +71,7 @@ export function PresetsDaCapa({
         <Icon name="bookmark" />
         Salvar como preset
       </Button>
+      {erro && <p className="w-full text-[11px] text-[var(--wb-err)]">{erro.message}</p>}
       {dialogo && (
         <NomeDoPresetDialog
           titulo={dialogo === 'novo' ? 'Novo preset da capa' : 'Renomear preset'}

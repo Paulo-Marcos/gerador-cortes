@@ -64,9 +64,12 @@ export function blocosVisiveis(painel: PainelDaCapa): Record<string, Retangulo> 
   return Object.fromEntries(Object.entries(faixas).filter(([componente]) => visiveis[componente]));
 }
 
-/** Os props da composição do renderer para a prévia — os mesmos do PNG. */
-export function propsDaPrevia(painel: PainelDaCapa, etiqueta: string): CapaTikTokProps {
-  const { arte, ...faixas } = painel.efetivo.faixas;
+/**
+ * Os props da composição do renderer para a prévia — os mesmos do PNG. A arte
+ * vem à parte: só o GET a traz, a prévia do rascunho não a repete.
+ */
+export function propsDaPrevia(painel: PainelDaCapa, etiqueta: string, arte: string): CapaTikTokProps {
+  const { arte: faixaDaArte, ...faixas } = painel.efetivo.faixas;
   const visiveis = painel.efetivo.visiveis;
   return {
     estilo: painel.efetivo.estilo === 'limpo' ? 'limpo' : 'atual',
@@ -74,8 +77,8 @@ export function propsDaPrevia(painel: PainelDaCapa, etiqueta: string): CapaTikTo
     fundo: painel.fundo_do_atual as CapaTikTokProps['fundo'],
     etiqueta: etiqueta.toUpperCase(),
     selo: painel.cabecalho.handle,
-    frameDataUri: painel.arte,
-    faixas: { ...faixas, frame: arte } as CapaTikTokProps['faixas'],
+    frameDataUri: arte,
+    faixas: { ...faixas, frame: faixaDaArte } as CapaTikTokProps['faixas'],
     visiveis,
     cabecalho: visiveis.cabecalho ? painel.cabecalho : undefined,
   };

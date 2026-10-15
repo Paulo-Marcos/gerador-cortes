@@ -86,6 +86,7 @@ export function EstiloDaCapaModal({
           <PreviaDaCapa
             painel={painel}
             etiqueta={etiqueta}
+            arte={salvo.data?.arte ?? ''}
             onSoltar={(componente, retangulo) => setRascunho(comPosicao(atual, componente, retangulo))}
           />
           <div className="grid min-w-[260px] flex-1 content-start gap-4">

@@ -15,10 +15,13 @@ const pct = (valor: number, total: number) => `${(valor / total) * 100}%`;
 export function PreviaDaCapa({
   painel,
   etiqueta,
+  arte,
   onSoltar,
 }: {
   painel: PainelDaCapa;
   etiqueta: string;
+  /** A arte do corte em data URI, do GET do painel. */
+  arte: string;
   onSoltar: (componente: ComponenteDaCapa, retangulo: Retangulo) => void;
 }) {
   const { quadro, faixa_segura: seguro } = painel;
@@ -29,7 +32,7 @@ export function PreviaDaCapa({
     >
       <Thumbnail
         component={CapaTikTok}
-        inputProps={propsDaPrevia(painel, etiqueta)}
+        inputProps={propsDaPrevia(painel, etiqueta, arte)}
         compositionWidth={LARGURA_DA_CAPA}
         compositionHeight={ALTURA_DA_CAPA}
         frameToDisplay={0}

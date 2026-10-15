@@ -221,6 +221,17 @@ def test_previa_mostra_o_rascunho_sem_gravar(cliente):
     assert estilo_da_capa.ler_salvo() == {}
 
 
+def test_previa_nao_repete_a_arte(cliente, monkeypatch, tmp_path: Path):
+    """A prévia roda a cada gesto; a arte (megabytes) só vem no GET."""
+    arte = tmp_path / "arte.png"
+    arte.write_bytes(b"png fake")
+    monkeypatch.setattr(capa_tiktok, "arte_do_corte", lambda *_: arte)
+    painel = cliente.get("/api/capa-tiktok/estilo", params={"corte_id": "c1"}).json()
+    previa = cliente.post("/api/capa-tiktok/estilo/previa", json=_corpo(estilo="limpo")).json()
+    assert painel["arte"].startswith("data:image/png;base64,")
+    assert previa["arte"] == ""
+
+
 def test_gravar_pelo_modal_vale_para_o_canal(cliente):
     gravado = cliente.put("/api/capa-tiktok/estilo", json=_corpo(estilo="limpo", fundo="linho"))
     assert gravado.status_code == 200
