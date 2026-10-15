@@ -43,6 +43,7 @@ from app.domain.corte.capa_tiktok import etiqueta_da_resposta, etiqueta_herdada,
 from app.domain.corte.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
+from app.services import estilo_da_capa
 from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from app.services.channels import identidade_do_canal_ativo
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
@@ -106,7 +107,7 @@ async def gerar(
     """
     contexto = await _contexto(corte_id, exigir_video=origem == ORIGEM_FRAME)
 
-    faixas = layout_capa.montar_layout(_ajuste_do_layout())
+    faixas = layout_capa.montar_layout(estilo_da_capa.ajuste_do_layout())
     texto = layout_capa.normalizar_etiqueta(etiqueta or contexto["texto_capa"])
 
     destino = contexto["thumb_dir"] / f"{NOME_DA_CAPA}_{corte_id[:8]}.png"
@@ -137,6 +138,7 @@ async def gerar(
             "selo": contexto["selo"],
             "frameDataUri": _data_uri(imagem),
             "faixas": faixas.como_dict(),
+            **estilo_da_capa.estilo_do_palco(contexto["projeto_id"], corte_id),
         }
         await _rasterizar(destino, props)
 
@@ -251,21 +253,6 @@ async def sugerir_etiqueta(corte_id: str, provider: ProviderIA = "claude") -> st
         corte_id=corte_id,
     )
     return etiqueta_da_resposta(bruto)
-
-
-def _ajuste_do_layout() -> dict:
-    """Onde o operador pôs cada componente, das configurações globais (D-532).
-
-    JSON inválido vira `{}` — a capa sai no padrão em vez de não sair. Config de
-    posição não é motivo para uma capa falhar.
-    """
-    from app.services.app_settings import AppSettingsService
-
-    try:
-        return json.loads(AppSettingsService.get().capa_tiktok_layout or "{}")
-    except (ValueError, TypeError):
-        logger.warning("[CapaTikTok] layout salvo nao e um JSON valido; usando o padrao")
-        return {}
 
 
 async def tem_texto_de_capa(corte_id: str) -> bool:
