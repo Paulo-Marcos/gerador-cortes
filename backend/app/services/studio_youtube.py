@@ -28,11 +28,14 @@ from app.domain.publicacao.studio_youtube import (
     TRECHO_DO_LOGIN,
     URL_DO_STUDIO,
     TarefaNoStudio,
+    a_monetizar,
+    atualizados_do_aviso,
+    canal_da_url,
     esta_monetizado,
     juntar,
     tarefa_do_upload,
     url_da_edicao,
-    url_da_monetizacao,
+    url_da_lista,
 )
 from app.infrastructure import studio_youtube_store
 from app.services import janela_do_robo, navegador_assistido, navegador_do_robo
@@ -47,17 +50,32 @@ RESPIRO_ANTES_DE_COMECAR = 45
 PRAZO_PARA_ABRIR = 60
 PRAZO_PARA_O_CAMPO = 30
 PRAZO_PARA_SALVAR = 30
+# Medido em 15/10/2026: 1 vídeo levou ~12 s entre o "Update videos" e o aviso.
+# O Studio processa a fila dele em lote; folga para um lote de shorts inteiro.
+PRAZO_DA_ATUALIZACAO = 300
+PRAZO_POR_LINHA = 5
 INTERVALO_DE_CONFERENCIA = 1
 
-# Medidos no Studio real em 08/10/2026, numa janela logada no canal: ids e
-# componentes, nada de texto — o Studio da janela do robô pode estar em inglês.
+# Medidos no Studio real, numa janela logada no canal: ids, componentes e
+# `test-id`, nada de texto — o Studio da janela do robô pode estar em inglês.
+#
+# A monetização vai pela EDIÇÃO EM MASSA da lista de Conteúdo (D-935, medida em
+# 15/10/2026): marcar as linhas → Editar → Monetização (já vem "On") → Update
+# videos → "I understand..." → Update videos. Pela página de cada vídeo (D-895)
+# o Studio pedia preenchimentos a mais e o robô não terminava.
+#
 # O cartão do relacionado não tem `<img>`: a miniatura é `background-image`
 # inline num `div.thumbnail`, com o id do vídeo no endereço (ver
 # `clicar_cartao_do_video`). Escolher o cartão já fecha a lista.
 SELETORES: dict[str, str] = {
-    "seletor_de_monetizacao": "ytcp-video-monetization",
-    "opcao_ativada": "ytcp-video-monetization-edit-dialog #radio-on",
-    "concluido": "ytcp-video-monetization-edit-dialog #save-button",
+    "linha_do_video": "ytcp-video-row",
+    "editar_em_massa": "ytcp-bulk-actions ytcp-select",
+    "item_monetizacao": 'tp-yt-paper-item[test-id="MONETIZATION"]',
+    "opcao_em_massa": "ytpp-bulk-actions-editor-monetization ytcp-select",
+    "atualizar_videos": "ytcp-bulk-actions #submit-button",
+    "entendo": "ytcp-confirmation-dialog #confirm-checkbox",
+    "confirmar": "ytcp-confirmation-dialog #confirm-button",
+    "aviso": "tp-yt-paper-toast#paper-toast",
     "salvar": "ytcp-button#save",
     "video_relacionado": "ytcp-shorts-content-links-picker #linked-video-editor-link",
     "busca_do_relacionado": "ytcp-video-pick-dialog #search-yours",
@@ -78,7 +96,9 @@ class PaginaDoStudio(Protocol):
     def clicar(self, alvo: str, *, segundos: float) -> None: ...
     def escrever(self, alvo: str, texto: str, *, segundos: float) -> None: ...
     def clicar_cartao_do_video(self, alvo: str, video_id: str, *, segundos: float) -> None: ...
+    def marcar_video(self, alvo: str, video_id: str, *, segundos: float) -> bool: ...
     def habilitado(self, alvo: str) -> bool: ...
+    def aguardar(self, segundos: float) -> None: ...
     def fechar(self) -> None: ...
 
 
@@ -94,12 +114,37 @@ class PaginaDoPlaywrightNoStudio(navegador_assistido.PaginaDoPlaywright):
         cartao = self._page.locator(f'{self._css(alvo)}:has([style*="/vi/{video_id}/"])')
         cartao.first.click(timeout=segundos * 1000)
 
+    def marcar_video(self, alvo: str, video_id: str, *, segundos: float) -> bool:
+        """Marca a linha do vídeo na lista de Conteúdo; `False` se ela não está na página.
+
+        Pelo link da linha (`/video/<id>/edit`). O clique vai no componente e não
+        no `#checkbox`: medido, o contêiner por cima intercepta o clique nele.
+        """
+        linha = self._page.locator(f'{self._css(alvo)}:has(a[href*="/video/{video_id}/"])').first
+        try:
+            linha.wait_for(state="visible", timeout=segundos * 1000)
+        except Exception:  # noqa: BLE001 — fora da primeira página: resposta, não erro
+            return False
+        caixa = linha.locator("ytcp-checkbox-lit").first
+        if caixa.locator("#checkbox").get_attribute("aria-checked") != "true":
+            caixa.click(timeout=segundos * 1000)
+        return True
+
     def habilitado(self, alvo: str) -> bool:
         try:
             botao = self._page.locator(self._css(alvo)).first
             return botao.is_enabled() and botao.get_attribute("aria-disabled") != "true"
         except Exception:  # noqa: BLE001 — botão sumiu: não há o que salvar
             return False
+
+    def aguardar(self, segundos: float) -> None:
+        """Espera DENTRO do Playwright, e não com `time.sleep`.
+
+        Medido em 15/10/2026: no Playwright síncrono, a URL e os eventos da página
+        só chegam quando o código fala com o navegador. Com `time.sleep` no laço,
+        o redirecionamento do Studio para `/channel/<id>` (1,5 s) nunca era visto.
+        """
+        self._page.wait_for_timeout(segundos * 1000)
 
     def fechar(self) -> None:
         try:
@@ -134,7 +179,7 @@ def gravar_configuracao(*, monetizar: bool, relacionar_short: bool) -> dict:
 # --------------------------------------------------------------------------- #
 
 
-def agendar(video_id: str, *, relacionado: str = "") -> None:
+def agendar(video_id: str, *, relacionado: str = "", short: bool = False) -> None:
     """Põe o vídeo recém-subido na fila do Studio, se o canal pediu (RN-27).
 
     NUNCA levanta: quando isto roda, o vídeo já está no canal, e derrubar o
@@ -148,6 +193,7 @@ def agendar(video_id: str, *, relacionado: str = "") -> None:
             relacionado=relacionado,
             monetizar=config["monetizar"],
             relacionar=config["relacionar_short"],
+            short=short,
         )
         if tarefa.vazia:
             return
@@ -179,17 +225,46 @@ async def _esvaziar() -> None:
 
 
 def executar_roteiro(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> list[str]:
-    """Visita cada vídeo e devolve o que não deu — uma falha não para os outros.
+    """Monetiza o lote em massa e depois liga o relacionado de cada short.
 
-    Sessão caída para tudo: todo vídeo seguinte falharia do mesmo jeito.
+    Devolve o que não deu. A aba só fecha quando tudo deu certo: é nela que o
+    operador lê o motivo.
     """
+    falhas = _monetizar_tudo(pagina, tarefas)
+    if not _pediu_login(pagina):
+        falhas += _relacionar_todos(pagina, tarefas)
+    if not falhas:
+        pagina.fechar()
+    return falhas
+
+
+def _monetizar_tudo(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> list[str]:
+    """Uma edição em massa por aba: Vídeos (os cortes) e Shorts."""
+    if not any(t.monetizar for t in tarefas):
+        return []
+    try:
+        canal = _canal(pagina)
+        falhas: list[str] = []
+        for shorts in (False, True):
+            ids = a_monetizar(tarefas, shorts=shorts)
+            if ids:
+                falhas += monetizar_em_massa(pagina, canal, ids, shorts=shorts)
+        return falhas
+    except ServicoExternoFalhou as exc:
+        return [f"monetização: {exc}"]
+    except Exception as exc:  # noqa: BLE001 — tela mudou: dizer onde parou
+        motivo = (str(exc).splitlines() or [type(exc).__name__])[0]
+        return [f"monetização: o robô parou na lista do Studio ({motivo})"]
+
+
+def _relacionar_todos(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> list[str]:
+    """Um short por vez — o relacionado não existe na edição em massa."""
     falhas: list[str] = []
     for tarefa in tarefas:
+        if not tarefa.relacionado:
+            continue
         try:
-            if tarefa.monetizar:
-                monetizar(pagina, tarefa.video_id)
-            if tarefa.relacionado:
-                relacionar(pagina, tarefa.video_id, tarefa.relacionado)
+            relacionar(pagina, tarefa.video_id, tarefa.relacionado)
         except ServicoExternoFalhou as exc:
             falhas.append(f"{tarefa.video_id}: {exc}")
             if _pediu_login(pagina):
@@ -197,24 +272,78 @@ def executar_roteiro(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> l
         except Exception as exc:  # noqa: BLE001 — tela mudou: dizer onde parou e seguir
             motivo = (str(exc).splitlines() or [type(exc).__name__])[0]
             falhas.append(f"{tarefa.video_id}: o robô parou no Studio ({motivo})")
-    if not falhas:
-        pagina.fechar()
     return falhas
 
 
-def monetizar(pagina: PaginaDoStudio, video_id: str) -> None:
-    """Aba Monetização → Ativada → Concluído → Salvar. Já ativada não mexe."""
-    _abrir(pagina, url_da_monetizacao(video_id))
-    if not pagina.existe("seletor_de_monetizacao", segundos=PRAZO_PARA_O_CAMPO):
-        raise ServicoExternoFalhou(
-            "não achei a monetização do vídeo — o canal está no Programa de Parcerias?"
-        )
-    if esta_monetizado(pagina.texto_de("seletor_de_monetizacao")):
-        return
-    pagina.clicar("seletor_de_monetizacao", segundos=PRAZO_PARA_O_CAMPO)
-    pagina.clicar("opcao_ativada", segundos=PRAZO_PARA_O_CAMPO)
-    pagina.clicar("concluido", segundos=PRAZO_PARA_O_CAMPO)
-    _salvar(pagina)
+def _canal(pagina: PaginaDoStudio) -> str:
+    """O id do canal: a página inicial do Studio redireciona para `/channel/<id>`."""
+    _abrir(pagina, URL_DO_STUDIO)
+    limite = time.monotonic() + PRAZO_PARA_ABRIR
+    while time.monotonic() < limite:
+        canal = canal_da_url(pagina.url_atual())
+        if canal:
+            return canal
+        if _pediu_login(pagina):
+            break
+        pagina.aguardar(INTERVALO_DE_CONFERENCIA)
+    raise ServicoExternoFalhou(
+        "o Studio não abriu o canal — faça login na conta do canal na janela do robô"
+    )
+
+
+def monetizar_em_massa(
+    pagina: PaginaDoStudio, canal: str, ids: list[str], *, shorts: bool
+) -> list[str]:
+    """Marca os vídeos na lista → Editar → Monetização On → Update videos → confirma.
+
+    Devolve o que ficou de fora: vídeo fora da primeira página da aba (o lote
+    recém-subido está no topo) ou o Studio atualizando menos do que pedimos.
+    """
+    aba = "Shorts" if shorts else "Vídeos"
+    _abrir(pagina, url_da_lista(canal, shorts=shorts))
+    if not pagina.existe("linha_do_video", segundos=PRAZO_PARA_ABRIR):
+        raise ServicoExternoFalhou(f"a aba {aba} da lista de Conteúdo não carregou")
+    marcados = [
+        v for v in ids if pagina.marcar_video("linha_do_video", v, segundos=PRAZO_POR_LINHA)
+    ]
+    faltando = [f"{v}: não está na primeira página da aba {aba}" for v in ids if v not in marcados]
+    if not marcados:
+        return faltando
+    pagina.clicar("editar_em_massa", segundos=PRAZO_PARA_O_CAMPO)
+    pagina.clicar("item_monetizacao", segundos=PRAZO_PARA_O_CAMPO)
+    if not esta_monetizado(pagina.texto_de("opcao_em_massa")):
+        raise ServicoExternoFalhou("a edição em massa não ofereceu Monetização: On")
+    pagina.clicar("atualizar_videos", segundos=PRAZO_PARA_O_CAMPO)
+    pagina.clicar("entendo", segundos=PRAZO_PARA_O_CAMPO)
+    _esperar_habilitado(pagina, "confirmar")
+    pagina.clicar("confirmar", segundos=PRAZO_PARA_O_CAMPO)
+    atualizados, total = _esperar_aviso(pagina)
+    if atualizados < total:
+        faltando.append(f"o Studio atualizou {atualizados} de {total} na aba {aba}")
+    return faltando
+
+
+def _esperar_habilitado(pagina: PaginaDoStudio, alvo: str) -> None:
+    """O "Update videos" da confirmação só acende depois do "I understand"."""
+    limite = time.monotonic() + PRAZO_PARA_O_CAMPO
+    while time.monotonic() < limite:
+        if pagina.habilitado(alvo):
+            return
+        pagina.aguardar(INTERVALO_DE_CONFERENCIA)
+    raise ServicoExternoFalhou("o Studio não liberou a confirmação da edição em massa")
+
+
+def _esperar_aviso(pagina: PaginaDoStudio) -> tuple[int, int]:
+    """Até o aviso "N of M video(s) successfully updated" — o Studio dizendo que terminou."""
+    limite = time.monotonic() + PRAZO_DA_ATUALIZACAO
+    while time.monotonic() < limite:
+        contagem = atualizados_do_aviso(pagina.texto_de("aviso"))
+        if contagem:
+            return contagem
+        pagina.aguardar(INTERVALO_DE_CONFERENCIA)
+    raise ServicoExternoFalhou(
+        "o Studio não confirmou a monetização em massa — confira na janela do robô"
+    )
 
 
 def relacionar(pagina: PaginaDoStudio, short_id: str, longo_id: str) -> None:
@@ -255,7 +384,7 @@ def _salvar(pagina: PaginaDoStudio) -> None:
     while time.monotonic() < limite:
         if not pagina.habilitado("salvar"):
             return
-        time.sleep(INTERVALO_DE_CONFERENCIA)
+        pagina.aguardar(INTERVALO_DE_CONFERENCIA)
     raise ServicoExternoFalhou("o Studio não confirmou o Salvar — confira na janela do robô")
 
 
