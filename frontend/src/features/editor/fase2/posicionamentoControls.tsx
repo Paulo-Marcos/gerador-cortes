@@ -6,30 +6,26 @@
  * o painel inline foi substituido pelo modal.
  */
 
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
   sharedVerticalCardZone,
-  type YoutubeBackgroundId,
-  type YoutubePlaca,
   type YoutubeSharedConfig,
   type YoutubeSharedRect,
   type YoutubeSharedScreenCount,
 } from '@/shared/palco/youtubeLayout';
-import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
-import { limitar } from '@/lib/limitar';
 import { Icon } from '@/upgrade/Icon';
-import { PalcoDoSlotPreview } from './PalcoDoSlotPreview';
-import { SlotDragOverlay, redimensionarNoPalco, useArrastarRetangulo } from './SlotPreviewPartes';
-import { ComponentesArrastaveis, type EdicaoDosComponentes } from './ComponentesArrastaveis';
+
+// D-928: a prévia e o recorte moraram aqui; quem importa por este caminho continua valendo.
+export { SlotPreview, type DragRectKey } from './SlotPreview';
+export { CropPicker } from './CropPicker';
 
 export type SharedRectKey = Exclude<keyof YoutubeSharedConfig, 'telas'>;
 export type CropRectKey = 'crop_facecam' | 'crop_tela';
 /** Os retângulos que se movem no preview do palco. */
-export type DragRectKey = 'slot_facecam' | 'slot_tela' | 'zona_card';
 
 export const RECT_LABEL: Record<SharedRectKey, string> = {
   crop_facecam: 'Menor recorte',
@@ -101,28 +97,6 @@ export function resizeSlotForCrop(
 }
 
 
-function rectFromPoints(
-  start: { x: number; y: number },
-  end: { x: number; y: number },
-): YoutubeSharedRect {
-  const x = Math.min(start.x, end.x);
-  const y = Math.min(start.y, end.y);
-  return {
-    x,
-    y,
-    w: Math.max(1, Math.abs(end.x - start.x)),
-    h: Math.max(1, Math.abs(end.y - start.y)),
-  };
-}
-
-function rectToStyle(rect: YoutubeSharedRect) {
-  return {
-    left: `${(rect.x / 1920) * 100}%`,
-    top: `${(rect.y / 1080) * 100}%`,
-    width: `${(rect.w / 1920) * 100}%`,
-    height: `${(rect.h / 1080) * 100}%`,
-  };
-}
 
 export function SharedScreenCountToggle({
   value,
@@ -173,7 +147,8 @@ export function ModePicker({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'h-[30px] rounded-[var(--radius-xs)] border px-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition-colors',
+        // D-928: o rótulo quebra linha em vez de passar da borda do botão (coluna estreita do modal).
+        'min-h-[30px] rounded-[var(--radius-xs)] border px-2 py-1 text-[11px] font-bold uppercase leading-tight tracking-[0.04em] transition-colors',
         active
           ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--sel-ink)]'
           : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
@@ -336,268 +311,6 @@ export function SharedRectEditor({
             </Button>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Preview do "encaixe" (slot) no palco 1920x1080 — F-048.
- *
- * Renderiza o palco real (fundo editorial + chrome + placa + frames com o
- * video bruto recortado) e sobrepoe um overlay "drag" no slot selecionado.
- * Permite arrastar para mover, mantendo a previa visual fiel ao render.
- *
- * Tecnica: o palco interno usa coords nativas 1920x1080 dentro de um
- * container `transform: scale(...)` que cabe no espaco disponivel — assim
- * todos os componentes do palco (que assumem coords absolutas em 1920x1080)
- * funcionam sem mudanca.
- */
-export function SlotPreview({
-  className,
-  config,
-  rectKey,
-  videoSrc,
-  currentTime,
-  fundo,
-  placa,
-  palco,
-  componentes,
-  onChangeSlot,
-}: {
-  className?: string;
-  config: YoutubeSharedConfig;
-  rectKey: SharedRectKey;
-  videoSrc?: string;
-  currentTime: number;
-  fundo: YoutubeBackgroundId;
-  placa: YoutubePlaca;
-  /** D-921: o palco do canal (o rascunho, no modal); "limpo" troca o desenho. */
-  palco?: ComponentesDoPalco;
-  /** D-927: arrastar e redimensionar cabeçalho e placa (estilo limpo). */
-  componentes?: EdicaoDosComponentes;
-  onChangeSlot: (key: DragRectKey, rect: YoutubeSharedRect) => void;
-}) {
-  const frameRef = useRef<HTMLDivElement | null>(null);
-  const [stageScale, setStageScale] = useState(1);
-  // D-904: a zona dos cards aparece sempre que está selecionada — tracejada
-  // quando é a automática (só para ver onde o card vai cair) e arrastável
-  // quando o operador a definiu.
-  const zonaCard = sharedVerticalCardZone(config);
-  const zonaManual = Boolean(config.zona_card);
-  const rectDe = (key: DragRectKey): YoutubeSharedRect =>
-    key === 'zona_card' ? zonaCard : config[key];
-
-  // Calcula a escala que faz o palco 1920x1080 caber no container 16:9.
-  useEffect(() => {
-    const el = frameRef.current;
-    if (!el) return;
-    const compute = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width === 0) return;
-      setStageScale(rect.width / 1920);
-    };
-    compute();
-    const observer = new ResizeObserver(compute);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const hasFacecam = config.telas !== 1;
-  const isSelected = (key: DragRectKey) =>
-    rectKey === key ||
-    (key === 'slot_facecam' && rectKey === 'crop_facecam') ||
-    (key === 'slot_tela' && rectKey === 'crop_tela');
-
-  const retangulos: { key: DragRectKey; label: string; color: string; draggable: boolean }[] = [
-    { key: 'slot_tela', label: 'Tela', color: 'var(--wb-accent)', draggable: true },
-    ...(hasFacecam ? [{ key: 'slot_facecam' as const, label: 'Facecam', color: 'var(--wb-info)', draggable: true }] : []),
-    ...(zonaManual || isSelected('zona_card')
-      ? [{ key: 'zona_card' as const, label: zonaManual ? 'Cards' : 'Cards (automática)', color: 'var(--wb-warn)', draggable: zonaManual }]
-      : []),
-  ];
-  const { dragKey, startDrag, startResize, onMove, endDrag } = useArrastarRetangulo<DragRectKey>({
-    frameRef,
-    rectDe,
-    onChange: onChangeSlot,
-    redimensionar: redimensionarNoPalco,
-  });
-
-  return (
-    <div className={className}>
-      <div
-        ref={frameRef}
-        className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[#0c0e12]"
-      >
-        {/* Palco em coords 1920x1080 escalado p/ caber. Pointer-events
-            none aqui pra nao bloquear o SlotBox overlay. */}
-        <div
-          className="pointer-events-none absolute left-0 top-0"
-          style={{
-            width: 1920,
-            height: 1080,
-            transform: `scale(${stageScale})`,
-            transformOrigin: '0 0',
-          }}
-        >
-          <PalcoDoSlotPreview
-            config={config}
-            videoSrc={videoSrc}
-            currentTime={currentTime}
-            fundo={fundo}
-            placa={placa}
-            palco={palco}
-          />
-        </div>
-
-        {/* Um retângulo arrastável (e redimensionável pela alça) por janela. */}
-        {retangulos.map(({ key, label, color, draggable }) => (
-          <SlotDragOverlay
-            key={key}
-            rect={rectDe(key)}
-            label={label}
-            color={color}
-            selected={isSelected(key)}
-            dragging={dragKey === key}
-            draggable={draggable}
-            onPointerDown={startDrag(key)}
-            onResizeDown={startResize(key)}
-            onPointerMove={onMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
-          />
-        ))}
-        {componentes && palco?.estilo === 'limpo' && <ComponentesArrastaveis frameRef={frameRef} edicao={componentes} />}
-      </div>
-    </div>
-  );
-}
-
-export function CropPicker({
-  className,
-  videoSrc,
-  currentTime,
-  rect,
-  drawingEnabled,
-  onToggleDrawing,
-  onChange,
-}: {
-  className?: string;
-  videoSrc: string;
-  currentTime: number;
-  rect: YoutubeSharedRect;
-  drawingEnabled: boolean;
-  onToggleDrawing: () => void;
-  onChange: (rect: YoutubeSharedRect) => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const frameRef = useRef<HTMLDivElement | null>(null);
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
-  const [draftRect, setDraftRect] = useState<YoutubeSharedRect | null>(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !Number.isFinite(currentTime)) return;
-    const nextTime = Math.max(0, currentTime);
-    if (video.readyState > 0 && Math.abs(video.currentTime - nextTime) > 0.25) {
-      try {
-        video.currentTime = nextTime;
-      } catch {
-        // Browser ainda pode estar resolvendo o redirect do video.
-      }
-    }
-  }, [currentTime, videoSrc]);
-
-  const activeRect = draftRect ?? rect;
-
-  const pointToVideo = (event: PointerEvent<HTMLDivElement>) => {
-    const bounds = frameRef.current?.getBoundingClientRect();
-    if (!bounds) return null;
-    return {
-      x: limitar(Math.round(((event.clientX - bounds.left) / bounds.width) * 1920), 0, 1920),
-      y: limitar(Math.round(((event.clientY - bounds.top) / bounds.height) * 1080), 0, 1080),
-    };
-  };
-
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!drawingEnabled) return;
-    const point = pointToVideo(event);
-    if (!point) return;
-    dragStartRef.current = point;
-    setDraftRect({ x: point.x, y: point.y, w: 1, h: 1 });
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!drawingEnabled || !dragStartRef.current) return;
-    const point = pointToVideo(event);
-    if (!point) return;
-    setDraftRect(rectFromPoints(dragStartRef.current, point));
-  };
-
-  const finishDrag = (event: PointerEvent<HTMLDivElement>) => {
-    if (!drawingEnabled || !dragStartRef.current) return;
-    const point = pointToVideo(event);
-    const finalRect = point ? rectFromPoints(dragStartRef.current, point) : draftRect;
-    dragStartRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    setDraftRect(null);
-    if (finalRect && finalRect.w >= 4 && finalRect.h >= 4) {
-      onChange(finalRect);
-    }
-  };
-
-  return (
-    <div className={className}>
-      <div className="mb-1.5 flex items-center gap-1.5">
-        <Button
-          type="button"
-          variant={drawingEnabled ? 'default' : 'outline'}
-          size="sm"
-          onClick={onToggleDrawing}
-        >
-          <Icon name="crop" />
-          Desenhar
-        </Button>
-        <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
-          {rect.x},{rect.y} {rect.w}x{rect.h}
-        </span>
-      </div>
-      <div
-        ref={frameRef}
-        role="presentation"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={finishDrag}
-        onPointerCancel={finishDrag}
-        className={[
-          'relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border bg-black',
-          drawingEnabled
-            ? 'cursor-crosshair border-[var(--wb-accent)]'
-            : 'border-[var(--wb-border-soft)]',
-        ].join(' ')}
-      >
-        <video
-          ref={videoRef}
-          src={videoSrc}
-          muted
-          preload="metadata"
-          className="h-full w-full object-fill"
-          onLoadedMetadata={() => {
-            if (!videoRef.current) return;
-            try {
-              videoRef.current.currentTime = Math.max(0, currentTime);
-            } catch {
-              // Sem efeito; o proximo tick de currentTime sincroniza.
-            }
-          }}
-        />
-        <div
-          className="pointer-events-none absolute border-2 border-sky-300 bg-sky-300/15 shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]"
-          style={rectToStyle(activeRect)}
-        />
       </div>
     </div>
   );

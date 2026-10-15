@@ -20,11 +20,9 @@ import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import {
-  CropPicker,
   RECT_KEYS_FULL,
   RECT_KEYS_ONE_SCREEN,
   RECT_KEYS_TWO_SCREENS,
-  SlotPreview,
   comZonaManual,
   isCardZoneKey,
   isCropRectKey,
@@ -38,8 +36,12 @@ import { AbaixoDaPrevia, PainelDoPalco } from './PaineisDoPalco';
 import { PainelDasTelas } from './PainelDasTelas';
 import { MenuDoModal, gruposDoModal, type GrupoDoModal } from './MenuDoModal';
 import { PreviaQueCabe } from './PreviaQueCabe';
+import { CropPicker } from './CropPicker';
+import { SlotPreview } from './SlotPreview';
 import { edicaoDoRascunho } from './ComponentesArrastaveis';
-import { BarraDePresets } from './BarraDePresets';
+import { PresetsNaFaixa } from './BarraDePresets';
+import { cenaDeExemplo } from './ExemploDoCard';
+import { estiloDasCenasDe } from '@/shared/palco/palcoLimpo';
 import { EstiloNoModal } from '@/features/channels/EstiloNoModal';
 import type { AlvoDoEstilo } from '@/features/channels/palcoDoEscopo';
 import { usePalcoDoModal } from '@/features/channels/usePalcoDoModal';
@@ -136,8 +138,9 @@ export function PosicionamentoModal({
   const estiloDoPalco = palco.estilo;
   const presets = presetsDoEstilo(todosOsPresets, estiloDoPalco);
   const [rectKey, setRectKey] = useState<SharedRectKey>(isFullMode ? 'crop_tela' : 'crop_facecam');
-  // D-927: o grupo de ajustes aberto no menu da esquerda.
+  // D-927: o grupo de ajustes aberto no menu da esquerda; D-928: o card de exemplo.
   const [grupo, setGrupo] = useState<GrupoDoModal>('telas');
+  const [exemplo, setExemplo] = useState('definicao_termo');
   const [drawingEnabled, setDrawingEnabled] = useState(false);
   const [presetSelecionado, setPresetSelecionado] = useState<string>('');
   const [salvarPresetOpen, setSalvarPresetOpen] = useState(false);
@@ -455,24 +458,15 @@ export function PosicionamentoModal({
           estilo={estiloDoPalco}
           origem={palco.origem}
           onEstilo={palco.setEstilo}
+          acoes={<PresetsNaFaixa presets={presets} selecionado={presetSelecionado} onAplicar={handleAplicarPreset} onRenomear={abrirRenomearPreset}
+            onRemover={handleDeletePreset} renomeando={updatePreset.isPending} removendo={deletePreset.isPending} />}
         />
 
         {/* D-927: menu de grupos | ajustes do grupo | prévia parada, que cabe inteira. */}
         <div className="grid min-h-0 flex-1 grid-cols-[84px_minmax(0,300px)_minmax(0,1fr)] overflow-hidden">
           <MenuDoModal grupos={grupos} ativo={grupoAtivo} onEscolher={setGrupo} />
           <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto border-r border-[var(--wb-border-soft)] p-3">
-            {grupoAtivo === 'presets' ? (
-              <BarraDePresets
-                presets={presets}
-                selecionado={presetSelecionado}
-                onAplicar={handleAplicarPreset}
-                onRenomear={abrirRenomearPreset}
-                onRemover={handleDeletePreset}
-                renomeando={updatePreset.isPending}
-                removendo={deletePreset.isPending}
-                estilo={estiloDoPalco}
-              />
-            ) : grupoAtivo === 'telas' ? (
+            {grupoAtivo === 'telas' ? (
               <PainelDasTelas
                 isFullMode={isFullMode}
                 telas={sharedScreenCount}
@@ -489,7 +483,7 @@ export function PosicionamentoModal({
                 onRect={(rect) => updateRect(rectKey, rect)}
               />
             ) : (
-              <PainelDoPalco grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} editavel={fundoPlacaEditavel} fundo={draftFundo} placa={draftPlaca} onFundo={setDraftFundo} onPlaca={setDraftPlaca} />
+              <PainelDoPalco grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} editavel={fundoPlacaEditavel} fundo={draftFundo} placa={draftPlaca} onFundo={setDraftFundo} onPlaca={setDraftPlaca} exemplo={exemplo} onExemplo={setExemplo} />
             )}
           </div>
           <div className="flex min-h-0 min-w-0 flex-col gap-2 p-3">
@@ -506,7 +500,9 @@ export function PosicionamentoModal({
               ) : (
                 <SlotPreview
                   config={config}
-                  rectKey={rectKey}
+                  rectKey={grupoAtivo === 'cards' ? 'zona_card' : rectKey}
+                  comZonaDosCards={!isFullMode}
+                  exemplo={grupoAtivo === 'cards' && exemplo && palco.componentes ? { cena: cenaDeExemplo(exemplo, isFullMode ? null : sharedVerticalCardZone(config)), estiloCenas: estiloDasCenasDe(palco.componentes) } : null}
                   videoSrc={videoSrc}
                   currentTime={currentTime}
                   fundo={draftFundo}

@@ -5,10 +5,9 @@ import { Icon, type IconName } from '@/upgrade/Icon';
 // grupo de ajustes, e a prévia fica parada à direita — nada de rolar para ver
 // o efeito do que se mexe.
 
-export type GrupoDoModal = 'presets' | 'telas' | 'fundo' | 'cabecalho' | 'placa' | 'cards';
+export type GrupoDoModal = 'telas' | 'fundo' | 'cabecalho' | 'placa' | 'cards';
 
 const ROTULOS: Record<GrupoDoModal, { nome: string; icone: IconName }> = {
-  presets: { nome: 'Presets', icone: 'bookmark' },
   telas: { nome: 'Telas', icone: 'monitor' },
   fundo: { nome: 'Fundo', icone: 'image' },
   cabecalho: { nome: 'Cabeçalho', icone: 'at-sign' },
@@ -16,11 +15,12 @@ const ROTULOS: Record<GrupoDoModal, { nome: string; icone: IconName }> = {
   cards: { nome: 'Cards', icone: 'layers' },
 };
 
-/** Os grupos que existem no estilo: o cabeçalho só existe no limpo. */
+/**
+ * Os grupos que existem no estilo: o cabeçalho só existe no limpo. Os presets
+ * saíram do menu (D-928): ficam sempre à vista, na faixa do estilo.
+ */
 export function gruposDoModal(estilo: 'atual' | 'limpo'): GrupoDoModal[] {
-  return estilo === 'limpo'
-    ? ['presets', 'telas', 'fundo', 'cabecalho', 'placa', 'cards']
-    : ['presets', 'telas', 'fundo', 'placa', 'cards'];
+  return estilo === 'limpo' ? ['telas', 'fundo', 'cabecalho', 'placa', 'cards'] : ['telas', 'fundo', 'placa', 'cards'];
 }
 
 export function MenuDoModal({

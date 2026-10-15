@@ -58,9 +58,12 @@ describe('o preview do palco', () => {
     expect(html).toContain('424×281');
   });
 
-  it('não desenha a zona automática quando outro retângulo está selecionado', () => {
+  // D-928: a zona não some mais quando outro retângulo está selecionado — o
+  // dono pediu para vê-la sempre ("o container dos cards ficou invisível").
+  it('desenha a zona automática tracejada mesmo quando outro retângulo está selecionado', () => {
     const html = renderPreview(config(), 'slot_tela');
-    expect(html).not.toContain('Cards');
+    expect(html).toContain('Cards (automática)');
+    expect(html).toContain('border-dashed');
   });
 
   it('desenha a zona manual arrastável, mesmo sem estar selecionada', () => {

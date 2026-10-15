@@ -1,6 +1,7 @@
 import { useRef, useState, type PointerEvent, type RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { limitar } from '@/lib/limitar';
+import { SEM_GUIAS, alvosDe, encaixar, outrosNaPrevia, type Alvos, type Guias } from './guiasDeAlinhamento';
 import type { YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
 
 /**
@@ -40,13 +41,24 @@ export function useArrastarRetangulo<K extends string>({
   onChange: (key: K, rect: YoutubeSharedRect) => void;
   redimensionar?: Redimensionar<K>;
 }) {
-  const dragRef = useRef<{ key: K; modo: 'mover' | 'redimensionar'; startX: number; startY: number; inicial: YoutubeSharedRect } | null>(null);
+  const dragRef = useRef<{
+    key: K;
+    modo: 'mover' | 'redimensionar';
+    startX: number;
+    startY: number;
+    inicial: YoutubeSharedRect;
+    alvos: Alvos;
+  } | null>(null);
   const [dragKey, setDragKey] = useState<K | null>(null);
+  // D-928: as linhas de alinhamento do arraste em curso.
+  const [guias, setGuias] = useState<Guias>(SEM_GUIAS);
 
   const comecar = (key: K, modo: 'mover' | 'redimensionar') => (event: PointerEvent<HTMLElement>) => {
     event.stopPropagation();
     if (!frameRef.current) return;
-    dragRef.current = { key, modo, startX: event.clientX, startY: event.clientY, inicial: rectDe(key) };
+    const proprio = event.currentTarget.closest('[data-retangulo]') ?? event.currentTarget;
+    const alvos = alvosDe(outrosNaPrevia(frameRef.current, proprio));
+    dragRef.current = { key, modo, startX: event.clientX, startY: event.clientY, inicial: rectDe(key), alvos };
     setDragKey(key);
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -65,14 +77,20 @@ export function useArrastarRetangulo<K extends string>({
     const atual = rectDe(drag.key);
     let proximo: YoutubeSharedRect;
     if (drag.modo === 'mover') {
+      const solto = { ...atual, x: Math.round(inicial.x + dx), y: Math.round(inicial.y + dy) };
+      const encaixe = encaixar(solto, 'mover', drag.alvos);
+      setGuias(encaixe.guias);
       proximo = {
         ...atual,
-        x: limitar(Math.round(inicial.x + dx), 0, 1920 - atual.w),
-        y: limitar(Math.round(inicial.y + dy), 0, 1080 - atual.h),
+        x: limitar(encaixe.rect.x, 0, 1920 - atual.w),
+        y: limitar(encaixe.rect.y, 0, 1080 - atual.h),
       };
     } else {
-      const w = limitar(Math.round(inicial.w + dx), LADO_MINIMO, 1920 - inicial.x);
-      const h = limitar(Math.round(inicial.h + dy), LADO_MINIMO, 1080 - inicial.y);
+      const solto = { ...inicial, w: Math.round(inicial.w + dx), h: Math.round(inicial.h + dy) };
+      const encaixe = encaixar(solto, 'redimensionar', drag.alvos);
+      setGuias(encaixe.guias);
+      const w = limitar(encaixe.rect.w, LADO_MINIMO, 1920 - inicial.x);
+      const h = limitar(encaixe.rect.h, LADO_MINIMO, 1080 - inicial.y);
       proximo = redimensionar ? redimensionar(drag.key, inicial, w, h) : { ...inicial, w, h };
     }
     if (proximo.x !== atual.x || proximo.y !== atual.y || proximo.w !== atual.w || proximo.h !== atual.h) {
@@ -86,10 +104,12 @@ export function useArrastarRetangulo<K extends string>({
     }
     dragRef.current = null;
     setDragKey(null);
+    setGuias(SEM_GUIAS);
   };
 
   return {
     dragKey,
+    guias,
     startDrag: (key: K) => comecar(key, 'mover'),
     startResize: (key: K) => comecar(key, 'redimensionar'),
     onMove,
@@ -175,6 +195,8 @@ export function SlotDragOverlay({
   onPointerUp,
   onPointerCancel,
   onResizeDown,
+  contornoSempre = false,
+  tracejado = false,
 }: {
   rect: YoutubeSharedRect;
   label: string;
@@ -189,7 +211,12 @@ export function SlotDragOverlay({
   onPointerCancel: (event: PointerEvent<HTMLElement>) => void;
   /** D-927: a alça do canto, quando o retângulo pode crescer. */
   onResizeDown?: (event: PointerEvent<HTMLElement>) => void;
+  /** D-928: o contorno tracejado aparece mesmo sem seleção (a zona dos cards não some). */
+  contornoSempre?: boolean;
+  /** D-928: tracejado = automático (a zona dos cards que o operador ainda não fixou). */
+  tracejado?: boolean;
 }) {
+  const visivel = selected || contornoSempre;
   return (
     <div
       role="presentation"
@@ -200,6 +227,7 @@ export function SlotDragOverlay({
       onPointerCancel={draggable ? onPointerCancel : undefined}
       className={cn(
         'absolute flex flex-col items-stretch justify-end border-2 transition-colors',
+        (tracejado || (!selected && contornoSempre)) && 'border-dashed',
         !draggable
           ? 'pointer-events-none border-dashed'
           : dragging
@@ -211,11 +239,11 @@ export function SlotDragOverlay({
         top: `${(rect.y / 1080) * 100}%`,
         width: `${(rect.w / 1920) * 100}%`,
         height: `${(rect.h / 1080) * 100}%`,
-        borderColor: selected ? color : 'transparent',
+        borderColor: visivel ? color : 'transparent',
         background: selected ? `color-mix(in oklch, ${color} 12%, transparent)` : 'transparent',
       }}
     >
-      {selected && (
+      {visivel && (
         <span
           className="pointer-events-none m-1 self-start rounded-sm px-1 py-0.5 font-code text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent-fg)]"
           style={{ background: color }}
