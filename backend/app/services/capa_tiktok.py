@@ -26,7 +26,6 @@ que não deu, porque uma capa que some calada é pior do que capa nenhuma (D-384
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import os
@@ -106,8 +105,10 @@ async def gerar(
     para a tela em vez de um traceback.
     """
     contexto = await _contexto(corte_id, exigir_video=origem == ORIGEM_FRAME)
+    corte_id = contexto["corte_id"]  # o do banco: ele vira caminho de arquivo
 
-    faixas = layout_capa.montar_layout(estilo_da_capa.ajuste_do_layout())
+    desenho = estilo_da_capa.resolver_para_corte(contexto["projeto_id"], corte_id)
+    faixas = desenho.layout
     texto = layout_capa.normalizar_etiqueta(etiqueta or contexto["texto_capa"])
 
     destino = contexto["thumb_dir"] / f"{NOME_DA_CAPA}_{corte_id[:8]}.png"
@@ -136,9 +137,8 @@ async def gerar(
             "fundo": FUNDO_PADRAO,
             "etiqueta": texto,
             "selo": contexto["selo"],
-            "frameDataUri": _data_uri(imagem),
-            "faixas": faixas.como_dict(),
-            **estilo_da_capa.estilo_do_palco(contexto["projeto_id"], corte_id),
+            "frameDataUri": estilo_da_capa.data_uri(imagem),
+            **estilo_da_capa.props_da_capa(desenho),
         }
         await _rasterizar(destino, props)
 
@@ -270,7 +270,7 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
         corte = await db.get(Corte, corte_id)
         if not corte:
             raise CapaTikTokError("Corte nao encontrado.")
-        projeto_id = corte.projeto_id
+        projeto_id, corte_id = corte.projeto_id, corte.id  # os do banco, não os da URL
 
         resultado = await db.execute(
             select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
@@ -287,11 +287,11 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
 
     canal = identidade_do_canal_ativo()
     selo = (canal.handle or canal.nome or "").strip()
-    if selo and not selo.startswith("@"):
-        selo = f"@{selo}"
+    selo = f"@{selo}" if selo and not selo.startswith("@") else selo
 
     return {
         "projeto_id": projeto_id,
+        "corte_id": corte_id,
         "video": video,
         "thumb_dir": projetos_dir() / projeto_id / "thumbnails",
         "selo": selo,
@@ -303,6 +303,10 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
 def caminho_da_arte(thumb_dir: Path, corte_id: str, extensao: str = ".png") -> Path:
     """Onde a arte 4:5 daquele corte mora (D-526)."""
     return thumb_dir / f"{NOME_DA_ARTE}_{corte_id[:8]}{extensao}"
+
+
+def arte_do_corte(projeto_id: str, corte_id: str) -> Path | None:  # a prévia do modal (D-933)
+    return _arte_existente(projetos_dir() / projeto_id / "thumbnails", corte_id)
 
 
 def _arte_existente(thumb_dir: Path, corte_id: str) -> Path | None:
@@ -463,18 +467,6 @@ async def _extrair_frame(
 
     if not destino.is_file():
         raise CapaTikTokError("O FFmpeg terminou sem escrever o frame.")
-
-
-def _data_uri(imagem: Path) -> str:
-    """O still embutido nos props.
-
-    Copiá-lo para `public/` do renderer invalidaria o fingerprint do bundle a
-    cada corte (D-190), e o cache do Remotion pararia de acertar — cada capa
-    custaria um bundle novo.
-    """
-    tipo = "png" if imagem.suffix.lower() == ".png" else "jpeg"
-    dados = base64.b64encode(imagem.read_bytes()).decode("ascii")
-    return f"data:image/{tipo};base64,{dados}"
 
 
 async def _rasterizar(destino: Path, props: dict) -> None:

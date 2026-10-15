@@ -133,11 +133,17 @@ class Faixa:
 
 @dataclass(frozen=True)
 class Layout:
-    """As três faixas da capa, já posicionadas."""
+    """As faixas da capa, já posicionadas.
+
+    `cabecalho` e `acento` só aparecem no estilo limpo, e só quando o operador
+    os liga (D-933); a posição existe sempre para o editor ter onde arrastá-los.
+    """
 
     etiqueta: Faixa
     frame: Faixa
     selo: Faixa
+    cabecalho: Faixa
+    acento: Faixa
 
     @property
     def cabe_na_faixa_segura(self) -> bool:
@@ -160,6 +166,8 @@ class Layout:
             "etiqueta": self.etiqueta.como_dict(),
             "frame": self.frame.como_dict(),
             "selo": self.selo.como_dict(),
+            "cabecalho": self.cabecalho.como_dict(),
+            "acento": self.acento.como_dict(),
         }
 
 
@@ -170,6 +178,13 @@ LADO_MINIMO = 40
 # Os nomes dos três componentes, na ordem em que aparecem de cima para baixo.
 # São a chave do layout salvo e o rótulo no editor: um vocabulário só.
 COMPONENTES = ("etiqueta", "arte", "selo")
+
+# D-933: os do estilo limpo. O cabeçalho do canal senta acima da faixa segura —
+# a pilha já a preenche — e o acento é o traço coral no vão entre a etiqueta e a
+# arte. A faixa do acento tem o lado mínimo; o traço desenhado é mais fino.
+COMPONENTES_DO_LIMPO = ("cabecalho", "acento")
+ALTURA_DO_CABECALHO = 88
+LARGURA_DO_ACENTO = 200
 
 
 def layout_padrao() -> Layout:
@@ -200,7 +215,18 @@ def layout_padrao() -> Layout:
 
     y += ALTURA_DO_FRAME + ESPACO_ENTRE_FAIXAS
     selo = Faixa(MARGEM_SEGURA, y, LARGURA - 2 * MARGEM_SEGURA, ALTURA_DO_SELO)
-    return Layout(etiqueta=etiqueta, frame=frame, selo=selo)
+
+    cabecalho = Faixa(
+        MARGEM_SEGURA,
+        TOPO_SEGURO - ESPACO_ENTRE_FAIXAS - ALTURA_DO_CABECALHO,
+        LARGURA - 2 * MARGEM_SEGURA,
+        ALTURA_DO_CABECALHO,
+    )
+    vao = etiqueta.y + etiqueta.h + ESPACO_ENTRE_FAIXAS // 2
+    acento = Faixa(
+        (LARGURA - LARGURA_DO_ACENTO) // 2, vao - LADO_MINIMO // 2, LARGURA_DO_ACENTO, LADO_MINIMO
+    )
+    return Layout(etiqueta=etiqueta, frame=frame, selo=selo, cabecalho=cabecalho, acento=acento)
 
 
 def montar_layout(ajuste: dict | None = None) -> Layout:
@@ -223,19 +249,21 @@ def montar_layout(ajuste: dict | None = None) -> Layout:
     True
     """
     padrao = layout_padrao()
-    if not ajuste:
+    if not ajuste or not isinstance(ajuste, dict):
         return padrao
 
     return Layout(
         etiqueta=_com_ajuste(padrao.etiqueta, ajuste.get("etiqueta")),
         frame=_com_ajuste(padrao.frame, ajuste.get("arte")),
         selo=_com_ajuste(padrao.selo, ajuste.get("selo")),
+        cabecalho=_com_ajuste(padrao.cabecalho, ajuste.get("cabecalho")),
+        acento=_com_ajuste(padrao.acento, ajuste.get("acento")),
     )
 
 
 def _com_ajuste(padrao: Faixa, campos: dict | None) -> Faixa:
     """Uma faixa com os campos que o operador mexeu, encaixada no quadro."""
-    if not campos:
+    if not campos or not isinstance(campos, dict):
         return padrao
     return encaixar(
         Faixa(

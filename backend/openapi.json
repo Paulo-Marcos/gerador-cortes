@@ -1984,6 +1984,29 @@
         "title": "BulkYoutubeResponse",
         "type": "object"
       },
+      "CabecalhoDaCapaTiktok": {
+        "properties": {
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "imagem": {
+            "title": "Imagem",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome",
+          "handle",
+          "imagem"
+        ],
+        "title": "CabecalhoDaCapaTiktok",
+        "type": "object"
+      },
       "CabecalhoRequest": {
         "properties": {
           "ativo": {
@@ -3215,7 +3238,7 @@
             "type": "object"
           },
           "tipo": {
-            "pattern": "^(completo|posicionamento|posicionamento_full|palco_short|gancho_short)$",
+            "pattern": "^(completo|posicionamento|posicionamento_full|palco_short|gancho_short|capa_tiktok)$",
             "title": "Tipo",
             "type": "string"
           }
@@ -4061,6 +4084,117 @@
           "maximo_de_fotos"
         ],
         "title": "EstiloDaCapaResponse",
+        "type": "object"
+      },
+      "EstiloDaCapaTiktokRequest": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "estilo": {
+            "$ref": "#/components/schemas/EstiloDaCapaTiktokSalvo"
+          }
+        },
+        "required": [
+          "corte_id",
+          "estilo"
+        ],
+        "title": "EstiloDaCapaTiktokRequest",
+        "type": "object"
+      },
+      "EstiloDaCapaTiktokSalvo": {
+        "description": "O estilo gravado, parcial: chave ausente é herança (RN-10).",
+        "properties": {
+          "estilo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estilo"
+          },
+          "fundo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fundo"
+          },
+          "posicoes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posicoes"
+          },
+          "visiveis": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "boolean"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visiveis"
+          }
+        },
+        "title": "EstiloDaCapaTiktokSalvo",
+        "type": "object"
+      },
+      "EstiloEfetivoDaCapaTiktok": {
+        "properties": {
+          "estilo": {
+            "title": "Estilo",
+            "type": "string"
+          },
+          "faixas": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloCapa"
+            },
+            "title": "Faixas",
+            "type": "object"
+          },
+          "fundo": {
+            "title": "Fundo",
+            "type": "string"
+          },
+          "visiveis": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Visiveis",
+            "type": "object"
+          }
+        },
+        "required": [
+          "estilo",
+          "fundo",
+          "visiveis",
+          "faixas"
+        ],
+        "title": "EstiloEfetivoDaCapaTiktok",
         "type": "object"
       },
       "FabricaDaLiveResponse": {
@@ -5406,7 +5540,8 @@
               "posicionamento",
               "posicionamento_full",
               "palco_short",
-              "gancho_short"
+              "gancho_short",
+              "capa_tiktok"
             ],
             "title": "Tipo",
             "type": "string"
@@ -7313,6 +7448,95 @@
           "analise"
         ],
         "title": "PadroesThumbnailResponse",
+        "type": "object"
+      },
+      "PainelDoEstiloDaCapaTiktok": {
+        "description": "Tudo que o modal desenha: o salvo, o efetivo e as regras do quadro.",
+        "properties": {
+          "arte": {
+            "title": "Arte",
+            "type": "string"
+          },
+          "cabecalho": {
+            "$ref": "#/components/schemas/CabecalhoDaCapaTiktok"
+          },
+          "componentes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Componentes",
+            "type": "array"
+          },
+          "componentes_do_limpo": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Componentes Do Limpo",
+            "type": "array"
+          },
+          "efetivo": {
+            "$ref": "#/components/schemas/EstiloEfetivoDaCapaTiktok"
+          },
+          "estilo_do_palco": {
+            "title": "Estilo Do Palco",
+            "type": "string"
+          },
+          "estilos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Estilos",
+            "type": "array"
+          },
+          "faixa_segura": {
+            "$ref": "#/components/schemas/FaixaSeguraCapa"
+          },
+          "fundo_do_atual": {
+            "title": "Fundo Do Atual",
+            "type": "string"
+          },
+          "fundos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fundos",
+            "type": "array"
+          },
+          "lado_minimo": {
+            "title": "Lado Minimo",
+            "type": "integer"
+          },
+          "padrao": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloCapa"
+            },
+            "title": "Padrao",
+            "type": "object"
+          },
+          "quadro": {
+            "$ref": "#/components/schemas/QuadroCapa"
+          },
+          "salvo": {
+            "$ref": "#/components/schemas/EstiloDaCapaTiktokSalvo"
+          }
+        },
+        "required": [
+          "salvo",
+          "efetivo",
+          "padrao",
+          "estilo_do_palco",
+          "fundo_do_atual",
+          "arte",
+          "cabecalho",
+          "estilos",
+          "fundos",
+          "componentes",
+          "componentes_do_limpo",
+          "quadro",
+          "faixa_segura",
+          "lado_minimo"
+        ],
+        "title": "PainelDoEstiloDaCapaTiktok",
         "type": "object"
       },
       "PalavraDoBruto": {
@@ -13671,6 +13895,131 @@
         "summary": "Pedido Da Capa",
         "tags": [
           "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-tiktok/estilo": {
+      "get": {
+        "description": "O estilo do canal e como ele fica na capa deste corte.",
+        "operationId": "obter_estilo_da_capa_api_capa_tiktok_estilo_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelDoEstiloDaCapaTiktok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Obter Estilo Da Capa",
+        "tags": [
+          "Capa do TikTok"
+        ]
+      },
+      "put": {
+        "description": "Grava o estilo do canal. A capa do corte se refaz pelo endpoint dela.",
+        "operationId": "gravar_estilo_da_capa_api_capa_tiktok_estilo_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstiloDaCapaTiktokRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelDoEstiloDaCapaTiktok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gravar Estilo Da Capa",
+        "tags": [
+          "Capa do TikTok"
+        ]
+      }
+    },
+    "/api/capa-tiktok/estilo/previa": {
+      "post": {
+        "description": "A capa com o rascunho do modal, sem gravar nada.",
+        "operationId": "prever_estilo_da_capa_api_capa_tiktok_estilo_previa_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstiloDaCapaTiktokRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelDoEstiloDaCapaTiktok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prever Estilo Da Capa",
+        "tags": [
+          "Capa do TikTok"
         ]
       }
     },

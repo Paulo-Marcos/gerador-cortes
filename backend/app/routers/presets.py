@@ -25,11 +25,13 @@ from typing import Any, Literal
 
 from app.database import get_db
 from app.domain.canal.palco_componentes import (
+    FUNDOS,
     PADRAO,
     TIPOS_DE_PRESET_COM_ESTILO,
     estilo_do_preset,
     mesclar,
 )
+from app.domain.corte import estilo_da_capa
 from app.domain.corte.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
@@ -62,6 +64,7 @@ TIPOS_DE_PRESET = (
     "posicionamento_full",
     "palco_short",
     "gancho_short",
+    "capa_tiktok",
 )
 TIPOS_VALIDOS = set(TIPOS_DE_PRESET)
 
@@ -81,7 +84,8 @@ class LayoutPresetResponse(RespostaApi):
 class CriarPresetRequest(BaseModel):
     nome: str = Field(..., min_length=1, max_length=120)
     tipo: str = Field(
-        ..., pattern="^(completo|posicionamento|posicionamento_full|palco_short|gancho_short)$"
+        ...,
+        pattern="^(completo|posicionamento|posicionamento_full|palco_short|gancho_short|capa_tiktok)$",
     )
     payload: dict[str, Any]
 
@@ -114,6 +118,11 @@ def _normalizar_payload_do_tipo(tipo: str, payload: Any) -> dict[str, Any]:
 
     if tipo == "completo":
         return normalizar_layout_youtube(payload)
+
+    if tipo == "capa_tiktok":
+        # D-933: o mesmo contrato do estilo da capa do canal, parcial (RN-10):
+        # aplicar o preset é gravar este payload como o estilo do canal.
+        return estilo_da_capa.normalizar(payload, FUNDOS)
 
     if tipo == "palco_short":
         # D-509: o palco do SHORT — como a tela monta, o que cada janela mostra
