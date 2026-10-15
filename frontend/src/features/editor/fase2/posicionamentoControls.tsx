@@ -315,5 +315,3 @@ export function SharedRectEditor({
     </div>
   );
 }
-
-
