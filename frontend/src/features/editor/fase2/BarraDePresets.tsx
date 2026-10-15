@@ -79,7 +79,7 @@ export function BarraDePresets({
               className={cn(
                 'max-w-full truncate rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors',
                 selecionado === preset.id
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+                  ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--sel-ink)]'
                   : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
               )}
             >

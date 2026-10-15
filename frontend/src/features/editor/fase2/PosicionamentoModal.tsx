@@ -19,18 +19,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { cn } from '@/lib/utils';
 import {
   CropPicker,
-  ModePicker,
   RECT_KEYS_FULL,
   RECT_KEYS_ONE_SCREEN,
   RECT_KEYS_TWO_SCREENS,
-  SharedRectEditor,
-  SharedScreenCountToggle,
   SlotPreview,
   comZonaManual,
-  getRectLabel,
   isCardZoneKey,
   isCropRectKey,
   isFacecamRectKey,
@@ -39,8 +34,11 @@ import {
   type SharedRectKey,
 } from './posicionamentoControls';
 import { NomeDoPresetDialog } from './NomeDoPresetDialog';
-import { ZonaCardsControle } from './ZonaCardsControle';
-import { AjustesDoEstilo } from './AjustesDoEstilo';
+import { AbaixoDaPrevia, PainelDoPalco } from './PaineisDoPalco';
+import { PainelDasTelas } from './PainelDasTelas';
+import { MenuDoModal, gruposDoModal, type GrupoDoModal } from './MenuDoModal';
+import { PreviaQueCabe } from './PreviaQueCabe';
+import { edicaoDoRascunho } from './ComponentesArrastaveis';
 import { BarraDePresets } from './BarraDePresets';
 import { EstiloNoModal } from '@/features/channels/EstiloNoModal';
 import type { AlvoDoEstilo } from '@/features/channels/palcoDoEscopo';
@@ -138,6 +136,8 @@ export function PosicionamentoModal({
   const estiloDoPalco = palco.estilo;
   const presets = presetsDoEstilo(todosOsPresets, estiloDoPalco);
   const [rectKey, setRectKey] = useState<SharedRectKey>(isFullMode ? 'crop_tela' : 'crop_facecam');
+  // D-927: o grupo de ajustes aberto no menu da esquerda.
+  const [grupo, setGrupo] = useState<GrupoDoModal>('telas');
   const [drawingEnabled, setDrawingEnabled] = useState(false);
   const [presetSelecionado, setPresetSelecionado] = useState<string>('');
   const [salvarPresetOpen, setSalvarPresetOpen] = useState(false);
@@ -158,6 +158,7 @@ export function PosicionamentoModal({
       setRenomearPresetOpen(false);
       setNomeRenomear('');
       setDrawingEnabled(false);
+      setGrupo('telas');
     }
   }, [open, initialConfig, fundo, placa, isFullMode]);
 
@@ -405,6 +406,16 @@ export function PosicionamentoModal({
     onClose();
   };
 
+  // D-927: o grupo que vale no estilo (o cabeçalho só existe no limpo) e o que a prévia mostra.
+  const grupos = gruposDoModal(estiloDoPalco);
+  const grupoAtivo = grupos.includes(grupo) ? grupo : 'telas';
+  const cropNaPrevia = grupoAtivo === 'telas' && Boolean(selectedCropKey);
+  const componenteAtivo = grupoAtivo === 'cabecalho' || grupoAtivo === 'placa' ? grupoAtivo : null;
+  const componentes =
+    palco.rascunho && alvoDoEstilo !== 'global'
+      ? edicaoDoRascunho(palco.rascunho, palco.mudar, componenteAtivo, setGrupo)
+      : undefined;
+
   if (!open) return null;
 
   const modeLabel = isFullMode ? 'Full' : 'Compartilhada';
@@ -419,7 +430,7 @@ export function PosicionamentoModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <div className="flex h-full max-h-[920px] w-full max-w-7xl flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
         {/* Header */}
         <header className="flex items-center gap-3 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-5 py-3">
           <strong className="font-editorial text-[16px] font-medium text-[var(--wb-ink)]">
@@ -446,62 +457,44 @@ export function PosicionamentoModal({
           onEstilo={palco.setEstilo}
         />
 
-        {/* Body — duas colunas: controles a esquerda, preview e ajustes do estilo a direita */}
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-0 overflow-hidden">
-          {/* Coluna controles */}
-          <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto border-r border-[var(--wb-border-soft)] p-4">
-            <BarraDePresets
-              presets={presets}
-              selecionado={presetSelecionado}
-              onAplicar={handleAplicarPreset}
-              onRenomear={abrirRenomearPreset}
-              onRemover={handleDeletePreset}
-              renomeando={updatePreset.isPending}
-              removendo={deletePreset.isPending}
-              estilo={estiloDoPalco}
-            />
-
-            {!isFullMode && (
-              <SharedScreenCountToggle value={sharedScreenCount} onChange={handleScreenCount} />
-            )}
-
-            <div className={cn('grid gap-1.5', 'grid-cols-2')}>
-              {rectOptions.map((key) => (
-                <ModePicker
-                  key={key}
-                  active={rectKey === key}
-                  label={getRectLabel(key, isFullMode ? 1 : sharedScreenCount)}
-                  onClick={() => setRectKey(key)}
-                />
-              ))}
-            </div>
-
-            {isCardZoneKey(rectKey) && (
-              <ZonaCardsControle
-                manual={zonaManual}
-                onAutomatica={() => setConfig((current) => semZonaManual(current))}
-                onManual={() => setConfig((current) => comZonaManual(current))}
+        {/* D-927: menu de grupos | ajustes do grupo | prévia parada, que cabe inteira. */}
+        <div className="grid min-h-0 flex-1 grid-cols-[84px_minmax(0,300px)_minmax(0,1fr)] overflow-hidden">
+          <MenuDoModal grupos={grupos} ativo={grupoAtivo} onEscolher={setGrupo} />
+          <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto border-r border-[var(--wb-border-soft)] p-3">
+            {grupoAtivo === 'presets' ? (
+              <BarraDePresets
+                presets={presets}
+                selecionado={presetSelecionado}
+                onAplicar={handleAplicarPreset}
+                onRenomear={abrirRenomearPreset}
+                onRemover={handleDeletePreset}
+                renomeando={updatePreset.isPending}
+                removendo={deletePreset.isPending}
+                estilo={estiloDoPalco}
               />
-            )}
-
-            {editorLiberado && (
-              <SharedRectEditor
-                className="mt-1"
+            ) : grupoAtivo === 'telas' ? (
+              <PainelDasTelas
+                isFullMode={isFullMode}
+                telas={sharedScreenCount}
+                onTelas={handleScreenCount}
+                opcoes={rectOptions}
+                rectKey={rectKey}
+                onRectKey={setRectKey}
+                zonaManual={zonaManual}
+                onZonaAutomatica={() => setConfig((current) => semZonaManual(current))}
+                onZonaManual={() => setConfig((current) => comZonaManual(current))}
+                editorLiberado={editorLiberado}
                 rect={selectedRect}
                 baseRect={selectedBaseRect}
-                onChange={(rect) => updateRect(rectKey, rect)}
-                onChangeDraft={(rect) => updateRect(rectKey, rect)}
-                onCommit={() => undefined}
+                onRect={(rect) => updateRect(rectKey, rect)}
               />
+            ) : (
+              <PainelDoPalco grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} editavel={fundoPlacaEditavel} fundo={draftFundo} placa={draftPlaca} onFundo={setDraftFundo} onPlaca={setDraftPlaca} />
             )}
-
           </div>
-
-          {/* Coluna preview — Recorte mostra video pra desenhar; Encaixe
-              mostra previa do palco com slots arrastaveis. */}
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto p-4">
-            {selectedCropKey ? (
-              <>
+          <div className="flex min-h-0 min-w-0 flex-col gap-2 p-3">
+            <PreviaQueCabe reserva={cropNaPrevia ? 44 : 0}>
+              {cropNaPrevia && selectedCropKey ? (
                 <CropPicker
                   videoSrc={videoSrc}
                   currentTime={currentTime}
@@ -510,14 +503,7 @@ export function PosicionamentoModal({
                   onToggleDrawing={() => setDrawingEnabled((v) => !v)}
                   onChange={(rect) => updateRect(selectedCropKey, rect)}
                 />
-                <p className="font-code text-[10px] leading-snug text-[var(--wb-text-dim)]">
-                  Editor mostra o quadro do vídeo no tempo atual. Clique{' '}
-                  <strong className="text-[var(--wb-text)]">Desenhar</strong> e arraste sobre o
-                  quadro para definir o recorte.
-                </p>
-              </>
-            ) : (
-              <>
+              ) : (
                 <SlotPreview
                   config={config}
                   rectKey={rectKey}
@@ -526,24 +512,17 @@ export function PosicionamentoModal({
                   fundo={draftFundo}
                   placa={draftPlaca}
                   palco={palco.componentes ?? undefined}
+                  componentes={componentes}
                   onChangeSlot={(key, rect) => updateRect(key, rect)}
                 />
-                <p className="font-code text-[10px] leading-snug text-[var(--wb-text-dim)]">
-                  Pré-visualização do palco. Arraste o retângulo destacado para mover o encaixe; use
-                  os controles à esquerda para ajustar escala (escala muda o tamanho do encaixe
-                  respeitando o recorte).
-                </p>
-              </>
-            )}
-            <AjustesDoEstilo
-              palco={palco}
-              global={alvoDoEstilo === 'global'}
-              editavel={fundoPlacaEditavel}
-              fundo={draftFundo}
-              placa={draftPlaca}
-              onFundo={setDraftFundo}
-              onPlaca={setDraftPlaca}
-            />
+              )}
+            </PreviaQueCabe>
+            <AbaixoDaPrevia grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} />
+            <p className="font-code text-[11px] leading-snug text-[var(--wb-text-dim)]">
+              {cropNaPrevia
+                ? 'Quadro do vídeo no tempo atual: clique Desenhar e arraste para definir o recorte.'
+                : 'Arraste para mover; a alça no canto redimensiona. Clique no cabeçalho ou na placa para editá-los.'}
+            </p>
           </div>
         </div>
 

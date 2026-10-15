@@ -243,6 +243,8 @@ export const CabecalhoDoCanal: FC<{
   escala?: number;
 }> = ({ x, y, nome, handle, imagem, escala = 1 }) => (
   <div
+    // D-927: a prévia do modal acha o componente por aqui para arrastá-lo.
+    data-componente="cabecalho"
     style={{
       position: "absolute",
       left: x,
@@ -286,6 +288,7 @@ export const PlacaLimpa: FC<{
   if (!nome && !papel) return null;
   return (
     <div
+      data-componente="placa"
       style={{
         position: "absolute",
         left: x,
