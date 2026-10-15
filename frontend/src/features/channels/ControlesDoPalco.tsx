@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,16 @@ export function CampoNumero({
   unidade: string;
   onMudar: (valor: number) => void;
 }) {
+  // D-927: o texto é livre enquanto se digita e só se prende ao limite ao sair
+  // do campo — prender a cada tecla fazia o "3" de "300" virar o mínimo.
+  const [texto, setTexto] = useState<string | null>(null);
+  const confirmar = () => {
+    const numero = Number(texto);
+    if (texto !== null && texto.trim() !== '' && Number.isFinite(numero)) {
+      onMudar(Math.max(min, Math.min(max, numero)));
+    }
+    setTexto(null);
+  };
   return (
     <div className="grid gap-1.5">
       <Label htmlFor={id}>
@@ -42,17 +53,22 @@ export function CampoNumero({
         step="any"
         min={min}
         max={max}
-        value={valor}
-        onChange={(e) => {
-          const numero = Number(e.target.value);
-          if (Number.isFinite(numero)) onMudar(Math.max(min, Math.min(max, numero)));
+        value={texto ?? valor}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') confirmar();
         }}
       />
     </div>
   );
 }
 
-/** Tamanho em % (a escala do componente, 50 a 200). */
+/** D-927: de 25% a 500% (espelha ESCALA_MINIMA/MAXIMA do domínio do palco). */
+export const TAMANHO_MINIMO = 25;
+export const TAMANHO_MAXIMO = 500;
+
+/** Tamanho em % (a escala do componente). */
 export function CampoTamanho({
   id,
   escala,
@@ -68,8 +84,8 @@ export function CampoTamanho({
       rotulo="Tamanho"
       unidade="%"
       valor={Math.round(escala * 100)}
-      min={50}
-      max={200}
+      min={TAMANHO_MINIMO}
+      max={TAMANHO_MAXIMO}
       onMudar={(porcento) => onMudar(porcento / 100)}
     />
   );

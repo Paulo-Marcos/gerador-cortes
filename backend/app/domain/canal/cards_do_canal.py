@@ -38,7 +38,7 @@ TIPOS_DE_CENA: dict[str, str] = {
 }
 APELIDOS = {"comparativo_enfase": "comparativo_contraponto"}
 
-ESCALA_MINIMA, ESCALA_MAXIMA = 0.5, 2.0
+ESCALA_MINIMA, ESCALA_MAXIMA = 0.25, 5.0  # D-927: de 25% a 500%
 # O canto de sempre no layout cheio: 96 px da esquerda; com a posição manual o
 # operador escolhe o canto de cima à esquerda do card no quadro de 1920x1080.
 QUADRO = (1920, 1080)
@@ -144,7 +144,7 @@ def mesclar(atual: Cards, mudancas: Any, *, tolerante: bool = False) -> Cards:
         >>> mesclar(Cards(), {"ocultos": ["enfase", "Enfase"], "escala": 9}).para_dict()["ocultos"]
         ['enfase']
         >>> mesclar(Cards(), {"escala": 9}).escala
-        2.0
+        5.0
         >>> mesclar(Cards(), {"ocultos": ["sumiu"]}, tolerante=True).ocultos
         ()
     """

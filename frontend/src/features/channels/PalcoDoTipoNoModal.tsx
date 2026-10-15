@@ -13,7 +13,7 @@ import { ItensDoCabecalho, type RascunhoDoPalco } from './PalcoComponentesSectio
 // cards); o short, só o do short (cabeçalho no quadro vertical, janelas e
 // legenda). Uma aba por componente, para nada ficar aberto ao mesmo tempo.
 
-type Aba = 'fundo' | 'cabecalho' | 'placa' | 'cards' | 'janelas';
+export type Aba = 'fundo' | 'cabecalho' | 'placa' | 'cards' | 'janelas';
 
 const NOMES: Record<Aba, string> = {
   fundo: 'Fundo',
@@ -68,13 +68,14 @@ export function PalcoDoTipoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) 
         </div>
       )}
       <div role="tabpanel" aria-label={NOMES[aba]}>
-        <ConteudoDaAba aba={aba} tipo={tipo} rascunho={rascunho} efetivo={efetivo} onMudar={onMudar} />
+        <PainelDoComponente aba={aba} tipo={tipo} rascunho={rascunho} efetivo={efetivo} onMudar={onMudar} />
       </div>
     </div>
   );
 }
 
-function ConteudoDaAba({ aba, ...props }: Props & { aba: Aba }) {
+/** O conteúdo de um componente do palco (D-927: o modal do horizontal usa por grupo). */
+export function PainelDoComponente({ aba, ...props }: Props & { aba: Aba }) {
   const { tipo, rascunho, efetivo, onMudar } = props;
   if (aba === 'fundo') {
     return <FundosDoLimpo fundo={rascunho.fundo} onFundo={(fundo) => onMudar({ ...rascunho, fundo })} />;

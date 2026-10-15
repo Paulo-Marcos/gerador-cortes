@@ -23,7 +23,8 @@ import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
 import { limitar } from '@/lib/limitar';
 import { Icon } from '@/upgrade/Icon';
 import { PalcoDoSlotPreview } from './PalcoDoSlotPreview';
-import { SlotDragOverlay, useArrastarRetangulo } from './SlotPreviewPartes';
+import { SlotDragOverlay, redimensionarNoPalco, useArrastarRetangulo } from './SlotPreviewPartes';
+import { ComponentesArrastaveis, type EdicaoDosComponentes } from './ComponentesArrastaveis';
 
 export type SharedRectKey = Exclude<keyof YoutubeSharedConfig, 'telas'>;
 export type CropRectKey = 'crop_facecam' | 'crop_tela';
@@ -361,6 +362,7 @@ export function SlotPreview({
   fundo,
   placa,
   palco,
+  componentes,
   onChangeSlot,
 }: {
   className?: string;
@@ -372,6 +374,8 @@ export function SlotPreview({
   placa: YoutubePlaca;
   /** D-921: o palco do canal (o rascunho, no modal); "limpo" troca o desenho. */
   palco?: ComponentesDoPalco;
+  /** D-927: arrastar e redimensionar cabeçalho e placa (estilo limpo). */
+  componentes?: EdicaoDosComponentes;
   onChangeSlot: (key: DragRectKey, rect: YoutubeSharedRect) => void;
 }) {
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -405,17 +409,22 @@ export function SlotPreview({
     (key === 'slot_facecam' && rectKey === 'crop_facecam') ||
     (key === 'slot_tela' && rectKey === 'crop_tela');
 
-  const { dragKey, startDrag, onMove, endDrag } = useArrastarRetangulo<DragRectKey>({
+  const retangulos: { key: DragRectKey; label: string; color: string; draggable: boolean }[] = [
+    { key: 'slot_tela', label: 'Tela', color: 'var(--wb-accent)', draggable: true },
+    ...(hasFacecam ? [{ key: 'slot_facecam' as const, label: 'Facecam', color: 'var(--wb-info)', draggable: true }] : []),
+    ...(zonaManual || isSelected('zona_card')
+      ? [{ key: 'zona_card' as const, label: zonaManual ? 'Cards' : 'Cards (automática)', color: 'var(--wb-warn)', draggable: zonaManual }]
+      : []),
+  ];
+  const { dragKey, startDrag, startResize, onMove, endDrag } = useArrastarRetangulo<DragRectKey>({
     frameRef,
     rectDe,
     onChange: onChangeSlot,
+    redimensionar: redimensionarNoPalco,
   });
 
   return (
     <div className={className}>
-      <div className="mb-1.5 flex items-center gap-1.5 font-code text-[10px] text-[var(--wb-text-dim)]">
-        Pré-visualização do palco — arraste o retângulo destacado para mover o encaixe.
-      </div>
       <div
         ref={frameRef}
         className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[#0c0e12]"
@@ -441,46 +450,24 @@ export function SlotPreview({
           />
         </div>
 
-        {/* Overlay clicavel/arrastavel para cada slot — em coords % para
-            casar visualmente com o palco escalado. */}
-        <SlotDragOverlay
-          rect={config.slot_tela}
-          label="Tela"
-          color="var(--wb-accent)"
-          selected={isSelected('slot_tela')}
-          dragging={dragKey === 'slot_tela'}
-          onPointerDown={startDrag('slot_tela')}
-          onPointerMove={onMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-        />
-        {hasFacecam && (
+        {/* Um retângulo arrastável (e redimensionável pela alça) por janela. */}
+        {retangulos.map(({ key, label, color, draggable }) => (
           <SlotDragOverlay
-            rect={config.slot_facecam}
-            label="Facecam"
-            color="var(--wb-info)"
-            selected={isSelected('slot_facecam')}
-            dragging={dragKey === 'slot_facecam'}
-            onPointerDown={startDrag('slot_facecam')}
+            key={key}
+            rect={rectDe(key)}
+            label={label}
+            color={color}
+            selected={isSelected(key)}
+            dragging={dragKey === key}
+            draggable={draggable}
+            onPointerDown={startDrag(key)}
+            onResizeDown={startResize(key)}
             onPointerMove={onMove}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
           />
-        )}
-        {(zonaManual || isSelected('zona_card')) && (
-          <SlotDragOverlay
-            rect={zonaCard}
-            label={zonaManual ? 'Cards' : 'Cards (automática)'}
-            color="var(--wb-warn)"
-            selected={isSelected('zona_card')}
-            dragging={dragKey === 'zona_card'}
-            draggable={zonaManual}
-            onPointerDown={startDrag('zona_card')}
-            onPointerMove={onMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
-          />
-        )}
+        ))}
+        {componentes && palco?.estilo === 'limpo' && <ComponentesArrastaveis frameRef={frameRef} edicao={componentes} />}
       </div>
     </div>
   );

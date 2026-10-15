@@ -80,7 +80,7 @@ class OpcaoDePalcoInvalida(PedidoInvalido):
 # QUE tamanho, em px do quadro (1920x1080 no horizontal, 1080x1920 no short).
 # Os padrões são os números que o estilo limpo usava cravados — quem nunca
 # mexeu vê o mesmo palco.
-ESCALA_MINIMA, ESCALA_MAXIMA = 0.5, 2.0
+ESCALA_MINIMA, ESCALA_MAXIMA = 0.25, 5.0  # D-927: de 25% a 500%
 HORIZONTAL = (1920, 1080)
 VERTICAL = (1080, 1920)
 CONTORNO_MAXIMO = 80
@@ -275,7 +275,7 @@ def mesclar(atual: PalcoComponentes, mudancas: dict[str, Any] | None) -> PalcoCo
         >>> mesclar(PADRAO, {"fundo": "Linho"}).fundo
         'linho'
         >>> mesclar(PADRAO, {"cabecalho": {"escala": 9}}).cabecalho.escala
-        2.0
+        5.0
         >>> mesclar(PADRAO, {"placa": {"posicao": {"automatica": False, "x": 5000}}}).placa.posicao
         Posicao(automatica=False, x=1920, y=0)
         >>> mesclar(PADRAO, None) == PADRAO
