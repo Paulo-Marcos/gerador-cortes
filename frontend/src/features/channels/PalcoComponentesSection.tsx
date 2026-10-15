@@ -14,7 +14,7 @@ import {
   type FundoDoShort,
   type PosicaoEditavel,
 } from './ControlesDoPalco';
-import { CardsDoCanal, type CardsEditaveis } from './CardsDoCanal';
+import { CardsDoCanal, cardsEditaveisDe, type CardsEditaveis } from './CardsDoCanal';
 import { urlDaImagem } from './palcoDoCanal';
 
 // D-911: os componentes do palco do canal ativo — estilo, cabeçalho e placa —
@@ -77,7 +77,7 @@ export function rascunhoDe(palco: PalcoComponentes): RascunhoDoPalco {
     contornoShort: palco.contorno_short,
     fundoShort: palco.fundo_short === 'eco' ? 'eco' : 'palco',
     estiloDaLegenda: palco.estilo_da_legenda === 'sombra' ? 'sombra' : 'contorno',
-    cards: palco.cards,
+    cards: cardsEditaveisDe(palco.cards),
     cabecalhoAtivo: palco.cabecalho.ativo,
     mostrarImagem: palco.cabecalho.mostrar_imagem,
     mostrarNome: palco.cabecalho.mostrar_nome,

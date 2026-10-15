@@ -5766,6 +5766,12 @@ export interface components {
          * @description D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio.
          */
         CardsRequest: {
+            /** Ajuste */
+            ajuste?: ("preencher" | "natural") | null;
+            /** Alinhamento Horizontal */
+            alinhamento_horizontal?: ("centro" | "esquerda" | "direita") | null;
+            /** Alinhamento Vertical */
+            alinhamento_vertical?: ("centro" | "topo" | "base") | null;
             /** Escala */
             escala?: number | null;
             /** Ocultos */
@@ -5774,6 +5780,12 @@ export interface components {
         };
         /** CardsResponse */
         CardsResponse: {
+            /** Ajuste */
+            ajuste?: string | null;
+            /** Alinhamento Horizontal */
+            alinhamento_horizontal?: string | null;
+            /** Alinhamento Vertical */
+            alinhamento_vertical?: string | null;
             /** Escala */
             escala: number;
             /** Ocultos */

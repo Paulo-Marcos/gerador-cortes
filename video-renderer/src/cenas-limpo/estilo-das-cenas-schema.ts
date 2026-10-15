@@ -18,6 +18,15 @@ export const estiloDasCenasSchema = z.object({
   escala: z.number().default(1),
   /** Onde os cards sentam no layout cheio; na compartilhada manda a zona do corte. */
   posicao: posicaoDosCardsSchema.default({ automatica: true, x: 96, y: 112 }),
+  /**
+   * D-926: como o card se apresenta dentro da zona dos cards (compartilhada).
+   * "preencher" cresce ou encolhe o card até caber no espaço; "natural" é o
+   * tamanho de sempre. Sem a chave vale o desenho de antes (natural, no topo,
+   * à esquerda): o backend sempre manda o que o canal escolheu.
+   */
+  ajuste: z.enum(["preencher", "natural"]).default("natural"),
+  alinhamento_vertical: z.enum(["centro", "topo", "base"]).default("topo"),
+  alinhamento_horizontal: z.enum(["centro", "esquerda", "direita"]).default("esquerda"),
 });
 
 export type EstiloDasCenas = z.infer<typeof estiloDasCenasSchema>;

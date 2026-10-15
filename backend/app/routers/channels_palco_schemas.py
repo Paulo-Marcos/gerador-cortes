@@ -44,6 +44,10 @@ class CardsRequest(BaseModel):
     ocultos: list[str] | None = None
     escala: float | None = None
     posicao: PosicaoModel | None = None
+    # D-926: como o card se apresenta dentro do espaço dele.
+    ajuste: Literal["preencher", "natural"] | None = None
+    alinhamento_vertical: Literal["centro", "topo", "base"] | None = None
+    alinhamento_horizontal: Literal["centro", "esquerda", "direita"] | None = None
 
 
 class TipoDeCenaModel(BaseModel):
@@ -55,6 +59,11 @@ class CardsResponse(BaseModel):
     ocultos: list[str]
     escala: float
     posicao: PosicaoModel
+    # D-926: a resposta sempre os traz; opcionais no contrato para cliente antigo
+    # (e fixture) que não os conhece continuar valendo — ausente = o padrão.
+    ajuste: str | None = None
+    alinhamento_vertical: str | None = None
+    alinhamento_horizontal: str | None = None
 
 
 class PalcoComponentesRequest(BaseModel):
