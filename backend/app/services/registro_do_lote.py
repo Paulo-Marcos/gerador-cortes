@@ -2,8 +2,8 @@
 
 Saiu do `publicacao_lote` quando ele chegou ao teto de tamanho que o CI confere
 (D-771): lá ficou o que o lote FAZ — raias, estados, vigília —, aqui o que ele
-consulta para decidir. São leituras sobre `PublicacaoShort`, `Short` e `Corte`,
-mais a gravação da confirmação à mão (D-894), sem estado em memória.
+consulta para decidir. São leituras sobre `PublicacaoShort`, `Short` e `Corte`
+(e a fila do YouTube longo, que a agenda dos horizontais lê, D-934), mais a gravação da confirmação à mão (D-894), sem estado em memória.
 """
 
 from __future__ import annotations
@@ -12,9 +12,10 @@ import uuid
 from datetime import UTC, datetime
 
 from app.database import AsyncSessionLocal
+from app.domain.publicacao.agendamento import instante_do_youtube
 from app.domain.publicacao.publicacao import Plataforma
 from app.domain.publicacao.ritmo_publicacao import EstadoItem, publicados_no_dia
-from app.models import PublicacaoShort
+from app.models import Corte, PublicacaoShort, YoutubeVideoStat
 from sqlalchemy import select
 
 ALVO_SHORT = "short"
@@ -86,6 +87,33 @@ async def ultimo_agendado(plataformas: list[str]) -> datetime | None:
     if not instantes:
         return None
     return max(instantes).replace(tzinfo=UTC).astimezone()
+
+
+async def ultimo_no_youtube() -> datetime | None:
+    """O corte agendado ou publicado mais tarde no YouTube longo (D-934).
+
+    É a partida do próximo lote de cortes, como `ultimo_agendado` é a dos
+    shorts. Vem de dois lugares porque o upload grava a data só quando agenda:
+    o corte que subiu na hora só tem data na sincronização do canal. Vídeo do
+    canal sem corte local (um Short, uma live) não é desta fila.
+    """
+    async with AsyncSessionLocal() as db:
+        agendados = (
+            await db.execute(
+                select(Corte.youtube_scheduled_at).where(Corte.youtube_scheduled_at != "")
+            )
+        ).scalars()
+        instantes = [m for m in map(instante_do_youtube, agendados) if m]
+        publicados = (
+            await db.execute(
+                select(YoutubeVideoStat.publicado_em).where(
+                    YoutubeVideoStat.corte_id.is_not(None),
+                    YoutubeVideoStat.publicado_em.is_not(None),
+                )
+            )
+        ).scalars()
+        instantes += [m.replace(tzinfo=UTC) for m in publicados if m]
+    return max(instantes).astimezone() if instantes else None
 
 
 async def rotulos_dos_alvos(alvos: list[tuple[str, str]]) -> dict[str, str]:

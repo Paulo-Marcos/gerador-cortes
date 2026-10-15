@@ -23210,7 +23210,7 @@
     },
     "/api/shorts/lote/agenda": {
       "post": {
-        "description": "A data que a janela do canal propõe para cada item, antes de publicar (D-908).",
+        "description": "A data que a janela do canal propõe para cada item, antes de publicar (D-908).\n\nAceita também o destino `youtube`, o do vídeo horizontal (D-934): o lote do\nYouTube longo e o envio avulso pedem a agenda aqui e publicam pelo upload.",
         "operationId": "prever_agenda_api_shorts_lote_agenda_post",
         "requestBody": {
           "content": {

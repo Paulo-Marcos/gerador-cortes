@@ -4,10 +4,8 @@ import { exportStatusKey } from '@/shared/chavesDeCache';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  PASSO_EM_SEGUNDOS,
-  sugestaoDeHorario,
-} from '@/features/shorts/agendamentoDoLote';
+import { PASSO_EM_SEGUNDOS } from '@/features/shorts/agendamentoDoLote';
+import { useDataDoAvulso } from './useHorarioSugerido';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';
@@ -129,10 +127,10 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
   // do servidor (`tiktok_publicado_em`) e sobrevive a fechar e reabrir; o
   // "pacote montado" não precisa sobreviver — refazer é barato.
   const [preparados, setPreparados] = useState<Record<string, boolean>>({});
-  // D-580: uma data para o modal inteiro, e não uma por linha. O operador vem
-  // aqui com uma janela em mente ("solta às 19h") e manda os cortes um a um; um
-  // campo por linha seria a mesma data digitada N vezes.
-  const [agendarPara, setAgendarPara] = useState('');
+  // D-580: uma data para os envios avulsos, e não uma por linha: um campo por
+  // linha seria a mesma data digitada N vezes. D-934: nasce na próxima vaga da
+  // janela do canal; o lote tem o próprio "Quando".
+  const [agendarPara, setAgendarPara, marcarDiaEHora] = useDataDoAvulso('tiktok_horizontal');
   // D-834: o "publicar sozinho" era só do lote; agora vale para cada corte também.
   const [publicarSozinho, setPublicarSozinho] = useInterruptorDaAbertura(open);
   const envio = { agendarPara, publicarSozinho };
@@ -142,7 +140,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
     setPreparados((atual) => ({ ...atual, [corteId]: true }));
 
   return (
-    <Modal open={open} onClose={onClose} title="TikTok — cortes horizontais">
+    <Modal open={open} onClose={onClose} size="lg" title="TikTok — cortes horizontais">
       <div className="space-y-3">
         <p className="text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
           O TikTok aceita 16:9, e o MP4 já existe — é o mesmo que foi para o YouTube, sem
@@ -161,7 +159,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                 <input
                   type="checkbox"
                   checked={Boolean(agendarPara)}
-                  onChange={(e) => setAgendarPara(e.target.checked ? sugestaoDeHorario() : '')}
+                  onChange={(e) => marcarDiaEHora(e.target.checked)}
                 />
                 Marcar dia e hora
               </label>
@@ -176,7 +174,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                   />
                   <span className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
                     O robô liga o “Programar” no Studio e marca a data antes de devolver a aba.
-                    Vale para os cortes que você mandar daqui pra frente.
+                    Vale para o botão de cada corte; o lote distribui pelo próprio Quando.
                   </span>
                 </>
               )}

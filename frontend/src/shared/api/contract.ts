@@ -4168,6 +4168,9 @@ export interface paths {
         /**
          * Prever Agenda
          * @description A data que a janela do canal propõe para cada item, antes de publicar (D-908).
+         *
+         *     Aceita também o destino `youtube`, o do vídeo horizontal (D-934): o lote do
+         *     YouTube longo e o envio avulso pedem a agenda aqui e publicam pelo upload.
          */
         post: operations["prever_agenda_api_shorts_lote_agenda_post"];
         delete?: never;

@@ -393,7 +393,7 @@ export default function WorkspaceProjetoPage() {
               </span>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--mute)' }}>
-                  Agendar (opcional — vazio envia agora)
+                  Agendar (sugerido: próximo horário livre do canal — vazio envia agora)
                 </span>
                 <span className="fld">
                   <input

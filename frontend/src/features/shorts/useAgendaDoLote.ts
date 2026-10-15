@@ -24,7 +24,8 @@ export function useAgendaDoLote(alvos: string[], plataformas: string[], ligado: 
     staleTime: 0,
   });
 
-  const [linhas, setLinhas] = useState<LinhaDaAgenda[]>([]);
+  // A primeira pintura já mostra a agenda que estiver em cache (D-934).
+  const [linhas, setLinhas] = useState<LinhaDaAgenda[]>(() => query.data?.itens ?? []);
   useEffect(() => {
     setLinhas(query.data?.itens ?? []);
   }, [query.data]);

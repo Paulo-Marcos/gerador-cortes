@@ -106,10 +106,17 @@ class LoteRequest(BaseModel):
 
 @router.post("/lote/agenda", response_model=esquemas.AgendaPrevistaResponse)
 async def prever_agenda(body: PreverAgendaRequest):
-    """A data que a janela do canal propõe para cada item, antes de publicar (D-908)."""
-    plataformas = _ler_plataformas(body.plataformas)
+    """A data que a janela do canal propõe para cada item, antes de publicar (D-908).
+
+    Aceita também o destino `youtube`, o do vídeo horizontal (D-934): o lote do
+    YouTube longo e o envio avulso pedem a agenda aqui e publicam pelo upload.
+    """
+    youtube = escalonamento_do_lote.YOUTUBE_LONGO
+    plataformas = _ler_plataformas([p for p in body.plataformas if p != youtube])
     alvos = [_ler_alvo(bruto) for bruto in body.alvos]
     linhas = await escalonamento_do_lote.prever(alvos, plataformas)
+    if youtube in body.plataformas:
+        linhas += await escalonamento_do_lote.prever_youtube(alvos)
     return {"itens": [linha.como_dict() for linha in linhas]}
 
 
