@@ -17,14 +17,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import tempfile
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import ErroDeDominio, NaoEncontrado, PedidoInvalido
 from app.models import MetadadoCorte, Short
-from app.services import capa_no_chatgpt, capa_short, capa_tiktok
+from app.services import capa_no_chatgpt, capa_short, capa_tiktok, quadros_da_capa
+from app.services.canal import capa_do_canal
 from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import select
@@ -39,6 +42,7 @@ EstadoDoPedido = Literal["aguardando", "rodando", "concluido", "erro", "cancelad
 PROPORCAO_DO_DESTINO: dict[Destino, str] = {"youtube": "16:9", "tiktok": "4:5", "short": "9:16"}
 
 ETAPA_NA_FILA = "Na fila do ChatGPT"
+ETAPA_QUADROS = "Tirando quadros do apresentador no vídeo"
 ETAPA_SALVANDO = "Salvando na capa"
 ETAPA_PRONTA = "Capa pronta"
 
@@ -235,9 +239,7 @@ async def _desenhar(pedido: PedidoDeCapa) -> None:
         pedido.etapa = etapa
 
     try:
-        imagem, tipo = await capa_no_chatgpt.gerar_imagem(
-            pedido.prompt, PROPORCAO_DO_DESTINO[pedido.destino], pedido.pessoas, anunciar
-        )
+        imagem, tipo = await _gerar(pedido, anunciar)
         pedido.etapa = ETAPA_SALVANDO
         await _entregar(pedido, imagem, f"chatgpt.{tipo.split('/')[-1]}")
     except Exception as exc:  # noqa: BLE001 — o motivo vai para a Fila, não para o log só
@@ -254,6 +256,31 @@ async def _desenhar(pedido: PedidoDeCapa) -> None:
     pedido.estado = "concluido"
     pedido.etapa = ETAPA_PRONTA
     logger.info("[ChatGPT] capa %s de %s pronta", pedido.destino, pedido.alvo_id[:8])
+
+
+async def _gerar(pedido: PedidoDeCapa, anunciar: capa_no_chatgpt.Anunciar) -> tuple[bytes, str]:
+    """A imagem do pedido; no modo apresentador, com os quadros da live (D-929).
+
+    Os quadros vivem numa pasta temporária até o robô terminar: o navegador os
+    lê do disco na hora de anexar.
+    """
+    proporcao = PROPORCAO_DO_DESTINO[pedido.destino]
+    if capa_do_canal.protagonista() != "apresentador":
+        return await capa_no_chatgpt.gerar_imagem(
+            pedido.prompt, proporcao, pedido.pessoas, anunciar
+        )
+    with tempfile.TemporaryDirectory(prefix="quadros-capa-", ignore_cleanup_errors=True) as pasta:
+        anunciar(ETAPA_QUADROS)
+        quadros = await quadros_da_capa.quadros_do_apresentador(
+            pedido.destino, pedido.alvo_id, Path(pasta)
+        )
+        if not quadros:
+            return await capa_no_chatgpt.gerar_imagem(
+                pedido.prompt, proporcao, pedido.pessoas, anunciar
+            )
+        return await capa_no_chatgpt.gerar_imagem_com_quadros(
+            pedido.prompt, proporcao, pedido.pessoas, anunciar, quadros
+        )
 
 
 def _motivo(exc: Exception) -> str:

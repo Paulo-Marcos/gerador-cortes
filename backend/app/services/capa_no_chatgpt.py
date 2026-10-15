@@ -407,6 +407,37 @@ async def gerar_imagem(
     `pessoas` é o elenco que o operador conferiu na tela; `None` (quem não
     conferiu) lê o elenco do próprio prompt. Quem não tem foto fica de fora.
     """
+    return await _gerar(prompt, proporcao, pessoas, anunciar, quadros=[])
+
+
+async def gerar_imagem_com_quadros(
+    prompt: str,
+    proporcao: str,
+    pessoas: list[str] | None,
+    anunciar: Anunciar,
+    quadros: list[Path],
+) -> tuple[bytes, str]:
+    """A `gerar_imagem` do modo apresentador com quadros da live (D-929).
+
+    Os quadros (`services/quadros_da_capa`) vão NO LUGAR das fotos do banco, e o
+    pedido diz que deles vêm a identidade e a expressão. Sem quadros, é a
+    `gerar_imagem` de sempre.
+    """
+    return await _gerar(prompt, proporcao, pessoas, anunciar, quadros=quadros)
+
+
+def _referencias_do_apresentador(prompt: str, quadros: list[Path]) -> list[Path]:
+    return quadros or capa_do_canal.fotos_para_o_prompt(prompt)
+
+
+async def _gerar(
+    prompt: str,
+    proporcao: str,
+    pessoas: list[str] | None,
+    anunciar: Anunciar,
+    *,
+    quadros: list[Path],
+) -> tuple[bytes, str]:
     projeto_url = ler_configuracao()["projeto_url"]
     if not projeto_url:
         raise PedidoInvalido("Configure o link do projeto do ChatGPT em Canais → Capas no ChatGPT.")
@@ -418,12 +449,13 @@ async def gerar_imagem(
     ]
     # D-909: no modo apresentador o mascote sai da capa — as fichas dele também.
     apresentador = capa_do_canal.protagonista() == "apresentador"
-    referencias = capa_do_canal.fotos_para_o_prompt(prompt) if apresentador else _fichas()
+    referencias = _referencias_do_apresentador(prompt, quadros) if apresentador else _fichas()
     pedido = montar_pedido(
         prompt,
         proporcao,
         [(nome, foto.name) for nome, foto in fotos],
         [r.name for r in referencias] if apresentador else None,
+        quadros_da_live=apresentador and bool(quadros),
     )
     anexos = referencias + [foto for _, foto in fotos]
     logger.info(
