@@ -4,13 +4,14 @@ import { limitar } from '@/lib/limitar';
 import { cn } from '@/lib/utils';
 import { TAMANHO_MAXIMO, TAMANHO_MINIMO } from '@/features/channels/ControlesDoPalco';
 import { AlcaDeTamanho } from './SlotPreviewPartes';
+import { GuiasNaPrevia, SEM_GUIAS, alvosDe, encaixar, outrosNaPrevia, type Alvos, type Guias } from './guiasDeAlinhamento';
 
 // D-927: o cabeçalho e a placa do estilo limpo se movem e se redimensionam com
 // o mouse na prévia do modal, como as janelas do short. A caixa de cada um sai
 // do próprio desenho (`data-componente` no renderer): o tamanho depende do
 // texto e da imagem, e medir é o único jeito de a alça cair no canto certo.
 
-export type ComponenteDoPalco = 'cabecalho' | 'placa';
+export type ComponenteDoPalco = 'cabecalho' | 'placa' | 'cards';
 
 /** O que o modal faz com o arraste: mover grava a posição manual; a alça, o tamanho. */
 export interface EdicaoDosComponentes {
@@ -28,8 +29,9 @@ interface Caixa {
   h: number;
 }
 
-const NOMES: Record<ComponenteDoPalco, string> = { cabecalho: 'Cabeçalho', placa: 'Placa' };
-const COMPONENTES: ComponenteDoPalco[] = ['cabecalho', 'placa'];
+const NOMES: Record<ComponenteDoPalco, string> = { cabecalho: 'Cabeçalho', placa: 'Placa', cards: 'Card' };
+// D-928: o card de exemplo no vídeo cheio também se arrasta (posição e tamanho dos cards).
+const COMPONENTES: ComponenteDoPalco[] = ['cabecalho', 'placa', 'cards'];
 
 /** A caixa do componente no quadro de 1920x1080, medida no desenho escalado. */
 function medir(frame: HTMLElement, componente: ComponenteDoPalco): Caixa | null {
@@ -57,17 +59,15 @@ export function ComponentesArrastaveis({
   frameRef: RefObject<HTMLDivElement | null>;
   edicao: EdicaoDosComponentes;
 }) {
-  const [caixas, setCaixas] = useState<Record<ComponenteDoPalco, Caixa | null>>({ cabecalho: null, placa: null });
+  const [caixas, setCaixas] = useState<Record<ComponenteDoPalco, Caixa | null>>({ cabecalho: null, placa: null, cards: null });
   // Mede depois de cada desenho (posição e tamanho mudam com o rascunho), sem
   // lista de dependências de propósito; só regrava quando a caixa mudou.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
-    const novas = { cabecalho: medir(frame, 'cabecalho'), placa: medir(frame, 'placa') };
-    setCaixas((atuais) =>
-      iguais(novas.cabecalho, atuais.cabecalho) && iguais(novas.placa, atuais.placa) ? atuais : novas,
-    );
+    const novas = { cabecalho: medir(frame, 'cabecalho'), placa: medir(frame, 'placa'), cards: medir(frame, 'cards') };
+    setCaixas((atuais) => (COMPONENTES.every((c) => iguais(novas[c], atuais[c])) ? atuais : novas));
   });
   const arraste = useArrastarComponente(frameRef, edicao);
   return (
@@ -112,6 +112,7 @@ export function ComponentesArrastaveis({
           </div>
         );
       })}
+      <GuiasNaPrevia guias={arraste.guias} />
     </>
   );
 }
@@ -134,14 +135,20 @@ function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edica
     y0: number;
     caixa: Caixa;
     escala: number;
+    alvos: Alvos;
   } | null>(null);
+  const [guias, setGuias] = useState<Guias>(SEM_GUIAS);
   return {
+    guias,
     comecar:
       (componente: ComponenteDoPalco, caixa: Caixa, modo: 'mover' | 'redimensionar') =>
       (event: PointerEvent<HTMLElement>) => {
         // A alça fica dentro da caixa: parar antes de tudo, senão o "mover" da caixa assume.
         event.stopPropagation();
-        atual.current = { componente, modo, x0: event.clientX, y0: event.clientY, caixa, escala: edicao.escala(componente) };
+        const frame = frameRef.current;
+        const proprio = event.currentTarget.closest('[data-arrastavel]') ?? event.currentTarget;
+        const alvos = alvosDe(frame ? outrosNaPrevia(frame, proprio) : []);
+        atual.current = { componente, modo, x0: event.clientX, y0: event.clientY, caixa, escala: edicao.escala(componente), alvos };
         edicao.onSelecionar?.(componente);
         capturar(event);
       },
@@ -153,20 +160,25 @@ function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edica
       const dx = (event.clientX - a.x0) * k;
       const dy = (event.clientY - a.y0) * k;
       if (a.modo === 'mover') {
+        const encaixe = encaixar({ ...a.caixa, x: a.caixa.x + dx, y: a.caixa.y + dy }, 'mover', a.alvos);
+        setGuias(encaixe.guias);
         edicao.mover(
           a.componente,
-          limitar(Math.round(a.caixa.x + dx), 0, 1920 - a.caixa.w),
-          limitar(Math.round(a.caixa.y + dy), 0, 1080 - a.caixa.h),
+          limitar(encaixe.rect.x, 0, 1920 - a.caixa.w),
+          limitar(encaixe.rect.y, 0, 1080 - a.caixa.h),
         );
         return;
       }
-      const fator = Math.max(1, a.caixa.w + dx) / a.caixa.w;
+      const encaixe = encaixar({ ...a.caixa, w: a.caixa.w + dx, h: a.caixa.h }, 'redimensionar', a.alvos);
+      setGuias({ x: encaixe.guias.x, y: null });
+      const fator = Math.max(1, encaixe.rect.w) / a.caixa.w;
       const escala = limitar(a.escala * fator, TAMANHO_MINIMO / 100, TAMANHO_MAXIMO / 100);
       edicao.escalar(a.componente, Math.round(escala * 100) / 100);
     },
     soltar: (event: PointerEvent<HTMLElement>) => {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       atual.current = null;
+      setGuias(SEM_GUIAS);
     },
   };
 }
@@ -178,12 +190,22 @@ export function edicaoDoRascunho(
   selecionado: ComponenteDoPalco | null,
   onSelecionar: (componente: ComponenteDoPalco) => void,
 ): EdicaoDosComponentes {
-  const campo = (c: ComponenteDoPalco) =>
+  type Fixo = 'cabecalho' | 'placa';
+  const campo = (c: Fixo) =>
     c === 'cabecalho' ? ({ posicao: 'cabecalhoPosicao', escala: 'cabecalhoEscala' } as const) : ({ posicao: 'placaPosicao', escala: 'placaEscala' } as const);
   return {
-    escala: (c) => rascunho[campo(c).escala],
-    mover: (c, x, y) => mudar((r) => r && { ...r, [campo(c).posicao]: { automatica: false, x, y } }),
-    escalar: (c, escala) => mudar((r) => r && { ...r, [campo(c).escala]: escala }),
+    escala: (c) => (c === 'cards' ? rascunho.cards.escala : rascunho[campo(c).escala]),
+    mover: (c, x, y) =>
+      mudar((r) => {
+        if (!r) return r;
+        const posicao = { automatica: false, x, y };
+        return c === 'cards' ? { ...r, cards: { ...r.cards, posicao } } : { ...r, [campo(c).posicao]: posicao };
+      }),
+    escalar: (c, escala) =>
+      mudar((r) => {
+        if (!r) return r;
+        return c === 'cards' ? { ...r, cards: { ...r.cards, escala } } : { ...r, [campo(c).escala]: escala };
+      }),
     selecionado,
     onSelecionar,
   };

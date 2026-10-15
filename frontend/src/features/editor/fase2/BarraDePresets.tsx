@@ -91,3 +91,42 @@ export function BarraDePresets({
     </section>
   );
 }
+
+/**
+ * D-928: os presets na faixa do estilo, sempre à vista (não é mais um grupo do
+ * menu): escolher na lista já aplica; renomear e remover agem sobre o aplicado.
+ */
+export function PresetsNaFaixa({
+  presets,
+  selecionado,
+  onAplicar,
+  onRenomear,
+  onRemover,
+  renomeando,
+  removendo,
+}: Omit<Parameters<typeof BarraDePresets>[0], 'estilo'>) {
+  return (
+    <div role="group" aria-label="Presets" className="flex items-center gap-1">
+      <Icon name="bookmark" className="text-[var(--wb-text-dim)]" />
+      <select
+        aria-label="Preset do estilo"
+        value={selecionado}
+        onChange={(e) => e.target.value && onAplicar(e.target.value)}
+        className="h-7 max-w-[220px] rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[12px] text-[var(--wb-text)]"
+      >
+        <option value="">{presets.length === 0 ? 'Nenhum preset neste estilo' : 'Aplicar um preset…'}</option>
+        {presets.map((preset) => (
+          <option key={preset.id} value={preset.id}>
+            {preset.nome}
+          </option>
+        ))}
+      </select>
+      <Button type="button" variant="ghost" size="sm" onClick={onRenomear} disabled={!selecionado || renomeando} aria-label="Renomear preset selecionado">
+        <Icon name={ICONE_DO_CONCEITO.renomear} />
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={onRemover} disabled={!selecionado || removendo} aria-label="Remover preset selecionado">
+        <Icon name={removendo ? 'loader-2' : 'trash-2'} className={removendo ? 'animate-spin' : undefined} />
+      </Button>
+    </div>
+  );
+}

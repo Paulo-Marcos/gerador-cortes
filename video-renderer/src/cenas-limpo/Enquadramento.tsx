@@ -82,7 +82,8 @@ export const Enquadramento: FC<{ cena: CenaRemotion; children: ReactNode }> = ({
   return (
     <TempoDaCenaContext.Provider value={tempo}>
       <AbsoluteFill>
-        <div style={{ ...base, ...lugar, transform: `scale(${escala})` }}>
+        {/* D-928: a prévia do modal acha o card por aqui para arrastá-lo no vídeo cheio. */}
+        <div data-componente="cards" style={{ ...base, ...lugar, transform: `scale(${escala})` }}>
           <div style={{ ...scrimDoNivel(nivel), position: "absolute", inset: 0, opacity: tempo.daAnterior ? 1 : scrim }} />
           <div style={{ position: "relative", textShadow: scrimDoNivel(nivel).textShadow }}>{children}</div>
         </div>

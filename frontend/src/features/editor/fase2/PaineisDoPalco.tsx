@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { AjustesDosCards, TiposDeCard } from '@/features/channels/CardsDoCanal';
 import { PainelDoComponente } from '@/features/channels/PalcoDoTipoNoModal';
+import { EscolhaDoExemplo } from './ExemploDoCard';
 import type { usePalcoDoModal } from '@/features/channels/usePalcoDoModal';
 import { cn } from '@/lib/utils';
 import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/shared/palco/youtubeBackgrounds';
@@ -24,6 +25,9 @@ export interface ContextoDoPalco {
   placa: YoutubePlaca;
   onFundo: (fundo: YoutubeBackgroundId) => void;
   onPlaca: Dispatch<SetStateAction<YoutubePlaca>>;
+  /** D-928: o tipo do card de exemplo desenhado na prévia ('' = nenhum). */
+  exemplo?: string;
+  onExemplo?: (tipo: string) => void;
 }
 
 /** O que o grupo do palco mostra na coluna (fundo, cabeçalho, placa ou cards). */
@@ -48,7 +52,15 @@ export function PainelDoPalco({ grupo, ...ctx }: ContextoDoPalco & { grupo: 'fun
     );
   }
   if (grupo === 'cards') {
-    return doCanal ?? (palco.rascunho ? <AjustesDosCards valor={palco.rascunho.cards} onMudar={(cards) => palco.mudar((r) => r && { ...r, cards })} /> : null);
+    const exemplo = palco.efetivo && ctx.onExemplo && (
+      <EscolhaDoExemplo tipos={palco.efetivo.tipos_de_cena} valor={ctx.exemplo ?? ''} onEscolher={ctx.onExemplo} />
+    );
+    return (
+      <div className="grid gap-3">
+        {exemplo}
+        {doCanal ?? (palco.rascunho ? <AjustesDosCards valor={palco.rascunho.cards} onMudar={(cards) => palco.mudar((r) => r && { ...r, cards })} /> : null)}
+      </div>
+    );
   }
   return doCanal ?? componente(grupo);
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { EstiloDoPalco } from '@/shared/palco/presetsPorEstilo';
@@ -24,11 +25,14 @@ export function EstiloNoModal({
   estilo,
   origem,
   onEstilo,
+  acoes,
 }: {
   alvo: AlvoDoEstilo;
   estilo: EstiloDoPalco;
   origem: PalcoDoEscopo['origem'] | undefined;
   onEstilo: (estilo: EstiloDoPalco) => void;
+  /** D-928: o que mais fica sempre à vista na faixa (os presets do estilo). */
+  acoes?: ReactNode;
 }) {
   const nome = ESTILOS.find((e) => e.id === estilo)?.nome ?? estilo;
   return (
@@ -41,6 +45,7 @@ export function EstiloNoModal({
         Estilo <strong>{nome}</strong>
         <span className="text-[var(--wb-text-dim)]"> · {origem ? ORIGEM[origem] : 'carregando…'}</span>
       </span>
+      {acoes}
       <div className="flex-1" />
       {alvo === 'global' ? (
         <Link to="/canais" className="text-[12px] font-semibold text-[var(--wb-accent)] underline-offset-2 hover:underline">
