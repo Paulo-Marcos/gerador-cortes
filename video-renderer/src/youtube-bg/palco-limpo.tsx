@@ -231,8 +231,6 @@ export const SombraDaJanela: FC<{ janela: Janela; raio: number }> = ({ janela, r
   </div>
 );
 
-/** O cabeçalho do canal: imagem redonda + nome + @. A imagem vem pronta de quem
- *  chama (um `<Img>` do Remotion), porque só o entry sabe resolver o `staticFile`. */
 // A pílula cresce para fora do ponto (x, y): o padding vira margem negativa, e
 // a imagem e o texto ficam onde ficariam sem ela.
 const PILULA_DO_CABECALHO = {
@@ -243,6 +241,8 @@ const PILULA_DO_CABECALHO = {
   height: "auto",
 } as const;
 
+/** O cabeçalho do canal: imagem redonda + nome + @. A imagem vem pronta de quem
+ *  chama (um `<Img>` do Remotion), porque só o entry sabe resolver o `staticFile`. */
 export const CabecalhoDoCanal: FC<{
   x: number;
   y: number;
