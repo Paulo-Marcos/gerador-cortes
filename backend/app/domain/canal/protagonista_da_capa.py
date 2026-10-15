@@ -19,6 +19,7 @@ from collections.abc import Sequence
 from typing import Literal, get_args
 
 from app.domain.canal.fotos_do_apresentador import MARCA_DA_LINHA, MAXIMO_DE_FOTOS_POR_CAPA
+from app.domain.compartilhado.chatgpt_imagem import MARCA_DA_EXPRESSAO_DO_APRESENTADOR
 from app.domain.compartilhado.erros import PedidoInvalido
 
 Protagonista = Literal["mascote", "apresentador"]
@@ -60,7 +61,11 @@ def bloco_do_modo(protagonista: Protagonista, *, mascote: str, expressoes: Seque
     return (
         "=== MODO DA CAPA: apresentador ===\n"
         'Siga a seção "MODO apresentador" da skill. O protagonista desta capa é o '
-        "APRESENTADOR da live, e o robô anexa fotos reais dele como referência de rosto. "
+        "APRESENTADOR da live, e o robô anexa imagens reais dele como referência de rosto: "
+        "quadros da própria live no momento em que ele diz a frase da capa e, quando não "
+        "os acha, as fotos do banco. Escreva a cara dele numa linha própria, começando por "
+        f"{MARCA_DA_EXPRESSAO_DO_APRESENTADOR}, e só nela: com os quadros, o robô troca essa "
+        "linha pela expressão real que eles mostram. "
         f"O {mascote} NÃO entra nesta capa: nem como protagonista, nem como coadjuvante, "
         f"nem citado no prompt final; as regras da skill sobre o {mascote} não valem aqui. "
         "Pessoas citadas no corte continuam podendo aparecer.\n"

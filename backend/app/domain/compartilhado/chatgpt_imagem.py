@@ -79,6 +79,8 @@ def montar_pedido(
     proporcao: str,
     pessoas: Sequence[tuple[str, str]] = (),
     fotos_do_apresentador: Sequence[str] | None = None,
+    *,
+    quadros_da_live: bool = False,
 ) -> str:
     """O texto que vai para o chat: o prompt do app e o quadro que a capa exige.
 
@@ -91,6 +93,10 @@ def montar_pedido(
 
     `fotos_do_apresentador` (D-909) é o modo em que o apresentador protagoniza:
     os anexos são fotos dele, e o pedido não fala de fichas nem de personagem.
+
+    `quadros_da_live` (D-929): os anexos não são fotos do banco, e sim quadros
+    da live no momento em que ele diz a frase da capa. Deles vem a identidade E
+    a expressão; o prompt passa por `prompt_com_quadros` para não pedir outra.
     """
     prompt = (prompt or "").strip()
     if not prompt:
@@ -99,6 +105,14 @@ def montar_pedido(
         raise PedidoInvalido(f"Proporção desconhecida: {proporcao!r}.")
     if fotos_do_apresentador is None:
         referencia = "usando as fichas anexas como referência do personagem."
+    elif fotos_do_apresentador and quadros_da_live:
+        prompt = prompt_com_quadros(prompt)
+        referencia = (
+            f"usando os anexos ({', '.join(fotos_do_apresentador)}) como referência do "
+            "apresentador: são quadros da live no exato momento em que ele diz a frase da "
+            "capa. A identidade E a expressão dele vêm desses quadros — reproduza a cara "
+            "que eles mostram, no traço da casa, sem trocar por outra emoção."
+        )
     elif fotos_do_apresentador:
         referencia = (
             f"usando as fotos anexas do apresentador ({', '.join(fotos_do_apresentador)}) "
@@ -114,6 +128,48 @@ def montar_pedido(
             "do rosto e dos traços dessa pessoa; elas não são fichas do personagem."
         )
     return pedido
+
+
+# O que a linha de expressão do apresentador passa a dizer com os quadros (D-929).
+MARCA_DA_EXPRESSAO_DO_APRESENTADOR = "EXPRESSION (host):"
+EXPRESSAO_DOS_QUADROS = (
+    "EXPRESSION (host): exactly the facial expression he shows in the attached live frames, "
+    "captured at the moment he says the cover line — same eyes, brows, mouth and jaw, "
+    "translated into the house style; do not invent a different face."
+)
+# Frases que as skills escreviam para as fotos do banco ("use as fotos só para a
+# identidade") e que, com os quadros, mandariam o gerador jogar fora a expressão.
+# Pares (como a skill escrevia, como fica), do mais longo ao mais curto.
+_USAR_A_EXPRESSAO = "take his facial expression from them too"
+_IGNORAR_A_EXPRESSAO = (
+    ("; ignore the facial expressions shown in them", f"; {_USAR_A_EXPRESSAO}"),
+    (", ignore their facial expressions", f"; {_USAR_A_EXPRESSAO}"),
+    ("ignore the facial expressions shown in them", _USAR_A_EXPRESSAO),
+    ("ignore their facial expressions", _USAR_A_EXPRESSAO),
+)
+
+
+def prompt_com_quadros(prompt: str) -> str:
+    """O prompt com a expressão do apresentador apontando para os quadros da live.
+
+    A linha `EXPRESSION (host):` descrevia uma cara escrita pelo Capista; com os
+    quadros, a cara é a dele naquele momento. Por linha e por texto fixo, sem
+    regex sobre o prompt: ele chega pela requisição (o cuidado de
+    `variacao_prompt.pessoas_do_prompt`).
+
+    >>> prompt_com_quadros("A.\\nEXPRESSION (host): smirk.\\nB.").splitlines()[1][:40]
+    'EXPRESSION (host): exactly the facial ex'
+    """
+    linhas = [
+        EXPRESSAO_DOS_QUADROS
+        if linha.lstrip().startswith(MARCA_DA_EXPRESSAO_DO_APRESENTADOR)
+        else linha
+        for linha in prompt.splitlines()
+    ]
+    reescrito = "\n".join(linhas)
+    for antes, depois in _IGNORAR_A_EXPRESSAO:
+        reescrito = reescrito.replace(antes, depois)
+    return reescrito
 
 
 def nome_de_ficha_valido(nome: str) -> str:
