@@ -35,6 +35,9 @@ export const SOURCE_BY_TYPE: Partial<Record<CenaRemotion["tipo"], CardSourceRect
   fonte_referencia: { x: 92, y: 602, w: 390, h: 360 },
   // I-036: tipos fora deste mapa renderizam em tamanho cheio sobre o palco.
   citacao_autor: { x: 92, y: 116, w: 520, h: 760 },
+  // D-931: o número em destaque desenha um anel de 780 px no centro do quadro;
+  // fora deste mapa ele saía por cima da tela pequena, longe da zona.
+  destaque_numerico: { x: 570, y: 150, w: 780, h: 780 },
   chamada_final: { x: 92, y: 92, w: 560, h: 760 },
   pergunta_chat: { x: 92, y: 112, w: 520, h: 560 },
 };

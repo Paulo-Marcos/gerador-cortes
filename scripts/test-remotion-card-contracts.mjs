@@ -336,7 +336,25 @@ scenarios.push(
   scene("zona-preencher-centro", NA_ZONA, "vertical", "media", modoNaZona("preencher", "centro")),
 );
 
+// D-931: o número em destaque também vai para a zona dos cards (nos dois
+// estilos); fora dela ele saía por cima da tela pequena.
+const NUMERO_NA_ZONA = {
+  ...base,
+  tipo: "destaque_numerico",
+  ...CENAS_LIMPAS.destaque_numerico,
+  layout_card: "vertical",
+  modelo_cena: "card",
+  layout_youtube_modo: "compartilhada",
+  layout_card_zone: { x: 1180, y: 80, w: 680, h: 920 },
+};
+scenarios.push(
+  scene("destaque_numerico-zona-limpo", NUMERO_NA_ZONA, "vertical", "media", LIMPO),
+  scene("destaque_numerico-zona-atual", NUMERO_NA_ZONA, "vertical", "media", ATUAL),
+);
+
 const distinctPairs = [
+  ["destaque_numerico-zona-limpo", "destaque_numerico-limpo", "o número em destaque tem de ir para a zona no limpo"],
+  ["destaque_numerico-zona-atual", "destaque_numerico-atual", "o número em destaque tem de ir para a zona no estilo de sempre"],
   ["zona-natural-topo", "zona-natural-centro", "o alinhamento vertical tem de mover o card na zona"],
   ["zona-natural-centro", "zona-preencher-centro", "preencher tem de mudar o tamanho do card na zona"],
   ["tela_cheia-card-v", "tela_cheia-card-h", "tela_cheia card deve mudar com layout_card"],
