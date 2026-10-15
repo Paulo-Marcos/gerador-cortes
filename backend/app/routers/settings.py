@@ -130,7 +130,7 @@ def obter_layout_da_capa_tiktok():
     desenha, sem erro nenhum aparecendo.
     """
     from app.domain.corte import capa_tiktok as layout_capa
-    from app.services.capa_tiktok import _ajuste_do_layout
+    from app.services.estilo_da_capa import ajuste_do_layout
 
     return {
         "quadro": {"largura": layout_capa.LARGURA, "altura": layout_capa.ALTURA},
@@ -144,7 +144,7 @@ def obter_layout_da_capa_tiktok():
         "componentes": list(layout_capa.COMPONENTES),
         "lado_minimo": layout_capa.LADO_MINIMO,
         "padrao": _em_componentes(layout_capa.layout_padrao()),
-        "atual": _em_componentes(layout_capa.montar_layout(_ajuste_do_layout())),
+        "atual": _em_componentes(layout_capa.montar_layout(ajuste_do_layout())),
     }
 
 
