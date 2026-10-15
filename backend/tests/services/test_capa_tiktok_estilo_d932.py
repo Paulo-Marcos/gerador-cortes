@@ -45,7 +45,13 @@ async def test_gerar_manda_o_estilo_ao_rasterizador(tmp_path: Path, monkeypatch)
     enviados: list[dict] = []
 
     async def contexto(_corte_id, *, exigir_video=True):
-        return {"projeto_id": "p1", "thumb_dir": tmp_path, "selo": "@canal", "texto_capa": "JURO"}
+        return {
+            "projeto_id": "p1",
+            "corte_id": "c1",
+            "thumb_dir": tmp_path,
+            "selo": "@canal",
+            "texto_capa": "JURO",
+        }
 
     async def rasterizar(destino: Path, props: dict) -> None:
         enviados.append(props)

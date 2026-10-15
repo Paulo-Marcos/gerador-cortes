@@ -105,6 +105,7 @@ async def gerar(
     para a tela em vez de um traceback.
     """
     contexto = await _contexto(corte_id, exigir_video=origem == ORIGEM_FRAME)
+    corte_id = contexto["corte_id"]  # o do banco: ele vira caminho de arquivo
 
     desenho = estilo_da_capa.resolver_para_corte(contexto["projeto_id"], corte_id)
     faixas = desenho.layout
@@ -269,7 +270,7 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
         corte = await db.get(Corte, corte_id)
         if not corte:
             raise CapaTikTokError("Corte nao encontrado.")
-        projeto_id = corte.projeto_id
+        projeto_id, corte_id = corte.projeto_id, corte.id  # os do banco, não os da URL
 
         resultado = await db.execute(
             select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
@@ -286,11 +287,11 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
 
     canal = identidade_do_canal_ativo()
     selo = (canal.handle or canal.nome or "").strip()
-    if selo and not selo.startswith("@"):
-        selo = f"@{selo}"
+    selo = f"@{selo}" if selo and not selo.startswith("@") else selo
 
     return {
         "projeto_id": projeto_id,
+        "corte_id": corte_id,
         "video": video,
         "thumb_dir": projetos_dir() / projeto_id / "thumbnails",
         "selo": selo,
@@ -304,8 +305,7 @@ def caminho_da_arte(thumb_dir: Path, corte_id: str, extensao: str = ".png") -> P
     return thumb_dir / f"{NOME_DA_ARTE}_{corte_id[:8]}{extensao}"
 
 
-def arte_do_corte(projeto_id: str, corte_id: str) -> Path | None:
-    """A arte 4:5 que o corte já tem, para a prévia do modal de estilo (D-933)."""
+def arte_do_corte(projeto_id: str, corte_id: str) -> Path | None:  # a prévia do modal (D-933)
     return _arte_existente(projetos_dir() / projeto_id / "thumbnails", corte_id)
 
 

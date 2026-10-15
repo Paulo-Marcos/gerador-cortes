@@ -139,7 +139,13 @@ async def test_gerar_manda_visibilidade_e_cabecalho_ao_rasterizador(
     enviados: list[dict] = []
 
     async def contexto(_corte_id, *, exigir_video=True):
-        return {"projeto_id": "p1", "thumb_dir": tmp_path, "selo": "@c", "texto_capa": "JURO"}
+        return {
+            "projeto_id": "p1",
+            "corte_id": "c1",
+            "thumb_dir": tmp_path,
+            "selo": "@c",
+            "texto_capa": "JURO",
+        }
 
     async def rasterizar(destino: Path, props: dict) -> None:
         enviados.append(props)
