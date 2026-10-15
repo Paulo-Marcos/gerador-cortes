@@ -1,5 +1,6 @@
 import { AbsoluteFill, interpolate, useVideoConfig } from "remotion";
 import { CenaRemotion } from "../schema";
+import { shouldUseSharedCardZone } from "../shared-card-zone";
 import { COLORS_V2 as C, FONTS_V2 as F, SHADOWS_V2 as SH } from "../theme-v2";
 import { useGlobalFrame } from "../frame-context";
 import { AmbientHud, useFades} from "./_shared";
@@ -48,7 +49,8 @@ export const CenaNumber: React.FC<Props> = ({ cena }) => {
         gap: 28,
       }}
     >
-      <AmbientHud intensity={0.55} scanline={false} ringsTL={false} />
+      {/* D-931: na zona dos cards o fundo de quadro inteiro invadiria as telas; ali vai só o anel. */}
+      {!shouldUseSharedCardZone(cena) && <AmbientHud intensity={0.55} scanline={false} ringsTL={false} />}
 
       {/* Anel reticle de fundo */}
       <svg width={780} height={780} style={{ position: "absolute" }} viewBox="0 0 780 780">
