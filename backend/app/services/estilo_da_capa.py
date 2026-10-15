@@ -17,11 +17,14 @@ import logging
 from pathlib import Path
 
 from app.core import channel_paths
+from app.database import AsyncSessionLocal
 from app.domain.canal.palco_componentes import FUNDOS
+from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.corte import capa_tiktok as geometria
 from app.domain.corte import estilo_da_capa as dominio
 from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_DO_ATUAL
 from app.infrastructure import palco_componentes_store
+from app.models import Corte
 from app.services import palco_componentes, palco_por_escopo
 from app.services.app_settings import AppSettingsService
 
@@ -89,6 +92,20 @@ def resolver_para_corte(
         fundo_do_palco=palco["fundoLimpo"],
         posicoes_globais=ajuste_do_layout(),
     )
+
+
+async def corte_conferido(corte_id: str) -> tuple[str, str]:
+    """O projeto e o id do corte COMO O BANCO OS TEM.
+
+    O painel monta caminho de arquivo (a arte) a partir deles. Vindos da
+    requisição, um `../` sairia da pasta de projetos; vindos do banco, são o
+    que o app mesmo gravou.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+    if corte is None:
+        raise NaoEncontrado("Corte nao encontrado.")
+    return corte.projeto_id, corte.id
 
 
 def painel(projeto_id: str, corte_id: str, arte: Path | None, rascunho: dict | None = None) -> dict:

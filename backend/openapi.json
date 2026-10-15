@@ -4094,14 +4094,9 @@
           },
           "estilo": {
             "$ref": "#/components/schemas/EstiloDaCapaTiktokSalvo"
-          },
-          "projeto_id": {
-            "title": "Projeto Id",
-            "type": "string"
           }
         },
         "required": [
-          "projeto_id",
           "corte_id",
           "estilo"
         ],
@@ -13908,15 +13903,6 @@
         "description": "O estilo do canal e como ele fica na capa deste corte.",
         "operationId": "obter_estilo_da_capa_api_capa_tiktok_estilo_get",
         "parameters": [
-          {
-            "in": "query",
-            "name": "projeto_id",
-            "required": true,
-            "schema": {
-              "title": "Projeto Id",
-              "type": "string"
-            }
-          },
           {
             "in": "query",
             "name": "corte_id",

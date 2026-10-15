@@ -129,7 +129,6 @@ describe('controles do modal', () => {
       <QueryClientProvider client={cliente}>
         <EstilizarCapa
           ocupado={false}
-          projetoId="p1"
           corteId="c1"
           etiqueta="x"
           refazCapa={false}

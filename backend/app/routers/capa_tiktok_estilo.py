@@ -6,6 +6,8 @@ Só HTTP: o contrato é `domain/corte/estilo_da_capa.py`, e a resposta inteira
 
 from __future__ import annotations
 
+import asyncio
+
 from app.domain.canal.palco_componentes import FUNDOS
 from app.domain.corte import capa_tiktok as geometria
 from app.domain.corte import estilo_da_capa as dominio
@@ -28,7 +30,6 @@ class EstiloDaCapaTiktokSalvo(BaseModel):
 
 
 class EstiloDaCapaTiktokRequest(BaseModel):
-    projeto_id: str
     corte_id: str
     estilo: EstiloDaCapaTiktokSalvo
 
@@ -65,10 +66,14 @@ class PainelDoEstiloDaCapaTiktok(RespostaApi):
     lado_minimo: int
 
 
-def _painel(projeto_id: str, corte_id: str, rascunho: dict | None = None) -> dict:
+async def _painel(corte_id: str, rascunho: dict | None = None) -> dict:
+    # O projeto vem do banco, nunca da requisição: ele vira caminho de arquivo.
+    projeto_id, corte_id = await estilo_da_capa.corte_conferido(corte_id)
     arte = capa_tiktok.arte_do_corte(projeto_id, corte_id)
+    # Lê a arte e o settings.db: fora do event loop.
+    painel = await asyncio.to_thread(estilo_da_capa.painel, projeto_id, corte_id, arte, rascunho)
     return {
-        **estilo_da_capa.painel(projeto_id, corte_id, arte, rascunho),
+        **painel,
         "estilos": list(dominio.ESTILOS_DA_CAPA),
         "fundos": list(FUNDOS),
         "componentes": list(dominio.COMPONENTES),
@@ -84,20 +89,21 @@ def _sem_nulos(estilo: EstiloDaCapaTiktokSalvo) -> dict:
 
 
 @router.get("/estilo", response_model=PainelDoEstiloDaCapaTiktok)
-def obter_estilo_da_capa(projeto_id: str, corte_id: str):
+async def obter_estilo_da_capa(corte_id: str):
     """O estilo do canal e como ele fica na capa deste corte."""
-    return _painel(projeto_id, corte_id)
+    return await _painel(corte_id)
 
 
 @router.post("/estilo/previa", response_model=PainelDoEstiloDaCapaTiktok)
-def prever_estilo_da_capa(body: EstiloDaCapaTiktokRequest):
+async def prever_estilo_da_capa(body: EstiloDaCapaTiktokRequest):
     """A capa com o rascunho do modal, sem gravar nada."""
     rascunho = dominio.validar(_sem_nulos(body.estilo), FUNDOS)
-    return _painel(body.projeto_id, body.corte_id, rascunho)
+    return await _painel(body.corte_id, rascunho)
 
 
 @router.put("/estilo", response_model=PainelDoEstiloDaCapaTiktok)
-def gravar_estilo_da_capa(body: EstiloDaCapaTiktokRequest):
+async def gravar_estilo_da_capa(body: EstiloDaCapaTiktokRequest):
     """Grava o estilo do canal. A capa do corte se refaz pelo endpoint dela."""
+    await estilo_da_capa.corte_conferido(body.corte_id)
     estilo_da_capa.gravar(_sem_nulos(body.estilo))
-    return _painel(body.projeto_id, body.corte_id)
+    return await _painel(body.corte_id)

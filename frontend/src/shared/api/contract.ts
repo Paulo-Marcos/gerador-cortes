@@ -6519,8 +6519,6 @@ export interface components {
             /** Corte Id */
             corte_id: string;
             estilo: components["schemas"]["EstiloDaCapaTiktokSalvo"];
-            /** Projeto Id */
-            projeto_id: string;
         };
         /**
          * EstiloDaCapaTiktokSalvo
@@ -10722,7 +10720,6 @@ export interface operations {
     obter_estilo_da_capa_api_capa_tiktok_estilo_get: {
         parameters: {
             query: {
-                projeto_id: string;
                 corte_id: string;
             };
             header?: never;

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from app.core import channel_paths
 from app.domain.canal import palco_componentes as palco_dominio
-from app.domain.compartilhado.erros import PedidoInvalido
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.corte import capa_tiktok as geometria
 from app.domain.corte import estilo_da_capa as dominio
 from app.services import capa_tiktok, estilo_da_capa, palco_componentes
@@ -183,18 +183,25 @@ def cliente(canais, monkeypatch):
         estilo_da_capa, "_cabecalho", lambda: {"nome": "Canal", "handle": "@c", "imagem": ""}
     )
     monkeypatch.setattr(capa_tiktok, "arte_do_corte", lambda *_: None)
+
+    async def corte_do_banco(corte_id):
+        if corte_id != "c1":
+            raise NaoEncontrado("Corte nao encontrado.")
+        return "p1", "c1"
+
+    monkeypatch.setattr(estilo_da_capa, "corte_conferido", corte_do_banco)
     app = FastAPI()
     registrar_tratadores(app)
     app.include_router(capa_tiktok_estilo.router, prefix="/api/capa-tiktok")
     return TestClient(app)
 
 
-def _corpo(**estilo):
-    return {"projeto_id": "p1", "corte_id": "c1", "estilo": estilo}
+def _corpo(corte_id="c1", **estilo):
+    return {"corte_id": corte_id, "estilo": estilo}
 
 
 def test_painel_traz_o_efetivo_e_as_regras_do_quadro(cliente):
-    painel = cliente.get("/api/capa-tiktok/estilo", params={"projeto_id": "p1", "corte_id": "c1"})
+    painel = cliente.get("/api/capa-tiktok/estilo", params={"corte_id": "c1"})
     assert painel.status_code == 200
     corpo = painel.json()
     assert corpo["salvo"] == {"estilo": None, "fundo": None, "visiveis": None, "posicoes": None}
@@ -225,6 +232,58 @@ def test_estilo_desconhecido_e_recusado(cliente):
     resposta = cliente.put("/api/capa-tiktok/estilo", json=_corpo(estilo="neon"))
     assert resposta.status_code == 400
     assert estilo_da_capa.ler_salvo() == {}
+
+
+def test_corte_que_nao_existe_e_404_e_nada_e_gravado(cliente):
+    assert cliente.get("/api/capa-tiktok/estilo", params={"corte_id": "x"}).status_code == 404
+    gravado = cliente.put("/api/capa-tiktok/estilo", json=_corpo("x", estilo="limpo"))
+    assert gravado.status_code == 404
+    assert estilo_da_capa.ler_salvo() == {}
+
+
+def test_a_arte_e_buscada_com_o_projeto_do_banco(cliente, monkeypatch):
+    """O caminho da arte nunca sai de um id da requisição (path injection)."""
+    pedidos = []
+    monkeypatch.setattr(capa_tiktok, "arte_do_corte", lambda *ids: pedidos.append(ids))
+    cliente.get("/api/capa-tiktok/estilo", params={"corte_id": "c1", "projeto_id": "../../x"})
+    assert pedidos == [("p1", "c1")]
+
+
+@pytest.mark.asyncio
+async def test_corte_conferido_devolve_o_que_o_banco_tem(monkeypatch):
+    from app.models import Base, Corte, Projeto
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import StaticPool
+
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    fabrica = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    monkeypatch.setattr(estilo_da_capa, "AsyncSessionLocal", fabrica)
+    async with fabrica() as db:
+        db.add(Projeto(id="proj-1", youtube_url="http://x", transcricao_raw="[]"))
+        db.add(
+            Corte(
+                id="c1",
+                projeto_id="proj-1",
+                numero=1,
+                titulo_proposto="t",
+                tema_central="e",
+                resumo="r",
+                inicio_seg=0.0,
+                fim_seg=60.0,
+                transcricao_final="[]",
+            )
+        )
+        await db.commit()
+
+    assert await estilo_da_capa.corte_conferido("c1") == ("proj-1", "c1")
+    with pytest.raises(NaoEncontrado):
+        await estilo_da_capa.corte_conferido("../c1")
 
 
 def test_preset_de_capa_guarda_o_estilo_normalizado():

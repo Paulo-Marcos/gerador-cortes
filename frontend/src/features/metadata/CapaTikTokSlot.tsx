@@ -293,7 +293,6 @@ export function CapaTikTokSlot({
 
           <EstilizarCapa
             ocupado={ocupado}
-            projetoId={projetoId}
             corteId={corteId}
             etiqueta={textoCapa?.trim() || etiqueta || ''}
             refazCapa={Boolean(capaPath)}

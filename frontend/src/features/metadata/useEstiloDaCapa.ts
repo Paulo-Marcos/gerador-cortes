@@ -8,7 +8,7 @@ const CHAVE = 'capa-tiktok-estilo';
 
 export function useEstiloDaCapa(alvo: Alvo) {
   return useQuery({
-    queryKey: [CHAVE, alvo.projetoId, alvo.corteId],
+    queryKey: [CHAVE, alvo.corteId],
     queryFn: () => estiloDaCapaApi.obter(alvo),
   });
 }
@@ -16,7 +16,7 @@ export function useEstiloDaCapa(alvo: Alvo) {
 /** A prévia do rascunho; mantém a anterior na tela enquanto a nova chega. */
 export function usePreviaDaCapa(alvo: Alvo, rascunho: EstiloDaCapaTiktok | null) {
   return useQuery({
-    queryKey: [CHAVE, 'previa', alvo.projetoId, alvo.corteId, rascunho],
+    queryKey: [CHAVE, 'previa', alvo.corteId, rascunho],
     queryFn: () => estiloDaCapaApi.prever(alvo, rascunho ?? {}),
     enabled: rascunho !== null,
     placeholderData: keepPreviousData,

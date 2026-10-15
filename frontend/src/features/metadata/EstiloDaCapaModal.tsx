@@ -17,7 +17,6 @@ import { useEstiloDaCapa, useGravarEstiloDaCapa, usePreviaDaCapa } from './useEs
 type Props = {
   open: boolean;
   onClose: () => void;
-  projetoId: string;
   corteId: string;
   /** O texto que a capa leva, para a prévia mostrar a capa de verdade. */
   etiqueta: string;
@@ -29,13 +28,12 @@ type Props = {
 export function EstiloDaCapaModal({
   open,
   onClose,
-  projetoId,
   corteId,
   etiqueta,
   refazCapa,
   onSalvou,
 }: Props) {
-  const alvo = { projetoId, corteId };
+  const alvo = { corteId };
   const salvo = useEstiloDaCapa(alvo);
   const [rascunho, setRascunho] = useState<EstiloDaCapaTiktok | null>(null);
   const atual = rascunho ?? (salvo.data ? rascunhoDoSalvo(salvo.data.salvo) : null);
