@@ -20,7 +20,27 @@ export type LayoutPresetTipo =
   /** D-509: o palco do SHORT — catálogo próprio, vocabulário próprio. */
   | 'palco_short'
   /** D-594: a aparência do gancho da abertura. */
-  | 'gancho_short';
+  | 'gancho_short'
+  /** D-933: o estilo da capa do TikTok (desenho, componentes e posições). */
+  | 'capa_tiktok';
+
+/** D-933: os componentes da capa do TikTok — o nome é a chave do contrato. */
+export type ComponenteDaCapa = 'etiqueta' | 'arte' | 'selo' | 'cabecalho' | 'acento';
+
+/**
+ * D-933: o estilo da capa do TikTok de um canal, e o payload do preset
+ * `capa_tiktok`. Parcial (RN-10): chave ausente é herança — do palco, dos
+ * Ajustes ou do padrão da geometria.
+ */
+export interface EstiloDaCapaTiktok {
+  /** `palco` segue o palco horizontal do corte. */
+  estilo?: 'palco' | 'atual' | 'limpo';
+  /** O fundo do estilo limpo. */
+  fundo?: string;
+  visiveis?: Partial<Record<ComponenteDaCapa, boolean>>;
+  /** Em px do quadro de 1080x1920. */
+  posicoes?: Partial<Record<ComponenteDaCapa, { x: number; y: number; w: number; h: number }>>;
+}
 
 /**
  * D-594: o que um preset de GANCHO guarda. Parcial de propósito: vazio e zero
@@ -121,7 +141,8 @@ export interface CriarLayoutPresetRequest {
     | LayoutPosicionamentoPayload
     | LayoutPosicionamentoFullPayload
     | PalcoShortPreset
-    | GanchoShortPreset;
+    | GanchoShortPreset
+    | EstiloDaCapaTiktok;
 }
 
 export interface AtualizarLayoutPresetRequest {
@@ -131,5 +152,6 @@ export interface AtualizarLayoutPresetRequest {
     | LayoutPosicionamentoPayload
     | LayoutPosicionamentoFullPayload
     | PalcoShortPreset
-    | GanchoShortPreset;
+    | GanchoShortPreset
+    | EstiloDaCapaTiktok;
 }

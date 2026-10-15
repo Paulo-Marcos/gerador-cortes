@@ -12,6 +12,7 @@ import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaArea
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
 import { metadadosApi } from './api/metadados';
+import { EstilizarCapa } from './EstiloDaCapaModal';
 import { metadataKey } from './useMetadataCard';
 import { Icon } from '@/upgrade/Icon';
 
@@ -290,16 +291,16 @@ export function CapaTikTokSlot({
 
           <SubirCapaPronta ocupado={ocupado} onArquivo={(arquivo) => subirCapaPronta.mutate(arquivo)} />
 
-          <button
-            type="button"
-            disabled={ocupado}
-            onClick={() => montar.mutate({ origem: 'frame' })}
-            className="inline-flex items-center gap-1 text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
-            title="Sem arte: usa um quadro do próprio vídeo. Costuma ficar pior."
-          >
-            <Icon name="film" />
-            usar frame do vídeo
-          </button>
+          <EstilizarCapa
+            ocupado={ocupado}
+            projetoId={projetoId}
+            corteId={corteId}
+            etiqueta={textoCapa?.trim() || etiqueta || ''}
+            refazCapa={Boolean(capaPath)}
+            onSalvou={() => capaPath && montar.mutate({})}
+          />
+
+          <UsarFrameDoVideo ocupado={ocupado} onUsar={() => montar.mutate({ origem: 'frame' })} />
 
           {etiqueta && (
             <p className="truncate font-code text-[10px] uppercase text-[var(--wb-text-mute)]">
@@ -383,5 +384,21 @@ function GerarArteNoChatGPT({
       alvoId={corteId}
       promptDoElenco={metadado.data?.prompt_thumbnail ?? ''}
     />
+  );
+}
+
+/** Sem arte: a capa sai de um quadro do próprio vídeo — discreto, porque costuma ficar pior. */
+function UsarFrameDoVideo({ ocupado, onUsar }: { ocupado: boolean; onUsar: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={ocupado}
+      onClick={onUsar}
+      className="inline-flex items-center gap-1 text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
+      title="Sem arte: usa um quadro do próprio vídeo. Costuma ficar pior."
+    >
+      <Icon name="film" />
+      usar frame do vídeo
+    </button>
   );
 }

@@ -26,7 +26,6 @@ que não deu, porque uma capa que some calada é pior do que capa nenhuma (D-384
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import os
@@ -107,7 +106,8 @@ async def gerar(
     """
     contexto = await _contexto(corte_id, exigir_video=origem == ORIGEM_FRAME)
 
-    faixas = layout_capa.montar_layout(estilo_da_capa.ajuste_do_layout())
+    desenho = estilo_da_capa.resolver_para_corte(contexto["projeto_id"], corte_id)
+    faixas = desenho.layout
     texto = layout_capa.normalizar_etiqueta(etiqueta or contexto["texto_capa"])
 
     destino = contexto["thumb_dir"] / f"{NOME_DA_CAPA}_{corte_id[:8]}.png"
@@ -136,9 +136,8 @@ async def gerar(
             "fundo": FUNDO_PADRAO,
             "etiqueta": texto,
             "selo": contexto["selo"],
-            "frameDataUri": _data_uri(imagem),
-            "faixas": faixas.como_dict(),
-            **estilo_da_capa.estilo_do_palco(contexto["projeto_id"], corte_id),
+            "frameDataUri": estilo_da_capa.data_uri(imagem),
+            **estilo_da_capa.props_da_capa(desenho),
         }
         await _rasterizar(destino, props)
 
@@ -305,6 +304,11 @@ def caminho_da_arte(thumb_dir: Path, corte_id: str, extensao: str = ".png") -> P
     return thumb_dir / f"{NOME_DA_ARTE}_{corte_id[:8]}{extensao}"
 
 
+def arte_do_corte(projeto_id: str, corte_id: str) -> Path | None:
+    """A arte 4:5 que o corte já tem, para a prévia do modal de estilo (D-933)."""
+    return _arte_existente(projetos_dir() / projeto_id / "thumbnails", corte_id)
+
+
 def _arte_existente(thumb_dir: Path, corte_id: str) -> Path | None:
     """A arte já subida, em qualquer extensão de imagem que o operador usou."""
     for extensao in (".png", ".jpg", ".jpeg", ".webp"):
@@ -463,18 +467,6 @@ async def _extrair_frame(
 
     if not destino.is_file():
         raise CapaTikTokError("O FFmpeg terminou sem escrever o frame.")
-
-
-def _data_uri(imagem: Path) -> str:
-    """O still embutido nos props.
-
-    Copiá-lo para `public/` do renderer invalidaria o fingerprint do bundle a
-    cada corte (D-190), e o cache do Remotion pararia de acertar — cada capa
-    custaria um bundle novo.
-    """
-    tipo = "png" if imagem.suffix.lower() == ".png" else "jpeg"
-    dados = base64.b64encode(imagem.read_bytes()).decode("ascii")
-    return f"data:image/{tipo};base64,{dados}"
 
 
 async def _rasterizar(destino: Path, props: dict) -> None:

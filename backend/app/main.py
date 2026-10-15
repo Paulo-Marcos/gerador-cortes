@@ -21,6 +21,7 @@ from app.routers import (
     avaliacao_cortes,
     avaliacoes_thumbnail,
     capa_no_chatgpt,
+    capa_tiktok_estilo,
     channels,
     claude_ia,
     cortes,
@@ -152,6 +153,7 @@ app.include_router(
 app.include_router(shorts.router, prefix="/api/shorts", tags=["Shorts"])
 # D-804: a capa gerada no ChatGPT do operador, pelo navegador dele.
 app.include_router(capa_no_chatgpt.router, prefix="/api/capa-chatgpt", tags=["Capa no ChatGPT"])
+app.include_router(capa_tiktok_estilo.router, prefix="/api/capa-tiktok", tags=["Capa do TikTok"])
 # D-491: quatro vezes numa sessao so, um bug foi cacado onde ele nao estava —
 # backend velho no ar, npm install faltando, coluna que so nasce no boot. Este
 # router torna visivel a diferenca entre o que roda e o que esta no disco.

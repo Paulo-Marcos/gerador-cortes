@@ -7,6 +7,19 @@
 
 export type Faixa = { x: number; y: number; w: number; h: number };
 
+/** D-933: os componentes que o operador mostra ou esconde no modal de estilo. */
+export type ComponenteDaCapa =
+  "etiqueta" | "arte" | "selo" | "cabecalho" | "acento";
+
+/** O cabeçalho do canal na capa limpa; a imagem chega em data URI. */
+export type CabecalhoDaCapa = { nome: string; handle: string; imagem: string };
+
+/** Sem a chave, o componente aparece: props antigas desenham a capa de sempre. */
+export const visivel = (
+  visiveis: Partial<Record<ComponenteDaCapa, boolean>> | undefined,
+  componente: ComponenteDaCapa,
+): boolean => visiveis?.[componente] !== false;
+
 // D-533: quanto uma letra ocupa, em fração do corpo da fonte.
 //
 // Medido no render real: com Inter Black em caixa alta e letter-spacing -0.02em,

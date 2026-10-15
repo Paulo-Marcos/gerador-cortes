@@ -55,6 +55,15 @@ export {
   type PosicaoDoComponente,
 } from "./youtube-bg/palco-limpo";
 
+// D-933: a capa do TikTok — a prévia do modal de estilo monta a mesma
+// composição que o gerador rasteriza.
+export {
+  CANVAS_H as ALTURA_DA_CAPA,
+  CANVAS_W as LARGURA_DA_CAPA,
+  CapaTikTok,
+  type CapaTikTokProps,
+} from "./youtube-bg/capa-tiktok";
+
 // D-913: as sombras da legenda do short, para a prévia desenhar igual ao render.
 export {
   ESTILOS_DA_LEGENDA,

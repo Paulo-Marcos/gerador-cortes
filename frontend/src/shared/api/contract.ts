@@ -388,6 +388,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/capa-tiktok/estilo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obter Estilo Da Capa
+         * @description O estilo do canal e como ele fica na capa deste corte.
+         */
+        get: operations["obter_estilo_da_capa_api_capa_tiktok_estilo_get"];
+        /**
+         * Gravar Estilo Da Capa
+         * @description Grava o estilo do canal. A capa do corte se refaz pelo endpoint dela.
+         */
+        put: operations["gravar_estilo_da_capa_api_capa_tiktok_estilo_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-tiktok/estilo/previa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prever Estilo Da Capa
+         * @description A capa com o rascunho do modal, sem gravar nada.
+         */
+        post: operations["prever_estilo_da_capa_api_capa_tiktok_estilo_previa_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels": {
         parameters: {
             query?: never;
@@ -5584,6 +5628,15 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** CabecalhoDaCapaTiktok */
+        CabecalhoDaCapaTiktok: {
+            /** Handle */
+            handle: string;
+            /** Imagem */
+            imagem: string;
+            /** Nome */
+            nome: string;
+        };
         /** CabecalhoRequest */
         CabecalhoRequest: {
             /** Ativo */
@@ -6461,6 +6514,49 @@ export interface components {
              */
             protagonista: "mascote" | "apresentador";
         };
+        /** EstiloDaCapaTiktokRequest */
+        EstiloDaCapaTiktokRequest: {
+            /** Corte Id */
+            corte_id: string;
+            estilo: components["schemas"]["EstiloDaCapaTiktokSalvo"];
+            /** Projeto Id */
+            projeto_id: string;
+        };
+        /**
+         * EstiloDaCapaTiktokSalvo
+         * @description O estilo gravado, parcial: chave ausente é herança (RN-10).
+         */
+        EstiloDaCapaTiktokSalvo: {
+            /** Estilo */
+            estilo?: string | null;
+            /** Fundo */
+            fundo?: string | null;
+            /** Posicoes */
+            posicoes?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
+            /** Visiveis */
+            visiveis?: {
+                [key: string]: boolean;
+            } | null;
+        };
+        /** EstiloEfetivoDaCapaTiktok */
+        EstiloEfetivoDaCapaTiktok: {
+            /** Estilo */
+            estilo: string;
+            /** Faixas */
+            faixas: {
+                [key: string]: components["schemas"]["RetanguloCapa"];
+            };
+            /** Fundo */
+            fundo: string;
+            /** Visiveis */
+            visiveis: {
+                [key: string]: boolean;
+            };
+        };
         /**
          * FabricaDaLiveResponse
          * @description O que o clique disparou: quantos cortes entram e se a live será baixada.
@@ -7047,7 +7143,7 @@ export interface components {
              * Tipo
              * @enum {string}
              */
-            tipo: "completo" | "posicionamento" | "posicionamento_full" | "palco_short" | "gancho_short";
+            tipo: "completo" | "posicionamento" | "posicionamento_full" | "palco_short" | "gancho_short" | "capa_tiktok";
         };
         /** LevantamentoDuracao */
         LevantamentoDuracao: {
@@ -7779,6 +7875,37 @@ export interface components {
             total_avaliacoes: number;
             /** Total Melhores */
             total_melhores: number;
+        };
+        /**
+         * PainelDoEstiloDaCapaTiktok
+         * @description Tudo que o modal desenha: o salvo, o efetivo e as regras do quadro.
+         */
+        PainelDoEstiloDaCapaTiktok: {
+            /** Arte */
+            arte: string;
+            cabecalho: components["schemas"]["CabecalhoDaCapaTiktok"];
+            /** Componentes */
+            componentes: string[];
+            /** Componentes Do Limpo */
+            componentes_do_limpo: string[];
+            efetivo: components["schemas"]["EstiloEfetivoDaCapaTiktok"];
+            /** Estilo Do Palco */
+            estilo_do_palco: string;
+            /** Estilos */
+            estilos: string[];
+            faixa_segura: components["schemas"]["FaixaSeguraCapa"];
+            /** Fundo Do Atual */
+            fundo_do_atual: string;
+            /** Fundos */
+            fundos: string[];
+            /** Lado Minimo */
+            lado_minimo: number;
+            /** Padrao */
+            padrao: {
+                [key: string]: components["schemas"]["RetanguloCapa"];
+            };
+            quadro: components["schemas"]["QuadroCapa"];
+            salvo: components["schemas"]["EstiloDaCapaTiktokSalvo"];
         };
         /** PalavraDoBruto */
         PalavraDoBruto: {
@@ -10579,6 +10706,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PedidoDaCapaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_estilo_da_capa_api_capa_tiktok_estilo_get: {
+        parameters: {
+            query: {
+                projeto_id: string;
+                corte_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PainelDoEstiloDaCapaTiktok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gravar_estilo_da_capa_api_capa_tiktok_estilo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EstiloDaCapaTiktokRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PainelDoEstiloDaCapaTiktok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prever_estilo_da_capa_api_capa_tiktok_estilo_previa_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EstiloDaCapaTiktokRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PainelDoEstiloDaCapaTiktok"];
                 };
             };
             /** @description Validation Error */
