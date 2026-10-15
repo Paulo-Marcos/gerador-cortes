@@ -176,4 +176,3 @@ const CardNaZona: FC<{ zona: { x: number; y: number; w: number; h: number }; fam
     </div>
   );
 };
-
