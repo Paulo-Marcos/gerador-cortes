@@ -44,6 +44,14 @@ ESCALA_MINIMA, ESCALA_MAXIMA = 0.5, 2.0
 QUADRO = (1920, 1080)
 POSICAO_PADRAO = (96, 112)
 
+# D-926: como o card se apresenta DENTRO do espaço dele (a zona dos cards na
+# compartilhada). "preencher" cresce o card com pouco texto e encolhe o com
+# muito, até caber no espaço; "natural" deixa o tamanho de sempre. O
+# alinhamento diz onde o card senta quando sobra espaço.
+AJUSTES = ("preencher", "natural")
+ALINHAMENTOS_VERTICAIS = ("centro", "topo", "base")
+ALINHAMENTOS_HORIZONTAIS = ("centro", "esquerda", "direita")
+
 
 class TipoDeCenaInvalido(PedidoInvalido):
     """Um tipo de cena que o renderer não conhece."""
@@ -62,11 +70,17 @@ class Cards:
     """Tipos que não aparecem no vídeo deste canal."""
     escala: float = 1.0
     posicao: PosicaoDosCards = PosicaoDosCards()
+    ajuste: str = AJUSTES[0]
+    alinhamento_vertical: str = ALINHAMENTOS_VERTICAIS[0]
+    alinhamento_horizontal: str = ALINHAMENTOS_HORIZONTAIS[0]
 
     def para_dict(self) -> dict[str, Any]:
         return {
             "ocultos": list(self.ocultos),
             "escala": self.escala,
+            "ajuste": self.ajuste,
+            "alinhamento_vertical": self.alinhamento_vertical,
+            "alinhamento_horizontal": self.alinhamento_horizontal,
             "posicao": {
                 "automatica": self.posicao.automatica,
                 "x": self.posicao.x,
@@ -101,6 +115,25 @@ def _numero(valor: Any, atual: float, minimo: float, maximo: float) -> float:
         return atual
 
 
+def _opcao(valor: Any, atual: str, opcoes: tuple[str, ...], *, tolerante: bool) -> str:
+    """Uma das opções; desconhecida é recusada na edição e ignorada na leitura.
+
+    Exemplos:
+        >>> _opcao("Topo", "centro", ALINHAMENTOS_VERTICAIS, tolerante=False)
+        'topo'
+        >>> _opcao("meio", "centro", ALINHAMENTOS_VERTICAIS, tolerante=True)
+        'centro'
+    """
+    if valor is None:
+        return atual
+    opcao = str(valor).strip().lower()
+    if opcao in opcoes:
+        return opcao
+    if tolerante:
+        return atual
+    raise PedidoInvalido(f"Opção de card desconhecida: {valor!r} (use {', '.join(opcoes)}).")
+
+
 def mesclar(atual: Cards, mudancas: Any, *, tolerante: bool = False) -> Cards:
     """Os cards depois de uma edição parcial (campo ausente não muda).
 
@@ -130,6 +163,19 @@ def mesclar(atual: Cards, mudancas: Any, *, tolerante: bool = False) -> Cards:
         ocultos=_ocultos(mudancas.get("ocultos"), atual.ocultos, tolerante=tolerante),
         escala=_numero(mudancas.get("escala"), atual.escala, ESCALA_MINIMA, ESCALA_MAXIMA),
         posicao=nova_posicao,
+        ajuste=_opcao(mudancas.get("ajuste"), atual.ajuste, AJUSTES, tolerante=tolerante),
+        alinhamento_vertical=_opcao(
+            mudancas.get("alinhamento_vertical"),
+            atual.alinhamento_vertical,
+            ALINHAMENTOS_VERTICAIS,
+            tolerante=tolerante,
+        ),
+        alinhamento_horizontal=_opcao(
+            mudancas.get("alinhamento_horizontal"),
+            atual.alinhamento_horizontal,
+            ALINHAMENTOS_HORIZONTAIS,
+            tolerante=tolerante,
+        ),
     )
 
 
@@ -150,4 +196,7 @@ def props_para_renderer(estilo: str, cards: Cards) -> dict[str, Any]:
         "ocultos": ocultos,
         "escala": cards.escala,
         "posicao": cards.para_dict()["posicao"],
+        "ajuste": cards.ajuste,
+        "alinhamento_vertical": cards.alinhamento_vertical,
+        "alinhamento_horizontal": cards.alinhamento_horizontal,
     }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { CenaRemotion } from "./schema";
+import { useEstiloDasCenas } from "./cenas-limpo/estilo-das-cenas";
 
 export interface LayoutCardZone {
   x: number;
@@ -63,7 +64,10 @@ export const SharedCardZoneFrame: React.FC<{
   cena: CenaRemotion;
   children: ReactNode;
 }> = ({ cena, children }) => {
-  if (!shouldUseSharedCardZone(cena)) return <>{children}</>;
+  // D-926: no estilo limpo o próprio card se encaixa na zona (alinhado e, se o
+  // canal quiser, crescendo até o espaço) — o enquadramento dele cuida disso.
+  const { estilo } = useEstiloDasCenas();
+  if (estilo === "limpo" || !shouldUseSharedCardZone(cena)) return <>{children}</>;
   const fit = fitSharedCardZone(cena);
   if (!fit) return <>{children}</>;
 

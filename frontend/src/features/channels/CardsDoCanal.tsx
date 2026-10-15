@@ -1,14 +1,85 @@
-import { CampoPosicao, CampoTamanho, type PosicaoEditavel } from './ControlesDoPalco';
+import { CampoEscolha, CampoPosicao, CampoTamanho, type PosicaoEditavel } from './ControlesDoPalco';
 
 // D-916: os cards (cenas) do canal na tela de Canais — quais tipos aparecem no
 // vídeo, de que tamanho, e onde sentam quando a cena está sobre o vídeo cheio.
 // Na compartilhada quem posiciona o card é a zona do corte (o retângulo "Cards"
 // do modal de posição), e isso continua lá.
 
+export type AjusteDoCard = 'preencher' | 'natural';
+export type AlinhamentoVertical = 'centro' | 'topo' | 'base';
+export type AlinhamentoHorizontal = 'centro' | 'esquerda' | 'direita';
+
 export interface CardsEditaveis {
   ocultos: string[];
   escala: number;
   posicao: PosicaoEditavel;
+  /** D-926: ausente = o padrão (ocupar o espaço, no centro). */
+  ajuste?: AjusteDoCard;
+  alinhamento_vertical?: AlinhamentoVertical;
+  alinhamento_horizontal?: AlinhamentoHorizontal;
+}
+
+const AJUSTES: { id: AjusteDoCard; nome: string }[] = [
+  { id: 'preencher', nome: 'Ocupar o espaço' },
+  { id: 'natural', nome: 'Tamanho natural' },
+];
+const VERTICAIS: { id: AlinhamentoVertical; nome: string }[] = [
+  { id: 'topo', nome: 'Topo' },
+  { id: 'centro', nome: 'Centro' },
+  { id: 'base', nome: 'Base' },
+];
+const HORIZONTAIS: { id: AlinhamentoHorizontal; nome: string }[] = [
+  { id: 'esquerda', nome: 'Esquerda' },
+  { id: 'centro', nome: 'Centro' },
+  { id: 'direita', nome: 'Direita' },
+];
+
+/** O que veio do servidor (texto livre) como opções da tela; o desconhecido vira o padrão. */
+export function cardsEditaveisDe(cards: {
+  ocultos: string[];
+  escala: number;
+  posicao: PosicaoEditavel;
+  ajuste?: string | null;
+  alinhamento_vertical?: string | null;
+  alinhamento_horizontal?: string | null;
+}): CardsEditaveis {
+  const escolher = <T extends string>(valor: string | null | undefined, opcoes: { id: T }[], padrao: T): T =>
+    opcoes.find((o) => o.id === valor)?.id ?? padrao;
+  return {
+    ocultos: cards.ocultos,
+    escala: cards.escala,
+    posicao: cards.posicao,
+    ajuste: escolher(cards.ajuste, AJUSTES, 'preencher'),
+    alinhamento_vertical: escolher(cards.alinhamento_vertical, VERTICAIS, 'centro'),
+    alinhamento_horizontal: escolher(cards.alinhamento_horizontal, HORIZONTAIS, 'centro'),
+  };
+}
+
+/**
+ * D-926: como o card se apresenta dentro do espaço dele (a zona dos cards na
+ * compartilhada): ocupar o espaço (cresce com pouco texto, encolhe com muito)
+ * ou o tamanho natural, e onde senta quando sobra espaço.
+ */
+export function ModosDoCard({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (valor: CardsEditaveis) => void }) {
+  return (
+    <div className="grid gap-3" role="group" aria-label="Modo do card no espaço">
+      <CampoEscolha rotulo="No espaço dos cards" valor={valor.ajuste ?? 'preencher'} opcoes={AJUSTES} onEscolher={(ajuste) => onMudar({ ...valor, ajuste })} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <CampoEscolha
+          rotulo="Alinhamento vertical"
+          valor={valor.alinhamento_vertical ?? 'centro'}
+          opcoes={VERTICAIS}
+          onEscolher={(alinhamento_vertical) => onMudar({ ...valor, alinhamento_vertical })}
+        />
+        <CampoEscolha
+          rotulo="Alinhamento horizontal"
+          valor={valor.alinhamento_horizontal ?? 'centro'}
+          opcoes={HORIZONTAIS}
+          onEscolher={(alinhamento_horizontal) => onMudar({ ...valor, alinhamento_horizontal })}
+        />
+      </div>
+    </div>
+  );
 }
 
 const QUADRO = { largura: 1920, altura: 1080 };
@@ -60,8 +131,10 @@ export function CardsDoCanal({
           onMudar={(posicao) => onMudar({ ...valor, posicao })}
         />
       </div>
+      <ModosDoCard valor={valor} onMudar={onMudar} />
       <p className="text-xs text-[var(--wb-text-dim)]">
-        Na tela compartilhada o card fica na zona de cada corte (modal de posição).
+        Na tela compartilhada o card fica na zona de cada corte (modal de posição); o modo acima diz como ele
+        ocupa essa zona. Tamanho e posição valem no vídeo cheio.
       </p>
     </fieldset>
   );

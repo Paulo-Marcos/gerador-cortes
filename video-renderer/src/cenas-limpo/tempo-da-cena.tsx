@@ -1,5 +1,5 @@
 import { createContext, useContext, type CSSProperties, type FC, type ReactNode } from "react";
-import { useCurrentFrame } from "remotion";
+import { useGlobalFrame } from "../frame-context";
 import { estadoDaLinha, opacidadeDeSaida } from "./movimento";
 
 /**
@@ -23,14 +23,29 @@ export const useContinuidade = (): Continuidade => useContext(ContinuidadeContex
 export interface TempoDaCena extends Continuidade {
   /** Quadros da cena em tela (a barra inferior já vem limitada a 4 s). */
   fim: number;
+  /** D-926: o quadro em que a cena começa, no relógio global do vídeo. */
+  inicio: number;
 }
 
-export const TempoDaCenaContext = createContext<TempoDaCena>({ ...SEM_CONTINUIDADE, fim: Number.MAX_SAFE_INTEGER });
-
-export const useTempoDaCena = (): TempoDaCena & { quadro: number } => ({
-  ...useContext(TempoDaCenaContext),
-  quadro: useCurrentFrame(),
+export const TempoDaCenaContext = createContext<TempoDaCena>({
+  ...SEM_CONTINUIDADE,
+  fim: Number.MAX_SAFE_INTEGER,
+  inicio: 0,
 });
+
+/**
+ * D-926: o quadro DENTRO da cena (0 no começo dela), como as cenas de sempre
+ * medem (`useGlobalFrame() - inicio`). Contar com o quadro cru só dava certo
+ * dentro de uma `<Sequence>` (o render em pedaços); na prévia do editor e no
+ * Studio o quadro é o do vídeo inteiro, e todo card que começava depois da
+ * própria duração se dava por terminado e não aparecia.
+ */
+export const useQuadroDaCena = (inicio: number): number => useGlobalFrame() - inicio;
+
+export const useTempoDaCena = (): TempoDaCena & { quadro: number } => {
+  const tempo = useContext(TempoDaCenaContext);
+  return { ...tempo, quadro: useQuadroDaCena(tempo.inicio) };
+};
 
 /** Uma linha do texto: entra na vez dela (subindo 10 px) e sai junto com a cena. */
 export const Linha: FC<{ indice: number; children: ReactNode; style?: CSSProperties }> = ({

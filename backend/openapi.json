@@ -2432,6 +2432,53 @@
       "CardsRequest": {
         "description": "D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio.",
         "properties": {
+          "ajuste": {
+            "anyOf": [
+              {
+                "enum": [
+                  "preencher",
+                  "natural"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ajuste"
+          },
+          "alinhamento_horizontal": {
+            "anyOf": [
+              {
+                "enum": [
+                  "centro",
+                  "esquerda",
+                  "direita"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alinhamento Horizontal"
+          },
+          "alinhamento_vertical": {
+            "anyOf": [
+              {
+                "enum": [
+                  "centro",
+                  "topo",
+                  "base"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alinhamento Vertical"
+          },
           "escala": {
             "anyOf": [
               {
@@ -2473,6 +2520,39 @@
       },
       "CardsResponse": {
         "properties": {
+          "ajuste": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ajuste"
+          },
+          "alinhamento_horizontal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alinhamento Horizontal"
+          },
+          "alinhamento_vertical": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alinhamento Vertical"
+          },
           "escala": {
             "title": "Escala",
             "type": "number"

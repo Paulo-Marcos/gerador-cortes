@@ -72,7 +72,15 @@ export interface ComponentesDoPalco {
   /** D-913: a legenda do short com contorno (o de sempre) ou só sombra. */
   estilo_da_legenda: 'contorno' | 'sombra';
   /** D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio. */
-  cards: { ocultos: string[]; escala: number; posicao: Posicao };
+  cards: {
+    ocultos: string[];
+    escala: number;
+    posicao: Posicao;
+    /** D-926: como o card ocupa a zona dos cards (compartilhada); ausente = ocupar, no centro. */
+    ajuste?: 'preencher' | 'natural';
+    alinhamento_vertical?: 'centro' | 'topo' | 'base';
+    alinhamento_horizontal?: 'centro' | 'esquerda' | 'direita';
+  };
 }
 
 export const COMPONENTES_PADRAO: ComponentesDoPalco = {
@@ -91,7 +99,14 @@ export const COMPONENTES_PADRAO: ComponentesDoPalco = {
   contorno_short: 32,
   fundo_short: 'palco',
   estilo_da_legenda: 'contorno',
-  cards: { ocultos: [], escala: 1, posicao: { automatica: true, x: 96, y: 112 } },
+  cards: {
+    ocultos: [],
+    escala: 1,
+    posicao: { automatica: true, x: 96, y: 112 },
+    ajuste: 'preencher',
+    alinhamento_vertical: 'centro',
+    alinhamento_horizontal: 'centro',
+  },
 };
 
 /** A janela da prévia: recorta o vídeo com os cantos do estilo limpo e leva a sombra. */
@@ -161,6 +176,9 @@ export function temEcoNoShort(componentes: ComponentesDoPalco): boolean {
  */
 export function estiloDasCenasDe(componentes: ComponentesDoPalco = COMPONENTES_PADRAO) {
   const { ocultos, escala, posicao } = componentes.cards;
+  const { ajuste = 'preencher', alinhamento_vertical = 'centro', alinhamento_horizontal = 'centro' } = componentes.cards;
   const comApelido = ocultos.includes('comparativo_contraponto') ? [...ocultos, 'comparativo_enfase'] : ocultos;
-  return { estilo: componentes.estilo, ocultos: comApelido, escala, posicao };
+  const base = { estilo: componentes.estilo, ocultos: comApelido, escala, posicao };
+  // D-926: os modos na zona só existem no estilo limpo.
+  return componentes.estilo === 'limpo' ? { ...base, ajuste, alinhamento_vertical, alinhamento_horizontal } : base;
 }

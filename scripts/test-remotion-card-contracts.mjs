@@ -318,7 +318,27 @@ scenarios.push(
   scene("card_informacao-escondido", { ...base, tipo: "card_informacao", ...CENAS_LIMPAS.card_informacao }, "vertical", "media", { ...LIMPO, ocultos: ["card_informacao"] }),
 );
 
+// D-926: o card limpo dentro da zona dos cards (compartilhada). Alinhar no
+// centro tem de mover o card em relação ao topo, e "preencher" tem de mudar o
+// tamanho em relação ao natural — senão o modo escolhido não chega ao vídeo.
+const NA_ZONA = {
+  ...base,
+  tipo: "definicao_termo",
+  ...CENAS_LIMPAS.definicao_termo,
+  layout_card: "vertical",
+  layout_youtube_modo: "compartilhada",
+  layout_card_zone: { x: 1180, y: 80, w: 680, h: 920 },
+};
+const modoNaZona = (ajuste, alinhamento_vertical) => ({ ...LIMPO, ajuste, alinhamento_vertical, alinhamento_horizontal: "centro" });
+scenarios.push(
+  scene("zona-natural-topo", NA_ZONA, "vertical", "media", modoNaZona("natural", "topo")),
+  scene("zona-natural-centro", NA_ZONA, "vertical", "media", modoNaZona("natural", "centro")),
+  scene("zona-preencher-centro", NA_ZONA, "vertical", "media", modoNaZona("preencher", "centro")),
+);
+
 const distinctPairs = [
+  ["zona-natural-topo", "zona-natural-centro", "o alinhamento vertical tem de mover o card na zona"],
+  ["zona-natural-centro", "zona-preencher-centro", "preencher tem de mudar o tamanho do card na zona"],
   ["tela_cheia-card-v", "tela_cheia-card-h", "tela_cheia card deve mudar com layout_card"],
   ["comparativo_contraponto-padrao", "comparativo_contraponto-card-v", "comparativo_contraponto deve mudar quando modelo_cena=card"],
   ["comparativo_contraponto-card-v", "comparativo_contraponto-card-h", "comparativo_contraponto card deve mudar com layout_card"],
