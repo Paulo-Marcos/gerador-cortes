@@ -439,7 +439,7 @@ function bundleOnce() {
 // vazia. A lista vazia é a assinatura da corrida e nada mais a produz depois do
 // registerRoot (que tem erro próprio): só ela se repete.
 const tentativasDeSelecao = 3;
-const listaVazia = /^Could not find composition with ID \S+\. Available compositions:\s*$/;
+const listaVazia = /^(?:Error: )?Could not find composition with ID \S+\. Available compositions:\s*$/;
 
 async function selecionarComposicao(selecionar, opcoes, avisar = console.warn) {
   for (let tentativa = 1; ; tentativa++) {
@@ -456,8 +456,11 @@ async function selecionarComposicao(selecionar, opcoes, avisar = console.warn) {
 
 // D-920: a repetição tem de valer só para a lista VAZIA; composição sumida de
 // verdade (lista com outras) ou outro erro falham na primeira.
+// D-930: as mensagens são as que o Remotion 4.0.534 entrega de fato, com o
+// "Error: " da descrição do navegador na frente (medido com um ID inexistente).
+// Sem ele, este teste passava e a repetição nunca disparou no CI.
 async function verificarRepeticaoDaSelecao() {
-  const corrida = new Error("Could not find composition with ID OverlaySceneV2. Available compositions: ");
+  const corrida = new Error("Error: Could not find composition with ID OverlaySceneV2. Available compositions: ");
   const falhaAntes = (erros) => {
     const fila = [...erros];
     const selecionar = async () => {
@@ -479,7 +482,7 @@ async function verificarRepeticaoDaSelecao() {
   await assert.rejects(selecionarComposicao(sempreCorrida, {}, semLog), corrida);
   assert.equal(sempreCorrida.chamadas, 3);
 
-  const sumiu = falhaAntes([new Error("Could not find composition with ID OverlaySceneV2. Available compositions: Outra")]);
+  const sumiu = falhaAntes([new Error("Error: Could not find composition with ID OverlaySceneV2. Available compositions: Outra")]);
   await assert.rejects(selecionarComposicao(sumiu, {}, semLog), /Available compositions: Outra/);
   assert.equal(sumiu.chamadas, 1);
 
@@ -488,16 +491,53 @@ async function verificarRepeticaoDaSelecao() {
   assert.equal(outroErro.chamadas, 1);
 }
 
-async function runStill(scenario, browser) {
+// D-930: a corrida da D-920 mora no selectComposition, e cada still o chamava
+// com 4 abas disputando a CPU — 80 sorteios por execução. A composição é uma só
+// e o calculateMetadata do OverlaySceneV2 (src/Root.tsx) só lê durationFrames:
+// seleciona-se UMA vez, antes do paralelismo, e cada cenário refaz o que o
+// Remotion faria com as props dele (defaultProps + inputProps, mescla rasa).
+async function prepararComposicoes(selecionar, opcoes, cenarios, avisar = console.warn) {
+  const base = await selecionarComposicao(selecionar, { ...opcoes, inputProps: {} }, avisar);
+  return new Map(cenarios.map(({ id, props }) => [id, composicaoDoCenario(base, props)]));
+}
+
+function composicaoDoCenario(base, props) {
+  return { ...base, durationInFrames: props.durationFrames, props: { ...base.defaultProps, ...props } };
+}
+
+// D-930: uma seleção para todos os cenários, mesmo depois de a lista voltar
+// vazia; e cada cenário com as próprias props por cima dos padrões.
+async function verificarComposicaoUnica() {
+  const corrida = new Error("Error: Could not find composition with ID OverlaySceneV2. Available compositions: ");
+  const base = { id: "OverlaySceneV2", durationInFrames: 150, defaultProps: { durationFrames: 150, fontPreset: "atual", estiloCenas: "padrao" } };
+  const fila = [corrida, corrida];
+  const selecionar = async (opcoes) => {
+    selecionar.chamadas += 1;
+    assert.deepEqual(opcoes.inputProps, {});
+    const erro = fila.shift();
+    if (erro) throw erro;
+    return { ...base, props: base.defaultProps };
+  };
+  selecionar.chamadas = 0;
+  const cenarios = [
+    { id: "a", props: { durationFrames: 150, cena: { tipo: "enfase" } } },
+    { id: "b", props: { durationFrames: 90, cena: { tipo: "linha_tempo" }, estiloCenas: "limpo" } },
+    { id: "c", props: { durationFrames: 150, cena: { tipo: "enfase" } } },
+  ];
+
+  const composicoes = await prepararComposicoes(selecionar, {}, cenarios, () => {});
+
+  assert.equal(selecionar.chamadas, 3, "duas listas vazias e uma seleção que vale para todos");
+  assert.deepEqual(composicoes.get("a").props, { durationFrames: 150, fontPreset: "atual", estiloCenas: "padrao", cena: { tipo: "enfase" } });
+  assert.equal(composicoes.get("b").props.estiloCenas, "limpo");
+  assert.equal(composicoes.get("b").durationInFrames, 90);
+  assert.equal(composicoes.get("c").id, "OverlaySceneV2");
+}
+
+async function runStill(scenario, composition, browser) {
   const outputPath = path.join(outDir, `${scenario.id}.png`);
   writeFileSync(path.join(outDir, `${scenario.id}.json`), JSON.stringify(scenario.props, null, 2), "utf8");
 
-  const composition = await selecionarComposicao(selectComposition, {
-    serveUrl: bundleDir,
-    id: "OverlaySceneV2",
-    inputProps: scenario.props,
-    puppeteerInstance: browser,
-  });
   await renderStill({
     composition,
     serveUrl: bundleDir,
@@ -523,6 +563,7 @@ async function runStill(scenario, browser) {
 
 async function main() {
   await verificarRepeticaoDaSelecao();
+  await verificarComposicaoUnica();
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
   bundleOnce();
@@ -531,14 +572,20 @@ async function main() {
   const browser = await openBrowser("chrome");
   // Cada still abre a própria aba; algumas em paralelo dividem o navegador.
   const pendentes = [...scenarios];
+  let composicoes;
   const renderizarPendentes = async () => {
     for (let scenario = pendentes.shift(); scenario; scenario = pendentes.shift()) {
-      const result = await runStill(scenario, browser);
+      const result = await runStill(scenario, composicoes.get(scenario.id), browser);
       results.set(result.id, result);
       console.log(`ok ${result.id} (${result.bytes} bytes)`);
     }
   };
   try {
+    composicoes = await prepararComposicoes(
+      selectComposition,
+      { serveUrl: bundleDir, id: "OverlaySceneV2", puppeteerInstance: browser },
+      scenarios,
+    );
     await Promise.all(Array.from({ length: Math.min(4, availableParallelism()) }, renderizarPendentes));
   } finally {
     await browser.close({ silent: true });
