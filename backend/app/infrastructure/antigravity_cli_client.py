@@ -177,22 +177,29 @@ def _conversar(proc: subprocess.Popen, prompt: str, limite: float) -> tuple[str,
                 break
         terminou.set()
 
-    leitores = [
+    def _escrever_stdin() -> None:
+        try:
+            entrada.write(_mensagem_stdin(prompt))
+            entrada.close()
+        except OSError:
+            pass  # o processo morreu antes de ler o prompt; o stderr conta o porquê
+
+    # WHY a escrita também numa thread (D-954): prompt maior que o buffer do
+    # pipe bloqueia até o agy ler. Se ele travar sem ler, a escrita na thread
+    # chamadora furava o `limite`; assim o timeout vale para tudo, e `_encerrar`
+    # mata a árvore, o que quebra a escrita presa com OSError.
+    canais = [
         threading.Thread(target=_ler_stdout, daemon=True),
         threading.Thread(target=lambda: erros.append(saida_de_erro.read()), daemon=True),
+        threading.Thread(target=_escrever_stdin, daemon=True),
     ]
-    for leitor in leitores:
-        leitor.start()
-    try:
-        entrada.write(_mensagem_stdin(prompt))
-        entrada.close()
-    except OSError:
-        pass  # o processo morreu antes de ler o prompt; o stderr conta o porquê
+    for canal in canais:
+        canal.start()
 
     respondeu = terminou.wait(limite)
     _encerrar(proc, respondeu=respondeu)
-    for leitor in leitores:
-        leitor.join(_ESPERA_PARA_DRENAR_S)
+    for canal in canais:
+        canal.join(_ESPERA_PARA_DRENAR_S)
     if not respondeu:
         raise subprocess.TimeoutExpired(proc.args, limite)
     return "".join(linhas), b"".join(erros).decode("utf-8", errors="replace").strip()
