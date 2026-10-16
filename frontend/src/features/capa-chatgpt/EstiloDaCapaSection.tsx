@@ -44,11 +44,44 @@ export function EstiloDaCapaSection() {
       {estilo.data && (
         <>
           <EscolhaDoProtagonista estilo={estilo.data} />
-          <FotosDoApresentador estilo={estilo.data} />
+          {estilo.data.protagonista === 'apresentador' ? (
+            <FotosDoApresentador estilo={estilo.data} />
+          ) : (
+            <ReferenciaGuardada
+              quantas={estilo.data.fotos_do_apresentador.length}
+              singular="foto do apresentador guardada"
+              plural="fotos do apresentador guardadas"
+              protagonista="Apresentador"
+            />
+          )}
           <MetaDeClaridade estilo={estilo.data} />
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * D-939: a referência do protagonista que NÃO foi escolhido sai da tela, mas
+ * não do disco — esta linha diz quantas ficam guardadas e como trazê-las.
+ */
+export function ReferenciaGuardada({
+  quantas,
+  singular,
+  plural,
+  protagonista,
+}: {
+  quantas: number;
+  singular: string;
+  plural: string;
+  protagonista: string;
+}) {
+  if (quantas === 0) return null;
+  return (
+    <p className="text-[11px] text-[var(--wb-text-dim)]">
+      {quantas} {quantas === 1 ? singular : plural}. Para voltar a usar, escolha {protagonista}{' '}
+      como protagonista.
+    </p>
   );
 }
 
@@ -164,7 +197,7 @@ export function FotosDoApresentador({ estilo }: { estilo: EstiloDaCapa }) {
           {fotos.map((nome) => (
             <li
               key={nome}
-              className="grid gap-1 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-1.5"
+              className="grid grid-cols-1 gap-1 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-1.5"
             >
               <ImagemAmpliavel
                 src={fotoDoApresentadorUrl(nome, versao)}
