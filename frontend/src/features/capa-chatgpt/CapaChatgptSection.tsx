@@ -11,13 +11,17 @@ import {
   useSubirFichaChatgpt,
 } from './useCapaNoChatGPT';
 import { Icon } from '@/upgrade/Icon';
+import { ReferenciaGuardada } from './EstiloDaCapaSection';
+import { useEstiloDaCapa } from './useEstiloDaCapa';
 
 // D-804: onde o robô gera as capas — o projeto do ChatGPT do canal e as fichas
 // do mascote que vão anexas em todo pedido. Por canal, porque cada canal tem o
-// seu personagem (e pode ter a sua conta).
+// seu personagem (e pode ter a sua conta). As fichas só aparecem com o mascote
+// de protagonista (D-939): com o apresentador, elas não vão para a capa.
 
 export function CapaChatgptSection() {
   const config = useConfiguracaoCapaChatgpt();
+  const protagonista = useEstiloDaCapa().data?.protagonista;
 
   return (
     <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
@@ -28,7 +32,15 @@ export function CapaChatgptSection() {
         entre na sua conta na janela que o robô abrir; ela fica guardada.
       </p>
       <LinkDoProjeto salvo={config.data?.projeto_url ?? ''} />
-      <FichasDoPersonagem config={config.data} />
+      {protagonista === 'mascote' && <FichasDoPersonagem config={config.data} />}
+      {protagonista === 'apresentador' && (
+        <ReferenciaGuardada
+          quantas={config.data?.fichas.length ?? 0}
+          singular="ficha do mascote guardada"
+          plural="fichas do mascote guardadas"
+          protagonista="Mascote"
+        />
+      )}
     </section>
   );
 }
@@ -138,7 +150,7 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
           {fichas.map((nome) => (
             <li
               key={nome}
-              className="grid gap-1 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-1.5"
+              className="grid grid-cols-1 gap-1 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-1.5"
             >
               <ImagemAmpliavel
                 src={fichaUrl(nome, versao)}
