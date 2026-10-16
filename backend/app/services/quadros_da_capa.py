@@ -35,8 +35,10 @@ from pathlib import Path
 from app.core.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.canal.quadros_do_apresentador import (
+    FRACAO_DA_MOLDURA,
     Caixa,
     ampliacao,
+    aparar_na_moldura,
     apresentador_entre,
     dentro_da_webcam,
     escolher_quadros,
@@ -50,6 +52,7 @@ from app.domain.corte.youtube_layout import CANVAS_H, CANVAS_W, resolver_layout_
 from app.domain.short import segmentos_short
 from app.domain.short.destaque_do_gancho import sem_marcas
 from app.infrastructure import quadros_do_video
+from app.infrastructure.detector_rosto import DeteccaoIndisponivel
 from app.models import Corte, MetadadoCorte, MetadadoShort, Projeto, Short
 from app.services.app_settings import AppSettingsService
 from sqlalchemy import select
@@ -157,6 +160,16 @@ def _janela(material: MaterialDaCapa) -> JanelaDaFrase | None:
     return None
 
 
+def _sem_a_moldura(video: Path, instantes: list[float], regiao: Caixa, rosto: Caixa) -> Caixa:
+    """A região aparada na moldura da live (D-957); sem ler as bordas, a inteira."""
+    try:
+        linhas = quadros_do_video.linhas_fixas(video, instantes, regiao, FRACAO_DA_MOLDURA)
+    except DeteccaoIndisponivel as exc:
+        logger.info("[Quadros] não li a moldura, vai a região inteira: %s", exc)
+        return regiao
+    return aparar_na_moldura(regiao, rosto, linhas)
+
+
 def extrair_quadros(material: MaterialDaCapa, pasta: Path) -> list[Path]:
     """Os recortes do apresentador no momento da frase, salvos em `pasta`.
 
@@ -191,7 +204,9 @@ def extrair_quadros(material: MaterialDaCapa, pasta: Path) -> list[Path]:
     if qual is None:
         logger.info("[Quadros] nenhum rosto fixo e vivo perto da frase: vai o banco de fotos")
         return []
-    regiao = dentro_da_webcam(regioes[qual], material.webcam)
+    regiao = dentro_da_webcam(
+        _sem_a_moldura(material.video, instantes, regioes[qual], lugares[qual]), material.webcam
+    )
     escolhidos = escolher_quadros(medidos[qual])
     salvos = quadros_do_video.salvar_recortes(
         material.video, [c.instante for c in escolhidos], regiao, pasta, ampliacao
