@@ -163,12 +163,15 @@ def _conversar(proc: subprocess.Popen, prompt: str, limite: float) -> tuple[str,
     resposta pronta no timeout e prendia o semáforo da fila do Gemini. O
     `result` é o fim da conversa; o que sobra do processo morre pelo PID.
     """
+    entrada, saida, saida_de_erro = proc.stdin, proc.stdout, proc.stderr
+    if entrada is None or saida is None or saida_de_erro is None:
+        raise AntigravityCliError("O agy foi aberto sem os pipes de entrada e saída.")
     linhas: list[str] = []
     erros: list[bytes] = []
     terminou = threading.Event()
 
     def _ler_stdout() -> None:
-        for bruta in proc.stdout:
+        for bruta in saida:
             linhas.append(bruta.decode("utf-8", errors="replace"))
             if _evento_result(linhas[-1]) is not None:
                 break
@@ -176,13 +179,13 @@ def _conversar(proc: subprocess.Popen, prompt: str, limite: float) -> tuple[str,
 
     leitores = [
         threading.Thread(target=_ler_stdout, daemon=True),
-        threading.Thread(target=lambda: erros.append(proc.stderr.read()), daemon=True),
+        threading.Thread(target=lambda: erros.append(saida_de_erro.read()), daemon=True),
     ]
     for leitor in leitores:
         leitor.start()
     try:
-        proc.stdin.write(_mensagem_stdin(prompt))
-        proc.stdin.close()
+        entrada.write(_mensagem_stdin(prompt))
+        entrada.close()
     except OSError:
         pass  # o processo morreu antes de ler o prompt; o stderr conta o porquê
 
