@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 import pytest
-from app.domain.projeto.idioma_da_legenda import escolher_legenda
+from app.domain.projeto.idioma_da_legenda import ordenar_por_idioma
 from app.services import ingestao as ingestao_module
 from app.services.ingestao import IngestaoService
 
@@ -54,26 +54,43 @@ class TestExtrairLegenda:
         assert "você" in texto
         assert "you" not in texto
 
+    @pytest.mark.asyncio
+    async def test_sem_json3_o_vtt_tambem_sai_em_portugues(
+        self, legendas_em_dois_idiomas, tmp_path
+    ):
+        subs = tmp_path / "proj-1" / "subtitles"
+        for arquivo in subs.glob("*.json3"):
+            arquivo.unlink()
+        cabecalho = "WEBVTT\n\n00:00:00.000 --> 00:00:02.000\n"
+        (subs / "sub.en.vtt").write_text(cabecalho + "you ask\n", encoding="utf-8")
+        (subs / "sub.pt.vtt").write_text(cabecalho + "você pergunta\n", encoding="utf-8")
 
-class TestEscolherLegenda:
+        trans = await IngestaoService._extrair_legenda("proj-1", "https://youtu.be/abc12345678")
+
+        texto = " ".join(seg["texto"] for seg in trans)
+        assert "você" in texto
+        assert "you" not in texto
+
+
+class TestOrdenarPorIdioma:
     def test_portugues_vence_ingles(self):
         arquivos = [Path("sub.en.json3"), Path("sub.pt.json3")]
-        assert escolher_legenda(arquivos) == Path("sub.pt.json3")
+        assert ordenar_por_idioma(arquivos)[0] == Path("sub.pt.json3")
 
     def test_pt_vence_variantes_regionais(self):
         arquivos = [Path("sub.pt-PT.vtt"), Path("sub.pt-BR.vtt"), Path("sub.pt.vtt")]
-        assert escolher_legenda(arquivos) == Path("sub.pt.vtt")
+        assert ordenar_por_idioma(arquivos)[0] == Path("sub.pt.vtt")
 
     def test_pt_br_vence_pt_pt(self):
         arquivos = [Path("sub.pt-PT.vtt"), Path("sub.pt-BR.vtt")]
-        assert escolher_legenda(arquivos) == Path("sub.pt-BR.vtt")
+        assert ordenar_por_idioma(arquivos)[0] == Path("sub.pt-BR.vtt")
 
     def test_so_ingles_ainda_serve(self):
-        assert escolher_legenda([Path("sub.en.json3")]) == Path("sub.en.json3")
+        assert ordenar_por_idioma([Path("sub.en.json3")])[0] == Path("sub.en.json3")
 
     def test_idioma_fora_da_lista_fica_por_ultimo(self):
         arquivos = [Path("sub.es.json3"), Path("sub.en.json3")]
-        assert escolher_legenda(arquivos) == Path("sub.en.json3")
+        assert ordenar_por_idioma(arquivos)[0] == Path("sub.en.json3")
 
-    def test_sem_arquivo_devolve_none(self):
-        assert escolher_legenda([]) is None
+    def test_sem_arquivo_devolve_lista_vazia(self):
+        assert ordenar_por_idioma([]) == []

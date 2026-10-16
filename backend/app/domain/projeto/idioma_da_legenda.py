@@ -17,8 +17,8 @@ def _idioma(arquivo: Path) -> str:
     return Path(arquivo.stem).suffix.lstrip(".")
 
 
-def escolher_legenda(arquivos: list[Path]) -> Path | None:
-    """A legenda do idioma de maior prioridade; idioma fora da lista fica por último."""
+def ordenar_por_idioma(arquivos: list[Path]) -> list[Path]:
+    """As legendas do idioma de maior prioridade primeiro; idioma fora da lista por último."""
 
     def _posicao(arquivo: Path) -> int:
         idioma = _idioma(arquivo)
@@ -26,4 +26,4 @@ def escolher_legenda(arquivos: list[Path]) -> Path | None:
             return PRIORIDADE_DE_IDIOMA.index(idioma)
         return len(PRIORIDADE_DE_IDIOMA)
 
-    return min(arquivos, key=_posicao, default=None)
+    return sorted(arquivos, key=_posicao)
