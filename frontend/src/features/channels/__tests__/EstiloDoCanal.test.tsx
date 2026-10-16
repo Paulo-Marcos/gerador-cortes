@@ -11,6 +11,7 @@ import type { PalcoComponentes } from '../api/canais';
 import { EstiloNoModal } from '../EstiloNoModal';
 import { EstiloPorTipo, ImagemDoCabecalho } from '../EstiloDoCanal';
 import { layoutGlobalDe } from '../PadraoDoCanalModais';
+import { PainelDoComponente } from '../PalcoDoTipoNoModal';
 import { rascunhoDe } from '../PalcoComponentesSection';
 
 // D-938: a tela de Canais só escolhe o estilo por tipo; o detalhe e os presets
@@ -120,6 +121,25 @@ describe('o modal do horizontal no padrão do canal (D-938)', () => {
     expect(layoutGlobalDe('')).toBe(DEFAULT_YOUTUBE_LAYOUT);
     expect(layoutGlobalDe('{lixo')).toBe(DEFAULT_YOUTUBE_LAYOUT);
     expect(layoutGlobalDe(JSON.stringify({ modo_padrao: 'compartilhada', fundo: 'hud-topo' })).fundo).toBe('hud-topo');
+  });
+});
+
+describe('o detalhe que saiu da página continua no modal (D-938)', () => {
+  const painel = (aba: 'janelas' | 'cards', tipo: 'short' | 'horizontal') =>
+    renderToStaticMarkup(<PainelDoComponente aba={aba} tipo={tipo} rascunho={rascunhoDe(palco())} efetivo={palco()} onMudar={nada} />);
+
+  it('janelas do short: contorno, eco e estilo da legenda (D-913)', () => {
+    const html = painel('janelas', 'short');
+    expect(html).toContain('Contorno do fundo em volta das janelas');
+    expect(html).toContain('Eco do vídeo (desfocado)');
+    expect(html).toContain('Só sombra');
+  });
+
+  it('cards: um interruptor por tipo e a posição sobre o vídeo cheio (D-916)', () => {
+    const html = painel('cards', 'horizontal');
+    expect(html).toContain('Cards (cenas)');
+    expect(html).toContain('Definição');
+    expect(html).toContain('Posição sobre o vídeo cheio');
   });
 });
 
