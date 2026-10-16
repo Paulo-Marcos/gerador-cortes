@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type Dispatch, type PointerEvent, ty
 import type { RascunhoDoPalco } from '@/features/channels/PalcoComponentesSection';
 import { limitar } from '@/lib/limitar';
 import { cn } from '@/lib/utils';
+import { LADO_MINIMO_DA_CAIXA } from '@/features/channels/CardsDoCanal';
 import { TAMANHO_MAXIMO, TAMANHO_MINIMO } from '@/features/channels/ControlesDoPalco';
 import { AlcaDeTamanho } from './SlotPreviewPartes';
 import { GuiasNaPrevia, SEM_GUIAS, alvosDe, encaixar, outrosNaPrevia, type Alvos, type Guias } from './guiasDeAlinhamento';
@@ -18,11 +19,15 @@ export interface EdicaoDosComponentes {
   escala: (componente: ComponenteDoPalco) => number;
   mover: (componente: ComponenteDoPalco, x: number, y: number) => void;
   escalar: (componente: ComponenteDoPalco, escala: number) => void;
+  /** D-941: o card estica a caixa (largura e altura livres) em vez de escalar. */
+  esticar?: (componente: ComponenteDoPalco, caixa: Caixa) => void;
+  /** D-941: a caixa do componente, quando ele tem uma (o rótulo mostra largura×altura). */
+  caixa?: (componente: ComponenteDoPalco) => Caixa | null;
   selecionado?: ComponenteDoPalco | null;
   onSelecionar?: (componente: ComponenteDoPalco) => void;
 }
 
-interface Caixa {
+export interface Caixa {
   x: number;
   y: number;
   w: number;
@@ -99,7 +104,7 @@ export function ComponentesArrastaveis({
             {selecionado && (
               <>
                 <span className="pointer-events-none absolute -top-5 left-0 rounded-sm bg-[var(--sel-bg)] px-1 font-code text-[11px] font-bold text-[var(--sel-ink)]">
-                  {NOMES[componente]} {Math.round(edicao.escala(componente) * 100)}%
+                  {NOMES[componente]} {rotuloDoTamanho(edicao, componente)}
                 </span>
                 <AlcaDeTamanho
                   rotulo={NOMES[componente]}
@@ -115,6 +120,30 @@ export function ComponentesArrastaveis({
       <GuiasNaPrevia guias={arraste.guias} />
     </>
   );
+}
+
+/**
+ * O componente arrastável que o grupo do menu seleciona. D-941: os cards
+ * também — antes o card só se movia, porque a alça de tamanho só aparece no
+ * componente selecionado.
+ */
+export function componenteDoGrupo(grupo: string): ComponenteDoPalco | null {
+  return grupo === 'cabecalho' || grupo === 'placa' || grupo === 'cards' ? grupo : null;
+}
+
+/** "760×420" para quem tem caixa (D-941); a escala em % para os demais. */
+function rotuloDoTamanho(edicao: EdicaoDosComponentes, componente: ComponenteDoPalco): string {
+  const caixa = edicao.caixa?.(componente);
+  return caixa ? `${caixa.w}×${caixa.h}` : `${Math.round(edicao.escala(componente) * 100)}%`;
+}
+
+/** D-941: a caixa esticada pela alça, presa ao quadro e ao lado mínimo. */
+export function caixaEsticada(caixa: Caixa, dx: number, dy: number, minimo: number): Caixa {
+  return {
+    ...caixa,
+    w: Math.round(limitar(caixa.w + dx, minimo, 1920 - caixa.x)),
+    h: Math.round(limitar(caixa.h + dy, minimo, 1080 - caixa.y)),
+  };
 }
 
 /** Prende o ponteiro no elemento; um ponteiro que já não existe não derruba o arraste. */
@@ -169,6 +198,10 @@ function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edica
         );
         return;
       }
+      if (edicao.esticar && a.componente === 'cards') {
+        edicao.esticar(a.componente, caixaEsticada(a.caixa, dx, dy, LADO_MINIMO_DA_CAIXA));
+        return;
+      }
       const encaixe = encaixar({ ...a.caixa, w: a.caixa.w + dx, h: a.caixa.h }, 'redimensionar', a.alvos);
       setGuias({ x: encaixe.guias.x, y: null });
       const fator = Math.max(1, encaixe.rect.w) / a.caixa.w;
@@ -195,12 +228,17 @@ export function edicaoDoRascunho(
     c === 'cabecalho' ? ({ posicao: 'cabecalhoPosicao', escala: 'cabecalhoEscala' } as const) : ({ posicao: 'placaPosicao', escala: 'placaEscala' } as const);
   return {
     escala: (c) => (c === 'cards' ? rascunho.cards.escala : rascunho[campo(c).escala]),
+    caixa: (c) => (c === 'cards' ? (rascunho.cards.zona_no_cheio ?? null) : null),
     mover: (c, x, y) =>
       mudar((r) => {
         if (!r) return r;
+        // D-941: com caixa, mover leva a caixa; sem ela, vira a posição manual.
+        const zona = c === 'cards' ? r.cards.zona_no_cheio : null;
+        if (zona) return { ...r, cards: { ...r.cards, zona_no_cheio: { ...zona, x: Math.round(x), y: Math.round(y) } } };
         const posicao = { automatica: false, x, y };
         return c === 'cards' ? { ...r, cards: { ...r.cards, posicao } } : { ...r, [campo(c).posicao]: posicao };
       }),
+    esticar: (_c, caixa) => mudar((r) => (r ? { ...r, cards: { ...r.cards, zona_no_cheio: caixa } } : r)),
     escalar: (c, escala) =>
       mudar((r) => {
         if (!r) return r;

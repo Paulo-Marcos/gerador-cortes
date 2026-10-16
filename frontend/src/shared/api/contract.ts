@@ -5686,6 +5686,20 @@ export interface components {
             posicao: components["schemas"]["PosicaoModel"];
             posicao_short: components["schemas"]["PosicaoModel"];
         };
+        /**
+         * CaixaDoCardModel
+         * @description D-941: o retângulo do card no vídeo cheio, em px do quadro de 1920x1080.
+         */
+        CaixaDoCardModel: {
+            /** H */
+            h: number;
+            /** W */
+            w: number;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
         /** CaminhoDaPastaResponse */
         CaminhoDaPastaResponse: {
             /** Dir Path */
@@ -5833,6 +5847,7 @@ export interface components {
             /** Ocultos */
             ocultos?: string[] | null;
             posicao?: components["schemas"]["PosicaoModel"] | null;
+            zona_no_cheio?: components["schemas"]["CaixaDoCardModel"] | null;
         };
         /** CardsResponse */
         CardsResponse: {
@@ -5847,6 +5862,7 @@ export interface components {
             /** Ocultos */
             ocultos: string[];
             posicao: components["schemas"]["PosicaoModel"];
+            zona_no_cheio?: components["schemas"]["CaixaDoCardModel"] | null;
         };
         /**
          * CenaDoCorte

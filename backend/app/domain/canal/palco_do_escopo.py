@@ -64,6 +64,11 @@ def aplicar(componentes: PalcoComponentes, *parciais: dict[str, Any]) -> PalcoCo
     return componentes
 
 
+# Dicionários que valem inteiros: uma posição ou a caixa do card (D-941) pela
+# metade não significam nada, então a diferença os grava completos.
+_VALORES_INTEIROS = ("posicao", "posicao_short", "zona_no_cheio")
+
+
 def diferenca(base: dict[str, Any], novo: dict[str, Any]) -> dict[str, Any]:
     """Só o que `novo` muda em relação a `base` (é o que o escopo grava).
 
@@ -80,8 +85,7 @@ def diferenca(base: dict[str, Any], novo: dict[str, Any]) -> dict[str, Any]:
         if (
             isinstance(valor, dict)
             and isinstance(anterior, dict)
-            and chave != "posicao"
-            and chave != "posicao_short"
+            and chave not in _VALORES_INTEIROS
         ):
             interna = diferenca(anterior, valor)
             if interna:

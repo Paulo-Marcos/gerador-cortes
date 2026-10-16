@@ -352,7 +352,19 @@ scenarios.push(
   scene("destaque_numerico-zona-atual", NUMERO_NA_ZONA, "vertical", "media", ATUAL),
 );
 
+// D-941: o card do vídeo cheio numa caixa. Alargar a caixa no "ocupar o
+// espaço" espalha o texto (o quadro muda); sem caixa, nada muda em relação ao
+// limpo de antes.
+const DEFINICAO_NO_CHEIO = { ...base, tipo: "definicao_termo", ...CENAS_LIMPAS.definicao_termo };
+const naCaixa = (w, h) => ({ ...LIMPO, ajuste: "preencher", alinhamento_vertical: "centro", alinhamento_horizontal: "esquerda", zona_no_cheio: { x: 96, y: 300, w, h } });
+scenarios.push(
+  scene("caixa-estreita", DEFINICAO_NO_CHEIO, "vertical", "media", naCaixa(520, 480)),
+  scene("caixa-larga", DEFINICAO_NO_CHEIO, "vertical", "media", naCaixa(1100, 480)),
+  scene("caixa-nula", DEFINICAO_NO_CHEIO, "vertical", "media", { ...LIMPO, zona_no_cheio: null }),
+);
+
 const distinctPairs = [
+  ["caixa-estreita", "caixa-larga", "alargar a caixa do card no cheio tem de espalhar o texto"],
   ["destaque_numerico-zona-limpo", "destaque_numerico-limpo", "o número em destaque tem de ir para a zona no limpo"],
   ["destaque_numerico-zona-atual", "destaque_numerico-atual", "o número em destaque tem de ir para a zona no estilo de sempre"],
   ["zona-natural-topo", "zona-natural-centro", "o alinhamento vertical tem de mover o card na zona"],
@@ -367,6 +379,8 @@ const distinctPairs = [
 ];
 
 const identicalPairs = [
+  // D-941: sem caixa o card do cheio sai como sempre saiu no limpo.
+  ["caixa-nula", "definicao_termo-limpo", "zona_no_cheio nula não muda o card do cheio"],
   // I-031: tela_cheia sempre renderiza como card, independente do modelo_cena no banco.
   ["tela_cheia-padrao", "tela_cheia-default-card", "tela_cheia com modelo_cena=padrao agora renderiza como card"],
   ["tela_cheia-auto-longo", "tela_cheia-card-longo-v", "tela_cheia longa sem modelo_cena deve renderizar como card"],

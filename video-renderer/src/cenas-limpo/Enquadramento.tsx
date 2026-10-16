@@ -5,7 +5,7 @@ import { shouldUseSharedCardZone } from "../shared-card-zone";
 import { useSombraPadrao } from "../cenas-v2/_shared/sombra-context";
 import { resolverNivel, type SombraNivel } from "../cenas-v2/_shared/sombra-tokens";
 import { useEstiloDasCenas } from "./estilo-das-cenas";
-import { useFonteDoLimpo } from "./Bloco";
+import { LarguraNaCaixaContext, useFonteDoLimpo } from "./Bloco";
 import { assentar, duracaoEmQuadros, opacidadeDeSaida, QUADROS } from "./movimento";
 import { TempoDaCenaContext, useContinuidade, useQuadroDaCena, type TempoDaCena } from "./tempo-da-cena";
 
@@ -54,7 +54,7 @@ function useTempoDestaCena(cena: CenaRemotion): TempoDaCena {
 
 export const Enquadramento: FC<{ cena: CenaRemotion; children: ReactNode }> = ({ cena, children }) => {
   const familia = useFonteDoLimpo();
-  const { escala, posicao } = useEstiloDasCenas();
+  const { escala, posicao, zona_no_cheio: caixa } = useEstiloDasCenas();
   const nivel = resolverNivel(cena.sombra_nivel, useSombraPadrao());
   const tempo = useTempoDestaCena(cena);
   const quadro = useQuadroDaCena(tempo.inicio);
@@ -74,18 +74,38 @@ export const Enquadramento: FC<{ cena: CenaRemotion; children: ReactNode }> = ({
     );
   }
 
+  // O scrim acompanha o texto: aparece com o traço e some com a cena.
+  const scrim = Math.min(assentar(quadro / QUADROS.traco), opacidadeDeSaida(quadro, tempo.fim, tempo.naProxima));
+  const comScrim = (
+    <>
+      <div style={{ ...scrimDoNivel(nivel), position: "absolute", inset: 0, opacity: tempo.daAnterior ? 1 : scrim }} />
+      <div style={{ position: "relative", textShadow: scrimDoNivel(nivel).textShadow }}>{children}</div>
+    </>
+  );
+
+  if (caixa) {
+    // D-941: com caixa, o card do cheio senta nela como na zona dos cards.
+    return (
+      <TempoDaCenaContext.Provider value={tempo}>
+        <AbsoluteFill>
+          {/* A prévia do modal acha a caixa por aqui para arrastá-la e esticá-la. */}
+          <CardNaCaixa caixa={caixa} escala={escala} familia={familia}>
+            {comScrim}
+          </CardNaCaixa>
+        </AbsoluteFill>
+      </TempoDaCenaContext.Provider>
+    );
+  }
+
   const lugar: CSSProperties = posicao.automatica
     ? { left: AUTOMATICA_NO_CHEIO.x, bottom: AUTOMATICA_NO_CHEIO.base, transformOrigin: "0 100%" }
     : { left: posicao.x, top: posicao.y, transformOrigin: "0 0" };
-  // O scrim acompanha o texto: aparece com o traço e some com a cena.
-  const scrim = Math.min(assentar(quadro / QUADROS.traco), opacidadeDeSaida(quadro, tempo.fim, tempo.naProxima));
   return (
     <TempoDaCenaContext.Provider value={tempo}>
       <AbsoluteFill>
         {/* D-928: a prévia do modal acha o card por aqui para arrastá-lo no vídeo cheio. */}
         <div data-componente="cards" style={{ ...base, ...lugar, transform: `scale(${escala})` }}>
-          <div style={{ ...scrimDoNivel(nivel), position: "absolute", inset: 0, opacity: tempo.daAnterior ? 1 : scrim }} />
-          <div style={{ position: "relative", textShadow: scrimDoNivel(nivel).textShadow }}>{children}</div>
+          {comScrim}
         </div>
       </AbsoluteFill>
     </TempoDaCenaContext.Provider>
@@ -173,6 +193,65 @@ const CardNaZona: FC<{ zona: { x: number; y: number; w: number; h: number }; fam
         style={{ flex: "0 0 auto", transform: `scale(${escala})`, transformOrigin: `${ORIGEM[horizontal]} ${ORIGEM[vertical]}` }}
       >
         {children}
+      </div>
+    </div>
+  );
+};
+
+/** A escala do card na caixa do cheio: a escolhida, menos o que não couber (D-941). */
+export function escalaNaCaixa(natural: { w: number; h: number }, caixa: { w: number; h: number }, escala: number): number {
+  if (natural.w <= 0 || natural.h <= 0) return escala;
+  return Math.min(escala, (caixa.w * MARGEM_NA_ZONA) / natural.w, (caixa.h * MARGEM_NA_ZONA) / natural.h);
+}
+
+/**
+ * D-941: o card no vídeo cheio com caixa (largura e altura próprias). No
+ * "ocupar o espaço" o Bloco toma a largura da caixa (descontada a escala, que
+ * vira o tamanho da letra) e o texto se espalha; no "tamanho natural" fica a
+ * largura de cada cena. Nos dois, o que não couber encolhe — a caixa é o limite.
+ */
+const CardNaCaixa: FC<{
+  caixa: { x: number; y: number; w: number; h: number };
+  escala: number;
+  familia: string;
+  children: ReactNode;
+}> = ({ caixa, escala, familia, children }) => {
+  const { ajuste, alinhamento_vertical: vertical, alinhamento_horizontal: horizontal } = useEstiloDasCenas();
+  const card = useRef<HTMLDivElement>(null);
+  const [efetiva, setEfetiva] = useState(escala);
+  const { w, h } = caixa;
+  const largura = ajuste === "preencher" ? Math.round((w * MARGEM_NA_ZONA) / escala) : null;
+  useLayoutEffect(() => {
+    const el = card.current;
+    if (!el) return;
+    setEfetiva(escalaNaCaixa({ w: el.offsetWidth, h: el.offsetHeight }, { w, h }, escala));
+  }, [w, h, escala, ajuste]);
+  return (
+    <div
+      // A prévia do modal acha a caixa por aqui para arrastá-la e esticá-la.
+      data-componente="cards"
+      style={{
+        position: "absolute",
+        left: caixa.x,
+        top: caixa.y,
+        width: caixa.w,
+        height: caixa.h,
+        display: "flex",
+        alignItems: ALINHA[vertical],
+        justifyContent: ALINHA[horizontal],
+        fontFamily: familia,
+      }}
+    >
+      <div
+        ref={card}
+        style={{
+          position: "relative",
+          flex: "0 0 auto",
+          transform: `scale(${efetiva})`,
+          transformOrigin: `${ORIGEM[horizontal]} ${ORIGEM[vertical]}`,
+        }}
+      >
+        <LarguraNaCaixaContext.Provider value={largura}>{children}</LarguraNaCaixaContext.Provider>
       </div>
     </div>
   );

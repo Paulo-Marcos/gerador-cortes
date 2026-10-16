@@ -14,7 +14,7 @@ import {
   type FundoDoShort,
   type PosicaoEditavel,
 } from './ControlesDoPalco';
-import { CardsDoCanal, cardsEditaveisDe, type CardsEditaveis } from './CardsDoCanal';
+import { CardsDoCanal, cardsEditaveisDe, SEM_CAIXA, type CardsEditaveis } from './CardsDoCanal';
 import { urlDaImagem } from './palcoDoCanal';
 
 // D-911: os componentes do palco do canal ativo — estilo, cabeçalho e placa —
@@ -100,7 +100,8 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
     contorno_short: rascunho.contornoShort,
     fundo_short: rascunho.fundoShort,
     estilo_da_legenda: rascunho.estiloDaLegenda,
-    cards: rascunho.cards,
+    // D-941: nulo some na edição parcial; o "sem caixa" pedido vai como a caixa vazia.
+    cards: rascunho.cards.zona_no_cheio === null ? { ...rascunho.cards, zona_no_cheio: SEM_CAIXA } : rascunho.cards,
     cabecalho: {
       ativo: rascunho.cabecalhoAtivo,
       mostrar_imagem: rascunho.mostrarImagem,

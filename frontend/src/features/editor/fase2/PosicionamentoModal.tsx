@@ -38,7 +38,7 @@ import { MenuDoModal, gruposDoModal, type GrupoDoModal } from './MenuDoModal';
 import { PreviaQueCabe } from './PreviaQueCabe';
 import { CropPicker } from './CropPicker';
 import { SlotPreview } from './SlotPreview';
-import { edicaoDoRascunho } from './ComponentesArrastaveis';
+import { componenteDoGrupo, edicaoDoRascunho } from './ComponentesArrastaveis';
 import { PresetsNaFaixa } from './BarraDePresets';
 import { cenaDeExemplo } from './ExemploDoCard';
 import { estiloDasCenasDe } from '@/shared/palco/palcoLimpo';
@@ -413,7 +413,7 @@ export function PosicionamentoModal({
   const grupos = gruposDoModal(estiloDoPalco);
   const grupoAtivo = grupos.includes(grupo) ? grupo : 'telas';
   const cropNaPrevia = grupoAtivo === 'telas' && Boolean(selectedCropKey);
-  const componenteAtivo = grupoAtivo === 'cabecalho' || grupoAtivo === 'placa' ? grupoAtivo : null;
+  const componenteAtivo = componenteDoGrupo(grupoAtivo);
   const componentes =
     palco.rascunho && alvoDoEstilo !== 'global'
       ? edicaoDoRascunho(palco.rascunho, palco.mudar, componenteAtivo, setGrupo)

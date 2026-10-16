@@ -2181,6 +2181,35 @@
         "title": "CabecalhoResponse",
         "type": "object"
       },
+      "CaixaDoCardModel": {
+        "description": "D-941: o retângulo do card no vídeo cheio, em px do quadro de 1920x1080.",
+        "properties": {
+          "h": {
+            "title": "H",
+            "type": "integer"
+          },
+          "w": {
+            "title": "W",
+            "type": "integer"
+          },
+          "x": {
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "CaixaDoCardModel",
+        "type": "object"
+      },
       "CaminhoDaPastaResponse": {
         "properties": {
           "dir_path": {
@@ -2536,6 +2565,16 @@
                 "type": "null"
               }
             ]
+          },
+          "zona_no_cheio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaixaDoCardModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "title": "CardsRequest",
@@ -2589,6 +2628,16 @@
           },
           "posicao": {
             "$ref": "#/components/schemas/PosicaoModel"
+          },
+          "zona_no_cheio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaixaDoCardModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [

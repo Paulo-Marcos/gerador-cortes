@@ -49,6 +49,13 @@ POSICAO_PADRAO = (96, 112)
 # muito, até caber no espaço; "natural" deixa o tamanho de sempre. O
 # alinhamento diz onde o card senta quando sobra espaço.
 AJUSTES = ("preencher", "natural")
+
+# D-941: a caixa do card no vídeo cheio. Sem ela, o card é posição + escala; com
+# ela, ocupa o retângulo pelas mesmas regras da zona da compartilhada (ajuste e
+# alinhamentos). Lado mínimo para a alça ainda ter onde pegar. Uma caixa com
+# largura ou altura zero é "sem caixa": a edição é parcial e descarta nulos, então
+# o zero é o jeito de a tela pedir a volta ao modo proporcional.
+LADO_MINIMO_DA_CAIXA = 80
 ALINHAMENTOS_VERTICAIS = ("centro", "topo", "base")
 ALINHAMENTOS_HORIZONTAIS = ("centro", "esquerda", "direita")
 
@@ -73,9 +80,12 @@ class Cards:
     ajuste: str = AJUSTES[0]
     alinhamento_vertical: str = ALINHAMENTOS_VERTICAIS[0]
     alinhamento_horizontal: str = ALINHAMENTOS_HORIZONTAIS[0]
+    zona_no_cheio: tuple[int, int, int, int] | None = None
+    """D-941: a caixa (x, y, w, h) do card no vídeo cheio; None = posição + escala."""
 
     def para_dict(self) -> dict[str, Any]:
         return {
+            "zona_no_cheio": _zona_como_dict(self.zona_no_cheio),
             "ocultos": list(self.ocultos),
             "escala": self.escala,
             "ajuste": self.ajuste,
@@ -87,6 +97,41 @@ class Cards:
                 "y": self.posicao.y,
             },
         }
+
+
+def _zona_como_dict(zona: tuple[int, int, int, int] | None) -> dict[str, int] | None:
+    if zona is None:
+        return None
+    x, y, w, h = zona
+    return {"x": x, "y": y, "w": w, "h": h}
+
+
+def _zona(valor: Any, atual: tuple[int, int, int, int] | None) -> tuple[int, int, int, int] | None:
+    """A caixa do card no cheio, encaixada no quadro (D-941).
+
+    Exemplos:
+        >>> _zona({"x": 1800, "y": 50, "w": 400, "h": 10}, None)
+        (1520, 50, 400, 80)
+        >>> _zona({"x": 10, "y": 10, "w": 0, "h": 300}, (1, 2, 300, 300)) is None
+        True
+        >>> _zona("lixo", (1, 2, 300, 300))
+        (1, 2, 300, 300)
+        >>> _zona(None, (1, 2, 300, 300)) is None   # o escopo que tirou a caixa
+        True
+    """
+    if valor is None:
+        return None
+    if not isinstance(valor, dict):
+        return atual
+    try:
+        x, y, w, h = (int(round(float(valor[k]))) for k in ("x", "y", "w", "h"))
+    except (KeyError, TypeError, ValueError):
+        return atual
+    if w <= 0 or h <= 0:
+        return None
+    w = max(LADO_MINIMO_DA_CAIXA, min(w, QUADRO[0]))
+    h = max(LADO_MINIMO_DA_CAIXA, min(h, QUADRO[1]))
+    return (max(0, min(x, QUADRO[0] - w)), max(0, min(y, QUADRO[1] - h)), w, h)
 
 
 def _ocultos(valor: Any, atual: tuple[str, ...], *, tolerante: bool) -> tuple[str, ...]:
@@ -176,6 +221,11 @@ def mesclar(atual: Cards, mudancas: Any, *, tolerante: bool = False) -> Cards:
             ALINHAMENTOS_HORIZONTAIS,
             tolerante=tolerante,
         ),
+        zona_no_cheio=(
+            _zona(mudancas["zona_no_cheio"], atual.zona_no_cheio)
+            if "zona_no_cheio" in mudancas
+            else atual.zona_no_cheio
+        ),
     )
 
 
@@ -199,4 +249,5 @@ def props_para_renderer(estilo: str, cards: Cards) -> dict[str, Any]:
         "ajuste": cards.ajuste,
         "alinhamento_vertical": cards.alinhamento_vertical,
         "alinhamento_horizontal": cards.alinhamento_horizontal,
+        "zona_no_cheio": _zona_como_dict(cards.zona_no_cheio),
     }
