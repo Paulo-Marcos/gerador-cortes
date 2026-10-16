@@ -35,6 +35,7 @@ from app.domain.compartilhado.chatgpt_imagem import (
     MAXIMO_DE_FICHAS,
     SELETORES,
     TRECHO_DA_TELA_DE_LOGIN,
+    indice_do_campo_de_fotos,
     montar_pedido,
     nome_de_ficha_valido,
     tipo_da_imagem,
@@ -101,14 +102,27 @@ class PaginaDoPlaywrightNoChatGPT(navegador_assistido.PaginaDoPlaywright):
         Uma por vez não serve: cada entrega SUBSTITUI a anterior no input, e o
         ChatGPT receberia só a última. Por CDP pelo mesmo motivo da entrega de
         um arquivo só (`PaginaDoPlaywright.enviar_arquivo`): vai o caminho, e o
-        navegador lê do disco.
+        navegador lê do disco. Mais de um campo casa com o seletor; qual recebe
+        é `indice_do_campo_de_fotos` (D-955).
         """
         css = self._css(alvo)
         self._page.locator(css).first.wait_for(state="attached", timeout=segundos * 1000)
+        campos = self._page.evaluate(
+            """(css) => [...document.querySelectorAll(css)].map((c) => ({
+              multiple: c.multiple, capture: c.hasAttribute("capture")}))""",
+            css,
+        )
+        indice = indice_do_campo_de_fotos(campos)
+        if indice is None:
+            raise ServicoExternoFalhou(
+                "Não achei o campo de anexar fotos no ChatGPT, e a capa sairia sem as "
+                "referências. A tela do ChatGPT mudou: o robô precisa de ajuste."
+            )
         sessao = self._page.context.new_cdp_session(self._page)
         try:
             achado = sessao.send(
-                "Runtime.evaluate", {"expression": f"document.querySelector({json.dumps(css)})"}
+                "Runtime.evaluate",
+                {"expression": f"document.querySelectorAll({json.dumps(css)})[{indice}]"},
             )
             sessao.send(
                 "DOM.setFileInputFiles",

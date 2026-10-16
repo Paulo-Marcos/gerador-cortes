@@ -18,7 +18,7 @@ para o chat e a validação do link do projeto.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from app.domain.compartilhado.erros import PedidoInvalido
 
@@ -33,6 +33,23 @@ SELETORES = {
     ),
     "imagem_gerada": '[data-testid="generated-image-preview"] img',
 }
+
+
+def indice_do_campo_de_fotos(campos: Sequence[Mapping[str, object]]) -> int | None:
+    """Qual dos campos `anexo_de_fotos` recebe os anexos, na ordem da página (D-955).
+
+    O de várias fotos e sem câmera. Em 16/10/2026 o "Tirar uma foto" (`capture`,
+    um arquivo só) passou a vir antes, e os anexos iam para ele: o pedido saía
+    sem nenhuma foto. `None` quando nenhum campo serve.
+
+    >>> indice_do_campo_de_fotos([{"multiple": False, "capture": True}, {"multiple": True}])
+    1
+    """
+    return next(
+        (i for i, c in enumerate(campos) if c.get("multiple") and not c.get("capture")),
+        None,
+    )
+
 
 # A tela de login troca a URL; é o sinal de sessão perdida mais barato de ler.
 TRECHO_DA_TELA_DE_LOGIN = "/auth/"
