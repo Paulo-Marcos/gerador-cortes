@@ -23,8 +23,45 @@ URL_DO_STUDIO = "https://studio.youtube.com"
 TRECHO_DO_LOGIN = "accounts.google.com"
 
 
-def url_da_monetizacao(video_id: str) -> str:
-    return f"{URL_DO_STUDIO}/video/{video_id}/monetization"
+def canal_da_url(url: str) -> str:
+    """O id do canal na URL do Studio, para onde a página inicial redireciona; "" sem ele.
+
+    >>> canal_da_url("https://studio.youtube.com/channel/UCabc_123-x/videos")
+    'UCabc_123-x'
+    >>> canal_da_url("https://studio.youtube.com/")
+    ''
+    """
+    achado = re.search(r"/channel/(UC[\w-]+)", url)
+    return achado.group(1) if achado else ""
+
+
+def url_da_lista(canal: str, *, shorts: bool) -> str:
+    """A lista de Conteúdo do canal: a aba Vídeos (cortes) ou a aba Shorts.
+
+    >>> url_da_lista("UCx", shorts=True)
+    'https://studio.youtube.com/channel/UCx/videos/short'
+    """
+    return f"{URL_DO_STUDIO}/channel/{canal}/videos/{'short' if shorts else 'upload'}"
+
+
+def atualizados_do_aviso(texto: str) -> tuple[int, int] | None:
+    """`(atualizados, total)` do aviso da edição em massa; `None` se ainda não é ele.
+
+    Pelos números, e não pela frase: o Studio da janela do robô pode estar em
+    inglês ou em português.
+
+    >>> atualizados_do_aviso("1 of 1 video successfully updated")
+    (1, 1)
+    >>> atualizados_do_aviso("3 de 5 vídeos atualizados")
+    (3, 5)
+    >>> atualizados_do_aviso("Updating videos.") is None
+    True
+    """
+    match re.findall(r"\d+", texto):
+        case [atualizados, total, *_]:
+            return int(atualizados), int(total)
+        case _:
+            return None
 
 
 def url_da_edicao(video_id: str) -> str:
@@ -75,6 +112,8 @@ class TarefaNoStudio:
     monetizar: bool = False
     relacionado: str = ""
     """O id do vídeo longo a ligar ao short; "" não liga nada."""
+    short: bool = False
+    """Em que aba da lista de Conteúdo ele está: Shorts ou Vídeos (D-935)."""
 
     @property
     def vazia(self) -> bool:
@@ -82,26 +121,26 @@ class TarefaNoStudio:
 
 
 def tarefa_do_upload(
-    video_id: str, *, relacionado: str, monetizar: bool, relacionar: bool
+    video_id: str, *, relacionado: str, monetizar: bool, relacionar: bool, short: bool = False
 ) -> TarefaNoStudio:
     """A tarefa de um upload recém-feito, já filtrada pelos interruptores do canal.
 
     >>> tarefa_do_upload("a" * 11, relacionado="b" * 11, monetizar=True, relacionar=False)
-    TarefaNoStudio(video_id='aaaaaaaaaaa', monetizar=True, relacionado='')
+    TarefaNoStudio(video_id='aaaaaaaaaaa', monetizar=True, relacionado='', short=False)
     >>> tarefa_do_upload("a" * 11, relacionado="a" * 11, monetizar=False, relacionar=True).vazia
     True
     """
     # Um vídeo relacionado a si mesmo seria um link para onde o espectador já está.
     ligar = relacionar and relacionado and relacionado != video_id
-    return TarefaNoStudio(video_id, monetizar, relacionado if ligar else "")
+    return TarefaNoStudio(video_id, monetizar, relacionado if ligar else "", short)
 
 
 def juntar(tarefas: list[TarefaNoStudio]) -> list[TarefaNoStudio]:
     """Uma tarefa por vídeo, na ordem de chegada — o mesmo vídeo duas vezes vira uma visita.
 
     >>> a = TarefaNoStudio("a" * 11, monetizar=True)
-    >>> juntar([a, TarefaNoStudio("a" * 11, relacionado="b" * 11), a])
-    [TarefaNoStudio(video_id='aaaaaaaaaaa', monetizar=True, relacionado='bbbbbbbbbbb')]
+    >>> juntar([a, TarefaNoStudio("a" * 11, relacionado="b" * 11, short=True), a])
+    [TarefaNoStudio(video_id='aaaaaaaaaaa', monetizar=True, relacionado='bbbbbbbbbbb', short=True)]
     """
     por_video: dict[str, TarefaNoStudio] = {}
     for tarefa in tarefas:
@@ -113,5 +152,16 @@ def juntar(tarefas: list[TarefaNoStudio]) -> list[TarefaNoStudio]:
             anterior,
             monetizar=anterior.monetizar or tarefa.monetizar,
             relacionado=tarefa.relacionado or anterior.relacionado,
+            short=anterior.short or tarefa.short,
         )
     return [t for t in por_video.values() if not t.vazia]
+
+
+def a_monetizar(tarefas: list[TarefaNoStudio], *, shorts: bool) -> list[str]:
+    """Os vídeos de UMA aba que a edição em massa vai ligar, na ordem da fila.
+
+    >>> t = [TarefaNoStudio("a" * 11, monetizar=True), TarefaNoStudio("b" * 11, monetizar=True, short=True)]
+    >>> a_monetizar(t, shorts=True)
+    ['bbbbbbbbbbb']
+    """
+    return [t.video_id for t in tarefas if t.monetizar and t.short == shorts]

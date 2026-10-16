@@ -86,7 +86,9 @@ class DestinoYouTubeShorts(Destino):
         aviso = await self._enviar_capa(creds, video_id, pacote.capa)
         # D-895: monetização e vídeo relacionado não existem na API; o robô do
         # Studio faz depois, se o canal pediu.
-        studio_youtube.agendar(video_id, relacionado=id_do_video(pacote.url_video_longo))
+        studio_youtube.agendar(
+            video_id, relacionado=id_do_video(pacote.url_video_longo), short=True
+        )
         return {
             "plataforma": self.plataforma.value,
             "video_id": video_id,

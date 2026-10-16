@@ -3,6 +3,9 @@
 Pedido → teste:
   - monetizar todo vídeo que o app sobe → `test_monetiza_*`, `test_upload_do_corte_*`,
     `test_upload_do_short_*`
+  - D-935: monetizar o lote EM MASSA pela lista de Conteúdo (a página de cada
+    vídeo pedia preenchimentos a mais e o robô não terminava) → `test_monetiza_*`,
+    `test_upload_do_short_vai_para_a_aba_shorts`
   - o short aponta para o corte de onde saiu → `test_relaciona_*`, `test_upload_do_short_*`
   - depois do lote, numa visita só → `test_a_fila_junta_*`
   - interruptor por canal, na tela (ADR-0012) → `test_interruptor_*`, `test_a_tela_*`
@@ -14,7 +17,6 @@ import types
 import pytest
 import pytest_asyncio
 from app.core import channel_paths
-from app.domain.compartilhado.erros import ServicoExternoFalhou
 from app.domain.publicacao import studio_youtube as dominio
 from app.domain.publicacao.publicacao import MetadadosBase, ModoPublicacao, Plataforma, adaptar
 from app.domain.publicacao.studio_youtube import TarefaNoStudio
@@ -47,12 +49,30 @@ def fila(monkeypatch):
     return disparos
 
 
-class PaginaFalsa:
-    """Dublê da página: grava o que o roteiro fez e responde o que o teste mandar."""
+CANAL = "UCcanalDoTeste"
 
-    def __init__(self, *, texto_monetizacao="Desativada", sem=(), login=False, salva=True):
+
+class PaginaFalsa:
+    """Dublê da página: grava o que o roteiro fez e responde o que o teste mandar.
+
+    `fora`: vídeos que não estão na primeira página da lista. `aviso`: o que o
+    Studio mostra depois de confirmar a edição em massa.
+    """
+
+    def __init__(
+        self,
+        *,
+        opcao="On",
+        aviso="1 of 1 video successfully updated",
+        fora=(),
+        sem=(),
+        login=False,
+        salva=True,
+    ):
         self.passos: list[tuple] = []
-        self.texto_monetizacao = texto_monetizacao
+        self.opcao = opcao
+        self.aviso = aviso
+        self.fora = set(fora)
         self.sem = set(sem)
         self.login = login
         self.salva = salva
@@ -63,6 +83,12 @@ class PaginaFalsa:
         self.url = "https://accounts.google.com/x" if self.login else url
         self.passos.append(("abrir", url))
 
+    def aguardar(self, segundos):
+        # O redirecionamento da página inicial para o canal só aparece depois de
+        # esperar PELA PÁGINA, como no Playwright síncrono (D-935).
+        if self.url == dominio.URL_DO_STUDIO:
+            self.url = f"{dominio.URL_DO_STUDIO}/channel/{CANAL}"
+
     def url_atual(self):
         return self.url
 
@@ -70,7 +96,13 @@ class PaginaFalsa:
         return alvo not in self.sem
 
     def texto_de(self, alvo):
-        return self.texto_monetizacao
+        return {"opcao_em_massa": self.opcao, "aviso": self.aviso}.get(alvo, "")
+
+    def marcar_video(self, alvo, video_id, *, segundos):
+        if video_id in self.fora:
+            return False
+        self.passos.append(("marcar", video_id))
+        return True
 
     def clicar(self, alvo, *, segundos):
         self.passos.append(("clicar", alvo))
@@ -84,7 +116,8 @@ class PaginaFalsa:
         self.passos.append(("cartao", video_id))
 
     def habilitado(self, alvo):
-        return not self.salva
+        # "confirmar" acende depois do "I understand"; "salvar" apaga quando grava.
+        return alvo == "confirmar" or not self.salva
 
     def fechar(self):
         self.fechada = True
@@ -95,6 +128,9 @@ def _sem_espera(monkeypatch):
     monkeypatch.setattr(studio_youtube, "PRAZO_PARA_SALVAR", 0.05)
     monkeypatch.setattr(studio_youtube, "INTERVALO_DE_CONFERENCIA", 0.01)
     monkeypatch.setattr(studio_youtube, "RESPIRO_ANTES_DE_COMECAR", 0)
+    monkeypatch.setattr(studio_youtube, "PRAZO_PARA_ABRIR", 0.05)
+    monkeypatch.setattr(studio_youtube, "PRAZO_PARA_O_CAMPO", 0.05)
+    monkeypatch.setattr(studio_youtube, "PRAZO_DA_ATUALIZACAO", 0.05)
 
 
 # --------------------------------------------------------------------------- #
@@ -232,42 +268,131 @@ async def test_a_fila_junta_o_lote_numa_visita_so(monkeypatch):
 # --------------------------------------------------------------------------- #
 
 
-def test_monetiza_ativando_e_salvando():
-    pagina = PaginaFalsa()
+EDICAO_EM_MASSA = [
+    ("clicar", "editar_em_massa"),
+    ("clicar", "item_monetizacao"),
+    ("clicar", "atualizar_videos"),
+    ("clicar", "entendo"),
+    ("clicar", "confirmar"),
+]
 
-    falhas = studio_youtube.executar_roteiro(pagina, [TarefaNoStudio(CORTE, monetizar=True)])
+
+def test_monetiza_o_lote_em_massa_numa_edicao_so():
+    """D-935: os cortes do lote marcados juntos na aba Vídeos, e um "Update videos"."""
+    pagina = PaginaFalsa(aviso="2 of 2 videos successfully updated")
+
+    falhas = studio_youtube.executar_roteiro(
+        pagina, [TarefaNoStudio(CORTE, monetizar=True), TarefaNoStudio(OUTRO, monetizar=True)]
+    )
 
     assert falhas == []
     assert pagina.passos == [
-        ("abrir", dominio.url_da_monetizacao(CORTE)),
-        ("clicar", "seletor_de_monetizacao"),
-        ("clicar", "opcao_ativada"),
-        ("clicar", "concluido"),
-        ("clicar", "salvar"),
+        ("abrir", dominio.URL_DO_STUDIO),
+        ("abrir", dominio.url_da_lista(CANAL, shorts=False)),
+        ("marcar", CORTE),
+        ("marcar", OUTRO),
+        *EDICAO_EM_MASSA,
     ]
     assert pagina.fechada, "deu tudo certo: a aba não serve mais"
 
 
-def test_monetiza_nao_mexe_no_que_ja_esta_ativado():
-    pagina = PaginaFalsa(texto_monetizacao="Ativada")
+def test_o_canal_vem_do_redirecionamento_esperado_pela_pagina(monkeypatch):
+    """D-935: com `time.sleep` no laço, a URL do Playwright síncrono congelava."""
+    import time
 
-    studio_youtube.executar_roteiro(pagina, [TarefaNoStudio(CORTE, monetizar=True)])
+    monkeypatch.setattr(studio_youtube, "PRAZO_PARA_ABRIR", 1)
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    pagina = PaginaFalsa()
 
-    assert ("clicar", "salvar") not in pagina.passos
+    assert studio_youtube._canal(pagina) == CANAL
 
 
-def test_monetiza_sem_a_aba_explica_o_programa_de_parcerias():
-    pagina = PaginaFalsa(sem={"seletor_de_monetizacao"})
+def test_monetiza_cortes_e_shorts_cada_um_na_sua_aba():
+    """O Studio separa as abas: um short não aparece na lista de Vídeos."""
+    pagina = PaginaFalsa()
+
+    studio_youtube.executar_roteiro(
+        pagina,
+        [TarefaNoStudio(CORTE, monetizar=True), TarefaNoStudio(SHORT, monetizar=True, short=True)],
+    )
+
+    lista_de_videos = pagina.passos.index(("abrir", dominio.url_da_lista(CANAL, shorts=False)))
+    lista_de_shorts = pagina.passos.index(("abrir", dominio.url_da_lista(CANAL, shorts=True)))
+    na_aba_videos = pagina.passos[lista_de_videos:lista_de_shorts]
+    na_aba_shorts = pagina.passos[lista_de_shorts:]
+    assert [p for p in na_aba_videos if p[0] == "marcar"] == [("marcar", CORTE)]
+    assert [p for p in na_aba_shorts if p[0] == "marcar"] == [("marcar", SHORT)]
+    assert pagina.passos.count(("clicar", "confirmar")) == 2
+
+
+def test_monetiza_nada_quando_nenhum_video_pede():
+    """Sem monetização a fazer, o robô nem abre a lista: não mexe sem precisar.
+
+    Substitui o "não mexe no que já está ativado" da D-895, que a edição em massa
+    não preserva: ela aplica On também em vídeo já On. Medido em 15/10/2026, On
+    sobre On mantém o estado ("1 of 1 updated", o vídeo continuou On).
+    """
+    pagina = PaginaFalsa()
+
+    studio_youtube.executar_roteiro(pagina, [TarefaNoStudio(SHORT, relacionado=CORTE)])
+
+    assert ("abrir", dominio.URL_DO_STUDIO) not in pagina.passos
+    assert not any(p[0] == "marcar" for p in pagina.passos)
+
+
+def test_monetiza_sem_a_opcao_on_explica_e_nao_confirma():
+    """Canal fora do Programa de Parcerias não oferece "On": o robô não chuta."""
+    pagina = PaginaFalsa(opcao="")
 
     falhas = studio_youtube.executar_roteiro(pagina, [TarefaNoStudio(CORTE, monetizar=True)])
 
+    assert "Monetização: On" in falhas[0]
     assert "Programa de Parcerias" in falhas[0]
+    assert ("clicar", "atualizar_videos") not in pagina.passos
     assert not pagina.fechada, "a aba fica: é nela que o operador vê o motivo"
 
 
-def test_monetiza_que_o_studio_nao_salvou_e_falha():
-    with pytest.raises(ServicoExternoFalhou, match="Salvar"):
-        studio_youtube.monetizar(PaginaFalsa(salva=False), CORTE)
+def test_monetiza_que_o_studio_nao_confirmou_e_falha():
+    pagina = PaginaFalsa(aviso="Updating videos.")
+
+    falhas = studio_youtube.executar_roteiro(pagina, [TarefaNoStudio(CORTE, monetizar=True)])
+
+    assert "não confirmou" in falhas[0]
+
+
+def test_monetiza_menos_do_que_pediu_diz_quantos():
+    pagina = PaginaFalsa(aviso="1 of 2 videos successfully updated")
+
+    falhas = studio_youtube.executar_roteiro(
+        pagina, [TarefaNoStudio(CORTE, monetizar=True), TarefaNoStudio(OUTRO, monetizar=True)]
+    )
+
+    assert falhas == ["o Studio atualizou 1 de 2 na aba Vídeos"]
+
+
+def test_nenhum_video_na_pagina_nao_abre_a_edicao():
+    """Sem linha marcada não há o que editar: o Studio nem mostra o Editar."""
+    pagina = PaginaFalsa(fora={CORTE, OUTRO})
+
+    falhas = studio_youtube.executar_roteiro(
+        pagina, [TarefaNoStudio(CORTE, monetizar=True), TarefaNoStudio(OUTRO, monetizar=True)]
+    )
+
+    assert ("clicar", "editar_em_massa") not in pagina.passos
+    assert [CORTE in falhas[0], OUTRO in falhas[1]] == [True, True]
+
+
+def test_monetiza_o_que_achou_e_diz_o_que_ficou_fora_da_pagina():
+    pagina = PaginaFalsa(fora={OUTRO})
+
+    falhas = studio_youtube.executar_roteiro(
+        pagina, [TarefaNoStudio(CORTE, monetizar=True), TarefaNoStudio(OUTRO, monetizar=True)]
+    )
+
+    assert ("marcar", CORTE) in pagina.passos
+    assert ("clicar", "confirmar") in pagina.passos
+    assert len(falhas) == 1
+    assert OUTRO in falhas[0]
 
 
 def test_relaciona_o_short_ao_corte_pela_miniatura():
@@ -302,7 +427,8 @@ def test_uma_falha_nao_para_os_outros_videos():
     )
 
     assert len(falhas) == 1
-    assert ("abrir", dominio.url_da_monetizacao(OUTRO)) in pagina.passos
+    assert ("marcar", OUTRO) in pagina.passos
+    assert ("clicar", "confirmar") in pagina.passos
 
 
 def test_sessao_caida_para_tudo_e_pede_login():
@@ -358,12 +484,22 @@ def test_conexao_que_cai_no_meio_vira_falha_e_mostra_a_janela(canal, monkeypatch
 # --------------------------------------------------------------------------- #
 
 
+class Agendados(list):
+    """`(video, relacionado)` de cada `agendar`; `shorts` guarda a aba de cada um (D-935)."""
+
+    shorts: list[bool]
+
+
 @pytest.fixture
 def agendados(monkeypatch):
-    chamadas: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        studio_youtube, "agendar", lambda vid, relacionado="": chamadas.append((vid, relacionado))
-    )
+    chamadas = Agendados()
+    chamadas.shorts = []
+
+    def _agendar(vid, relacionado="", short=False):
+        chamadas.append((vid, relacionado))
+        chamadas.shorts.append(short)
+
+    monkeypatch.setattr(studio_youtube, "agendar", _agendar)
     return chamadas
 
 
@@ -399,6 +535,32 @@ async def test_upload_do_short_agenda_com_o_corte_de_origem(tmp_path, monkeypatc
 
     assert pacote.modo is ModoPublicacao.API
     assert agendados == [(SHORT, CORTE)]
+
+
+@pytest.mark.asyncio
+async def test_upload_do_short_vai_para_a_aba_shorts(tmp_path, monkeypatch, agendados):
+    """D-935: a edição em massa acha o short na aba Shorts, não na de Vídeos."""
+    from app.services import youtube as youtube_module
+    from app.services.destinos_shorts import DestinoYouTubeShorts
+    from app.services.publicacao_destinos import PacotePublicacao
+
+    async def _fake_enviar(self, creds, pacote):
+        return SHORT
+
+    monkeypatch.setattr(DestinoYouTubeShorts, "_enviar", _fake_enviar)
+    monkeypatch.setattr(
+        youtube_module.YouTubeService, "_get_credentials", staticmethod(lambda: ("creds", None))
+    )
+    pacote = PacotePublicacao(
+        plataforma=Plataforma.YOUTUBE_SHORTS,
+        modo=ModoPublicacao.API,
+        arquivo=tmp_path / "short.mp4",
+        metadados=adaptar(MetadadosBase(titulo="t", descricao="d"), Plataforma.YOUTUBE_SHORTS),
+    )
+
+    await DestinoYouTubeShorts().publicar(pacote)
+
+    assert agendados.shorts == [True]
 
 
 @pytest.mark.asyncio
@@ -493,6 +655,7 @@ async def test_upload_do_corte_agenda_a_monetizacao(
 
     assert resultado["status"] == "ok", json.dumps(resultado)
     assert agendados == [(CORTE, "")]
+    assert agendados.shorts == [False], "o corte é procurado na aba Vídeos"
 
 
 @pytest.mark.asyncio
