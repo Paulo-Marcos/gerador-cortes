@@ -33,7 +33,6 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.core import process_runner
 from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
@@ -42,7 +41,7 @@ from app.domain.corte.capa_tiktok import etiqueta_da_resposta, etiqueta_herdada,
 from app.domain.corte.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
-from app.services import estilo_da_capa
+from app.services import estilo_da_capa, remotion_still
 from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
 from app.services.channels import identidade_do_canal_ativo
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
@@ -490,17 +489,13 @@ async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
 
     O runner guarda o fallback síncrono do event loop Selector do Windows (D-369).
     Timeout vira código -1: cai no mesmo caminho de falha de um gerador que
-    quebrou, em vez de levantar e derrubar quem chamou.
+    quebrou. O Chrome que não atende em 25 s ganha outra tentativa (D-949).
     """
-    try:
-        resultado = await process_runner.rodar(
-            ["node", str(_GEN_SCRIPT), str(destino), props_path],
-            cwd=_REPO_ROOT,
-            timeout=_TIMEOUT_DO_GERADOR_SEG,
-        )
-    except process_runner.ProcessoEstourouOTempo as exc:
-        return -1, str(exc)
-    return resultado.returncode, resultado.saida
+    return await remotion_still.rodar_gerador(
+        ["node", str(_GEN_SCRIPT), str(destino), props_path],
+        cwd=_REPO_ROOT,
+        timeout=_TIMEOUT_DO_GERADOR_SEG,
+    )
 
 
 async def _gravar_caminho(
