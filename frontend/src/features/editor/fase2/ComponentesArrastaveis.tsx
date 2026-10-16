@@ -5,7 +5,17 @@ import { cn } from '@/lib/utils';
 import { LADO_MINIMO_DA_CAIXA } from '@/features/channels/CardsDoCanal';
 import { TAMANHO_MAXIMO, TAMANHO_MINIMO } from '@/features/channels/ControlesDoPalco';
 import { AlcaDeTamanho } from './SlotPreviewPartes';
-import { GuiasNaPrevia, SEM_GUIAS, alvosDe, encaixar, outrosNaPrevia, type Alvos, type Guias } from './guiasDeAlinhamento';
+import {
+  GuiasNaPrevia,
+  QUADRO_DO_VIDEO,
+  SEM_GUIAS,
+  alvosDe,
+  encaixar,
+  outrosNaPrevia,
+  type Alvos,
+  type Guias,
+  type Quadro,
+} from './guiasDeAlinhamento';
 
 // D-927: o cabeçalho e a placa do estilo limpo se movem e se redimensionam com
 // o mouse na prévia do modal, como as janelas do short. A caixa de cada um sai
@@ -38,14 +48,14 @@ const NOMES: Record<ComponenteDoPalco, string> = { cabecalho: 'Cabeçalho', plac
 // D-928: o card de exemplo no vídeo cheio também se arrasta (posição e tamanho dos cards).
 const COMPONENTES: ComponenteDoPalco[] = ['cabecalho', 'placa', 'cards'];
 
-/** A caixa do componente no quadro de 1920x1080, medida no desenho escalado. */
-function medir(frame: HTMLElement, componente: ComponenteDoPalco): Caixa | null {
+/** A caixa do componente em px do quadro (o vídeo ou o short), medida no desenho escalado. */
+function medir(frame: HTMLElement, componente: ComponenteDoPalco, largura: number): Caixa | null {
   const el = frame.querySelector<HTMLElement>(`[data-componente="${componente}"]`);
   if (!el) return null;
   const quadro = frame.getBoundingClientRect();
   const r = el.getBoundingClientRect();
   if (quadro.width === 0 || r.width === 0) return null;
-  const k = 1920 / quadro.width;
+  const k = largura / quadro.width;
   return {
     x: Math.round((r.left - quadro.left) * k),
     y: Math.round((r.top - quadro.top) * k),
@@ -60,9 +70,12 @@ const iguais = (a: Caixa | null, b: Caixa | null) =>
 export function ComponentesArrastaveis({
   frameRef,
   edicao,
+  quadro = QUADRO_DO_VIDEO,
 }: {
   frameRef: RefObject<HTMLDivElement | null>;
   edicao: EdicaoDosComponentes;
+  /** D-937: o short arrasta o cabeçalho no quadro vertical. */
+  quadro?: Quadro;
 }) {
   const [caixas, setCaixas] = useState<Record<ComponenteDoPalco, Caixa | null>>({ cabecalho: null, placa: null, cards: null });
   // Mede depois de cada desenho (posição e tamanho mudam com o rascunho), sem
@@ -71,10 +84,11 @@ export function ComponentesArrastaveis({
   useLayoutEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
-    const novas = { cabecalho: medir(frame, 'cabecalho'), placa: medir(frame, 'placa'), cards: medir(frame, 'cards') };
+    const l = quadro.largura;
+    const novas = { cabecalho: medir(frame, 'cabecalho', l), placa: medir(frame, 'placa', l), cards: medir(frame, 'cards', l) };
     setCaixas((atuais) => (COMPONENTES.every((c) => iguais(novas[c], atuais[c])) ? atuais : novas));
   });
-  const arraste = useArrastarComponente(frameRef, edicao);
+  const arraste = useArrastarComponente(frameRef, edicao, quadro);
   return (
     <>
       {COMPONENTES.map((componente) => {
@@ -95,10 +109,10 @@ export function ComponentesArrastaveis({
               selecionado ? 'border-[var(--sel-line)]' : 'border-transparent hover:border-[var(--wb-border)]',
             )}
             style={{
-              left: `${(caixa.x / 1920) * 100}%`,
-              top: `${(caixa.y / 1080) * 100}%`,
-              width: `${(caixa.w / 1920) * 100}%`,
-              height: `${(caixa.h / 1080) * 100}%`,
+              left: `${(caixa.x / quadro.largura) * 100}%`,
+              top: `${(caixa.y / quadro.altura) * 100}%`,
+              width: `${(caixa.w / quadro.largura) * 100}%`,
+              height: `${(caixa.h / quadro.altura) * 100}%`,
             }}
           >
             {selecionado && (
@@ -117,7 +131,7 @@ export function ComponentesArrastaveis({
           </div>
         );
       })}
-      <GuiasNaPrevia guias={arraste.guias} />
+      <GuiasNaPrevia guias={arraste.guias} quadro={quadro} />
     </>
   );
 }
@@ -138,11 +152,11 @@ function rotuloDoTamanho(edicao: EdicaoDosComponentes, componente: ComponenteDoP
 }
 
 /** D-941: a caixa esticada pela alça, presa ao quadro e ao lado mínimo. */
-export function caixaEsticada(caixa: Caixa, dx: number, dy: number, minimo: number): Caixa {
+export function caixaEsticada(caixa: Caixa, dx: number, dy: number, minimo: number, quadro = QUADRO_DO_VIDEO): Caixa {
   return {
     ...caixa,
-    w: Math.round(limitar(caixa.w + dx, minimo, 1920 - caixa.x)),
-    h: Math.round(limitar(caixa.h + dy, minimo, 1080 - caixa.y)),
+    w: Math.round(limitar(caixa.w + dx, minimo, quadro.largura - caixa.x)),
+    h: Math.round(limitar(caixa.h + dy, minimo, quadro.altura - caixa.y)),
   };
 }
 
@@ -156,7 +170,11 @@ export function capturar(event: PointerEvent<HTMLElement>) {
 }
 
 /** Mover leva o canto de cima à esquerda junto com o mouse; a alça escala pela largura. */
-function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edicao: EdicaoDosComponentes) {
+function useArrastarComponente(
+  frameRef: RefObject<HTMLDivElement | null>,
+  edicao: EdicaoDosComponentes,
+  { largura, altura }: Quadro,
+) {
   const atual = useRef<{
     componente: ComponenteDoPalco;
     modo: 'mover' | 'redimensionar';
@@ -176,7 +194,7 @@ function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edica
         event.stopPropagation();
         const frame = frameRef.current;
         const proprio = event.currentTarget.closest('[data-arrastavel]') ?? event.currentTarget;
-        const alvos = alvosDe(frame ? outrosNaPrevia(frame, proprio) : []);
+        const alvos = alvosDe(frame ? outrosNaPrevia(frame, proprio, largura) : [], { w: largura, h: altura });
         atual.current = { componente, modo, x0: event.clientX, y0: event.clientY, caixa, escala: edicao.escala(componente), alvos };
         edicao.onSelecionar?.(componente);
         capturar(event);
@@ -185,7 +203,7 @@ function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edica
       const a = atual.current;
       const quadro = frameRef.current?.getBoundingClientRect();
       if (!a || !quadro) return;
-      const k = 1920 / quadro.width;
+      const k = largura / quadro.width;
       const dx = (event.clientX - a.x0) * k;
       const dy = (event.clientY - a.y0) * k;
       if (a.modo === 'mover') {
@@ -193,13 +211,13 @@ function useArrastarComponente(frameRef: RefObject<HTMLDivElement | null>, edica
         setGuias(encaixe.guias);
         edicao.mover(
           a.componente,
-          limitar(encaixe.rect.x, 0, 1920 - a.caixa.w),
-          limitar(encaixe.rect.y, 0, 1080 - a.caixa.h),
+          limitar(encaixe.rect.x, 0, largura - a.caixa.w),
+          limitar(encaixe.rect.y, 0, altura - a.caixa.h),
         );
         return;
       }
       if (edicao.esticar && a.componente === 'cards') {
-        edicao.esticar(a.componente, caixaEsticada(a.caixa, dx, dy, LADO_MINIMO_DA_CAIXA));
+        edicao.esticar(a.componente, caixaEsticada(a.caixa, dx, dy, LADO_MINIMO_DA_CAIXA, { largura, altura }));
         return;
       }
       const encaixe = encaixar({ ...a.caixa, w: a.caixa.w + dx, h: a.caixa.h }, 'redimensionar', a.alvos);

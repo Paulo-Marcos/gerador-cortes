@@ -65,6 +65,8 @@ interface Props {
   /** O player que o operador está scrubbing — a fonte dos quadros. */
   video: RefObject<HTMLVideoElement | null>;
   children?: React.ReactNode;
+  /** D-937: o quadro da prévia, para o cabeçalho se arrastar medido nele. */
+  quadroRef?: RefObject<HTMLDivElement | null>;
 }
 
 /** O mesmo recorte das janelas do palco vertical (`OPTS_COM_MARGEM`). */
@@ -74,7 +76,7 @@ const OPTS_COLADA = { radius: 0, chamferTR: 0, chamferBR: 0, offset: 8 };
 /** O trilho do chrome, em px do quadro — espelha `StageChrome pad` do renderer. */
 const PAD_DO_TRILHO = 40;
 
-export function PalcoPrevia({ plano, video, children }: Props) {
+export function PalcoPrevia({ plano, video, children, quadroRef }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // D-911: o estilo do palco vem do canal ativo (ver `CamadaDoPalcoLimpo`).
   const componentes = usePalcoParaPrevia();
@@ -98,7 +100,7 @@ export function PalcoPrevia({ plano, video, children }: Props) {
     : DEFAULT_YOUTUBE_BACKGROUND;
 
   return (
-    <div
+    <div ref={quadroRef}
       // `h-full w-auto` + aspectRatio: a altura vem da linha (que o player
       // define) e a largura sai da proporcao. Sem a altura definida, um
       // contentor que so tem aspect-ratio colapsa para largura zero.
