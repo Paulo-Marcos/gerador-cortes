@@ -9,6 +9,7 @@ fila de upload com controle de cota. Todos os métodos resolvem irmãos via
 import asyncio
 
 from app.core.logging import operational_info
+from app.services import agenda_youtube_em_voo
 from app.services.tasks import fire_and_forget
 
 # D-364: o render final em lote roda SEQUENCIAL (1 corte por vez). Cada corte
@@ -68,6 +69,10 @@ class _ExportBulkQueueMixin:
             return
 
         cls._fila_youtube[projeto_id] = {corte_id: "aguardando" for corte_id, _ in agenda}
+        # D-934: a agenda do próximo lote precisa ver estes horários antes de o
+        # upload gravá-los no corte.
+        for corte_id, agendado_para in agenda:
+            agenda_youtube_em_voo.reservar(corte_id, agendado_para)
         fire_and_forget(
             cls._run_youtube_upload_queue(projeto_id, agenda),
             name=f"yt-upload-{projeto_id[:8]}",
@@ -121,6 +126,8 @@ class _ExportBulkQueueMixin:
                 resultado = await YouTubeService.upload_video(corte_id, scheduled_at=scheduled_at)
             except Exception as exc:  # noqa: BLE001 — lote: um upload que falha não para os outros
                 resultado = {"status": "erro", "mensagem": str(exc)}
+            finally:
+                agenda_youtube_em_voo.liberar(corte_id)
 
             if resultado.get("cota_excedida"):
                 fila[corte_id] = "cota_excedida"
@@ -137,6 +144,7 @@ class _ExportBulkQueueMixin:
         fila = cls._fila_youtube.setdefault(projeto_id, {})
         for corte_id in corte_ids:
             fila[corte_id] = "cota_excedida"
+            agenda_youtube_em_voo.liberar(corte_id)
         if corte_ids:
             operational_info(
                 "ExportService",

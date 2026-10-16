@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusExportCorte } from '@/types/models';
 import { publicacaoApi } from '@/features/publicacao/api';
+import type { ModoDeQuando } from '@/features/shorts/agendaDoLote';
 import { notasDeAgendamento } from '@/features/shorts/agendamentoDoLote';
 import { QuandoDoLote } from '@/features/shorts/QuandoDoLote';
 import { useQuandoDoLote } from '@/features/shorts/useQuandoDoLote';
@@ -32,6 +33,9 @@ interface Props {
 // render pediria a agenda de novo.
 const PLATAFORMAS = ['youtube'];
 const NOTAS = notasDeAgendamento(PLATAFORMAS, { tiktokAssistido: false, instagramAssistido: false });
+// Sem "agora": o lote do YouTube sempre agendou, e N vídeos públicos de uma vez
+// é a cadência que a janela existe para evitar.
+const MODOS: ModoDeQuando[] = ['uma_data', 'distribuir'];
 
 export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: Props) {
   const totalProntos = cortesProntos.length;
@@ -126,7 +130,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
               disabled={enviando}
             />
           </div>
-          <QuandoDoLote {...quando.secao} rotuloDoAlvo={rotuloDoAlvo} />
+          <QuandoDoLote {...quando.secao} modos={MODOS} rotuloDoAlvo={rotuloDoAlvo} />
           {erro && (
             <p role="alert" className="flex items-center gap-1 text-[12px] text-error">
               <Icon name="x-circle" /> {erro}

@@ -53,6 +53,8 @@ describe('lote do YouTube longo (PublicarMassaModal)', () => {
 
     expect(html).not.toContain('15 minutos');
     expect(html).toContain('Distribuir pela janela do canal');
+    // Sem "agora": dez vídeos públicos de uma vez é o que a janela evita.
+    expect(html).not.toContain('cada destino publica assim que ficar pronto');
     // Quatro no bloco das 12h, quatro no das 18h, e dois transbordam para terça.
     for (const hora of HORAS) expect(html).toContain(`seg 07/01 · ${hora}`);
     expect(html).toContain('ter 08/01 · 12:00');
@@ -140,6 +142,64 @@ describe('um corte sozinho', () => {
     expect(await proximoHorarioLivre('youtube')).toBe('2030-01-07T12:00');
     expect(pedidos[0].url).toBe('http://api.test/api/shorts/lote/agenda');
     expect(await pedidos[0].json()).toEqual({ alvos: ['corte:avulso'], plataformas: ['youtube'] });
+  });
+
+  // Um campo que o hook controla, sem React: o estado é a variável.
+  function campo(inicial = '') {
+    const estado = { valor: inicial };
+    const aplicar = (mudar: (atual: string) => string) => {
+      estado.valor = mudar(estado.valor);
+    };
+    return { estado, aplicar };
+  }
+  const vaga = (quando: string) => {
+    let soltar: () => void = () => {};
+    const promessa = new Promise<string>((resolver) => {
+      soltar = () => resolver(quando);
+    });
+    return { buscar: () => promessa, soltar: () => { soltar(); return promessa; } };
+  };
+
+  it('a sugestão do YouTube preenche o campo vazio e respeita o que foi digitado', async () => {
+    const { sugerirHorario } = await import('../useHorarioSugerido');
+    const vazio = campo();
+    const digitado = campo('2030-02-01T09:00');
+    const resposta = vaga('2030-01-07T12:00');
+
+    sugerirHorario(vazio.aplicar, resposta.buscar);
+    sugerirHorario(digitado.aplicar, resposta.buscar);
+    await resposta.soltar();
+
+    expect(vazio.estado.valor).toBe('2030-01-07T12:00');
+    expect(digitado.estado.valor).toBe('2030-02-01T09:00');
+  });
+
+  it('a resposta de um corte que já foi trocado não cai no campo', async () => {
+    const { sugerirHorario } = await import('../useHorarioSugerido');
+    const { estado, aplicar } = campo();
+    const resposta = vaga('2030-01-07T12:00');
+
+    const cancelar = sugerirHorario(aplicar, resposta.buscar);
+    cancelar();
+    await resposta.soltar();
+
+    expect(estado.valor).toBe('');
+  });
+
+  it('no TikTok, a vaga troca a data provisória, mas não a que o operador mudou', async () => {
+    const { marcarComVaga } = await import('../useHorarioSugerido');
+    const intocado = campo();
+    const mexido = campo();
+    const resposta = vaga('2030-01-07T16:00');
+
+    marcarComVaga('tiktok_horizontal', intocado.aplicar, resposta.buscar, '2030-01-07T11:00');
+    marcarComVaga('tiktok_horizontal', mexido.aplicar, resposta.buscar, '2030-01-07T11:00');
+    expect(intocado.estado.valor).toBe('2030-01-07T11:00');
+    mexido.aplicar(() => '2030-01-09T20:00');
+    await resposta.soltar();
+
+    expect(intocado.estado.valor).toBe('2030-01-07T16:00');
+    expect(mexido.estado.valor).toBe('2030-01-09T20:00');
   });
 
   it('o envio ao YouTube e o Assistido do TikTok abrem com a sugestão', () => {

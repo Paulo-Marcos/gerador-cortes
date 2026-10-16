@@ -27,7 +27,7 @@ from app.domain.publicacao.escalonamento import (
     intensidade_em,
 )
 from app.domain.publicacao.publicacao import Plataforma
-from app.services import registro_do_lote
+from app.services import agenda_youtube_em_voo, registro_do_lote
 from app.services.canal import escalonamento_settings
 
 PUBLICA_NO_ATO = "publica no ato: o Instagram não agenda pelo compositor da web"
@@ -107,11 +107,14 @@ async def prever_youtube(
     """A data de cada corte no YouTube longo, a partir do último do canal (D-934).
 
     Com um corte só, é o próximo horário livre da janela: a sugestão do envio
-    avulso sai daqui também.
+    avulso sai daqui também. Conta também o que um lote ainda está subindo,
+    que só chega ao corte quando o upload termina.
     """
     agora = agora or datetime.now().astimezone()
     faixas = escalonamento_settings.resolver_referencia()
-    ultimo = await registro_do_lote.ultimo_no_youtube()
+    gravados = await registro_do_lote.ultimo_no_youtube()
+    em_voo = agenda_youtube_em_voo.ultima()
+    ultimo = max(gravados, em_voo) if gravados and em_voo else gravados or em_voo
     return _distribuir(alvos, YOUTUBE_LONGO, YOUTUBE_LONGO, ultimo, agora, faixas)
 
 

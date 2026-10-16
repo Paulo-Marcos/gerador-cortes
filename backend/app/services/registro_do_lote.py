@@ -3,7 +3,8 @@
 Saiu do `publicacao_lote` quando ele chegou ao teto de tamanho que o CI confere
 (D-771): lá ficou o que o lote FAZ — raias, estados, vigília —, aqui o que ele
 consulta para decidir. São leituras sobre `PublicacaoShort`, `Short` e `Corte`
-(e a fila do YouTube longo, que a agenda dos horizontais lê, D-934), mais a gravação da confirmação à mão (D-894), sem estado em memória.
+(e a fila do YouTube longo, que a agenda dos horizontais lê, D-934), mais a
+gravação da confirmação à mão (D-894), sem estado em memória.
 """
 
 from __future__ import annotations

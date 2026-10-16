@@ -158,3 +158,78 @@ async def test_ultimo_no_youtube_conta_a_publicacao_imediata_de_um_corte(banco):
 @pytest.mark.asyncio
 async def test_ultimo_no_youtube_sem_nada_no_canal(banco):
     assert await registro_do_lote.ultimo_no_youtube() is None
+
+
+# ─── Pr-audit do #199: o lote que ainda está subindo também segura a vaga ──
+
+
+@pytest.fixture
+def sem_reservas(monkeypatch):
+    from app.services import agenda_youtube_em_voo
+
+    monkeypatch.setattr(agenda_youtube_em_voo, "_reservas", {})
+    return agenda_youtube_em_voo
+
+
+@pytest.mark.asyncio
+async def test_segundo_lote_nao_repete_os_horarios_de_um_lote_ainda_subindo(canal, sem_reservas):
+    """O upload só grava a data no corte ao terminar; até lá ela está reservada."""
+    sem_reservas.reservar("c1", "2030-01-07T15:00:00.000Z")  # 12:00 em GMT-3
+    sem_reservas.reservar("c2", "2030-01-07T15:15:00.000Z")  # 12:15
+
+    linhas = await svc.prever_youtube(DEZ_CORTES[2:4], agora=SEGUNDA_10H)
+
+    assert [linha.agendar_para for linha in linhas] == ["2030-01-07T12:30", "2030-01-07T12:45"]
+
+
+@pytest.mark.asyncio
+async def test_a_reserva_mais_tarde_vence_o_que_ja_esta_gravado(canal, sem_reservas):
+    canal["youtube"] = datetime(2030, 1, 7, 12, 0, tzinfo=FUSO)
+    sem_reservas.reservar("c5", "2030-01-07T21:00:00Z")  # 18:00
+
+    linhas = await svc.prever_youtube(DEZ_CORTES[:1], agora=SEGUNDA_10H)
+
+    assert linhas[0].agendar_para == "2030-01-07T18:15"
+
+
+@pytest.mark.asyncio
+async def test_o_lote_reserva_ao_enfileirar_e_libera_quando_cada_upload_termina(
+    monkeypatch, sem_reservas
+):
+    import sys
+    import types
+
+    sys.modules.setdefault("auto_editor", types.SimpleNamespace())
+    from app.services import export_bulk_queue
+    from app.services.export import ExportService
+
+    monkeypatch.setattr(ExportService, "_fila_youtube", {})
+    monkeypatch.setattr(ExportService, "_bulk_upload_sem", None)
+    corridas = []
+    monkeypatch.setattr(
+        export_bulk_queue, "fire_and_forget", lambda corrotina, *, name: corridas.append(corrotina)
+    )
+    vistos = []
+
+    async def upload(corte_id, scheduled_at=None):
+        vistos.append(sorted(sem_reservas._reservas))
+        return {"status": "erro" if corte_id == "c2" else "ok"}
+
+    monkeypatch.setitem(
+        sys.modules,
+        "app.services.youtube",
+        types.SimpleNamespace(YouTubeService=types.SimpleNamespace(upload_video=upload)),
+    )
+
+    await ExportService.bulk_upload_youtube_impl(
+        "p1", ["c1", "c2", "c3"], ["2030-01-07T15:00:00Z", "2030-01-07T15:15:00Z", None]
+    )
+    assert sorted(sem_reservas._reservas) == ["c1", "c2"]
+
+    corridas[0].close()
+    agenda = [("c1", "2030-01-07T15:00:00Z"), ("c2", "2030-01-07T15:15:00Z"), ("c3", None)]
+    await ExportService._run_youtube_upload_queue("p1", agenda, cleanup_delay=None)
+
+    # Cada upload libera a sua vaga ao terminar, com sucesso ou com erro.
+    assert vistos == [["c1", "c2"], ["c2"], []]
+    assert sem_reservas.ultima() is None
