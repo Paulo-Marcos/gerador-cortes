@@ -31,6 +31,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -41,6 +42,8 @@ from app.infrastructure.claude_cli_client import LlmCallContext
 
 # Depois de matar a árvore, quanto esperar o pipe do processo morto fechar.
 _ESPERA_PARA_DRENAR_S = 15
+# Depois do `result`, a chance de o agy sair sozinho antes de morrer pelo PID.
+_ESPERA_PARA_SAIR_SOZINHO_S = 2
 # Listar os modelos é uma consulta curta ao CLI.
 _TIMEOUT_DA_LISTA_DE_MODELOS_S = 60
 
@@ -141,6 +144,57 @@ def _pede_login(texto: str) -> bool:
     return "authentication required" in (texto or "").lower()
 
 
+def _encerrar(proc: subprocess.Popen, *, respondeu: bool) -> None:
+    """Dá ao agy que respondeu uma chance de sair sozinho; o resto morre pelo PID."""
+    if respondeu and proc.poll() is None:
+        try:
+            proc.wait(timeout=_ESPERA_PARA_SAIR_SOZINHO_S)
+        except subprocess.TimeoutExpired:
+            pass
+    if proc.poll() is None:
+        claude_cli_client._matar_arvore(proc)
+
+
+def _conversar(proc: subprocess.Popen, prompt: str, limite: float) -> tuple[str, str]:
+    """Manda o prompt e lê o NDJSON até o evento `result` ou o fim do stdout.
+
+    WHY não `communicate()` (D-953): o agy 1.3.x responde e continua vivo por
+    10-15 min em polling de segundo plano. Esperar o processo sair descartava a
+    resposta pronta no timeout e prendia o semáforo da fila do Gemini. O
+    `result` é o fim da conversa; o que sobra do processo morre pelo PID.
+    """
+    linhas: list[str] = []
+    erros: list[bytes] = []
+    terminou = threading.Event()
+
+    def _ler_stdout() -> None:
+        for bruta in proc.stdout:
+            linhas.append(bruta.decode("utf-8", errors="replace"))
+            if _evento_result(linhas[-1]) is not None:
+                break
+        terminou.set()
+
+    leitores = [
+        threading.Thread(target=_ler_stdout, daemon=True),
+        threading.Thread(target=lambda: erros.append(proc.stderr.read()), daemon=True),
+    ]
+    for leitor in leitores:
+        leitor.start()
+    try:
+        proc.stdin.write(_mensagem_stdin(prompt))
+        proc.stdin.close()
+    except OSError:
+        pass  # o processo morreu antes de ler o prompt; o stderr conta o porquê
+
+    respondeu = terminou.wait(limite)
+    _encerrar(proc, respondeu=respondeu)
+    for leitor in leitores:
+        leitor.join(_ESPERA_PARA_DRENAR_S)
+    if not respondeu:
+        raise subprocess.TimeoutExpired(proc.args, limite)
+    return "".join(linhas), b"".join(erros).decode("utf-8", errors="replace").strip()
+
+
 def _run_sync(prompt: str, *, model: str, timeout: float) -> dict:
     """Executa o `agy -p` (bloqueante) e devolve o payload do evento `result`.
 
@@ -159,19 +213,10 @@ def _run_sync(prompt: str, *, model: str, timeout: float) -> dict:
         env=_subprocess_env(),
     )
     try:
-        stdout_b, stderr_b = proc.communicate(
-            input=_mensagem_stdin(prompt), timeout=timeout + _FOLGA_PROCESSO_SEG
-        )
+        stdout, stderr = _conversar(proc, prompt, timeout + _FOLGA_PROCESSO_SEG)
     except subprocess.TimeoutExpired as exc:
-        claude_cli_client._matar_arvore(proc)
-        try:
-            proc.communicate(timeout=_ESPERA_PARA_DRENAR_S)
-        except Exception:  # noqa: BLE001 — só drena o pipe do processo morto
-            pass
         raise AntigravityCliError(f"Antigravity CLI excedeu o timeout de {timeout}s.") from exc
 
-    stdout = stdout_b.decode("utf-8", errors="replace")
-    stderr = stderr_b.decode("utf-8", errors="replace").strip()
     resultado = _evento_result(stdout)
 
     if resultado is None:
