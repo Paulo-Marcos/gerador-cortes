@@ -181,6 +181,7 @@ class Recorte:
             ...     "origem": {"x": 24, "y": 410, "w": 340, "h": 260},
             ...     "destino": {"x": -715, "y": 0, "w": 2510, "h": 1920},
             ...     "recorta": {"x": 0, "y": 0, "w": 1080, "h": 1920},
+            ...     "janela": {"x": 0, "y": 0, "w": 1080, "h": 1920},
             ... }
             True
         """
@@ -204,6 +205,9 @@ class Recorte:
             # antes. Quem limita é `recorta`.
             "destino": {"x": px - dx, "y": py - dy, "w": self.escala[0], "h": self.escala[1]},
             "recorta": {"x": self.slot.x, "y": self.slot.y, "w": self.slot.w, "h": self.slot.h},
+            # D-936: o buraco do palco no render (o que o vídeo ocupa). Em CABER
+            # é menor que `recorta`; a prévia desenha as janelas por aqui.
+            "janela": self.janela,
         }
 
     @property

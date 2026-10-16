@@ -8599,6 +8599,7 @@ export interface components {
          */
         RecorteDesenhavel: {
             destino: components["schemas"]["RetanguloEmPixels"];
+            janela: components["schemas"]["RetanguloEmPixels"];
             origem: components["schemas"]["RetanguloEmPixels"];
             recorta: components["schemas"]["RetanguloEmPixels"];
             /** Regiao */

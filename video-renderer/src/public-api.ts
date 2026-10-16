@@ -48,6 +48,8 @@ export {
   posicaoDoCabecalho,
   posicaoDoCabecalhoNoShortDe,
   posicaoDoCabecalhoNoShort,
+  RECUO_DO_CABECALHO_NA_JANELA,
+  type PosicaoDoCabecalhoNoShort,
   raioDaJanela,
   type ComponentesDoPalco as ComponentesDoPalcoDoRenderer,
   type FundoDoLimpo,

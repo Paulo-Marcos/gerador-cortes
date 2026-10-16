@@ -231,6 +231,16 @@ export const SombraDaJanela: FC<{ janela: Janela; raio: number }> = ({ janela, r
   </div>
 );
 
+// A pílula cresce para fora do ponto (x, y): o padding vira margem negativa, e
+// a imagem e o texto ficam onde ficariam sem ela.
+const PILULA_DO_CABECALHO = {
+  background: "rgba(18,20,23,0.72)",
+  borderRadius: 999,
+  padding: "8px 20px 8px 8px",
+  margin: "-8px 0 0 -8px",
+  height: "auto",
+} as const;
+
 /** O cabeçalho do canal: imagem redonda + nome + @. A imagem vem pronta de quem
  *  chama (um `<Img>` do Remotion), porque só o entry sabe resolver o `staticFile`. */
 export const CabecalhoDoCanal: FC<{
@@ -241,7 +251,9 @@ export const CabecalhoDoCanal: FC<{
   imagem?: ReactNode;
   /** Tamanho: escala a partir do canto superior esquerdo (1 = o de sempre). */
   escala?: number;
-}> = ({ x, y, nome, handle, imagem, escala = 1 }) => (
+  /** D-936: sobre o vídeo, uma pílula escura atrás para o texto não sumir. */
+  comPilula?: boolean;
+}> = ({ x, y, nome, handle, imagem, escala = 1, comPilula = false }) => (
   <div
     // D-927: a prévia do modal acha o componente por aqui para arrastá-lo.
     data-componente="cabecalho"
@@ -258,6 +270,7 @@ export const CabecalhoDoCanal: FC<{
       fontFamily: FONTE,
       color: COR_DO_TEXTO,
       whiteSpace: "nowrap",
+      ...(comPilula ? PILULA_DO_CABECALHO : {}),
     }}
   >
     {imagem ?? null}
@@ -405,15 +418,49 @@ export function posicaoDoCabecalho(componentes: ComPosicoes): { x: number; y: nu
   return { x: posicao.x, y: posicao.y };
 }
 
-/** Onde o cabeçalho senta no short: o que o canal escolheu, ou a faixa acima da 1ª janela. */
+/** D-936: quanto o cabeçalho recua da borda da janela quando senta sobre o vídeo. */
+export const RECUO_DO_CABECALHO_NA_JANELA = 28;
+
+/** Onde o cabeçalho do short senta, e se ele cai sobre o vídeo (aí leva pílula). */
+export interface PosicaoDoCabecalhoNoShort {
+  x: number;
+  y: number;
+  sobreOVideo: boolean;
+}
+
+/**
+ * Onde o cabeçalho senta no short: o que o canal escolheu; senão a faixa acima
+ * da janela mais alta; senão DENTRO dela, no canto de cima, sobre o vídeo.
+ *
+ * D-936: antes só havia a faixa. No arranjo cheio (o padrão) e no insert a
+ * janela de cima começa no topo do quadro, não sobra faixa — e o cabeçalho
+ * sumia sem aviso. Sobre o vídeo ele vai numa pílula escura (`comPilula`) para
+ * continuar legível em qualquer imagem.
+ */
 export function posicaoDoCabecalhoNoShortDe(
   componentes: ComPosicoes,
-  primeiraJanela: Janela | undefined,
-): { x: number; y: number } | null {
+  janelas: Janela[],
+  canvasW: number,
+  canvasH: number,
+  contorno: number = CONTORNO_DO_SHORT,
+): PosicaoDoCabecalhoNoShort | null {
   if (!componentes.cabecalho.ativo) return null;
+  const sobreAlguma = (x: number, y: number) =>
+    janelas.some((j) => x >= j.x && x < j.x + j.w && y >= j.y && y < j.y + j.h);
   const posicao = componentes.cabecalho.posicao_short;
-  if (posicao && !posicao.automatica) return { x: posicao.x, y: posicao.y };
-  return posicaoDoCabecalhoNoShort(primeiraJanela);
+  if (posicao && !posicao.automatica) {
+    return { x: posicao.x, y: posicao.y, sobreOVideo: sobreAlguma(posicao.x, posicao.y) };
+  }
+  const topo = janelas.reduce<Janela | undefined>((alta, j) => (!alta || j.y < alta.y ? j : alta), undefined);
+  if (!topo) return null;
+  const naFaixa = posicaoDoCabecalhoNoShort(topo);
+  if (naFaixa) return { ...naFaixa, sobreOVideo: false };
+  const buraco = janelaComContorno(topo, janelas, canvasW, canvasH, contorno);
+  return {
+    x: buraco.x + RECUO_DO_CABECALHO_NA_JANELA,
+    y: buraco.y + RECUO_DO_CABECALHO_NA_JANELA,
+    sobreOVideo: true,
+  };
 }
 
 /** Onde a placa senta: a que o canal fixou, ou a regra automática (`posicaoDaPlaca`). */

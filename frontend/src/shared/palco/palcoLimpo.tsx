@@ -37,6 +37,8 @@ export {
   posicaoDoCabecalho,
   posicaoDoCabecalhoNoShortDe,
   posicaoDoCabecalhoNoShort,
+  RECUO_DO_CABECALHO_NA_JANELA,
+  type PosicaoDoCabecalhoNoShort,
   raioDaJanela,
   type FundoDoLimpo,
   type Janela,
@@ -139,11 +141,14 @@ export const CabecalhoDoCanal: FC<{
   handle: string;
   imagemSrc?: string;
   escala?: number;
-}> = ({ x, y, nome, handle, imagemSrc, escala }) => (
+  /** D-936: sobre o vídeo, a pílula escura do renderer. */
+  comPilula?: boolean;
+}> = ({ x, y, nome, handle, imagemSrc, escala, comPilula }) => (
   <CabecalhoDoRenderer
     x={x}
     y={y}
     escala={escala}
+    comPilula={comPilula}
     nome={nome}
     handle={handle}
     imagem={

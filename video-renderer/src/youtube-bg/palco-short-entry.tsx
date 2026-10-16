@@ -192,7 +192,7 @@ const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }
   const buracos = janelas.map((j) => janelaComContorno(j, janelas, CANVAS_W, CANVAS_H, contorno));
   const raios = buracos.map((j) => raioDaJanela(j, CANVAS_W, CANVAS_H, RAIO_DA_JANELA_DO_SHORT));
   const { cabecalho } = componentes;
-  const posicao = posicaoDoCabecalhoNoShortDe(componentes, janelas[0]);
+  const posicao = posicaoDoCabecalhoNoShortDe(componentes, janelas, CANVAS_W, CANVAS_H, contorno);
 
   return (
     <AbsoluteFill style={{ fontFamily: familiaInter }}>
@@ -221,6 +221,7 @@ const PalcoLimpoShort: FC<{ janelas: Janela[]; componentes: ComponentesDoPalco }
           escala={cabecalho.escala}
           nome={cabecalho.nome}
           handle={cabecalho.handle}
+          comPilula={posicao.sobreOVideo}
           imagem={
             cabecalho.imagem ? (
               <Img
