@@ -38,6 +38,15 @@ class PlacaRequest(BaseModel):
     posicao: PosicaoModel | None = None
 
 
+class CaixaDoCardModel(BaseModel):
+    """D-941: o retângulo do card no vídeo cheio, em px do quadro de 1920x1080."""
+
+    x: int
+    y: int
+    w: int
+    h: int
+
+
 class CardsRequest(BaseModel):
     """D-916: tipos de cena escondidos, tamanho e posição dos cards no layout cheio."""
 
@@ -48,6 +57,8 @@ class CardsRequest(BaseModel):
     ajuste: Literal["preencher", "natural"] | None = None
     alinhamento_vertical: Literal["centro", "topo", "base"] | None = None
     alinhamento_horizontal: Literal["centro", "esquerda", "direita"] | None = None
+    # D-941: a caixa do card no vídeo cheio; largura ou altura 0 = sem caixa.
+    zona_no_cheio: CaixaDoCardModel | None = None
 
 
 class TipoDeCenaModel(BaseModel):
@@ -64,6 +75,7 @@ class CardsResponse(BaseModel):
     ajuste: str | None = None
     alinhamento_vertical: str | None = None
     alinhamento_horizontal: str | None = None
+    zona_no_cheio: CaixaDoCardModel | None = None
 
 
 class PalcoComponentesRequest(BaseModel):

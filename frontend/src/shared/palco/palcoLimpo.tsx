@@ -82,6 +82,8 @@ export interface ComponentesDoPalco {
     ajuste?: 'preencher' | 'natural';
     alinhamento_vertical?: 'centro' | 'topo' | 'base';
     alinhamento_horizontal?: 'centro' | 'esquerda' | 'direita';
+    /** D-941: a caixa do card no vídeo cheio (px de 1920x1080); null = posição + escala. */
+    zona_no_cheio?: { x: number; y: number; w: number; h: number } | null;
   };
 }
 
@@ -185,5 +187,8 @@ export function estiloDasCenasDe(componentes: ComponentesDoPalco = COMPONENTES_P
   const comApelido = ocultos.includes('comparativo_contraponto') ? [...ocultos, 'comparativo_enfase'] : ocultos;
   const base = { estilo: componentes.estilo, ocultos: comApelido, escala, posicao };
   // D-926: os modos na zona só existem no estilo limpo.
-  return componentes.estilo === 'limpo' ? { ...base, ajuste, alinhamento_vertical, alinhamento_horizontal } : base;
+  const zona_no_cheio = componentes.cards.zona_no_cheio ?? null;
+  return componentes.estilo === 'limpo'
+    ? { ...base, ajuste, alinhamento_vertical, alinhamento_horizontal, zona_no_cheio }
+    : base;
 }

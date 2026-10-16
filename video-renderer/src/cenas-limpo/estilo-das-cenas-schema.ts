@@ -27,6 +27,15 @@ export const estiloDasCenasSchema = z.object({
   ajuste: z.enum(["preencher", "natural"]).default("natural"),
   alinhamento_vertical: z.enum(["centro", "topo", "base"]).default("topo"),
   alinhamento_horizontal: z.enum(["centro", "esquerda", "direita"]).default("esquerda"),
+  /**
+   * D-941: a caixa do card no layout cheio (px do quadro). Sem ela vale a
+   * posição + a escala; com ela o card ocupa o retângulo pelas regras da zona
+   * (ajuste e alinhamentos) — largura e altura se ajustam separadamente.
+   */
+  zona_no_cheio: z
+    .object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })
+    .nullable()
+    .default(null),
 });
 
 export type EstiloDasCenas = z.infer<typeof estiloDasCenasSchema>;

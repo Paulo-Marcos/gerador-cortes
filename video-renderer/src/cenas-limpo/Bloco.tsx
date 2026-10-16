@@ -1,4 +1,4 @@
-import { useCallback, type CSSProperties, type FC, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type CSSProperties, type FC, type ReactNode } from "react";
 import { fontFamily as familiaInter, loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { useEsperarFontes } from "../theme-v2";
 import { COR_DO_ACENTO, COR_DO_TEXTO } from "../youtube-bg/palco-limpo";
@@ -26,6 +26,13 @@ export const GIZ_35 = "rgba(243,242,238,0.35)";
 
 /** Largura da coluna das cenas (o catálogo inteiro é desenhado nela). */
 export const COLUNA = 440;
+
+/**
+ * D-941: a largura que a caixa do card no vídeo cheio impõe ao Bloco, quando o
+ * canal escolheu "ocupar o espaço". Alargar a caixa espalha o texto em vez de
+ * só escalá-lo. Fora de uma caixa vale a largura de cada cena.
+ */
+export const LarguraNaCaixaContext = createContext<number | null>(null);
 
 const carregarInter = () =>
   loadInter("normal", { weights: ["500", "600", "700", "800"], subsets: ["latin", "latin-ext"] })
@@ -93,7 +100,7 @@ export const Bloco: FC<BlocoProps> = ({
   largura = COLUNA,
   gap = 16,
 }) => (
-  <div style={{ display: "flex", gap: 28, width: largura, color: COR_DO_TEXTO }}>
+  <div style={{ display: "flex", gap: 28, width: useContext(LarguraNaCaixaContext) ?? largura, color: COR_DO_TEXTO }}>
     <Traco cor={corDoTraco} />
     <div style={{ display: "flex", flexDirection: "column", gap, minWidth: 0, flex: "1 1 auto" }}>
       {linhasDoBloco([

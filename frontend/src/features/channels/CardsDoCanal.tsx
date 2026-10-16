@@ -1,4 +1,5 @@
-import { CampoEscolha, CampoPosicao, CampoTamanho, type PosicaoEditavel } from './ControlesDoPalco';
+import { Button } from '@/components/ui/button';
+import { CampoEscolha, CampoNumero, CampoPosicao, CampoTamanho, type PosicaoEditavel } from './ControlesDoPalco';
 
 // D-916: os cards (cenas) do canal na tela de Canais — quais tipos aparecem no
 // vídeo, de que tamanho, e onde sentam quando a cena está sobre o vídeo cheio.
@@ -17,7 +18,27 @@ export interface CardsEditaveis {
   ajuste?: AjusteDoCard;
   alinhamento_vertical?: AlinhamentoVertical;
   alinhamento_horizontal?: AlinhamentoHorizontal;
+  /**
+   * D-941: a caixa do card no vídeo cheio. Ausente = sem caixa e nada a mudar;
+   * null = o operador pediu "sem caixa" (a edição manda a caixa vazia).
+   */
+  zona_no_cheio?: CaixaDoCard | null;
 }
+
+/** D-941: o retângulo do card no vídeo cheio, em px do quadro de 1920x1080. */
+export interface CaixaDoCard {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** A edição é parcial e descarta nulos: largura 0 é como a tela pede "sem caixa". */
+export const SEM_CAIXA: CaixaDoCard = { x: 0, y: 0, w: 0, h: 0 };
+/** Espelha `LADO_MINIMO_DA_CAIXA` do domínio. */
+export const LADO_MINIMO_DA_CAIXA = 80;
+/** A caixa que nasce quando o operador a liga: o canto de sempre, numa coluna larga. */
+export const CAIXA_INICIAL: CaixaDoCard = { x: 96, y: 112, w: 760, h: 420 };
 
 const AJUSTES: { id: AjusteDoCard; nome: string }[] = [
   { id: 'preencher', nome: 'Ocupar o espaço' },
@@ -42,6 +63,7 @@ export function cardsEditaveisDe(cards: {
   ajuste?: string | null;
   alinhamento_vertical?: string | null;
   alinhamento_horizontal?: string | null;
+  zona_no_cheio?: CaixaDoCard | null;
 }): CardsEditaveis {
   const escolher = <T extends string>(valor: string | null | undefined, opcoes: { id: T }[], padrao: T): T =>
     opcoes.find((o) => o.id === valor)?.id ?? padrao;
@@ -52,6 +74,8 @@ export function cardsEditaveisDe(cards: {
     ajuste: escolher(cards.ajuste, AJUSTES, 'preencher'),
     alinhamento_vertical: escolher(cards.alinhamento_vertical, VERTICAIS, 'centro'),
     alinhamento_horizontal: escolher(cards.alinhamento_horizontal, HORIZONTAIS, 'centro'),
+    // O servidor manda null quando não há caixa: aqui isso é "nada a mudar".
+    ...(cards.zona_no_cheio ? { zona_no_cheio: cards.zona_no_cheio } : {}),
   };
 }
 
@@ -144,16 +168,69 @@ export function AjustesDosCards({ valor, onMudar }: { valor: CardsEditaveis; onM
     <>
       <div className="grid gap-3 sm:grid-cols-2">
         <CampoTamanho id="palco-cards-tamanho" escala={valor.escala} onMudar={(escala) => onMudar({ ...valor, escala })} />
-        <CampoPosicao
-          id="palco-cards-posicao"
-          rotulo="Posição sobre o vídeo cheio"
-          posicao={valor.posicao}
-          quadro={QUADRO}
-          descricaoAutomatica="no canto inferior esquerdo"
-          onMudar={(posicao) => onMudar({ ...valor, posicao })}
-        />
+        {valor.zona_no_cheio ? (
+          <CaixaNoCheio caixa={valor.zona_no_cheio} onMudar={(zona_no_cheio) => onMudar({ ...valor, zona_no_cheio })} />
+        ) : (
+          <PosicaoNoCheio valor={valor} onMudar={onMudar} />
+        )}
       </div>
       <ModosDoCard valor={valor} onMudar={onMudar} />
     </>
+  );
+}
+
+/** Sem caixa: a posição do card sobre o vídeo cheio e o botão que liga a caixa. */
+function PosicaoNoCheio({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (valor: CardsEditaveis) => void }) {
+  return (
+    <div className="grid content-start gap-2">
+      <CampoPosicao
+        id="palco-cards-posicao"
+        rotulo="Posição sobre o vídeo cheio"
+        posicao={valor.posicao}
+        quadro={QUADRO}
+        descricaoAutomatica="no canto inferior esquerdo"
+        onMudar={(posicao) => onMudar({ ...valor, posicao })}
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => onMudar({ ...valor, zona_no_cheio: CAIXA_INICIAL })}
+        title="O card passa a ocupar um retângulo: largura e altura se ajustam separadamente."
+      >
+        Usar caixa (largura e altura)
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * D-941: com caixa, o card ocupa o retângulo. "Ocupar o espaço" espalha o texto
+ * pela largura; o tamanho (%) vira o da letra; o que não couber encolhe.
+ */
+function CaixaNoCheio({ caixa, onMudar }: { caixa: CaixaDoCard; onMudar: (caixa: CaixaDoCard | null) => void }) {
+  const campo = (chave: keyof CaixaDoCard, rotulo: string, max: number, min = 0) => (
+    <CampoNumero
+      id={`palco-cards-caixa-${chave}`}
+      rotulo={rotulo}
+      valor={caixa[chave]}
+      min={min}
+      max={max}
+      unidade="px"
+      onMudar={(numero) => onMudar({ ...caixa, [chave]: Math.round(numero) })}
+    />
+  );
+  return (
+    <div className="grid content-start gap-2" role="group" aria-label="Caixa do card no vídeo cheio">
+      <div className="grid grid-cols-2 gap-2">
+        {campo('w', 'Largura', QUADRO.largura, LADO_MINIMO_DA_CAIXA)}
+        {campo('h', 'Altura', QUADRO.altura, LADO_MINIMO_DA_CAIXA)}
+        {campo('x', 'X', QUADRO.largura)}
+        {campo('y', 'Y', QUADRO.altura)}
+      </div>
+      <Button type="button" size="sm" variant="outline" onClick={() => onMudar(null)}>
+        Sem caixa (posição e tamanho)
+      </Button>
+    </div>
   );
 }
