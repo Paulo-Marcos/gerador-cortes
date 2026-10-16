@@ -1072,7 +1072,14 @@ class TestFilaDoRender:
         corte = asyncio.create_task(_corte())
         await asyncio.wait_for(corte_rodando.wait(), 5)
         render_short.disparar("s1", final=False)
-        await asyncio.sleep(0.05)
+        # D-943: o short só entra na fila global depois de consultar o banco e
+        # bater na vaga; um sleep fixo perdia essa corrida no runner carregado.
+        # Sem teto estourado em exceção: quem falha é o assert, com sua mensagem.
+        for _ in range(500):
+            job = self._job("short:s1")
+            if job is not None and job.estado == "aguardando":
+                break
+            await asyncio.sleep(0.01)
 
         job = self._job("short:s1")
         assert job is not None, "o short esperando a vaga tem de aparecer na fila global"
