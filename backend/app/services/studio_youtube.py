@@ -312,7 +312,9 @@ def monetizar_em_massa(
     pagina.clicar("editar_em_massa", segundos=PRAZO_PARA_O_CAMPO)
     pagina.clicar("item_monetizacao", segundos=PRAZO_PARA_O_CAMPO)
     if not esta_monetizado(pagina.texto_de("opcao_em_massa")):
-        raise ServicoExternoFalhou("a edição em massa não ofereceu Monetização: On")
+        raise ServicoExternoFalhou(
+            "a edição em massa não ofereceu Monetização: On — o canal está no Programa de Parcerias?"
+        )
     pagina.clicar("atualizar_videos", segundos=PRAZO_PARA_O_CAMPO)
     pagina.clicar("entendo", segundos=PRAZO_PARA_O_CAMPO)
     _esperar_habilitado(pagina, "confirmar")

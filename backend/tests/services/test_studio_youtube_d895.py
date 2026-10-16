@@ -316,17 +316,22 @@ def test_monetiza_cortes_e_shorts_cada_um_na_sua_aba():
         [TarefaNoStudio(CORTE, monetizar=True), TarefaNoStudio(SHORT, monetizar=True, short=True)],
     )
 
-    aberturas = [p[1] for p in pagina.passos if p[0] == "abrir"]
-    assert aberturas == [
-        dominio.URL_DO_STUDIO,
-        dominio.url_da_lista(CANAL, shorts=False),
-        dominio.url_da_lista(CANAL, shorts=True),
-    ]
+    lista_de_videos = pagina.passos.index(("abrir", dominio.url_da_lista(CANAL, shorts=False)))
+    lista_de_shorts = pagina.passos.index(("abrir", dominio.url_da_lista(CANAL, shorts=True)))
+    na_aba_videos = pagina.passos[lista_de_videos:lista_de_shorts]
+    na_aba_shorts = pagina.passos[lista_de_shorts:]
+    assert [p for p in na_aba_videos if p[0] == "marcar"] == [("marcar", CORTE)]
+    assert [p for p in na_aba_shorts if p[0] == "marcar"] == [("marcar", SHORT)]
     assert pagina.passos.count(("clicar", "confirmar")) == 2
 
 
 def test_monetiza_nada_quando_nenhum_video_pede():
-    """Sem monetização a fazer, o robô nem abre a lista: não mexe sem precisar."""
+    """Sem monetização a fazer, o robô nem abre a lista: não mexe sem precisar.
+
+    Substitui o "não mexe no que já está ativado" da D-895, que a edição em massa
+    não preserva: ela aplica On também em vídeo já On. Medido em 15/10/2026, On
+    sobre On mantém o estado ("1 of 1 updated", o vídeo continuou On).
+    """
     pagina = PaginaFalsa()
 
     studio_youtube.executar_roteiro(pagina, [TarefaNoStudio(SHORT, relacionado=CORTE)])
@@ -342,6 +347,7 @@ def test_monetiza_sem_a_opcao_on_explica_e_nao_confirma():
     falhas = studio_youtube.executar_roteiro(pagina, [TarefaNoStudio(CORTE, monetizar=True)])
 
     assert "Monetização: On" in falhas[0]
+    assert "Programa de Parcerias" in falhas[0]
     assert ("clicar", "atualizar_videos") not in pagina.passos
     assert not pagina.fechada, "a aba fica: é nela que o operador vê o motivo"
 
@@ -362,6 +368,18 @@ def test_monetiza_menos_do_que_pediu_diz_quantos():
     )
 
     assert falhas == ["o Studio atualizou 1 de 2 na aba Vídeos"]
+
+
+def test_nenhum_video_na_pagina_nao_abre_a_edicao():
+    """Sem linha marcada não há o que editar: o Studio nem mostra o Editar."""
+    pagina = PaginaFalsa(fora={CORTE, OUTRO})
+
+    falhas = studio_youtube.executar_roteiro(
+        pagina, [TarefaNoStudio(CORTE, monetizar=True), TarefaNoStudio(OUTRO, monetizar=True)]
+    )
+
+    assert ("clicar", "editar_em_massa") not in pagina.passos
+    assert [CORTE in falhas[0], OUTRO in falhas[1]] == [True, True]
 
 
 def test_monetiza_o_que_achou_e_diz_o_que_ficou_fora_da_pagina():
