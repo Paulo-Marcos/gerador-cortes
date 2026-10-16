@@ -12,8 +12,9 @@ import type { AgendaParaEnvio, LinhaDaAgenda } from './loteApi';
 export type ModoDeQuando = 'agora' | 'uma_data' | 'distribuir';
 
 // Espelha `destino_de` em `backend/app/domain/publicacao/escalonamento.py`: o
-// Instagram publica no ato (medido: o compositor da web não agenda).
-const PLATAFORMAS_QUE_ESCALONAM = new Set(['youtube_shorts', 'tiktok', 'tiktok_horizontal']);
+// Instagram publica no ato (medido: o compositor da web não agenda). O `youtube`
+// é o vídeo horizontal do corte, no lote do YouTube longo (D-934).
+const PLATAFORMAS_QUE_ESCALONAM = new Set(['youtube', 'youtube_shorts', 'tiktok', 'tiktok_horizontal']);
 
 export function escalona(plataforma: string): boolean {
   return PLATAFORMAS_QUE_ESCALONAM.has(plataforma);

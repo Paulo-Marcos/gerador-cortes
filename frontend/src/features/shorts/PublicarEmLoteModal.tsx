@@ -18,7 +18,7 @@
 // No Instagram o upload acontece no celular, longe deste app. `sua_vez` é o
 // estado honesto para isso — e o botão que o fecha é o único jeito de o app
 // saber. Marcar sozinho seria inventar um fato.
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -47,28 +47,7 @@ import {
 import { notasDeAgendamento, problemaDoHorario, sugestaoDeHorario } from './agendamentoDoLote';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import { pedirGavetaDaFila } from '@/upgrade/useGavetaDaFila';
-
-// De quanto em quanto tempo o aviso do horário reavalia sozinho. Trinta segundos
-// bastam: a margem do backend é de cinco minutos, não de segundos.
-const RELOGIO_MS = 30_000;
-
-/**
- * O "agora" que o aviso do horário usa, avançando enquanto `ligado`.
- *
- * Sem ele o aviso só mudaria quando o operador mexesse na data — e o problema
- * que ele existe para pegar é justamente o horário que envelhece parado.
- */
-function useAgora(ligado: boolean): [Date, () => void] {
-  const [agora, setAgora] = useState(() => new Date());
-
-  useEffect(() => {
-    if (!ligado) return;
-    const id = window.setInterval(() => setAgora(new Date()), RELOGIO_MS);
-    return () => window.clearInterval(id);
-  }, [ligado]);
-
-  return [agora, () => setAgora(new Date())];
-}
+import { useAgora } from './useAgora';
 
 interface Props {
   open: boolean;

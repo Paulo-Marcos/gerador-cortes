@@ -13,8 +13,18 @@ export const PLATAFORMAS = [
   { id: 'instagram_reels', rotulo: 'Instagram Reels', nota: 'pacote pronto; sobe do celular' },
 ] as const;
 
+// D-934: os destinos do vídeo horizontal, cuja agenda usa as mesmas peças.
+const ROTULO_DO_HORIZONTAL: Record<string, string> = {
+  youtube: 'YouTube',
+  tiktok_horizontal: 'TikTok',
+};
+
 export function rotuloCurto(plataforma: string): string {
-  return PLATAFORMAS.find((p) => p.id === plataforma)?.rotulo ?? plataforma;
+  return (
+    PLATAFORMAS.find((p) => p.id === plataforma)?.rotulo ??
+    ROTULO_DO_HORIZONTAL[plataforma] ??
+    plataforma
+  );
 }
 
 export function Secao({

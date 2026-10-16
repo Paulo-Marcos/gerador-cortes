@@ -7,6 +7,9 @@
  * diferença que a tela precisa dizer antes de ele clicar, não depois.
  */
 
+// O TikTok vertical e o horizontal são a mesma conta e o mesmo seletor (D-934).
+const ehTiktok = (plataforma: string) => plataforma.startsWith('tiktok');
+
 /** Quem honra a data sozinho, quem só a repassa como recado. */
 export type ComoAgenda = 'sozinho' | 'a_mao';
 
@@ -26,6 +29,15 @@ export function notasDeAgendamento(
 ): NotaDeAgendamento[] {
   const notas: NotaDeAgendamento[] = [];
 
+  // D-934: o vídeo horizontal sobe pela mesma API, com a mesma promessa.
+  if (plataformas.includes('youtube')) {
+    notas.push({
+      plataforma: 'YouTube',
+      como: 'sozinho',
+      texto: 'sobe privado e o próprio YouTube publica na hora marcada',
+    });
+  }
+
   if (plataformas.includes('youtube_shorts')) {
     notas.push({
       plataforma: 'YouTube Shorts',
@@ -34,7 +46,7 @@ export function notasDeAgendamento(
     });
   }
 
-  if (plataformas.includes('tiktok')) {
+  if (plataformas.some(ehTiktok)) {
     notas.push(
       opcoes.tiktokAssistido
         ? {
@@ -76,8 +88,10 @@ const MARGEM_MINIMA_MS = 5 * 60 * 1000;
 const DIA_MS = 24 * 60 * 60 * 1000;
 const JANELA_DE_AGENDA: Record<string, { rotulo: string; dias: number }> = {
   tiktok: { rotulo: 'TikTok', dias: 10 },
+  tiktok_horizontal: { rotulo: 'TikTok', dias: 10 },
   instagram_reels: { rotulo: 'Instagram', dias: 75 },
   youtube_shorts: { rotulo: 'YouTube', dias: 365 },
+  youtube: { rotulo: 'YouTube', dias: 365 },
 };
 
 /**
@@ -113,7 +127,7 @@ export function problemaDoHorario(
     return `o ${maisCurta.rotulo} só agenda até ${maisCurta.dias} dias à frente — escolha uma data mais próxima`;
   }
 
-  if (plataformas.includes('tiktok') && quando.getMinutes() % 5 !== 0) {
+  if (plataformas.some(ehTiktok) && quando.getMinutes() % 5 !== 0) {
     return 'o TikTok só agenda de 5 em 5 minutos — escolha um minuto redondo';
   }
 

@@ -6,9 +6,21 @@ import { Modal } from '@/components/ui/modal';
 import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusExportCorte } from '@/types/models';
-import { publicacaoApi, type BulkYoutubeRequest } from '@/features/publicacao/api';
+import { publicacaoApi } from '@/features/publicacao/api';
+import type { ModoDeQuando } from '@/features/shorts/agendaDoLote';
+import { notasDeAgendamento } from '@/features/shorts/agendamentoDoLote';
+import { QuandoDoLote } from '@/features/shorts/QuandoDoLote';
+import { useQuandoDoLote } from '@/features/shorts/useQuandoDoLote';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import { pedirGavetaDaFila } from '@/upgrade/useGavetaDaFila';
+import { pedidoDoLoteYoutube } from './pedidoDoLoteYoutube';
+
+// D-934: o lote do YouTube longo respeita a janela do público, como o de shorts.
+//
+// Antes, a agenda era local: um horário digitado e 15 minutos entre um corte e
+// outro, sem blocos, sem teto por dia e sem olhar o que já estava agendado. Agora
+// ela vem do backend — os blocos do destino `youtube` na tela de Canais, a partir
+// do último corte já marcado — e aparece antes do clique, ajustável por linha.
 
 interface Props {
   open: boolean;
@@ -17,98 +29,71 @@ interface Props {
   cortesProntos: StatusExportCorte[];
 }
 
-const SPACING_MIN = 15;
-
-interface ResultadoPorCorte {
-  corteId: string;
-  numero: number;
-  scheduledAt: string;
-  status: 'aguardando' | 'enfileirado' | 'erro';
-  mensagem?: string;
-}
-
-function nowPlusOneHourLocal(): string {
-  const d = new Date(Date.now() + 60 * 60 * 1000);
-  // formato datetime-local: YYYY-MM-DDTHH:mm
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
-
-function fmtHora(iso: string): string {
-  return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-}
-
-type BulkYoutubePayload = BulkYoutubeRequest & { scheduled_dates: Array<string | null> };
+// Fora do componente: a agenda é chaveada por eles, e um array novo a cada
+// render pediria a agenda de novo.
+const PLATAFORMAS = ['youtube'];
+const NOTAS = notasDeAgendamento(PLATAFORMAS, { tiktokAssistido: false, instagramAssistido: false });
+// Sem "agora": o lote do YouTube sempre agendou, e N vídeos públicos de uma vez
+// é a cadência que a janela existe para evitar.
+const MODOS: ModoDeQuando[] = ['uma_data', 'distribuir'];
 
 export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: Props) {
   const totalProntos = cortesProntos.length;
   const [quantidade, setQuantidade] = useState(totalProntos);
-  const [inicio, setInicio] = useState(nowPlusOneHourLocal());
-  const [resultados, setResultados] = useState<ResultadoPorCorte[]>([]);
   const [enviando, setEnviando] = useState(false);
-  const qc = useQueryClient();
+  const [erro, setErro] = useState<string | null>(null);
   // D-746: depois de enfileirar, o lote NÃO pode ser enviado de novo — um
   // segundo clique duplicava os vídeos no canal. O rodapé vira só "Fechar".
-  const loteEnviado = resultados.some((r) => r.status === 'enfileirado');
+  const [loteEnviado, setLoteEnviado] = useState(false);
+  const qc = useQueryClient();
 
-  // Resetar quando abrir
   useEffect(() => {
     if (!open) return;
     setQuantidade(totalProntos);
-    setInicio(nowPlusOneHourLocal());
-    setResultados([]);
+    setErro(null);
     setEnviando(false);
+    setLoteEnviado(false);
   }, [open, totalProntos]);
 
-  // Gera agenda (corte → ISO scheduled_at)
-  const agenda = useMemo(() => {
-    const inicioMs = new Date(inicio).getTime();
-    if (Number.isNaN(inicioMs)) return [];
-    const lista = cortesProntos.slice(0, Math.max(0, Math.min(quantidade, totalProntos)));
-    return lista.map((c, i) => ({
-      corteId: c.corte_id,
-      numero: c.numero,
-      titulo: c.titulo_youtube || c.titulo,
-      scheduledAt: new Date(inicioMs + i * SPACING_MIN * 60 * 1000).toISOString(),
-    }));
-  }, [cortesProntos, inicio, quantidade, totalProntos]);
+  const escolhidos = useMemo(
+    () => cortesProntos.slice(0, Math.max(0, Math.min(quantidade, totalProntos))),
+    [cortesProntos, quantidade, totalProntos],
+  );
+  const alvos = useMemo(() => escolhidos.map((c) => `corte:${c.corte_id}`), [escolhidos]);
+  const quando = useQuandoDoLote({
+    alvos,
+    plataformas: PLATAFORMAS,
+    aberto: open,
+    notas: NOTAS,
+    modoInicial: 'distribuir',
+  });
+  const pedido = pedidoDoLoteYoutube(
+    quando.modo,
+    escolhidos.map((c) => c.corte_id),
+    quando.linhas,
+    quando.agendarPara,
+  );
+  const total = pedido.corte_ids.length;
+  const rotuloDoAlvo = (alvoId: string) => {
+    const corte = escolhidos.find((c) => c.corte_id === alvoId);
+    return corte ? `#${corte.numero} ${corte.titulo_youtube || corte.titulo}` : alvoId;
+  };
 
   const onPublicar = async () => {
-    if (agenda.length === 0) return;
+    if (total === 0) return;
     setEnviando(true);
-    const inicial: ResultadoPorCorte[] = agenda.map((a) => ({
-      corteId: a.corteId,
-      numero: a.numero,
-      scheduledAt: a.scheduledAt,
-      status: 'aguardando',
-    }));
-    setResultados(inicial);
-
+    setErro(null);
     // Backend segura a fila; o navegador só dispara o lote.
-    const payload: BulkYoutubePayload = {
-      corte_ids: agenda.map((item) => item.corteId),
-      agendar: true,
-      videos_por_dia: agenda.length,
-      data_inicio: agenda[0]?.scheduledAt,
-      hora_publicacao: '00:00',
-      scheduled_dates: agenda.map((item) => item.scheduledAt),
-    };
-
     try {
-      const res = await publicacaoApi.bulkYoutube(projetoId, payload);
-      setResultados((prev) =>
-        prev.map((r) => ({ ...r, status: 'enfileirado', mensagem: res.message })),
-      );
+      // Com as datas no pedido, o backend ignora o ritmo antigo (por dia e hora).
+      await publicacaoApi.bulkYoutube(projetoId, { ...pedido, videos_por_dia: total, hora_publicacao: '00:00' });
+      setLoteEnviado(true);
       void qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
       // D-897: os uploads já são jobs da fila; o modal sai da frente e a gaveta mostra o andamento.
       onClose();
       pedirGavetaDaFila();
     } catch (err) {
-      setResultados((prev) =>
-        prev.map((r) => ({ ...r, status: 'erro', mensagem: (err as Error).message })),
-      );
+      setErro((err as Error).message);
     }
     setEnviando(false);
   };
@@ -123,7 +108,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
           <Icon name={ICONE_DO_CONCEITO.publicar} size={20} className="text-accent-300" /> Publicar em massa
         </span>
       }
-      description={`Cada lançamento espaçado de ${SPACING_MIN} minutos a partir do horário inicial.`}
+      description="Cada corte cai num horário da janela do canal (tela de Canais), depois do último já agendado."
     >
       {totalProntos === 0 ? (
         <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/60 p-4 text-center text-sm text-text-300">
@@ -131,74 +116,26 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {/* Inputs */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="qtd">Quantidade (máx. {totalProntos})</Label>
-              <Input
-                id="qtd"
-                type="number"
-                min={1}
-                max={totalProntos}
-                value={quantidade}
-                onChange={(e) =>
-                  setQuantidade(Math.max(1, Math.min(totalProntos, Number(e.target.value) || 1)))
-                }
-                disabled={enviando}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="inicio">
-                <Icon name="calendar" className="mr-1 inline" /> Início
-              </Label>
-              <Input
-                id="inicio"
-                type="datetime-local"
-                value={inicio}
-                onChange={(e) => setInicio(e.target.value)}
-                disabled={enviando}
-              />
-            </div>
+          <div className="flex w-1/2 flex-col gap-1.5">
+            <Label htmlFor="qtd">Quantidade (máx. {totalProntos})</Label>
+            <Input
+              id="qtd"
+              type="number"
+              min={1}
+              max={totalProntos}
+              value={quantidade}
+              onChange={(e) =>
+                setQuantidade(Math.max(1, Math.min(totalProntos, Number(e.target.value) || 1)))
+              }
+              disabled={enviando}
+            />
           </div>
-
-          {/* Preview da agenda */}
-          <div className="flex flex-col gap-1">
-            <p className="flex items-center gap-1 text-xs font-medium text-text-300">
-              <Icon name="calendar" />Agenda ({agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'})
+          <QuandoDoLote {...quando.secao} modos={MODOS} rotuloDoAlvo={rotuloDoAlvo} />
+          {erro && (
+            <p role="alert" className="flex items-center gap-1 text-[12px] text-error">
+              <Icon name="x-circle" /> {erro}
             </p>
-            <div className="max-h-56 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40">
-              <ul className="divide-y divide-[var(--border)]">
-                {agenda.map((a) => {
-                  const r = resultados.find((x) => x.corteId === a.corteId);
-                  return (
-                    <li key={a.corteId} className="flex items-center gap-2 px-3 py-1.5 text-[12px]">
-                      <span className="w-8 shrink-0 font-mono tabular-nums text-text-400">
-                        #{a.numero}
-                      </span>
-                      <span className="flex-1 truncate text-text-200" title={a.titulo ?? undefined}>
-                        {a.titulo}
-                      </span>
-                      <span className="shrink-0 font-mono tabular-nums text-accent-300">
-                        {fmtHora(a.scheduledAt)}
-                      </span>
-                      <span className="w-5 shrink-0">
-                        {r?.status === 'enfileirado' && (
-                          <span title={r.mensagem ?? 'enfileirado'}>
-                            <Icon name="circle-check" className="text-success" />
-                          </span>
-                        )}
-                        {r?.status === 'erro' && (
-                          <span title={r.mensagem ?? 'erro'}>
-                            <Icon name="x-circle" className="text-error" />
-                          </span>
-                        )}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -212,9 +149,9 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
           {enviando ? 'Aguarde...' : 'Fechar'}
         </Button>
         {totalProntos > 0 && !loteEnviado && (
-          <Button type="button" onClick={onPublicar} disabled={enviando || agenda.length === 0}>
+          <Button type="button" onClick={onPublicar} disabled={enviando || !quando.pronto || total === 0}>
             {enviando ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.publicar} size={16} />}
-            Publicar {agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'}
+            Publicar {total} {total === 1 ? 'corte' : 'cortes'}
           </Button>
         )}
       </div>

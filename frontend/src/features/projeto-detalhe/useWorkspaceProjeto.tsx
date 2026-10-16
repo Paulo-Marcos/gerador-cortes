@@ -41,6 +41,7 @@ import { useCanais } from '@/features/channels/useChannels';
 import { filtroNoArLigado } from '@/upgrade/trilhaDaLive';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import type { CorteFiltro } from './WorkspaceProjetoPage';
+import { useHorarioSugerido } from './useHorarioSugerido';
 
 
 // D-729: o container de WorkspaceProjetoPage — estado, efeitos e ações. A view, em
@@ -107,7 +108,7 @@ export function useWorkspaceProjeto() {
   // D-746: publicar é público e irreversível — o clique na linha abre a
   // conferência (canal, título, capa, agendar), e só ela envia.
   const [publicarDe, setPublicarDe] = useState<StatusExportCorte | null>(null);
-  const [agendarEm, setAgendarEm] = useState('');
+  const [agendarEm, setAgendarEm] = useHorarioSugerido(publicarDe);
   const [capaQuebrou, setCapaQuebrou] = useState(false);
   const canais = useCanais();
   const canalAtivo = canais.data?.canais.find((c) => c.ativo);

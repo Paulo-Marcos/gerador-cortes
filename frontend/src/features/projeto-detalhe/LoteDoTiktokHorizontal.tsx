@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { exportStatusKey } from '@/shared/chavesDeCache';
 import { PainelDoLote } from '@/features/shorts/PainelDoLote';
+import { paraEnvio } from '@/features/shorts/agendaDoLote';
+import { notasDeAgendamento } from '@/features/shorts/agendamentoDoLote';
+import { QuandoDoLote } from '@/features/shorts/QuandoDoLote';
+import { useQuandoDoLote } from '@/features/shorts/useQuandoDoLote';
 import { motivoDoErro, shortsApi, type EnvioAssistido } from '@/features/shorts/shortsApi';
 import { useCancelarLote, useCriarLote, useLoteAtual } from '@/features/shorts/useLotePublicacao';
 import type { StatusExportCorte } from '@/types/models';
@@ -27,13 +31,21 @@ import { Icon } from '@/upgrade/Icon';
 //
 // Ele não depende da página do TikTok. No dia em que o Studio redesenhar e o
 // robô quebrar, é o caminho que segue funcionando.
+//
+// ## Quando (D-934)
+//
+// O lote distribui pela janela do canal, no destino `tiktok`: a mesma fila e o
+// mesmo teto dos shorts do TikTok, porque é a mesma conta — o horizontal parte
+// do último short já marcado, e vice-versa. "Uma data" e "agora" seguem ao lado.
 
 const PLATAFORMA = 'tiktok_horizontal';
+const PLATAFORMAS = [PLATAFORMA];
+const NOTAS = notasDeAgendamento(PLATAFORMAS, { tiktokAssistido: true, instagramAssistido: false });
 
 interface Props {
   projetoId: string;
   pendentes: StatusExportCorte[];
-  /** D-834: data e "publicar sozinho" vêm do modal, que vale também para cada corte. */
+  /** D-834: o "publicar sozinho" vem do modal; a data do lote, do Quando dele (D-934). */
   envio: EnvioAssistido;
   onPreparado: (corteId: string) => void;
   /** D-897: o lote começou — quem abriu o modal fecha e leva o operador à gaveta da fila. */
@@ -48,6 +60,17 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
   const cancelar = useCancelarLote();
   const raia = useRaiaDoTiktokHorizontal(projetoId);
   const correndo = Boolean(raia && !raia.terminou);
+  const quando = useQuandoDoLote({
+    alvos,
+    plataformas: PLATAFORMAS,
+    aberto: true,
+    notas: NOTAS,
+    modoInicial: 'distribuir',
+  });
+  const rotuloDoAlvo = (alvoId: string) => {
+    const corte = pendentes.find((c) => c.corte_id === alvoId);
+    return corte ? `#${corte.numero} ${corte.titulo}` : alvoId;
+  };
 
   const preparar = useMutation({
     mutationFn: async () => {
@@ -68,6 +91,8 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
         tiktokAssistido: true,
         instagramAssistido: false,
         ...envio,
+        agendarPara: quando.agendarPara,
+        agenda: quando.modo === 'distribuir' ? paraEnvio(quando.linhas) : undefined,
         republicar: false,
       },
     }, { onSuccess: onDisparado });
@@ -75,11 +100,12 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
 
   return (
     <div className="space-y-2 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-2">
+      <QuandoDoLote {...quando.secao} rotuloDoAlvo={rotuloDoAlvo} />
       <div className="flex flex-wrap items-center gap-2">
         <CampoQuantos total={pendentes.length} valor={quantidade} onChange={setQuantidade} />
         <Button
           size="sm"
-          disabled={subir.isPending || correndo || alvos.length === 0}
+          disabled={subir.isPending || correndo || alvos.length === 0 || !quando.pronto}
           onClick={subirTodos}
           title="O robô sobe um por um no navegador dele, fora da tela, com legenda e capa. No fim a janela volta com as abas prontas."
         >

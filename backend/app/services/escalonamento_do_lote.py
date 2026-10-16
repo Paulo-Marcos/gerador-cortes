@@ -8,6 +8,10 @@ com a agenda já decidida (`publicacao_lote.criar(agenda=...)`).
 O que decide mora no domínio (`escalonamento.escalonar`); aqui só se juntam os
 três ingredientes que ele não tem como buscar: a configuração do canal, o
 último item já agendado naquela rede e o relógio.
+
+Vale também para os horizontais (D-934): o lote do YouTube longo pede a agenda
+dos cortes no destino `youtube` (`prever_youtube`), e o TikTok horizontal entra
+pelo `prever`, na mesma fila dos shorts do TikTok.
 """
 
 from __future__ import annotations
@@ -16,15 +20,24 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.domain.publicacao.agendamento import HORIZONTE_EM_DIAS
-from app.domain.publicacao.escalonamento import destino_de, escalonar, intensidade_em
+from app.domain.publicacao.escalonamento import (
+    FaixaDoPublico,
+    destino_de,
+    escalonar,
+    intensidade_em,
+)
 from app.domain.publicacao.publicacao import Plataforma
-from app.services import registro_do_lote
+from app.services import agenda_youtube_em_voo, registro_do_lote
 from app.services.canal import escalonamento_settings
 
 PUBLICA_NO_ATO = "publica no ato: o Instagram não agenda pelo compositor da web"
 
 # O formato que o `<input type="datetime-local">` da tela fala, no fuso local.
 FORMATO_DA_TELA = "%Y-%m-%dT%H:%M"
+
+# O vídeo horizontal do corte no YouTube. Não é uma `Plataforma` do lote de
+# shorts: quem publica é o upload do YouTube; daqui sai só a agenda (D-934).
+YOUTUBE_LONGO = "youtube"
 
 
 @dataclass(frozen=True)
@@ -83,28 +96,58 @@ async def prever(
             )
             continue
 
-        parametros = escalonamento_settings.resolver_parametros(destino)
         ultimo = await registro_do_lote.ultimo_agendado(_mesma_conta(plataforma))
-        vagas = escalonar(
-            len(alvos),
-            parametros,
-            agora=agora,
-            ultimo=ultimo,
-            horizonte_dias=HORIZONTE_EM_DIAS.get(plataforma.value),
-        )
-        for (tipo, alvo), vaga in zip(alvos, vagas, strict=True):
-            if vaga.agendamento is None:
-                linhas.append(LinhaDaAgenda(tipo, alvo, plataforma.value, "", "", vaga.motivo))
-                continue
-            quando = vaga.agendamento.quando
-            linhas.append(
-                LinhaDaAgenda(
-                    tipo,
-                    alvo,
-                    plataforma.value,
-                    quando.strftime(FORMATO_DA_TELA),
-                    intensidade_em(faixas, quando).value,
-                    "",
-                )
+        linhas.extend(_distribuir(alvos, plataforma.value, destino, ultimo, agora, faixas))
+    return linhas
+
+
+async def prever_youtube(
+    alvos: list[tuple[str, str]], *, agora: datetime | None = None
+) -> list[LinhaDaAgenda]:
+    """A data de cada corte no YouTube longo, a partir do último do canal (D-934).
+
+    Com um corte só, é o próximo horário livre da janela: a sugestão do envio
+    avulso sai daqui também. Conta também o que um lote ainda está subindo,
+    que só chega ao corte quando o upload termina.
+    """
+    agora = agora or datetime.now().astimezone()
+    faixas = escalonamento_settings.resolver_referencia()
+    gravados = await registro_do_lote.ultimo_no_youtube()
+    em_voo = agenda_youtube_em_voo.ultima()
+    ultimo = max(gravados, em_voo) if gravados and em_voo else gravados or em_voo
+    return _distribuir(alvos, YOUTUBE_LONGO, YOUTUBE_LONGO, ultimo, agora, faixas)
+
+
+def _distribuir(
+    alvos: list[tuple[str, str]],
+    plataforma: str,
+    destino: str,
+    ultimo: datetime | None,
+    agora: datetime,
+    faixas: tuple[FaixaDoPublico, ...] | list[FaixaDoPublico],
+) -> list[LinhaDaAgenda]:
+    """As linhas de UMA rede: o motor decide, aqui só se fala o formato da tela."""
+    vagas = escalonar(
+        len(alvos),
+        escalonamento_settings.resolver_parametros(destino),
+        agora=agora,
+        ultimo=ultimo,
+        horizonte_dias=HORIZONTE_EM_DIAS.get(plataforma),
+    )
+    linhas: list[LinhaDaAgenda] = []
+    for (tipo, alvo), vaga in zip(alvos, vagas, strict=True):
+        if vaga.agendamento is None:
+            linhas.append(LinhaDaAgenda(tipo, alvo, plataforma, "", "", vaga.motivo))
+            continue
+        quando = vaga.agendamento.quando
+        linhas.append(
+            LinhaDaAgenda(
+                tipo,
+                alvo,
+                plataforma,
+                quando.strftime(FORMATO_DA_TELA),
+                intensidade_em(faixas, quando).value,
+                "",
             )
+        )
     return linhas

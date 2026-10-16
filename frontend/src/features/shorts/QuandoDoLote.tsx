@@ -37,6 +37,8 @@ interface Props {
   onRecalcular: () => void;
   /** O título de cada alvo, para a linha falar de vídeos e não de uuids. */
   rotuloDoAlvo: (alvoId: string) => string;
+  /** Os modos oferecidos; sem a lista, os três (D-934: o YouTube longo não tem "agora"). */
+  modos?: ModoDeQuando[];
 }
 
 const MODOS: { id: ModoDeQuando; titulo: string; nota: string }[] = [
@@ -50,11 +52,11 @@ const MODOS: { id: ModoDeQuando; titulo: string; nota: string }[] = [
 ];
 
 export function QuandoDoLote(props: Props) {
-  const { modo, onModo } = props;
+  const { modo, onModo, modos } = props;
   return (
     <Secao titulo="Quando">
       <div className="flex flex-wrap gap-2">
-        {MODOS.map((m) => (
+        {MODOS.filter((m) => !modos || modos.includes(m.id)).map((m) => (
           <Caixa
             key={m.id}
             marcada={modo === m.id}

@@ -189,10 +189,23 @@ def ja_esta_no_ar(agendado_para: str, agora: datetime) -> bool:
     """
     if not agendado_para:
         return True
+    quando = instante_do_youtube(agendado_para)
+    return quando is None or agora >= quando
+
+
+def instante_do_youtube(agendado_para: str) -> datetime | None:
+    """O instante que o corte guarda em `youtube_scheduled_at`, ou `None` se ilegível.
+
+    O YouTube devolve UTC (`...Z`, às vezes com milissegundos); sem fuso, a hora
+    também é UTC (D-703, D-934).
+
+    >>> instante_do_youtube("2030-01-07T15:00:00.000Z").hour
+    15
+    >>> instante_do_youtube("") is None
+    True
+    """
     try:
         quando = datetime.fromisoformat(agendado_para.replace("Z", "+00:00"))
     except ValueError:
-        return True
-    if quando.tzinfo is None:
-        quando = quando.replace(tzinfo=UTC)
-    return agora >= quando
+        return None
+    return quando if quando.tzinfo else quando.replace(tzinfo=UTC)
