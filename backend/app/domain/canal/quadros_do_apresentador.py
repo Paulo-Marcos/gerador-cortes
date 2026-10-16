@@ -67,6 +67,13 @@ VIDA_MINIMA = 0.0025
 LARGURA_DA_REGIAO = 3.0
 ALTURA_DA_REGIAO = 2.4
 ACIMA_DO_ROSTO = 0.7
+# Uma linha horizontal é moldura da live quando cruza esta fração da largura da
+# região em todos os quadros. O que está atrás do apresentador não chega lá: a
+# cabeça e os ombros tapam um terço da região (LARGURA_DA_REGIAO), e o que é
+# desenhado por cima dele não é tapado. Medido em 16/10/2026 (corte b4a2dd8c da
+# PROD, câmera numa janela entre a barra do canal e a faixa "CHAVE PIX"): a
+# moldura cruzou de 0,98 a 1,0.
+FRACAO_DA_MOLDURA = 0.8
 
 # A janela da frase ganha uma folga: a cara começa antes da primeira palavra.
 FOLGA_DA_JANELA_SEG = 0.4
@@ -251,6 +258,26 @@ def regiao_do_apresentador(rosto: Caixa, proporcao_do_quadro: float) -> Caixa:
     x = min(max(0.0, cx - largura / 2), 1.0 - largura)
     y = min(max(0.0, rosto.y - lado_px * ACIMA_DO_ROSTO), 1.0 - altura)
     return Caixa(x, y, largura, altura)
+
+
+def aparar_na_moldura(regiao: Caixa, rosto: Caixa, linhas: Sequence[float]) -> Caixa:
+    """A região entre as linhas da moldura mais próximas do rosto, acima e abaixo.
+
+    Com a câmera em tela cheia o rosto é grande, e cabeça e ombros passam da
+    janela da câmera: entram a barra do canal e a faixa da live (D-957). As
+    `linhas` (alturas, em fração do quadro) são as bordas fixas que cruzam a
+    região; o que passa delas é sobreposição, não o apresentador.
+
+    >>> rosto = Caixa(0.44, 0.37, 0.23, 0.4)
+    >>> aparar_na_moldura(Caixa(0.2, 0.04, 0.68, 0.96), rosto, [0.1, 0.13, 0.89, 0.9])
+    Caixa(x=0.2, y=0.13, largura=0.68, altura=0.76)
+    """
+    fundo = regiao.y + regiao.altura
+    y0 = max((y for y in linhas if regiao.y < y <= rosto.y), default=regiao.y)
+    y1 = min((y for y in linhas if rosto.y + rosto.altura <= y < fundo), default=fundo)
+    if (y0, y1) == (regiao.y, fundo):
+        return regiao
+    return Caixa(regiao.x, y0, regiao.largura, round(y1 - y0, 4))
 
 
 def instantes_da_frase(inicio_seg: float, fim_seg: float, duracao_do_video: float) -> list[float]:

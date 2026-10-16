@@ -26,6 +26,7 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
+import numpy as np
 from app.domain.canal.quadros_do_apresentador import Caixa, QuadroCandidato
 from app.infrastructure.detector_rosto import (
     DeteccaoIndisponivel,
@@ -42,6 +43,9 @@ _ROSTO_MINIMO = 0.03
 # compressão, grande o bastante para ver boca e olhos mudarem.
 _LADO_DA_ASSINATURA = 16
 _QUALIDADE_JPEG = 92
+# O salto de brilho (0 a 255) que conta como borda da moldura. Com ele, no corte
+# b4a2dd8c da PROD (D-957), a moldura da câmera apareceu em 98% das colunas.
+_SALTO_DA_BORDA = 18
 
 
 class VideoIlegivel(DeteccaoIndisponivel):
@@ -140,6 +144,36 @@ def medir_candidatos(video: Path, instantes: list[float], regiao: Caixa) -> list
                 )
             )
         return candidatos
+    finally:
+        captura.release()
+
+
+def linhas_fixas(
+    video: Path, instantes: list[float], regiao: Caixa, fracao_minima: float
+) -> list[float]:
+    """As alturas (fração do quadro) onde uma borda horizontal cruza a região em todo quadro.
+
+    Borda é o salto de brilho entre a linha de cima e a de baixo; ela "cruza"
+    quando aparece em `fracao_minima` das colunas da região. Cinza sem
+    equalizar: a equalização acenderia o ruído da parede lisa.
+    """
+    cv2, captura = _abrir(video)
+    try:
+        minimo = None
+        y0 = 0
+        altura = 0
+        for segundo in instantes:
+            quadro = _ler(cv2, captura, segundo)
+            if quadro is None:
+                continue
+            altura = quadro.shape[0]
+            x0, y0, x1, y1 = _em_pixels(regiao, quadro.shape[1], altura)
+            cinza = cv2.cvtColor(quadro[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.int16)
+            fracao = (np.abs(cinza[2:] - cinza[:-2]) > _SALTO_DA_BORDA).mean(axis=1)
+            minimo = fracao if minimo is None else np.minimum(minimo, fracao)
+        if minimo is None:
+            return []
+        return [round((y0 + i + 1) / altura, 4) for i, f in enumerate(minimo) if f >= fracao_minima]
     finally:
         captura.release()
 
