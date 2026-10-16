@@ -21,13 +21,18 @@ _MUDO_DEPOIS_DE_COMECAR = (
     "time.sleep(3600)\n"
 )
 
-# Fala a cada 0,3 s por 2 s: mais tempo total que o prazo, mas nunca mudo.
+# Fala a cada 0,5 s por 7 s: mais tempo total que o prazo, mas nunca mudo.
 _LENTO_MAS_VIVO = (
     "import sys, time\n"
-    "for i in range(7):\n"
-    "    print(f'[download]  {i * 10}.0% of 1.00GiB'); sys.stdout.flush()\n"
-    "    time.sleep(0.3)\n"
+    "for i in range(14):\n"
+    "    print(f'[download]  {i * 5}.0% of 1.00GiB'); sys.stdout.flush()\n"
+    "    time.sleep(0.5)\n"
 )
+# O prazo de quem continua falando. A partida do Python do fake já conta como
+# silêncio, e com a máquina ocupada (portão com -n 6, renders) ela levou até
+# 3,2 s em 15/10/2026: com prazo de 1 s, o teste acusava um silêncio que não
+# houve (D-949). Seis segundos sobram para a partida e ficam abaixo dos 7 s do fake.
+_PRAZO_DE_QUEM_FALA_S = 6
 
 pytestmark = pytest.mark.integration  # sobe processos reais (D-751)
 
@@ -74,18 +79,20 @@ class TestNaThread:
         vistos: list[float] = []
 
         codigo = _rodar_ytdlp_lendo_saida(
-            [sys.executable, "-c", _LENTO_MAS_VIVO], vistos.append, inatividade_s=1
+            [sys.executable, "-c", _LENTO_MAS_VIVO],
+            vistos.append,
+            inatividade_s=_PRAZO_DE_QUEM_FALA_S,
         )
 
         assert codigo == 0
-        assert vistos[-1] == 60.0
+        assert vistos[-1] == 65.0
 
 
 class TestNoCaminhoAssincrono:
     """O caminho de sempre da ingestão (`create_subprocess_exec`)."""
 
     @staticmethod
-    def _trocar_ytdlp_por(monkeypatch, tmp_path, script: str) -> None:
+    def _trocar_ytdlp_por(monkeypatch, tmp_path, script: str, prazo_s: float = 1) -> None:
         original = asyncio.create_subprocess_exec
 
         async def falso(*_cmd, **kwargs):
@@ -93,7 +100,7 @@ class TestNoCaminhoAssincrono:
 
         monkeypatch.setattr(ingestao.asyncio, "create_subprocess_exec", falso)
         monkeypatch.setattr(ingestao, "projetos_dir", lambda: tmp_path)
-        monkeypatch.setattr(ingestao, "_INATIVIDADE_DO_DOWNLOAD_S", 1)
+        monkeypatch.setattr(ingestao, "_INATIVIDADE_DO_DOWNLOAD_S", prazo_s)
 
         async def sem_banco(*_a, **_k):
             return None
@@ -113,7 +120,7 @@ class TestNoCaminhoAssincrono:
         assert encerrados and _morreu(encerrados[0])
 
     def test_quem_continua_falando_segue_ate_o_fim(self, monkeypatch, tmp_path):
-        self._trocar_ytdlp_por(monkeypatch, tmp_path, _LENTO_MAS_VIVO)
+        self._trocar_ytdlp_por(monkeypatch, tmp_path, _LENTO_MAS_VIVO, _PRAZO_DE_QUEM_FALA_S)
         (tmp_path / "p1").mkdir()
         (tmp_path / "p1" / "video.mkv").write_bytes(b"x")
         fila: asyncio.Queue = asyncio.Queue()
@@ -123,4 +130,4 @@ class TestNoCaminhoAssincrono:
         )
 
         assert caminho.endswith("video.mkv")
-        assert fila.qsize() == 7, "cada linha de progresso chegou à tela"
+        assert fila.qsize() == 14, "cada linha de progresso chegou à tela"
