@@ -18,6 +18,7 @@ from app.core.logging import operational_debug, operational_error, operational_i
 from app.core.process_runner import ProcessoEstourouOTempo, encerrar_arvore
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.url_do_youtube import url_canonica_do_video
+from app.domain.projeto.idioma_da_legenda import escolher_legenda
 from app.domain.projeto.json3_parser import parse_json3
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.domain.projeto.vtt_parser import parse_vtt
@@ -516,18 +517,17 @@ class IngestaoService:
 
         await IngestaoService._baixar_chat_replay(url, subs_path)
 
-        # Ler VTT e JSON3
-        vtt_files = list(subs_path.glob("*.vtt"))
-        json3_files = list(subs_path.glob("*.json3"))
+        vtt =escolher_legenda(list(subs_path.glob("*.vtt")))
+        json3 = escolher_legenda(list(subs_path.glob("*.json3")))
 
-        if not json3_files:
-            if vtt_files:
+        if json3 is None:
+            if vtt is not None:
                 from app.domain.compartilhado.time_convert import hms_to_seg
                 from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
 
                 operational_info("INGESTAO", "JSON3 não disponível. Usando VTT como fallback.")
                 offset_seg = legenda_offset_ms / 1000.0
-                trans_bruta = parse_vtt(vtt_files[0].read_text(encoding="utf-8"))
+                trans_bruta = parse_vtt(vtt.read_text(encoding="utf-8"))
                 if offset_seg:
                     trans_bruta = [
                         {
@@ -549,17 +549,17 @@ class IngestaoService:
 
         # Se não vier VTT, o offset é zero
         offset_ms = 0
-        if vtt_files:
+        if vtt is not None:
             from app.domain.compartilhado.time_convert import hms_to_seg
 
             try:
-                vtt_segs = parse_vtt(vtt_files[0].read_text(encoding="utf-8"))
+                vtt_segs = parse_vtt(vtt.read_text(encoding="utf-8"))
                 if vtt_segs:
                     vtt_start_ms = int(hms_to_seg(vtt_segs[0]["inicio"]) * 1000)
                     # Para descobrir o json3_start_ms real, precisamos de um parser bruto ou usar o json
                     import json
 
-                    json_data = json.loads(json3_files[0].read_text(encoding="utf-8"))
+                    json_data = json.loads(json3.read_text(encoding="utf-8"))
                     json3_start_ms = 0
                     events = json_data.get("events", [])
                     if events:
@@ -591,7 +591,7 @@ class IngestaoService:
         )
 
         try:
-            raw_content = json3_files[0].read_text(encoding="utf-8")
+            raw_content = json3.read_text(encoding="utf-8")
             trans_bruta = parse_json3(raw_content, offset_ms=offset_total)
             operational_info("INGESTAO", f"Transcrição extraída com {len(trans_bruta)} segmentos.")
             return limpar_e_ordenar_transcricao(trans_bruta)
