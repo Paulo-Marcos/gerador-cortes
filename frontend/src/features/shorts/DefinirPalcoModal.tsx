@@ -24,7 +24,7 @@ import { useTranscricaoDoCorte } from './useShortsDoCorte';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { ocupacaoDoPalco, recorteInicial, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
-import { SeletorDeTextura } from './SeletorDeTextura';
+import { CabecalhoArrastavelNoShort, numerarSecoes, TexturaDoAtual } from './SecoesDoEstilo';
 import { mudancaDoArranjo, mudancaDoPalco, palcoDoShort } from './aplicarPalco';
 import { usePalcoDoCorte } from './useShortsDoCorte';
 import { useArranjosDePalco } from './useShortsDoCorte';
@@ -183,6 +183,8 @@ export function DefinirPalcoModal({
   const [arrastandoLegenda, setArrastandoLegenda] = useState<LugarDaLegenda | null>(null);
   const lugarDaLegenda = arrastandoLegenda ?? lugarGravado;
   const palco = usePalcoDoShort(corteId, open); // D-923: o palco do short DESTE corte (o canal não muda)
+  const secoes = numerarSecoes({ emPreset: Boolean(rascunho), limpo: palco.estilo === 'limpo' }); // D-937
+  const quadroRef = useRef<HTMLDivElement>(null);
   const legendaNoLugarDela = temLugarProprio(short);
 
   /** Ajuste é PARCIAL: mandar só o bloco na mão apagaria a posição dos outros. */
@@ -456,8 +458,8 @@ export function DefinirPalcoModal({
             )}
           </Secao>
 
-          {!rascunho && (
-          <Secao numero={4} titulo="A moldura">
+          {secoes.moldura && (
+          <Secao numero={secoes.moldura} titulo="A moldura">
             <select
               aria-label="Moldura do short"
               value={short.moldura}
@@ -474,23 +476,14 @@ export function DefinirPalcoModal({
           </Secao>
           )}
 
-          <Secao numero={rascunho ? 4 : 5} titulo="O fundo">
-            {/* D-552: a TEXTURA, e não uma cor da paleta.
-                O seletor anterior oferecia cores e escolher uma não mudava nada
-                em lugar nenhum: no arquivo o PNG do palco cobre a cor, e na
-                prévia os recortes cobrem. Era um controle com efeito zero. */}
-            <SeletorDeTextura
-              escolhida={short.fundo_editorial ?? ''}
-              padrao={plano?.fundo_editorial ?? ''}
-              ocupado={ocupado}
-              onEscolher={(id) => onAplicar({ fundo_editorial: id })}
-            />
-            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
-              A textura do canal por trás das janelas. Aparece na prévia ao lado.
-            </p>
-          </Secao>
+          {secoes.fundo && (
+            <Secao numero={secoes.fundo} titulo="O fundo">
+              <TexturaDoAtual short={short} plano={plano} ocupado={ocupado} onAplicar={onAplicar} />
+            </Secao>
+          )}
+          {secoes.palcoLimpo && <Secao numero={secoes.palcoLimpo} titulo={tituloDoPalco('limpo')}><PalcoDoShortNoModal palco={palco} /></Secao>}
 
-          <Secao numero={rascunho ? 5 : 6} titulo="A legenda">
+          <Secao numero={secoes.legenda} titulo="A legenda">
             {/* D-563: a cor da palavra CORRENTE, e só dela.
                 O resto da frase fica branco em short praticamente sempre — é o
                 realce que diferencia, e é ele que precisa combinar com o palco.
@@ -633,11 +626,11 @@ export function DefinirPalcoModal({
           </Secao>
 
           {rascunho ? (
-            <Secao numero={6} titulo="Guardar o preset">
+            <Secao numero={secoes.preset} titulo="Guardar o preset">
               {rascunho.rodape}
             </Secao>
           ) : (
-          <Secao numero={7} titulo="Guardar como preset">
+          <Secao numero={secoes.preset} titulo="Guardar como preset">
             {/* D-567: o ciclo do preset mora em `PresetsDoPalco`.
                 Ele era uma classe escondida aqui dentro — 130 linhas, tres
                 estados e quatro mutacoes declaradas no topo deste componente, e
@@ -653,7 +646,7 @@ export function DefinirPalcoModal({
             />
           </Secao>
           )}
-          {!rascunho && <Secao numero={8} titulo={tituloDoPalco(palco.estilo)}><PalcoDoShortNoModal palco={palco} /></Secao>}
+          {secoes.janelasDoAtual && <Secao numero={secoes.janelasDoAtual} titulo={tituloDoPalco('atual')}><PalcoDoShortNoModal palco={palco} /></Secao>}
         </div>
 
         {/* A prévia acompanha cada decisão. Decidir olhando para o resultado é
@@ -678,7 +671,7 @@ export function DefinirPalcoModal({
             // impossível de acertar com a mão antes da D-559.
             <div className={cn('w-full', movendo ? 'max-w-[300px]' : 'max-w-[220px]')}>
               <RascunhoDoPalcoContext.Provider value={palco.componentes}>
-              <PalcoPrevia plano={planoNaTela} video={video}>
+              <PalcoPrevia plano={planoNaTela} video={video} quadroRef={quadroRef}>
                 {transcricao.data && (
                   <LegendaArrastavel
                     palavras={transcricao.data.palavras}
@@ -690,6 +683,7 @@ export function DefinirPalcoModal({
                     onAplicar={onAplicar}
                   />
                 )}
+                {!movendo && <CabecalhoArrastavelNoShort palco={palco} quadroRef={quadroRef} />}
                 <EditorDePalco
                   slots={planoNaTela.slots}
                   ativo={movendo}

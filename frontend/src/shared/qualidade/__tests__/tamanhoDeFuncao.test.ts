@@ -105,7 +105,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/shorts/CapaModal.tsx::ArteDaCapa": 139,
   "src/features/shorts/CapaModal.tsx::CapaModal": 264,
   "src/features/shorts/ColunaDeDecisoes.tsx::ColunaDeDecisoes": 210,
-  "src/features/shorts/DefinirPalcoModal.tsx::DefinirPalcoModal": 623,
+  "src/features/shorts/DefinirPalcoModal.tsx::DefinirPalcoModal": 617,
   "src/features/shorts/FireDetalhePage.tsx::FireDetalhePage": 436,
   "src/features/shorts/GanchoModal.tsx::GanchoModal": 583,
   "src/features/shorts/GanchoPrevia.tsx::GanchoPrevia": 158,

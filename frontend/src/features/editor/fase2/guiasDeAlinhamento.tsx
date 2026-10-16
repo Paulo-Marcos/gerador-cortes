@@ -72,11 +72,18 @@ export function encaixar(
   };
 }
 
+/** D-937: o quadro da prévia, em px — o vídeo (1920x1080) ou o short (1080x1920). */
+export interface Quadro {
+  largura: number;
+  altura: number;
+}
+export const QUADRO_DO_VIDEO: Quadro = { largura: 1920, altura: 1080 };
+
 /** Os outros objetos da prévia (janelas, zona, componentes), em px do quadro, menos o que se move. */
-export function outrosNaPrevia(frame: HTMLElement, excluir: Element): YoutubeSharedRect[] {
+export function outrosNaPrevia(frame: HTMLElement, excluir: Element, largura = QUADRO_DO_VIDEO.largura): YoutubeSharedRect[] {
   const quadro = frame.getBoundingClientRect();
   if (quadro.width === 0) return [];
-  const k = 1920 / quadro.width;
+  const k = largura / quadro.width;
   return [...frame.querySelectorAll('[data-retangulo], [data-arrastavel]')]
     .filter((el) => el !== excluir && !el.contains(excluir) && !excluir.contains(el))
     .map((el) => {
@@ -86,7 +93,7 @@ export function outrosNaPrevia(frame: HTMLElement, excluir: Element): YoutubeSha
 }
 
 /** As linhas de alinhamento sobre a prévia, enquanto se arrasta. */
-export function GuiasNaPrevia({ guias }: { guias: Guias }) {
+export function GuiasNaPrevia({ guias, quadro = QUADRO_DO_VIDEO }: { guias: Guias; quadro?: Quadro }) {
   return (
     <>
       {guias.x !== null && (
@@ -94,7 +101,7 @@ export function GuiasNaPrevia({ guias }: { guias: Guias }) {
           aria-hidden
           data-guia="vertical"
           className="pointer-events-none absolute top-0 h-full w-px bg-[var(--wb-info)]"
-          style={{ left: `${(guias.x / 1920) * 100}%` }}
+          style={{ left: `${(guias.x / quadro.largura) * 100}%` }}
         />
       )}
       {guias.y !== null && (
@@ -102,7 +109,7 @@ export function GuiasNaPrevia({ guias }: { guias: Guias }) {
           aria-hidden
           data-guia="horizontal"
           className="pointer-events-none absolute left-0 h-px w-full bg-[var(--wb-info)]"
-          style={{ top: `${(guias.y / 1080) * 100}%` }}
+          style={{ top: `${(guias.y / quadro.altura) * 100}%` }}
         />
       )}
     </>
