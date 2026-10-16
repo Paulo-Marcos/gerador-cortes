@@ -410,8 +410,8 @@ export function PosicionamentoModal({
   };
 
   // D-927: o grupo que vale no estilo (o cabeçalho só existe no limpo) e o que a prévia mostra.
-  const grupos = gruposDoModal(estiloDoPalco);
-  const grupoAtivo = grupos.includes(grupo) ? grupo : 'telas';
+  const grupos = gruposDoModal(estiloDoPalco, alvoDoEstilo === 'canal');
+  const grupoAtivo = grupos.includes(grupo) ? grupo : grupos[0];
   const cropNaPrevia = grupoAtivo === 'telas' && Boolean(selectedCropKey);
   const componenteAtivo = componenteDoGrupo(grupoAtivo);
   const componentes =
@@ -483,7 +483,7 @@ export function PosicionamentoModal({
                 onRect={(rect) => updateRect(rectKey, rect)}
               />
             ) : (
-              <PainelDoPalco grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} editavel={fundoPlacaEditavel} fundo={draftFundo} placa={draftPlaca} onFundo={setDraftFundo} onPlaca={setDraftPlaca} exemplo={exemplo} onExemplo={setExemplo} />
+              <PainelDoPalco grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} canal={alvoDoEstilo === 'canal'} editavel={fundoPlacaEditavel} fundo={draftFundo} placa={draftPlaca} onFundo={setDraftFundo} onPlaca={setDraftPlaca} exemplo={exemplo} onExemplo={setExemplo} />
             )}
           </div>
           <div className="flex min-h-0 min-w-0 flex-col gap-2 p-3">

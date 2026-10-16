@@ -10,7 +10,7 @@ import type { LayoutPreset } from '@/types/presets';
 import type { PalcoComponentes } from '../api/canais';
 import { componentesDoRascunho } from '../EdicaoDoPalco';
 import { EstiloNoModal } from '../EstiloNoModal';
-import { PalcoComponentesForm, rascunhoDe } from '../PalcoComponentesSection';
+import { ItensDoCabecalho, rascunhoDe } from '../PalcoComponentesSection';
 import { paraComponentesDoPalco } from '../palcoDoCanal';
 import { alvoDoEstiloPara } from '../palcoDoEscopo';
 import { PalcoDoTipoNoModal, abasDoPalco } from '../PalcoDoTipoNoModal';
@@ -71,19 +71,8 @@ describe('cabeçalho só com a imagem (D-923)', () => {
     expect(sem.cabecalho.imagemUrl).toBe('');
   });
 
-  it('a tela de Canais oferece ligar e desligar imagem, nome e @', () => {
-    const html = renderToStaticMarkup(
-      <PalcoComponentesForm
-        rascunho={rascunhoDe(palco())}
-        palco={palco()}
-        pendente={false}
-        enviandoImagem={false}
-        onMudar={() => undefined}
-        onSalvar={() => undefined}
-        onEnviarImagem={() => undefined}
-        onRemoverImagem={() => undefined}
-      />,
-    );
+  it('o modal oferece ligar e desligar imagem, nome e @ (D-938: saiu da tela de Canais)', () => {
+    const html = renderToStaticMarkup(<ItensDoCabecalho rascunho={rascunhoDe(palco())} onMudar={() => undefined} />);
     expect(html).toContain('aria-label="Itens do cabeçalho"');
   });
 });

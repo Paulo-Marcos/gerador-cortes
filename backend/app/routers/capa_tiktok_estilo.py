@@ -109,3 +109,22 @@ async def gravar_estilo_da_capa(body: EstiloDaCapaTiktokRequest):
     await estilo_da_capa.corte_conferido(body.corte_id)
     estilo_da_capa.gravar(_sem_nulos(body.estilo))
     return await _painel(body.corte_id)
+
+
+class EstiloDaCapaDoCanal(BaseModel):
+    """O desenho da capa do canal: `palco` (segue o palco), `atual` ou `limpo`."""
+
+    estilo: str
+
+
+@router.get("/estilo/do-canal", response_model=EstiloDaCapaDoCanal)
+async def ler_estilo_da_capa_do_canal():
+    """D-938: o desenho que a tela de Canais mostra, sem corte."""
+    return {"estilo": estilo_da_capa.ler_salvo().get("estilo", dominio.ESTILO_DO_PALCO)}
+
+
+@router.put("/estilo/do-canal", response_model=EstiloDaCapaDoCanal)
+async def escolher_estilo_da_capa_do_canal(body: EstiloDaCapaDoCanal):
+    """D-938: troca só o desenho; componentes e posições continuam os do modal."""
+    salvo = estilo_da_capa.escolher_estilo(body.estilo)
+    return {"estilo": salvo.get("estilo", dominio.ESTILO_DO_PALCO)}

@@ -1,26 +1,13 @@
-import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { PalcoComponentes, PalcoComponentesEdicao } from '@/features/channels/api/canais';
 import { PALETTE } from '@/shared/palco/youtubeBackgrounds';
 import { COR_DO_ACENTO, COR_DO_FUNDO, COR_DO_TEXTO } from '@/shared/palco/palcoLimpo';
 import { Icon } from '@/upgrade/Icon';
-import {
-  CampoPosicao,
-  CampoTamanho,
-  JanelasDoShort,
-  type EstiloDaLegenda,
-  type FundoDoShort,
-  type PosicaoEditavel,
-} from './ControlesDoPalco';
-import { CardsDoCanal, cardsEditaveisDe, SEM_CAIXA, type CardsEditaveis } from './CardsDoCanal';
-import { urlDaImagem } from './palcoDoCanal';
+import type { EstiloDaLegenda, FundoDoShort, PosicaoEditavel } from './ControlesDoPalco';
+import { cardsEditaveisDe, SEM_CAIXA, type CardsEditaveis } from './CardsDoCanal';
 
-// D-911: os componentes do palco do canal ativo — estilo, cabeçalho e placa —
-// editáveis na tela de Canais. O formulário é "burro" (recebe valor e avisa);
-// a seção liga os hooks. Imagem sobe na hora (é um arquivo, não um rascunho);
-// o resto vai junto no Salvar.
+// D-911: o rascunho do palco do canal e as peças de tela que o editam. D-938:
+// a tela de Canais só escolhe o estilo (`EscolhaDoEstilo`); o detalhe —
+// cabeçalho, placa, cards, janelas — se edita no modal de cada tipo.
 
 type Estilo = 'atual' | 'limpo';
 
@@ -121,52 +108,7 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
   };
 }
 
-const VIDEO = { largura: 1920, altura: 1080 };
-const SHORT = { largura: 1080, altura: 1920 };
-
-interface FormProps {
-  rascunho: RascunhoDoPalco;
-  palco: PalcoComponentes;
-  pendente: boolean;
-  enviandoImagem: boolean;
-  onMudar: (rascunho: RascunhoDoPalco) => void;
-  onSalvar: () => void;
-  onEnviarImagem: (arquivo: File) => void;
-  onRemoverImagem: () => void;
-}
-
-export function PalcoComponentesForm(props: FormProps) {
-  const { rascunho, pendente, onMudar, onSalvar } = props;
-  return (
-    <form
-      className="grid gap-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSalvar();
-      }}
-    >
-      <EscolhaDoEstilo estilo={rascunho.estilo} onEscolher={(estilo) => onMudar({ ...rascunho, estilo })} />
-      {rascunho.estilo === 'limpo' && (
-        <EscolhaDoFundo fundo={rascunho.fundo} onEscolher={(fundo) => onMudar({ ...rascunho, fundo })} />
-      )}
-      <CabecalhoDoPalco {...props} />
-      <PlacaDoPalco rascunho={rascunho} onMudar={onMudar} />
-      <JanelasDoShort
-        valor={rascunho}
-        limpo={rascunho.estilo === 'limpo'}
-        onMudar={(short) => onMudar({ ...rascunho, ...short })}
-      />
-      <CardsDoCanal valor={rascunho.cards} tipos={props.palco.tipos_de_cena} onMudar={(cards) => onMudar({ ...rascunho, cards })} />
-      <div className="flex justify-end">
-        <Button type="submit" disabled={pendente}>
-          {pendente ? 'Salvando…' : 'Salvar palco'}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-function EscolhaDoEstilo({ estilo, onEscolher }: { estilo: Estilo; onEscolher: (e: Estilo) => void }) {
+export function EscolhaDoEstilo({ estilo, onEscolher }: { estilo: Estilo; onEscolher: (e: Estilo) => void }) {
   return (
     <fieldset className="grid gap-2">
       <legend className="text-xs font-medium text-text-300">Estilo do palco</legend>
@@ -200,187 +142,6 @@ function EscolhaDoEstilo({ estilo, onEscolher }: { estilo: Estilo; onEscolher: (
           );
         })}
       </div>
-    </fieldset>
-  );
-}
-
-function EscolhaDoFundo({ fundo, onEscolher }: { fundo: string; onEscolher: (f: string) => void }) {
-  return (
-    <fieldset className="grid gap-2">
-      <legend className="text-xs font-medium text-text-300">Fundo do palco limpo</legend>
-      <div className="flex flex-wrap gap-2">
-        {FUNDOS.map((opcao) => (
-          <Button
-            key={opcao.id}
-            type="button"
-            size="sm"
-            variant={fundo === opcao.id ? 'default' : 'outline'}
-            aria-pressed={fundo === opcao.id}
-            onClick={() => onEscolher(opcao.id)}
-          >
-            {opcao.nome}
-          </Button>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
-function PlacaDoPalco({
-  rascunho,
-  onMudar,
-}: {
-  rascunho: RascunhoDoPalco;
-  onMudar: (rascunho: RascunhoDoPalco) => void;
-}) {
-  return (
-    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
-      <legend className="px-1 text-xs font-medium text-text-300">Placa do interlocutor</legend>
-      <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
-        <input
-          type="checkbox"
-          checked={rascunho.placaAtiva}
-          onChange={(e) => onMudar({ ...rascunho, placaAtiva: e.target.checked })}
-        />
-        Mostrar a placa (nome e papel de quem fala, preenchida em cada corte)
-      </label>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <CampoTamanho
-          id="palco-placa-tamanho"
-          escala={rascunho.placaEscala}
-          onMudar={(placaEscala) => onMudar({ ...rascunho, placaEscala })}
-        />
-        <CampoPosicao
-          id="palco-placa-posicao"
-          rotulo="Posição no vídeo"
-          posicao={rascunho.placaPosicao}
-          quadro={VIDEO}
-          descricaoAutomatica="acima da tela, cedendo ao cabeçalho"
-          onMudar={(placaPosicao) => onMudar({ ...rascunho, placaPosicao })}
-        />
-      </div>
-    </fieldset>
-  );
-}
-
-function PosicaoDoCabecalho({
-  rascunho,
-  onMudar,
-}: {
-  rascunho: RascunhoDoPalco;
-  onMudar: (rascunho: RascunhoDoPalco) => void;
-}) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <CampoTamanho
-        id="palco-cabecalho-tamanho"
-        escala={rascunho.cabecalhoEscala}
-        onMudar={(cabecalhoEscala) => onMudar({ ...rascunho, cabecalhoEscala })}
-      />
-      <CampoPosicao
-        id="palco-cabecalho-posicao"
-        rotulo="Posição no vídeo"
-        posicao={rascunho.cabecalhoPosicao}
-        quadro={VIDEO}
-        podeSerAutomatica={false}
-        onMudar={(cabecalhoPosicao) => onMudar({ ...rascunho, cabecalhoPosicao })}
-      />
-      <CampoPosicao
-        id="palco-cabecalho-posicao-short"
-        rotulo="Posição no short"
-        posicao={rascunho.cabecalhoPosicaoShort}
-        quadro={SHORT}
-        descricaoAutomatica="acima da primeira janela"
-        onMudar={(cabecalhoPosicaoShort) => onMudar({ ...rascunho, cabecalhoPosicaoShort })}
-      />
-    </div>
-  );
-}
-
-function CabecalhoDoPalco({
-  rascunho,
-  palco,
-  enviandoImagem,
-  onMudar,
-  onEnviarImagem,
-  onRemoverImagem,
-}: FormProps) {
-  const arquivoRef = useRef<HTMLInputElement>(null);
-  const imagem = urlDaImagem(palco.cabecalho.imagem_url);
-  const imagemPropria = Boolean(palco.cabecalho.imagem);
-  return (
-    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
-      <legend className="px-1 text-xs font-medium text-text-300">Cabeçalho do canal</legend>
-      <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
-        <input
-          type="checkbox"
-          checked={rascunho.cabecalhoAtivo}
-          onChange={(e) => onMudar({ ...rascunho, cabecalhoAtivo: e.target.checked })}
-        />
-        Mostrar o cabeçalho (imagem, nome e @) no palco
-      </label>
-      <ItensDoCabecalho rascunho={rascunho} onMudar={onMudar} />
-      <div className="flex items-center gap-3">
-        {imagem ? (
-          <img src={imagem} alt="Imagem do cabeçalho" className="h-14 w-14 rounded-full object-cover" />
-        ) : (
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wb-bg-card)] text-[var(--wb-text-dim)]">
-            <Icon name="image-off" />
-          </span>
-        )}
-        <div className="grid gap-1 text-xs text-[var(--wb-text-dim)]">
-          <span>{imagemPropria ? 'Imagem do canal' : 'Pose padrão do mascote'}</span>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" disabled={enviandoImagem} onClick={() => arquivoRef.current?.click()}>
-              <Icon name="image-plus" />
-              {enviandoImagem ? 'Enviando…' : 'Trocar imagem'}
-            </Button>
-            {imagemPropria && (
-              <Button type="button" variant="ghost" size="sm" disabled={enviandoImagem} onClick={onRemoverImagem}>
-                <Icon name="trash-2" />
-                Voltar ao mascote
-              </Button>
-            )}
-          </div>
-        </div>
-        <input
-          ref={arquivoRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          aria-label="Imagem do cabeçalho"
-          className="hidden"
-          onChange={(e) => {
-            const arquivo = e.target.files?.[0];
-            if (arquivo) onEnviarImagem(arquivo);
-            e.target.value = '';
-          }}
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-1.5">
-          <Label htmlFor="palco-nome">Nome</Label>
-          <Input
-            id="palco-nome"
-            value={rascunho.nome}
-            placeholder={palco.cabecalho.nome_efetivo || 'Nome do canal'}
-            onChange={(e) => onMudar({ ...rascunho, nome: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="palco-handle">@ (handle)</Label>
-          <Input
-            id="palco-handle"
-            value={rascunho.handle}
-            placeholder={palco.cabecalho.handle_efetivo || '@seucanal'}
-            onChange={(e) => onMudar({ ...rascunho, handle: e.target.value })}
-          />
-        </div>
-      </div>
-      <PosicaoDoCabecalho rascunho={rascunho} onMudar={onMudar} />
-      <p className="text-xs text-[var(--wb-text-dim)]">
-        Vazio usa a identidade do canal: <strong>{palco.cabecalho.nome_efetivo || '—'}</strong>{' '}
-        <span>{palco.cabecalho.handle_efetivo}</span>. Para não mostrar, desmarque o item acima.
-      </p>
     </fieldset>
   );
 }

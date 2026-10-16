@@ -18,8 +18,13 @@ const ROTULOS: Record<GrupoDoModal, { nome: string; icone: IconName }> = {
 /**
  * Os grupos que existem no estilo: o cabeçalho só existe no limpo. Os presets
  * saíram do menu (D-928): ficam sempre à vista, na faixa do estilo.
+ *
+ * D-938: no padrão do canal (aberto pela tela de Canais) só há o palco do
+ * canal — as telas, a textura do estilo atual e o texto da placa são do layout
+ * de cada corte, projeto ou do global do editor.
  */
-export function gruposDoModal(estilo: 'atual' | 'limpo'): GrupoDoModal[] {
+export function gruposDoModal(estilo: 'atual' | 'limpo', doCanal = false): GrupoDoModal[] {
+  if (doCanal) return estilo === 'limpo' ? ['fundo', 'cabecalho', 'placa', 'cards'] : ['cards'];
   return estilo === 'limpo' ? ['telas', 'fundo', 'cabecalho', 'placa', 'cards'] : ['telas', 'fundo', 'placa', 'cards'];
 }
 

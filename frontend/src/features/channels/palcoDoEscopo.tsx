@@ -71,8 +71,8 @@ export function useLayoutPresetsDoEstilo(filtro: { tipo: LayoutPresetTipo }) {
 
 const SEM_PRESETS: LayoutPreset[] = [];
 
-/** Onde a troca feita no modal grava: no corte, no projeto ou em lugar nenhum (o global é do canal). */
-export type AlvoDoEstilo = 'corte' | 'projeto' | 'global';
+/** Onde a troca feita no modal grava: no corte, no projeto, no canal (D-938, aberto pela tela de Canais) ou em lugar nenhum (o global do editor). */
+export type AlvoDoEstilo = 'corte' | 'projeto' | 'global' | 'canal';
 
 /** O escopo do modal de posição → onde a troca grava (segmentos gravam no corte). */
 export function alvoDoEstiloPara(escopo: string): AlvoDoEstilo {
