@@ -79,8 +79,8 @@ export function ReferenciaGuardada({
   if (quantas === 0) return null;
   return (
     <p className="text-[11px] text-[var(--wb-text-dim)]">
-      {quantas} {quantas === 1 ? singular : plural}: voltam ao escolher {protagonista} como
-      protagonista.
+      {quantas} {quantas === 1 ? singular : plural}. Para voltar a usar, escolha {protagonista}{' '}
+      como protagonista.
     </p>
   );
 }
