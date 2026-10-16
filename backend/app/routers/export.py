@@ -14,6 +14,7 @@ from app.routers import export_schemas
 from app.routers.errors import erro_interno
 
 # Via o service de configurações: o router não fala com a infraestrutura (D-696).
+from app.services import agenda_youtube_em_voo
 from app.services.app_settings import FILTROS_CINEMA
 from app.services.cancelamento_jobs import (
     CancelamentoNaoSuportado,
@@ -282,7 +283,9 @@ async def upload_to_youtube(
         "router", f"📥 Solicitação: YouTube Upload para '{corte_id}' | Agendado: {scheduled_at}"
     )
     try:
-        resultado = await YouTubeService.upload_video(corte_id, scheduled_at=scheduled_at)
+        # D-934: enquanto sobe, o horário segura a vaga da agenda do próximo envio.
+        async with agenda_youtube_em_voo.reservado(corte_id, scheduled_at):
+            resultado = await YouTubeService.upload_video(corte_id, scheduled_at=scheduled_at)
         if resultado.get("status") == "erro":
             raise HTTPException(status_code=500, detail=resultado.get("mensagem"))
         return resultado

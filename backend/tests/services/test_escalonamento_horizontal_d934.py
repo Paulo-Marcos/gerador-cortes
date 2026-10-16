@@ -233,3 +233,32 @@ async def test_o_lote_reserva_ao_enfileirar_e_libera_quando_cada_upload_termina(
     # Cada upload libera a sua vaga ao terminar, com sucesso ou com erro.
     assert vistos == [["c1", "c2"], ["c2"], []]
     assert sem_reservas.ultima() is None
+
+
+@pytest.mark.asyncio
+async def test_cota_excedida_libera_as_vagas_de_quem_nao_vai_subir(monkeypatch, sem_reservas):
+    import sys
+    import types
+
+    sys.modules.setdefault("auto_editor", types.SimpleNamespace())
+    from app.services.export import ExportService
+
+    monkeypatch.setattr(ExportService, "_fila_youtube", {})
+    monkeypatch.setattr(ExportService, "_bulk_upload_sem", None)
+
+    async def upload(corte_id, scheduled_at=None):
+        return {"status": "erro", "cota_excedida": True}
+
+    monkeypatch.setitem(
+        sys.modules,
+        "app.services.youtube",
+        types.SimpleNamespace(YouTubeService=types.SimpleNamespace(upload_video=upload)),
+    )
+    agenda = [("c1", "2030-01-07T15:00:00Z"), ("c2", "2030-01-07T15:15:00Z")]
+    for corte_id, quando in agenda:
+        sem_reservas.reservar(corte_id, quando)
+
+    await ExportService._run_youtube_upload_queue("p1", agenda, cleanup_delay=None)
+
+    assert ExportService._fila_youtube["p1"] == {"c1": "cota_excedida", "c2": "cota_excedida"}
+    assert sem_reservas.ultima() is None

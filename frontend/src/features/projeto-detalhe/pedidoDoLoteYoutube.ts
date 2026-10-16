@@ -26,9 +26,9 @@ export function pedidoDoLoteYoutube(
   linhas: LinhaDaAgenda[],
   agendarPara: string,
 ): PedidoDoLoteYoutube {
-  if (modo === 'agora') {
-    return { corte_ids: corteIds, agendar: false, scheduled_dates: corteIds.map(() => null) };
-  }
+  // O lote do YouTube longo não oferece "agora" (N vídeos públicos de uma vez);
+  // se o modo chegar aqui mesmo assim, nada sobe sem data.
+  if (modo === 'agora') return { corte_ids: [], agendar: true, scheduled_dates: [] };
 
   const datas =
     modo === 'uma_data'

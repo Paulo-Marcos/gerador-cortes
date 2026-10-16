@@ -7,10 +7,14 @@ horários, furando o teto por bloco e por dia (RN-29).
 
 Em memória, como a própria fila de upload (`ExportService._fila_youtube`): o
 processo que sobe é o mesmo que calcula a agenda, e um reinício perde as duas.
+Também como ela, não separa canais: trocar de canal com um lote subindo só faz o
+outro canal começar depois desses horários — atraso, nunca colisão.
 """
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from app.domain.publicacao.agendamento import instante_do_youtube
@@ -28,6 +32,16 @@ def reservar(corte_id: str, agendado_para: str | None) -> None:
 def liberar(corte_id: str) -> None:
     """O upload terminou (ou não vai acontecer): a data, se houver, já está no corte."""
     _reservas.pop(corte_id, None)
+
+
+@asynccontextmanager
+async def reservado(corte_id: str, agendado_para: str | None) -> AsyncIterator[None]:
+    """A vaga fica reservada enquanto o upload de UM corte dura, e sai no fim."""
+    reservar(corte_id, agendado_para)
+    try:
+        yield
+    finally:
+        liberar(corte_id)
 
 
 def ultima() -> datetime | None:

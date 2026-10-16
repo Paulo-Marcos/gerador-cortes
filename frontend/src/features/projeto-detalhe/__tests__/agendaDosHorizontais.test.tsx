@@ -75,12 +75,12 @@ describe('lote do YouTube longo (PublicarMassaModal)', () => {
     expect(pedido.agendar).toBe(true);
   });
 
-  it('uma data só e agora continuam como alternativa', () => {
+  it('uma data só continua como alternativa, e nada sobe sem data', () => {
     const umaData = pedidoDoLoteYoutube('uma_data', ['c1', 'c2'], [], '2030-01-07T19:00');
     const agora = pedidoDoLoteYoutube('agora', ['c1', 'c2'], [], '');
 
     expect(umaData.scheduled_dates).toEqual(Array(2).fill(new Date('2030-01-07T19:00').toISOString()));
-    expect(agora).toEqual({ corte_ids: ['c1', 'c2'], agendar: false, scheduled_dates: [null, null] });
+    expect(agora).toEqual({ corte_ids: [], agendar: true, scheduled_dates: [] });
   });
 });
 

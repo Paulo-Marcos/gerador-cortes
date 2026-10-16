@@ -60,3 +60,38 @@ def test_o_lote_de_shorts_nao_publica_no_youtube_longo(client):
     )
 
     assert resposta.status_code == 404
+
+
+class _DbComCorte:
+    async def get(self, modelo, corte_id):
+        return object()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("falha", [False, True])
+async def test_envio_avulso_segura_a_vaga_enquanto_sobe(monkeypatch, falha):
+    """Pr-audit do #199: o upload só grava a data no corte ao terminar; até lá,
+    a agenda do próximo envio precisa ver o horário prometido."""
+    from app.routers import export as export_router
+    from app.services import agenda_youtube_em_voo
+
+    monkeypatch.setattr(agenda_youtube_em_voo, "_reservas", {})
+    vista_durante = []
+
+    async def upload(corte_id, scheduled_at=None):
+        vista_durante.append(agenda_youtube_em_voo.ultima())
+        if falha:
+            raise RuntimeError("rede caiu")
+        return {"status": "ok", "video_id": "v1", "url": "u", "scheduled_at": scheduled_at}
+
+    monkeypatch.setattr(export_router.YouTubeService, "upload_video", upload)
+    pedido = export_router.YouTubeUploadRequest(scheduled_at="2030-01-07T15:00:00.000Z")
+
+    try:
+        await export_router.upload_to_youtube("c1", pedido, db=_DbComCorte())
+    except Exception:  # noqa: BLE001 — a falha vira 500; aqui importa só a reserva
+        assert falha
+
+    assert vista_durante[0] is not None
+    assert vista_durante[0].isoformat().startswith("2030-01-07")
+    assert agenda_youtube_em_voo.ultima() is None
