@@ -98,7 +98,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/projetos/BibliotecaPage.tsx::BibliotecaPage": 208,
   "src/features/projetos/ProjetoCardAp.tsx::ProjetoCardAp": 334,
   "src/features/settings/AppSettingsControls.tsx::AppSettingsControls": 333,
-  "src/features/settings/CapaTikTokLayoutEditor.tsx::CapaTikTokLayoutEditor": 142,
   "src/features/shorts/BlocosArrastaveis.tsx::BlocosArrastaveis": 120,
   "src/features/shorts/CabecalhoDoFire.tsx::CabecalhoDoFire": 133,
   "src/features/shorts/CandidatoCard.tsx::CandidatoCard": 429,

@@ -412,6 +412,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/capa-tiktok/estilo/do-canal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ler Estilo Da Capa Do Canal
+         * @description D-938: o desenho que a tela de Canais mostra, sem corte.
+         */
+        get: operations["ler_estilo_da_capa_do_canal_api_capa_tiktok_estilo_do_canal_get"];
+        /**
+         * Escolher Estilo Da Capa Do Canal
+         * @description D-938: troca só o desenho; componentes e posições continuam os do modal.
+         */
+        put: operations["escolher_estilo_da_capa_do_canal_api_capa_tiktok_estilo_do_canal_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/capa-tiktok/estilo/previa": {
         parameters: {
             query?: never;
@@ -6503,6 +6527,14 @@ export interface components {
          * @enum {string}
          */
         EstadoItem: "aguardando" | "preparando" | "sua_vez" | "conferir" | "publicado" | "erro" | "pulado" | "cancelado";
+        /**
+         * EstiloDaCapaDoCanal
+         * @description O desenho da capa do canal: `palco` (segue o palco), `atual` ou `limpo`.
+         */
+        EstiloDaCapaDoCanal: {
+            /** Estilo */
+            estilo: string;
+        };
         /** EstiloDaCapaRequest */
         EstiloDaCapaRequest: {
             /** Escuros Maximo */
@@ -10788,6 +10820,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PainelDoEstiloDaCapaTiktok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ler_estilo_da_capa_do_canal_api_capa_tiktok_estilo_do_canal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstiloDaCapaDoCanal"];
+                };
+            };
+        };
+    };
+    escolher_estilo_da_capa_do_canal_api_capa_tiktok_estilo_do_canal_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EstiloDaCapaDoCanal"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstiloDaCapaDoCanal"];
                 };
             };
             /** @description Validation Error */

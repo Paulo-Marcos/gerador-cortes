@@ -81,6 +81,21 @@ def gravar(dados: dict, *, db_path: Path | None = None) -> dict:
     return limpo
 
 
+def escolher_estilo(estilo: str, *, db_path: Path | None = None) -> dict:
+    """Troca só o desenho da capa do canal, sem um corte na mão (D-938).
+
+    É a escolha da tela de Canais; componentes e posições ficam como estão.
+    Seguir o palco é a ausência da chave, não um valor gravado (RN-10).
+    """
+    dominio.validar({"estilo": estilo}, FUNDOS)
+    salvo = ler_salvo(db_path=db_path)
+    if estilo == dominio.ESTILO_DO_PALCO:
+        salvo.pop("estilo", None)
+    else:
+        salvo["estilo"] = estilo
+    return gravar(salvo, db_path=db_path)
+
+
 def resolver_para_corte(
     projeto_id: str | None, corte_id: str | None, salvo: dict | None = None
 ) -> dominio.EstiloResolvido:

@@ -11,7 +11,8 @@ import type { YoutubeBackgroundId, YoutubePlaca } from '@/shared/palco/youtubeLa
 
 // D-927: o conteúdo de cada grupo do modal de posição do horizontal (o menu da
 // esquerda escolhe o grupo). Só aparece o que vale no estilo escolhido; no
-// padrão global o palco é o do canal e se ajusta na tela de Canais.
+// padrão global o palco é o do canal e se ajusta pelo botão da tela de Canais,
+// que abre este mesmo modal no alvo `canal` (D-938).
 
 const ROTULO = 'mb-1.5 font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]';
 
@@ -19,6 +20,8 @@ export interface ContextoDoPalco {
   palco: ReturnType<typeof usePalcoDoModal>;
   /** O modal do padrão global não muda o palco (é do canal). */
   global: boolean;
+  /** D-938: o padrão do canal, aberto pela tela de Canais — só o palco do canal. */
+  canal?: boolean;
   /** Segmentos herdam fundo e placa do corte. */
   editavel: boolean;
   fundo: YoutubeBackgroundId;
@@ -46,7 +49,7 @@ export function PainelDoPalco({ grupo, ...ctx }: ContextoDoPalco & { grupo: 'fun
   if (grupo === 'placa') {
     return (
       <div className="grid gap-3">
-        {editavel ? <TextoDaPlaca placa={ctx.placa} onPlaca={ctx.onPlaca} /> : <HerdaDoCorte />}
+        {ctx.canal ? null : editavel ? <TextoDaPlaca placa={ctx.placa} onPlaca={ctx.onPlaca} /> : <HerdaDoCorte />}
         {limpo && (doCanal ?? componente('placa'))}
       </div>
     );
@@ -83,7 +86,7 @@ function AjusteNoCanal() {
     <p className="text-[12px] text-[var(--wb-text-dim)]">
       No padrão global o palco é o do canal.{' '}
       <Link to="/canais" className="text-[var(--wb-accent)] underline-offset-2 hover:underline">
-        Ajuste em Canais → Palco do canal
+        Edite em Canais → Palco do canal
       </Link>
       .
     </p>

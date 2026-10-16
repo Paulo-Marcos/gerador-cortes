@@ -1,7 +1,6 @@
-import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { PalcoComponentes } from '../api/canais';
-import { PalcoComponentesForm, edicaoDe, rascunhoDe } from '../PalcoComponentesSection';
+import { edicaoDe, rascunhoDe } from '../PalcoComponentesSection';
 import { paraComponentesDoPalco, urlDaImagem } from '../palcoDoCanal';
 
 function palco(extra: Partial<PalcoComponentes> = {}): PalcoComponentes {
@@ -94,74 +93,5 @@ describe('rascunho e edição do palco (D-911)', () => {
     expect(componentes.cabecalho.imagemUrl).toMatch(/\/api\/channels\/default\/palco\/imagem\?v=1$/);
     expect(urlDaImagem('')).toBe('');
     expect(paraComponentesDoPalco(undefined).estilo).toBe('atual');
-  });
-});
-
-describe('PalcoComponentesForm', () => {
-  const nada = () => undefined;
-
-  it('mostra os dois estilos, marca o escolhido e os interruptores', () => {
-    const html = renderToStaticMarkup(
-      <PalcoComponentesForm
-        rascunho={rascunhoDe(palco({ estilo: 'limpo' }))}
-        palco={palco({ estilo: 'limpo' })}
-        pendente={false}
-        enviandoImagem={false}
-        onMudar={nada}
-        onSalvar={nada}
-        onEnviarImagem={nada}
-        onRemoverImagem={nada}
-      />,
-    );
-    expect(html).toContain('Atual');
-    expect(html).toContain('Limpo');
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain('Mostrar o cabeçalho');
-    expect(html).toContain('Mostrar a placa');
-    expect(html).toContain('Pose padrão do mascote');
-    // Todo componente diz onde fica e de que tamanho.
-    expect(html).toContain('Posição no vídeo');
-    expect(html).toContain('Posição no short');
-    expect(html).toContain('Tamanho');
-    expect(html).toContain('Contorno do fundo em volta das janelas');
-    // D-916: os cards — um interruptor por tipo, tamanho e posição sobre o vídeo cheio.
-    expect(html).toContain('Cards (cenas)');
-    expect(html).toContain('Pergunta do chat');
-    expect(html).toContain('Posição sobre o vídeo cheio');
-    // D-913: no limpo, o eco e o estilo da legenda são escolhas do canal.
-    expect(html).toContain('Eco do vídeo (desfocado)');
-    expect(html).toContain('Só sombra');
-    expect(html).toContain('acima da tela, cedendo ao cabeçalho');
-    // No limpo aparece a escolha do fundo, com o padrão marcado.
-    expect(html).toContain('Fundo do palco limpo');
-    expect(html).toContain('Retícula + aurora');
-    expect(html).not.toContain('Voltar ao mascote');
-    // Vazio herda da identidade: o placeholder diz o que vai aparecer.
-    expect(html).toContain('placeholder="Seu Canal"');
-    expect(html).toContain('placeholder="@seucanal"');
-  });
-
-  it('com imagem própria oferece voltar ao mascote', () => {
-    const comImagem = palco({
-      cabecalho: {
-        ...palco().cabecalho,
-        imagem: 'cabecalho.png',
-        imagem_url: '/api/channels/default/palco/imagem?v=2',
-      },
-    });
-    const html = renderToStaticMarkup(
-      <PalcoComponentesForm
-        rascunho={rascunhoDe(comImagem)}
-        palco={comImagem}
-        pendente={false}
-        enviandoImagem={false}
-        onMudar={nada}
-        onSalvar={nada}
-        onEnviarImagem={nada}
-        onRemoverImagem={nada}
-      />,
-    );
-    expect(html).toContain('Imagem do canal');
-    expect(html).toContain('Voltar ao mascote');
   });
 });

@@ -5,6 +5,9 @@ import type { EstiloDaCapaTiktok } from '@/types/presets';
 
 export type Alvo = { corteId: string };
 
+/** D-938: o desenho da capa do canal — `palco` segue o palco, ou `atual`/`limpo` fixos. */
+export type EstiloDaCapaDoCanal = 'palco' | 'atual' | 'limpo';
+
 const corpo = ({ corteId }: Alvo, estilo: EstiloDaCapaTiktok) => ({
   corte_id: corteId,
   estilo,
@@ -21,4 +24,8 @@ export const estiloDaCapaApi = {
     dados(api.POST('/api/capa-tiktok/estilo/previa', { body: corpo(alvo, estilo) })),
   gravar: async (alvo: Alvo, estilo: EstiloDaCapaTiktok) =>
     dados(api.PUT('/api/capa-tiktok/estilo', { body: corpo(alvo, estilo) })),
+  /** D-938: o desenho da capa na tela de Canais, sem corte. */
+  obterDoCanal: async () => dados(api.GET('/api/capa-tiktok/estilo/do-canal')),
+  escolherDoCanal: async (estilo: EstiloDaCapaDoCanal) =>
+    dados(api.PUT('/api/capa-tiktok/estilo/do-canal', { body: { estilo } })),
 };

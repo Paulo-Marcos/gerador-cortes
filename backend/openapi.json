@@ -4060,6 +4060,20 @@
         "title": "EstadoItem",
         "type": "string"
       },
+      "EstiloDaCapaDoCanal": {
+        "description": "O desenho da capa do canal: `palco` (segue o palco), `atual` ou `limpo`.",
+        "properties": {
+          "estilo": {
+            "title": "Estilo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "estilo"
+        ],
+        "title": "EstiloDaCapaDoCanal",
+        "type": "object"
+      },
       "EstiloDaCapaRequest": {
         "properties": {
           "escuros_maximo": {
@@ -14029,6 +14043,68 @@
           }
         },
         "summary": "Gravar Estilo Da Capa",
+        "tags": [
+          "Capa do TikTok"
+        ]
+      }
+    },
+    "/api/capa-tiktok/estilo/do-canal": {
+      "get": {
+        "description": "D-938: o desenho que a tela de Canais mostra, sem corte.",
+        "operationId": "ler_estilo_da_capa_do_canal_api_capa_tiktok_estilo_do_canal_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstiloDaCapaDoCanal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ler Estilo Da Capa Do Canal",
+        "tags": [
+          "Capa do TikTok"
+        ]
+      },
+      "put": {
+        "description": "D-938: troca só o desenho; componentes e posições continuam os do modal.",
+        "operationId": "escolher_estilo_da_capa_do_canal_api_capa_tiktok_estilo_do_canal_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstiloDaCapaDoCanal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstiloDaCapaDoCanal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Escolher Estilo Da Capa Do Canal",
         "tags": [
           "Capa do TikTok"
         ]
