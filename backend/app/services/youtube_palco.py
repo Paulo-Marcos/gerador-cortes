@@ -42,6 +42,10 @@ _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-youtube-palco.mjs"
 # D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
 # 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
 _TIMEOUT_DO_GERADOR_SEG = 300
+# D-942: o que o `remotion still` escreve quando o Chrome não atende em 25 s.
+_CHROME_NAO_ATENDEU = "while trying to connect to the browser"
+_TENTATIVAS_COM_CHROME_MUDO = 3
+_ESPERA_ENTRE_TENTATIVAS_SEG = 5
 
 
 def _cache_dir() -> Path:
@@ -327,6 +331,37 @@ def _com_componentes_do_canal(props: dict[str, Any]) -> dict[str, Any]:
     return {**props, "componentes": palco_componentes.props_para_palco()}
 
 
+async def _rodar_gerador(destino: Path, props_path: str) -> tuple[int, str]:
+    """Roda o gen-youtube-palco.mjs; repete só quando o Chrome não atendeu (D-942).
+
+    O `remotion still` espera o Chrome por 25 s fixos. Com o bundle e os
+    overlays do mesmo render ocupando a máquina, o Chrome passou disso na PROD
+    e o render inteiro bloqueou por uma falha de carga. Outra falha não se
+    repete: é de layout ou de ambiente, e a segunda tentativa daria o mesmo.
+    """
+    for tentativa in range(1, _TENTATIVAS_COM_CHROME_MUDO + 1):
+        try:
+            resultado = await process_runner.rodar(
+                ["node", str(_GEN_SCRIPT), str(destino), props_path],
+                cwd=_REPO_ROOT,
+                timeout=_TIMEOUT_DO_GERADOR_SEG,
+            )
+        except process_runner.ProcessoEstourouOTempo as exc:
+            # Timeout cai no caminho de falha visível de sempre (D-750).
+            return -1, str(exc)
+        chrome_mudo = _CHROME_NAO_ATENDEU in resultado.saida
+        if resultado.returncode == 0 or not chrome_mudo:
+            break
+        if tentativa < _TENTATIVAS_COM_CHROME_MUDO:
+            logger.warning(
+                "gen-youtube-palco: o Chrome nao atendeu (tentativa %d de %d); tentando de novo",
+                tentativa,
+                _TENTATIVAS_COM_CHROME_MUDO,
+            )
+            await asyncio.sleep(_ESPERA_ENTRE_TENTATIVAS_SEG)
+    return resultado.returncode, resultado.saida
+
+
 async def _ensure_png_para_props(
     props: dict[str, Any],
     *,
@@ -374,17 +409,7 @@ async def _ensure_png_para_props(
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 json.dump(_com_componentes_do_canal(props), handle)
-            try:
-                resultado = await process_runner.rodar(
-                    ["node", str(_GEN_SCRIPT), str(destino), props_path],
-                    cwd=_REPO_ROOT,
-                    timeout=_TIMEOUT_DO_GERADOR_SEG,
-                )
-                returncode, saida = resultado.returncode, resultado.saida
-            except process_runner.ProcessoEstourouOTempo as exc:
-                # Timeout cai no caminho de falha visível de sempre (D-750).
-                returncode, saida = -1, str(exc)
-
+            returncode, saida = await _rodar_gerador(destino, props_path)
             if returncode != 0:
                 logger.warning(
                     "gen-youtube-palco falhou (rc=%s): %s",
