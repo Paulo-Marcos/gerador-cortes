@@ -181,7 +181,13 @@ def extrair_quadros(material: MaterialDaCapa, pasta: Path) -> list[Path]:
     medidos = [
         quadros_do_video.medir_candidatos(material.video, instantes, regiao) for regiao in regioes
     ]
-    qual = apresentador_entre(lugares, medidos, material.webcam)
+    # A vida que decide é a do ROSTO (D-956): na região ampliada, a de um retrato
+    # pequeno na parede crescia com a cabeça do apresentador entrando nela, e a
+    # dele, grande, diluía o movimento.
+    nos_rostos = [
+        quadros_do_video.medir_candidatos(material.video, instantes, lugar) for lugar in lugares
+    ]
+    qual = apresentador_entre(lugares, nos_rostos, material.webcam)
     if qual is None:
         logger.info("[Quadros] nenhum rosto fixo e vivo perto da frase: vai o banco de fotos")
         return []

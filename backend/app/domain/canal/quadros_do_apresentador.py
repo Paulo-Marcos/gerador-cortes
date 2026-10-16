@@ -56,7 +56,10 @@ MAXIMO_DE_LUGARES = 3
 # qual o lugar é um retrato parado. Medido em oito cortes da PROD (15/10/2026)
 # durante a frase: vídeo comentado pausado, 0,0006 a 0,0015; apresentador
 # ouvindo quieto (a frase era do convidado), 0,0042 e 0,0044; falando, 0,015 a
-# 0,043. O limiar fica entre o pausado e o que ouve.
+# 0,043. O limiar fica entre o pausado e o que ouve. Desde a D-956 a vida é
+# medida na caixa do rosto, e o limiar seguiu valendo (7 cortes, 16/10/2026):
+# pausado 0,0008; retrato na parede 0,012 a 0,041; apresentador falando 0,034
+# a 0,129.
 VIDA_MINIMA = 0.0025
 
 # A região do apresentador a partir do rosto: cabeça e ombros, como na prova
@@ -173,6 +176,10 @@ def apresentador_entre(
     webcam: Caixa | None = None,
 ) -> int | None:
     """Qual dos lugares é o apresentador, ou `None` quando nenhum serve.
+
+    `medidos` são os quadros da frase medidos na caixa do ROSTO de cada lugar
+    (D-956): na região ampliada, um retrato pequeno na parede ganhava vida com
+    a cabeça do apresentador entrando nela.
 
     Primeiro a webcam que o operador marcou no layout do corte (`crop_facecam`):
     é ele quem sabe onde o apresentador fica. Entre os lugares dentro dela, e
