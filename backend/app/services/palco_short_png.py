@@ -23,6 +23,7 @@ semanas a este projeto (D-384).
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -31,15 +32,24 @@ import tempfile
 from pathlib import Path
 
 from app.core import channel_paths
+from app.core.por_loop import PorLoop
 from app.services import remotion_still
+from app.services.render.pipeline_render_helpers import fingerprint_do_bundle_async
 
 logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-short-palco.mjs"
-# D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
-# 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
+_RENDERER_DIR = _REPO_ROOT / "video-renderer"
+# D-964: o pacote do palco do short (webpack do palco-short-entry), um por versão
+# do renderer. Pasta própria: o entry não é o do palco do YouTube (D-963).
+_PACOTES_DIR = _RENDERER_DIR / ".bundle-cache-short"
+# D-750: só existe para um Chromium travado não prender o render para sempre.
+# D-964: com o pacote pronto, o node só faz o still.
 _TIMEOUT_DO_GERADOR_SEG = 300
+# D-964: a vez que empacota. Mesmo prazo do palco do YouTube (D-963): o webpack
+# leva 60 s com a máquina quieta e passa de 300 s com os overlays rodando.
+_TIMEOUT_COM_EMPACOTAMENTO_SEG = 1800
 
 # Quantos bytes do fim da saída do gerador entram no log quando ele falha.
 _SAIDA_TAIL = 1200
@@ -48,6 +58,10 @@ _SAIDA_TAIL = 1200
 # mesmo arranjo disparam dois `remotion still` sobre o MESMO arquivo — e o
 # segundo lê um PNG pela metade.
 _em_voo: set[str] = set()
+
+# D-964: enquanto o pacote não existe, só um node por vez o monta; os outros
+# esperam e saem direto para o still. Um por event loop (D-700).
+_vez_de_empacotar: PorLoop[asyncio.Lock] = PorLoop(asyncio.Lock)
 
 
 def _cache_dir() -> Path:
@@ -151,10 +165,27 @@ async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
     """Roda o gerador repetindo quando o Chrome não atende (D-950, D-949).
 
     Timeout vira código -1: cai no mesmo caminho de falha de um gerador que
-    quebrou, em vez de levantar e derrubar quem chamou (D-750).
+    quebrou, em vez de levantar e derrubar quem chamou (D-750). D-964: o node
+    recebe o pacote do palco; se ele falta, só um por vez o monta.
     """
+    pacote = await _pacote_do_palco()
+    argumentos = ["node", str(_GEN_SCRIPT), str(destino), props_path, str(pacote)]
+    if not (pacote / "index.html").exists():
+        async with _vez_de_empacotar.obter():
+            if not (pacote / "index.html").exists():
+                return await remotion_still.rodar_gerador(
+                    argumentos, cwd=_REPO_ROOT, timeout=_TIMEOUT_COM_EMPACOTAMENTO_SEG
+                )
     return await remotion_still.rodar_gerador(
-        ["node", str(_GEN_SCRIPT), str(destino), props_path],
-        cwd=_REPO_ROOT,
-        timeout=_TIMEOUT_DO_GERADOR_SEG,
+        argumentos, cwd=_REPO_ROOT, timeout=_TIMEOUT_DO_GERADOR_SEG
     )
+
+
+async def _pacote_do_palco() -> Path:
+    """Pasta do pacote do palco do short para a versão atual do renderer (D-964).
+
+    Mesma impressão digital do bundle dos overlays (src, configuração e os assets
+    do canal que o webpack embute — D-190): mudou o renderer ou o canal, muda a
+    pasta, e o gerador monta um pacote novo.
+    """
+    return _PACOTES_DIR / await fingerprint_do_bundle_async(_RENDERER_DIR)

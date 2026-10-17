@@ -115,6 +115,15 @@ async def test_palco_do_short_travado_deixa_o_render_seguir_sem_moldura(
     gerador_travado, monkeypatch, tmp_path
 ):
     monkeypatch.setattr(palco_short_png, "_cache_dir", lambda: tmp_path)
+    # D-964: com o pacote do palco pronto, o node só faz o still (prazo de 300 s).
+    pacote = tmp_path / "pacote"
+    pacote.mkdir()
+    (pacote / "index.html").write_text("ok", encoding="utf-8")
+
+    async def _pacote_pronto():
+        return pacote
+
+    monkeypatch.setattr(palco_short_png, "_pacote_do_palco", _pacote_pronto)
 
     palco = await palco_short_png._gerar(
         "chave", tmp_path / "palco.png", {"fundo": "hud-forte", "janelas": []}
