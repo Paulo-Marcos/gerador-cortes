@@ -41,6 +41,7 @@ import { SlotPreview } from './SlotPreview';
 import { componenteDoGrupo, edicaoDoRascunho } from './ComponentesArrastaveis';
 import { PresetsNaFaixa } from './BarraDePresets';
 import { cenaDeExemplo } from './ExemploDoCard';
+import { cardsDoPreset, mudouDesdeOPreset } from './mudancasDoPreset';
 import { estiloDasCenasDe } from '@/shared/palco/palcoLimpo';
 import { EstiloNoModal } from '@/features/channels/EstiloNoModal';
 import type { AlvoDoEstilo } from '@/features/channels/palcoDoEscopo';
@@ -356,14 +357,13 @@ export function PosicionamentoModal({
     () => (presetSelecionadoObj ? fundoPlacaDoPreset(presetSelecionadoObj) : {}),
     [presetSelecionadoObj],
   );
-  const presetTemMudancas = Boolean(
-    presetConfigOriginal &&
-      (!sharedConfigEquals(presetConfigOriginal, config) ||
-        (presetExtrasOriginais.fundo != null && presetExtrasOriginais.fundo !== draftFundo) ||
-        (presetExtrasOriginais.placa != null &&
-          (presetExtrasOriginais.placa.nome !== draftPlaca.nome ||
-            presetExtrasOriginais.placa.papel !== draftPlaca.papel))),
-  );
+  const presetTemMudancas = mudouDesdeOPreset({
+    configOriginal: presetConfigOriginal,
+    configMudou: (original) => !sharedConfigEquals(original, config),
+    extras: presetExtrasOriginais,
+    fundo: draftFundo, placa: draftPlaca, // D-951: os cards do palco também contam
+    cards: { doPreset: cardsDoPreset(presetSelecionadoObj?.payload, palco.efetivo?.cards), atuais: palco.paraPreset()?.cards },
+  });
 
   const handleAtualizarPreset = () => {
     if (!presetSelecionadoObj || !presetTemMudancas) return;
@@ -502,7 +502,7 @@ export function PosicionamentoModal({
                   config={config}
                   rectKey={grupoAtivo === 'cards' ? 'zona_card' : rectKey}
                   comZonaDosCards={!isFullMode}
-                  exemplo={grupoAtivo === 'cards' && exemplo && palco.componentes ? { cena: cenaDeExemplo(exemplo, isFullMode ? null : sharedVerticalCardZone(config)), estiloCenas: estiloDasCenasDe(palco.componentes) } : null}
+                  exemplo={exemplo && palco.componentes ? { cena: cenaDeExemplo(exemplo, isFullMode ? null : sharedVerticalCardZone(config)), estiloCenas: estiloDasCenasDe(palco.componentes) } : null}
                   videoSrc={videoSrc}
                   currentTime={currentTime}
                   fundo={draftFundo}

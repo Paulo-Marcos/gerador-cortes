@@ -62,7 +62,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase2/CenasPanel.tsx::forwardRef": 399,
   "src/features/editor/fase2/CenasRemotionPreview.tsx::CenasRemotionPreview": 159,
   "src/features/editor/fase2/EditorFase2.tsx::EditorFase2": 357,
-  "src/features/editor/fase2/PosicionamentoModal.tsx::PosicionamentoModal": 500,
+  "src/features/editor/fase2/PosicionamentoModal.tsx::PosicionamentoModal": 499,
   "src/features/editor/fase2/SceneTimeline.tsx::SceneTimeline": 744,
   "src/features/editor/fase2/YoutubeLayoutPanel.tsx::forwardRef": 300,
   "src/features/editor/fase2/posicionamentoControls.tsx::SharedRectEditor": 138,

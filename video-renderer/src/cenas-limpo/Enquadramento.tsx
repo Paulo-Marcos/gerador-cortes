@@ -112,26 +112,6 @@ export const Enquadramento: FC<{ cena: CenaRemotion; children: ReactNode }> = ({
   );
 };
 
-/** As cenas de quadro inteiro (tese, chamada final): scrim no quadro todo e conteúdo no centro. */
-export const QuadroInteiro: FC<{ cena: CenaRemotion; opacidade: number; children: ReactNode }> = ({
-  cena,
-  opacidade,
-  children,
-}) => {
-  const familia = useFonteDoLimpo();
-  const tempo = useTempoDestaCena(cena);
-  const quadro = useQuadroDaCena(tempo.inicio);
-  const fundo = Math.min(assentar(quadro / QUADROS.traco), opacidadeDeSaida(quadro, tempo.fim));
-  return (
-    <TempoDaCenaContext.Provider value={tempo}>
-      <AbsoluteFill style={{ fontFamily: familia }}>
-        <AbsoluteFill style={{ background: `rgba(${GRAFITE},${opacidade})`, opacity: fundo }} />
-        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>{children}</AbsoluteFill>
-      </AbsoluteFill>
-    </TempoDaCenaContext.Provider>
-  );
-};
-
 /** D-926: quanto o card pode crescer no "preencher" (um termo curto não vira um cartaz). */
 export const CRESCIMENTO_MAXIMO = 2.5;
 /** A folga entre o card e a borda da zona, no "preencher". */

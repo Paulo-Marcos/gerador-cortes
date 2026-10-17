@@ -1,9 +1,8 @@
 import type { FC } from "react";
 import type { CenaRemotion } from "../schema";
-import { Mascote } from "../Mascote";
 import { COR_DO_ACENTO } from "../youtube-bg/palco-limpo";
 import { Bloco, COLUNA, GIZ_35, GIZ_55, Kicker, TIPO, Traco, linhasDoBloco } from "./Bloco";
-import { Enquadramento, QuadroInteiro, estaNaZona } from "./Enquadramento";
+import { Enquadramento, estaNaZona } from "./Enquadramento";
 
 // D-916: as cenas LARGAS, de quadro e de rodapé no estilo limpo (canvas
 // "Catálogo B"). Na coluna do palco compartilhado elas encolhem para 440 —
@@ -138,61 +137,13 @@ export const CenaBarraInferiorLimpo: FC<Cena> = ({ cena }) => (
   </Enquadramento>
 );
 
-/** Tese: o quadro inteiro sob um scrim de 60%, o texto no centro. */
-export const CenaTelaCheiaLimpo: FC<Cena> = ({ cena }) => {
-  if (estaNaZona(cena)) {
-    return (
-      <Enquadramento cena={cena}>
-        <Bloco kicker={cena.contexto || "A tese"} titulo={cena.texto} corpo={cena.subtexto} />
-      </Enquadramento>
-    );
-  }
-  return (
-    <QuadroInteiro cena={cena} opacidade={0.6}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 20, maxWidth: 1200 }}>
-        {linhasDoBloco([
-          <Kicker key="k">{cena.contexto || "A tese"}</Kicker>,
-          <div key="t" style={{ fontSize: 72, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em" }}>
-            {cena.texto}
-          </div>,
-          cena.subtexto ? (
-            <div key="s" style={{ ...TIPO.corpo, fontSize: 32 }}>
-              {cena.subtexto}
-            </div>
-          ) : null,
-        ])}
-      </div>
-    </QuadroInteiro>
-  );
-};
-
-/** Chamada final: scrim de 70% e o sapo — a única cena em que ele cresce. */
-export const CenaChamadaFinalLimpo: FC<Cena> = ({ cena }) => {
-  const texto = cena.texto || "A live completa está no canal";
-  if (estaNaZona(cena)) {
-    return (
-      <Enquadramento cena={cena}>
-        <Bloco kicker={cena.contexto || "Até aqui"} titulo={texto} corpo={cena.subtexto} />
-      </Enquadramento>
-    );
-  }
-  return (
-    <QuadroInteiro cena={cena} opacidade={0.7}>
-      <div style={{ display: "flex", alignItems: "center", gap: 56 }}>
-        <Mascote mood={cena.mascotMood || "animado"} tamanho="pequeno" />
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 900 }}>
-          {linhasDoBloco([
-            <div key="t" style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-              {texto}
-            </div>,
-            cena.subtexto ? (
-              <div key="s" style={{ fontSize: 30, fontWeight: 700, color: COR_DO_ACENTO }}>
-                {cena.subtexto}
-              </div>
-            ) : null,
-          ])}
-        </div>
-      </div>
-    </QuadroInteiro>
-  );
-};
+/**
+ * Chamada final: no lugar do card, como as outras (D-951). Ela ocupava o meio da
+ * tela sob um scrim de 70%; agora segue a posição ou a caixa do canal no vídeo
+ * cheio e a zona dos cards na compartilhada.
+ */
+export const CenaChamadaFinalLimpo: FC<Cena> = ({ cena }) => (
+  <Enquadramento cena={cena}>
+    <Bloco kicker={cena.contexto || "Até aqui"} titulo={cena.texto || "A live completa está no canal"} corpo={cena.subtexto} />
+  </Enquadramento>
+);

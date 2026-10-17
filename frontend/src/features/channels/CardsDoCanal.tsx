@@ -6,6 +6,14 @@ import { CampoEscolha, CampoNumero, CampoPosicao, CampoTamanho, type PosicaoEdit
 // Na compartilhada quem posiciona o card é a zona do corte (o retângulo "Cards"
 // do modal de posição), e isso continua lá.
 
+/** D-951: espelha `SEM_LUGAR_NO_LIMPO` do renderer (cenas-limpo/index.tsx). */
+export const SEM_LUGAR_NO_LIMPO: readonly string[] = ['tela_cheia'];
+
+/** Os tipos que o estilo desenha — o exemplo da prévia não oferece o que sairia vazio. */
+export function tiposQueODesenha<T extends { id: string }>(tipos: ReadonlyArray<T>, limpo: boolean): ReadonlyArray<T> {
+  return limpo ? tipos.filter((t) => !SEM_LUGAR_NO_LIMPO.includes(t.id)) : tipos;
+}
+
 export type AjusteDoCard = 'preencher' | 'natural';
 export type AlinhamentoVertical = 'centro' | 'topo' | 'base';
 export type AlinhamentoHorizontal = 'centro' | 'esquerda' | 'direita';
@@ -112,15 +120,17 @@ export function CardsDoCanal({
   valor,
   tipos,
   onMudar,
+  limpo = false,
 }: {
   valor: CardsEditaveis;
   tipos: ReadonlyArray<{ id: string; nome: string }>;
   onMudar: (valor: CardsEditaveis) => void;
+  limpo?: boolean;
 }) {
   return (
     <fieldset className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
       <legend className="px-1 text-xs font-medium text-text-300">Cards (cenas)</legend>
-      <TiposDeCard valor={valor} tipos={tipos} onMudar={onMudar} />
+      <TiposDeCard valor={valor} tipos={tipos} onMudar={onMudar} limpo={limpo} />
       <AjustesDosCards valor={valor} onMudar={onMudar} />
       <p className="text-xs text-[var(--wb-text-dim)]">
         Na tela compartilhada o card fica na zona de cada corte (modal de posição); o modo acima diz como ele
@@ -136,11 +146,14 @@ export function TiposDeCard({
   tipos,
   onMudar,
   colunas = 'sm:grid-cols-2 lg:grid-cols-3',
+  limpo = false,
 }: {
   valor: CardsEditaveis;
   tipos: ReadonlyArray<{ id: string; nome: string }>;
   onMudar: (valor: CardsEditaveis) => void;
   colunas?: string;
+  /** D-951: no limpo a tela cheia (tese) não existe — fica desligada e diz por quê. */
+  limpo?: boolean;
 }) {
   const alternar = (id: string, mostrar: boolean) =>
     onMudar({
@@ -151,12 +164,21 @@ export function TiposDeCard({
     <div className="grid gap-1.5" role="group" aria-label="Tipos de card que aparecem no vídeo">
       <span className="text-xs font-medium text-text-300">Aparecem no vídeo</span>
       <div className={`grid gap-1 ${colunas}`}>
-        {tipos.map((tipo) => (
-          <label key={tipo.id} className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
-            <input type="checkbox" checked={!valor.ocultos.includes(tipo.id)} onChange={(e) => alternar(tipo.id, e.target.checked)} />
-            {tipo.nome}
-          </label>
-        ))}
+        {tipos.map((tipo) => {
+          const semLugar = limpo && SEM_LUGAR_NO_LIMPO.includes(tipo.id);
+          return (
+            <label key={tipo.id} className="flex items-center gap-2 text-sm text-[var(--wb-text)] aria-disabled:opacity-50" aria-disabled={semLugar}>
+              <input
+                type="checkbox"
+                disabled={semLugar}
+                checked={!semLugar && !valor.ocultos.includes(tipo.id)}
+                onChange={(e) => alternar(tipo.id, e.target.checked)}
+              />
+              {tipo.nome}
+              {semLugar && <span className="text-[11px] text-[var(--wb-text-dim)]">(não existe no limpo)</span>}
+            </label>
+          );
+        })}
       </div>
     </div>
   );
