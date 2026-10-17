@@ -25,11 +25,19 @@ Salvar — ela é a imagem local, um blob —, mas o envio da capa ao TikTok só
 termina ~6 s depois, quando a página chama `post_draft/get_image_urls`. Quem
 publica nesse intervalo publica sem capa. A miniatura prova que a PÁGINA tem a
 capa; só o recibo prova que o TIKTOK a tem.
+
+## O recibo de QUAL capa (D-958)
+
+Medido em 17/10/2026: salvar um quadro do vídeo também chama o recibo. Um
+Salvar clicado antes de o editor ler a imagem salvava o quadro, e o robô dava a
+capa por aplicada. O recibo só conta depois de o TikTok pedir o envio de uma
+imagem do tamanho exato do arquivo da capa.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 from collections.abc import Callable
@@ -49,6 +57,8 @@ TENTATIVAS = 2
 RECIBO_DA_CAPA = "post_draft/get_image_urls"
 # Mediu ~6 s com uma imagem de 10 KB; a arte de verdade pesa megabytes.
 SEGUNDOS_PARA_O_RECIBO = 60.0
+# D-958: o respiro entre entregar a capa e procurar o Salvar (ver `enviar_arquivo`).
+MS_PARA_O_EDITOR_LER_A_CAPA = 1500
 
 CAPA_FORA_DO_DISCO = "A capa nao esta mais em disco; o TikTok vai congelar um frame."
 
@@ -62,18 +72,48 @@ class PaginaQueOuve(Pagina, Protocol):
 class PaginaNoTikTok(PaginaDoPlaywright):
     """A `PaginaDoPlaywright` com o ouvido que só a capa do TikTok pede."""
 
+    # D-958: o tamanho da última capa entregue — é por ele que o envio dela se
+    # reconhece na rede. Zero: nenhuma capa entregue, e a resposta basta.
+    _tamanho_da_capa = 0
+
+    def enviar_arquivo(self, alvo: str, caminho: Path, *, segundos: float) -> None:
+        """Entrega o arquivo; sendo a capa, guarda o tamanho e dá tempo ao editor.
+
+        Medido em 17/10/2026: com o Salvar clicado 0,05 s depois da entrega, o
+        editor ainda não tinha lido a imagem, e o TikTok salvou um quadro do
+        vídeo. O Salvar segue habilitado nesse instante; ele só se desabilita
+        quando o editor começa a processar a imagem.
+        """
+        super().enviar_arquivo(alvo, caminho, segundos=segundos)
+        if alvo == "campo_da_capa":
+            self._tamanho_da_capa = Path(caminho).stat().st_size
+            self._page.wait_for_timeout(MS_PARA_O_EDITOR_LER_A_CAPA)
+
     def escutar_resposta(self, trecho: str) -> Callable[[float], bool]:
         """Começa a ouvir JÁ; devolve a espera: `esperar(segundos) -> chegou?`.
 
         Ouvir antes do clique é o ponto: a resposta pode chegar antes de quem
         clicou voltar a olhar, e evento passado não se escuta depois.
+
+        D-958: com uma capa entregue, a resposta só conta DEPOIS de o TikTok
+        pedir o envio de uma imagem do tamanho exato dela. Salvar um quadro do
+        vídeo também chama o recibo, mas sobe outras imagens.
         """
         chegou = threading.Event()
+        capa_subindo = threading.Event()
+        envio_da_capa = re.compile(rf"[?&]FileSize={self._tamanho_da_capa}(&|$)")
+        if not self._tamanho_da_capa:
+            capa_subindo.set()
+
+        def pedir(pedido) -> None:
+            if "FileType=image" in pedido.url and envio_da_capa.search(pedido.url):
+                capa_subindo.set()
 
         def ouvir(resposta) -> None:
-            if trecho in resposta.url and resposta.ok:
+            if trecho in resposta.url and resposta.ok and capa_subindo.is_set():
                 chegou.set()
 
+        self._page.on("request", pedir)
         self._page.on("response", ouvir)
 
         def esperar(segundos: float) -> bool:
@@ -81,6 +121,7 @@ class PaginaNoTikTok(PaginaDoPlaywright):
             # O Playwright síncrono só entrega eventos durante uma chamada a ele.
             while not chegou.is_set() and time.monotonic() < limite:
                 self._page.wait_for_timeout(250)
+            self._page.remove_listener("request", pedir)
             self._page.remove_listener("response", ouvir)
             return chegou.is_set()
 

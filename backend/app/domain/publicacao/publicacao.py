@@ -348,3 +348,29 @@ def pode_publicar_sozinho(capa_pedida: bool, capa_aplicada: bool, avisos: list[s
         avisos.append(NAO_PUBLIQUEI_SEM_CAPA)
         return False
     return True
+
+
+NAO_PUBLIQUEI_SEM_CAPA_VERTICAL = (
+    "Nao publiquei sozinho porque este corte nao tem a capa vertical do TikTok. "
+    "Gere a capa na tela do corte, ponha na aba e publique."
+)
+
+
+def segurar_sem_capa_vertical(
+    plataforma: str, capa: str, publicar_sozinho: bool
+) -> tuple[bool, list[str]]:
+    """RN-26 (D-958): no corte deitado, a capa vertical é sempre pedida.
+
+    O "sem capa pedida, publica" vale para o short, que já é 9:16. O corte
+    horizontal sem a capa vertical sobe com um quadro qualquer (D-522) — é o
+    mesmo que a capa não ter entrado, e o robô não aperta Publicar sozinho.
+    Devolve o `publicar_sozinho` que vale e o aviso que explica a troca.
+
+    >>> segurar_sem_capa_vertical("tiktok_horizontal", "", True)[0]
+    False
+    >>> segurar_sem_capa_vertical("tiktok", "", True)
+    (True, [])
+    """
+    if publicar_sozinho and plataforma == Plataforma.TIKTOK_HORIZONTAL.value and not capa:
+        return False, [NAO_PUBLIQUEI_SEM_CAPA_VERTICAL]
+    return publicar_sozinho, []

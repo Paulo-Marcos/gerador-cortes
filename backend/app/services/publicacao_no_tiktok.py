@@ -16,7 +16,7 @@ from uuid import uuid4
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
-from app.domain.publicacao.publicacao import legenda_unica
+from app.domain.publicacao.publicacao import legenda_unica, segurar_sem_capa_vertical
 from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido, marca_da_aba
 from app.models import Corte
 from app.services import janela_do_robo, tiktok_studio
@@ -78,6 +78,9 @@ async def _subir_e_entregar(
     # PRIMEIRA aba de upload — a de outro corte — e podia marcar este sem ele
     # ter saído, liberando a limpeza do MP4 (D-512).
     marca = marca_da_aba(uuid4().hex[:12])
+    sozinho, avisos = segurar_sem_capa_vertical(
+        pacote.get("plataforma", ""), capa, publicar_sozinho
+    )
 
     try:
         relatorio = await tiktok_studio.subir_assistido(
@@ -86,7 +89,7 @@ async def _subir_e_entregar(
             capa=Path(capa) if capa else None,
             marca=marca,
             agendamento=agendamento,
-            publicar_sozinho=publicar_sozinho,
+            publicar_sozinho=sozinho,
         )
     except RoteiroInterrompido as exc:
         # D-893: parar no PUBLICAR é parar depois do clique — o post pode ter
@@ -95,6 +98,7 @@ async def _subir_e_entregar(
         if exc.passo == Passo.PUBLICAR:
             await _entregar_a_aba_ao_operador(corte_id, marca)
         raise
+    relatorio = {**relatorio, "avisos": [*avisos, *relatorio.get("avisos", [])]}
 
     if relatorio.get("publicado"):
         # Quem apertou Publicar foi o robô: não há aba a vigiar nem janela a
