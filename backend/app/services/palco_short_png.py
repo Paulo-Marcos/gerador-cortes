@@ -30,7 +30,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from app.core import channel_paths, process_runner
+from app.core import channel_paths
+from app.services import remotion_still
 
 logger = logging.getLogger(__name__)
 
@@ -147,18 +148,13 @@ async def _gerar(chave: str, destino: Path, props: dict) -> Path | None:
 
 
 async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
-    """Roda o gerador pelo runner único de processo externo (D-750).
+    """Roda o gerador repetindo quando o Chrome não atende (D-950, D-949).
 
-    O runner guarda o fallback síncrono do event loop Selector do Windows (D-369).
     Timeout vira código -1: cai no mesmo caminho de falha de um gerador que
-    quebrou, em vez de levantar e derrubar quem chamou.
+    quebrou, em vez de levantar e derrubar quem chamou (D-750).
     """
-    try:
-        resultado = await process_runner.rodar(
-            ["node", str(_GEN_SCRIPT), str(destino), props_path],
-            cwd=_REPO_ROOT,
-            timeout=_TIMEOUT_DO_GERADOR_SEG,
-        )
-    except process_runner.ProcessoEstourouOTempo as exc:
-        return -1, str(exc)
-    return resultado.returncode, resultado.saida
+    return await remotion_still.rodar_gerador(
+        ["node", str(_GEN_SCRIPT), str(destino), props_path],
+        cwd=_REPO_ROOT,
+        timeout=_TIMEOUT_DO_GERADOR_SEG,
+    )
