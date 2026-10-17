@@ -87,7 +87,14 @@ export function PainelDoComponente({ aba, ...props }: Props & { aba: Aba }) {
     );
   }
   if (aba === 'cards') {
-    return <CardsDoCanal valor={rascunho.cards} tipos={efetivo.tipos_de_cena} onMudar={(cards) => onMudar({ ...rascunho, cards })} />;
+    return (
+      <CardsDoCanal
+        valor={rascunho.cards}
+        tipos={efetivo.tipos_de_cena}
+        limpo={rascunho.estilo === 'limpo'}
+        onMudar={(cards) => onMudar({ ...rascunho, cards })}
+      />
+    );
   }
   return (
     <div className="grid gap-3">

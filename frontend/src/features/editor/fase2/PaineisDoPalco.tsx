@@ -76,6 +76,7 @@ export function AbaixoDaPrevia({ grupo, palco, global }: Pick<ContextoDoPalco, '
       valor={palco.rascunho.cards}
       tipos={palco.efetivo.tipos_de_cena}
       colunas="grid-cols-3 xl:grid-cols-5"
+      limpo={palco.rascunho.estilo === 'limpo'}
       onMudar={(cards) => palco.mudar((r) => r && { ...r, cards })}
     />
   );

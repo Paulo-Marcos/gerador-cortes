@@ -18,7 +18,6 @@ import {
   CenaFonteLimpo,
   CenaLinhaTempoLimpo,
   CenaListaLimpo,
-  CenaTelaCheiaLimpo,
 } from "./cenas-largas";
 import { useEstiloDasCenas } from "./estilo-das-cenas";
 
@@ -32,7 +31,6 @@ export {
 
 /** D-916: tipo → cena no estilo limpo. Todos os tipos de `renderCenaV2` têm par aqui. */
 export const CENAS_LIMPAS: Record<string, FC<{ cena: CenaRemotion }>> = {
-  tela_cheia: CenaTelaCheiaLimpo,
   barra_inferior: CenaBarraInferiorLimpo,
   card_informacao: CenaCardLimpo,
   destaque_numerico: CenaNumeroLimpo,
@@ -52,12 +50,19 @@ export const CENAS_LIMPAS: Record<string, FC<{ cena: CenaRemotion }>> = {
 };
 
 /**
+ * D-951: tipos que o estilo limpo não desenha. A tese de quadro inteiro tampava
+ * o vídeo com um scrim — o oposto do limpo, onde o card é decoração do vídeo.
+ */
+export const SEM_LUGAR_NO_LIMPO: readonly string[] = ["tela_cheia"];
+
+/**
  * A cena no estilo do canal: some quando o tipo está escondido, sai pelo Bloco
  * no estilo limpo, e no estilo de sempre cai no desenho que já existia.
  */
 export const CenaNoEstilo: FC<{ cena: CenaRemotion; atual: ReactNode }> = ({ cena, atual }) => {
   const { estilo, ocultos } = useEstiloDasCenas();
   if (ocultos.includes(cena.tipo)) return null;
+  if (estilo === "limpo" && SEM_LUGAR_NO_LIMPO.includes(cena.tipo)) return null;
   const Limpa = estilo === "limpo" ? CENAS_LIMPAS[cena.tipo] : undefined;
   return <>{Limpa ? <Limpa cena={cena} /> : atual}</>;
 };
