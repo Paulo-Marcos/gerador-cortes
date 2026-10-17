@@ -519,7 +519,9 @@ class TestRaiaAssistidaDoTikTok:
             }
 
         async def _aguardar(*, marca="", segundos=None, parar=None):
-            eventos.append(f"esperou:{marca[:16]}")
+            # D-952: a marca inteira. Cortar em 16 deixava só 3 hex do UUID depois
+            # do prefixo, e duas abas colidiam 1 vez em 4096 (falso vermelho no CI).
+            eventos.append(f"esperou:{marca}")
             estado.setdefault("vigiadas", []).append(marca)
             if estado.get("vigilia") is not None:
                 await estado["vigilia"].wait()
@@ -534,12 +536,22 @@ class TestRaiaAssistidaDoTikTok:
         return eventos, estado
 
     @pytest.mark.asyncio
-    async def test_nao_espera_o_anterior_sair_para_subir_o_proximo(self, ambiente, robo):
+    async def test_nao_espera_o_anterior_sair_para_subir_o_proximo(
+        self, ambiente, robo, monkeypatch
+    ):
         """D-799: o operador revisa tudo de uma vez no fim, em vez de ficar de
         babá um vídeo por vez. Cada aba tem a sua marca (D-564), então vigiar
         várias ao mesmo tempo não confunde qual publicou (D-512)."""
+        from uuid import UUID
+
+        from app.services import destinos_assistidos
+
         _, raias = ambiente
         eventos, _ = robo
+        # D-952: as duas marcas começam igual de propósito; distinguir as abas
+        # não pode depender da sorte do UUID.
+        uuids = iter([UUID(int=0xBE30 << 112), UUID(int=0xBE31 << 112)])
+        monkeypatch.setattr(destinos_assistidos, "uuid4", lambda: next(uuids))
 
         lote = await lote_svc.criar(
             alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
