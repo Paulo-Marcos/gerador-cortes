@@ -127,6 +127,15 @@ async def test_palco_do_short_travado_deixa_o_render_seguir_sem_moldura(
 @pytest.mark.asyncio
 async def test_palco_do_youtube_travado_vira_falha_visivel(gerador_travado, monkeypatch, tmp_path):
     monkeypatch.setattr(youtube_palco, "_cache_dir", lambda: tmp_path)
+    # D-963: com o pacote do palco pronto, o node só faz o still (prazo de 300 s).
+    pacote = tmp_path / "pacote"
+    pacote.mkdir()
+    (pacote / "index.html").write_text("ok", encoding="utf-8")
+
+    async def _pacote_pronto():
+        return pacote
+
+    monkeypatch.setattr(youtube_palco, "_pacote_do_palco", _pacote_pronto)
     props = {
         "fundo": "f",
         "placa": {},
