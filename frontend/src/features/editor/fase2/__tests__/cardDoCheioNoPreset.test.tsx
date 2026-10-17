@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { SEM_CAIXA, TiposDeCard, type CardsEditaveis } from '@/features/channels/CardsDoCanal';
+import { SEM_CAIXA, TiposDeCard, tiposQueODesenha, type CardsEditaveis } from '@/features/channels/CardsDoCanal';
 import { cardsDoPreset, cardsMudaram, mudouDesdeOPreset } from '../mudancasDoPreset';
 
 // D-951: o card do vídeo cheio no modal de posição — sempre à vista, ligado ao
@@ -75,6 +75,11 @@ describe('a tela cheia não existe no limpo (D-951)', () => {
     const html = renderToStaticMarkup(<TiposDeCard valor={cards()} tipos={tipos} onMudar={vi.fn()} limpo />);
     expect(html).toContain('(não existe no limpo)');
     expect(html.match(/disabled=""/g)).toHaveLength(1);
+  });
+
+  it('o card de exemplo da prévia não oferece a tese no limpo', () => {
+    expect(tiposQueODesenha(tipos, true).map((t) => t.id)).toEqual(['chamada_final']);
+    expect(tiposQueODesenha(tipos, false)).toEqual(tipos);
   });
 
   it('no estilo de sempre ela continua como era', () => {

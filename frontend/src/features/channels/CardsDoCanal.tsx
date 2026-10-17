@@ -9,6 +9,11 @@ import { CampoEscolha, CampoNumero, CampoPosicao, CampoTamanho, type PosicaoEdit
 /** D-951: espelha `SEM_LUGAR_NO_LIMPO` do renderer (cenas-limpo/index.tsx). */
 export const SEM_LUGAR_NO_LIMPO: readonly string[] = ['tela_cheia'];
 
+/** Os tipos que o estilo desenha — o exemplo da prévia não oferece o que sairia vazio. */
+export function tiposQueODesenha<T extends { id: string }>(tipos: ReadonlyArray<T>, limpo: boolean): ReadonlyArray<T> {
+  return limpo ? tipos.filter((t) => !SEM_LUGAR_NO_LIMPO.includes(t.id)) : tipos;
+}
+
 export type AjusteDoCard = 'preencher' | 'natural';
 export type AlinhamentoVertical = 'centro' | 'topo' | 'base';
 export type AlinhamentoHorizontal = 'centro' | 'esquerda' | 'direita';

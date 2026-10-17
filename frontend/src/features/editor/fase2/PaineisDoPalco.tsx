@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
-import { AjustesDosCards, TiposDeCard } from '@/features/channels/CardsDoCanal';
+import { AjustesDosCards, TiposDeCard, tiposQueODesenha } from '@/features/channels/CardsDoCanal';
 import { PainelDoComponente } from '@/features/channels/PalcoDoTipoNoModal';
 import { EscolhaDoExemplo } from './ExemploDoCard';
 import type { usePalcoDoModal } from '@/features/channels/usePalcoDoModal';
@@ -56,7 +56,7 @@ export function PainelDoPalco({ grupo, ...ctx }: ContextoDoPalco & { grupo: 'fun
   }
   if (grupo === 'cards') {
     const exemplo = palco.efetivo && ctx.onExemplo && (
-      <EscolhaDoExemplo tipos={palco.efetivo.tipos_de_cena} valor={ctx.exemplo ?? ''} onEscolher={ctx.onExemplo} />
+      <EscolhaDoExemplo tipos={tiposQueODesenha(palco.efetivo.tipos_de_cena, palco.rascunho?.estilo === 'limpo')} valor={ctx.exemplo ?? ''} onEscolher={ctx.onExemplo} />
     );
     return (
       <div className="grid gap-3">
