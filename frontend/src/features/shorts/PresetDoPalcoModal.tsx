@@ -7,8 +7,9 @@ import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { mudancaDoPalco, palcoDoShort } from './aplicarPalco';
+import { presetComPalco, useGuardarPresetDePalco, usePalcoDoPresetEmEdicao } from './palcoDoPreset';
 import { shortsApi, type AtualizarShortBody, type ShortSugerido } from './shortsApi';
-import { PALCO_KEY, useGuardarPresetPadrao, usePalcoPadrao } from './useShortsDoCorte';
+import { PALCO_KEY, usePalcoPadrao } from './useShortsDoCorte';
 import { Icon } from '@/upgrade/Icon';
 
 // D-594: criar e editar um PALCO a partir do menu de padrões do corte.
@@ -121,12 +122,11 @@ function EditorDoPresetDePalco({
     placeholderData: keepPreviousData,
   });
 
-  const { gravando, erro, apagando, salvar, apagar } = useGuardarPresetPadrao({
-    tipo: 'palco_short',
-    corteId,
-    editando,
-    onClose,
-  });
+  // D-960: o palco do estilo (nome, @, cabeçalho, legenda) também é do preset.
+  const palco = usePalcoDoPresetEmEdicao(corteId, origem?.payload);
+  const { gravando, erro, apagando, salvar, apagar } = useGuardarPresetDePalco({ corteId, editando, onClose });
+  const guardar = () =>
+    void salvar(nome, presetComPalco(palcoDoShort(rascunho), palco.estilo, palco.paraPreset()), virarPadrao);
 
   const rodape = (
     <div className="space-y-2">
@@ -141,7 +141,7 @@ function EditorDoPresetDePalco({
         <Button
           size="sm"
           disabled={!nome.trim() || gravando}
-          onClick={() => void salvar(nome, palcoDoShort(rascunho), virarPadrao)}
+          onClick={guardar}
         >
           {gravando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="save" />}
           {editando ? 'Salvar alterações' : 'Criar preset'}
@@ -189,6 +189,7 @@ function EditorDoPresetDePalco({
             ? `Novo palco — partindo de "${origem.nome}"`
             : 'Novo palco para o corte',
         rodape,
+        palco,
       }}
     />
   );

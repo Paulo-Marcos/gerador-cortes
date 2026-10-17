@@ -10,7 +10,7 @@ import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA } from './LegendaPrevia';
 import { LegendaArrastavel } from './LegendaArrastavel';
 import { EstiloNoModal } from '@/features/channels/EstiloNoModal';
-import { PalcoDoShortNoModal, tituloDoPalco, usePalcoDoShort } from './PalcoDoShortNoModal';
+import { PalcoDoShortNoModal, tituloDoPalco, usePalcoNoModal, type PalcoDoShort } from './PalcoDoShortNoModal';
 import { RascunhoDoPalcoContext } from '@/features/channels/useChannels';
 import {
   LARGURA_MAX,
@@ -84,7 +84,7 @@ interface Props {
    * moldura e preset de recortes. Um controle cuja escolha não é salva é pior
    * que um que falta: o operador ajusta, salva, e o preset sai sem aquilo.
    */
-  rascunho?: { campos: Record<string, unknown>; titulo: string; rodape: React.ReactNode };
+  rascunho?: { campos: Record<string, unknown>; titulo: string; rodape: React.ReactNode; palco?: PalcoDoShort };
 }
 
 export function DefinirPalcoModal({
@@ -182,7 +182,7 @@ export function DefinirPalcoModal({
   // gastar um PATCH por pixel, do mesmo jeito que a simulação do palco faz.
   const [arrastandoLegenda, setArrastandoLegenda] = useState<LugarDaLegenda | null>(null);
   const lugarDaLegenda = arrastandoLegenda ?? lugarGravado;
-  const palco = usePalcoDoShort(corteId, open); // D-923: o palco do short DESTE corte (o canal não muda)
+  const palco = usePalcoNoModal(corteId, open, rascunho?.palco); // D-923/D-960: o do corte, ou o do preset em edição
   const secoes = numerarSecoes({ emPreset: Boolean(rascunho), limpo: palco.estilo === 'limpo' }); // D-937
   const quadroRef = useRef<HTMLDivElement>(null);
   const legendaNoLugarDela = temLugarProprio(short);
@@ -481,7 +481,7 @@ export function DefinirPalcoModal({
               <TexturaDoAtual short={short} plano={plano} ocupado={ocupado} onAplicar={onAplicar} />
             </Secao>
           )}
-          {secoes.palcoLimpo && <Secao numero={secoes.palcoLimpo} titulo={tituloDoPalco('limpo')}><PalcoDoShortNoModal palco={palco} /></Secao>}
+          {secoes.palco && <Secao numero={secoes.palco} titulo={tituloDoPalco(palco.estilo)}><PalcoDoShortNoModal palco={palco} emPreset={Boolean(rascunho)} /></Secao>}
 
           <Secao numero={secoes.legenda} titulo="A legenda">
             {/* D-563: a cor da palavra CORRENTE, e só dela.
