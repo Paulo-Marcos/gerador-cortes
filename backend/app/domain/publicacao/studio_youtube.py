@@ -6,9 +6,11 @@ valem só para quem sobe pelo navegador — medido: o vídeo da API chega com a
 monetização desligada mesmo com o padrão ligado) e o "vídeo relacionado" do
 Short. Quem faz é o robô, na janela logada do operador.
 
-RN-27: o robô só toca em vídeo que o app ACABOU de subir, e só com o interruptor
-do canal ligado. O relacionado do short é o corte de onde ele saiu — short cujo
-corte ainda não está no YouTube sobe sem relacionado, e não com um qualquer.
+RN-27: o robô só toca em vídeo que o app ACABOU de subir — e nos 3 do topo de
+cada aba, para pegar o que escapou na rodada anterior (D-959) —, e só com o
+interruptor do canal ligado. O relacionado do short é o corte de onde ele
+saiu — short cujo corte ainda não está no YouTube sobe sem relacionado, e não
+com um qualquer.
 """
 
 from __future__ import annotations
@@ -19,6 +21,9 @@ from dataclasses import dataclass, replace
 from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 
 URL_DO_STUDIO = "https://studio.youtube.com"
+# D-959: às vezes o Studio deixa um vídeo sem monetizar; a edição em massa leva
+# sempre os 3 mais recentes da aba, e o que escapou numa rodada sai na seguinte.
+QUANTOS_RECENTES = 3
 # A sessão caiu: o Studio manda para o login do Google em vez de abrir o vídeo.
 TRECHO_DO_LOGIN = "accounts.google.com"
 
@@ -62,6 +67,18 @@ def atualizados_do_aviso(texto: str) -> tuple[int, int] | None:
             return int(atualizados), int(total)
         case _:
             return None
+
+
+def id_da_linha(href: str | None) -> str:
+    """O id do vídeo no link de uma linha da lista de Conteúdo; "" se não é um.
+
+    >>> id_da_linha("/video/abcdefghijk/edit")
+    'abcdefghijk'
+    >>> id_da_linha("/channel/UCx/videos")
+    ''
+    """
+    achado = re.search(r"/video/([\w-]{11})/", href or "")
+    return achado.group(1) if achado else ""
 
 
 def url_da_edicao(video_id: str) -> str:
@@ -165,3 +182,13 @@ def a_monetizar(tarefas: list[TarefaNoStudio], *, shorts: bool) -> list[str]:
     ['bbbbbbbbbbb']
     """
     return [t.video_id for t in tarefas if t.monetizar and t.short == shorts]
+
+
+def com_os_recentes(ids: list[str], recentes: list[str]) -> list[str]:
+    """O lote e, depois dele, os mais recentes da aba que ainda não estão nele (D-959, RN-27).
+
+    >>> com_os_recentes(["a", "b"], ["b", "c", "d", "e"])
+    ['a', 'b', 'c', 'd']
+    """
+    topo = recentes[:QUANTOS_RECENTES]
+    return ids + [v for v in dict.fromkeys(topo) if v not in ids]

@@ -25,13 +25,16 @@ from typing import Protocol
 from app.core import channel_paths
 from app.domain.compartilhado.erros import ServicoExternoFalhou
 from app.domain.publicacao.studio_youtube import (
+    QUANTOS_RECENTES,
     TRECHO_DO_LOGIN,
     URL_DO_STUDIO,
     TarefaNoStudio,
     a_monetizar,
     atualizados_do_aviso,
     canal_da_url,
+    com_os_recentes,
     esta_monetizado,
+    id_da_linha,
     juntar,
     tarefa_do_upload,
     url_da_edicao,
@@ -97,6 +100,7 @@ class PaginaDoStudio(Protocol):
     def escrever(self, alvo: str, texto: str, *, segundos: float) -> None: ...
     def clicar_cartao_do_video(self, alvo: str, video_id: str, *, segundos: float) -> None: ...
     def marcar_video(self, alvo: str, video_id: str, *, segundos: float) -> bool: ...
+    def ids_no_topo(self, alvo: str, quantos: int, *, segundos: float) -> list[str]: ...
     def habilitado(self, alvo: str) -> bool: ...
     def aguardar(self, segundos: float) -> None: ...
     def fechar(self) -> None: ...
@@ -129,6 +133,17 @@ class PaginaDoPlaywrightNoStudio(navegador_assistido.PaginaDoPlaywright):
         if caixa.locator("#checkbox").get_attribute("aria-checked") != "true":
             caixa.click(timeout=segundos * 1000)
         return True
+
+    def ids_no_topo(self, alvo: str, quantos: int, *, segundos: float) -> list[str]:
+        """Os ids das primeiras linhas da lista, do mais novo ao mais velho (D-959).
+
+        Pelo link de edição de cada linha, como `marcar_video`.
+        """
+        ids = []
+        for linha in self._page.locator(self._css(alvo)).all()[:quantos]:
+            link = linha.locator('a[href*="/video/"]').first
+            ids.append(id_da_linha(link.get_attribute("href", timeout=segundos * 1000)))
+        return [v for v in ids if v]
 
     def habilitado(self, alvo: str) -> bool:
         try:
@@ -296,13 +311,16 @@ def monetizar_em_massa(
 ) -> list[str]:
     """Marca os vídeos na lista → Editar → Monetização On → Update videos → confirma.
 
-    Devolve o que ficou de fora: vídeo fora da primeira página da aba (o lote
-    recém-subido está no topo) ou o Studio atualizando menos do que pedimos.
+    Os 3 do topo da aba vão junto (D-959): o que o Studio deixou sem monetizar
+    numa rodada é pego na seguinte. Devolve o que ficou de fora: vídeo fora da
+    primeira página da aba (o lote recém-subido está no topo) ou o Studio
+    atualizando menos do que pedimos.
     """
     aba = "Shorts" if shorts else "Vídeos"
     _abrir(pagina, url_da_lista(canal, shorts=shorts))
     if not pagina.existe("linha_do_video", segundos=PRAZO_PARA_ABRIR):
         raise ServicoExternoFalhou(f"a aba {aba} da lista de Conteúdo não carregou")
+    ids = com_os_recentes(ids, _ids_no_topo(pagina, aba))
     marcados = [
         v for v in ids if pagina.marcar_video("linha_do_video", v, segundos=PRAZO_POR_LINHA)
     ]
@@ -323,6 +341,15 @@ def monetizar_em_massa(
     if atualizados < total:
         faltando.append(f"o Studio atualizou {atualizados} de {total} na aba {aba}")
     return faltando
+
+
+def _ids_no_topo(pagina: PaginaDoStudio, aba: str) -> list[str]:
+    """Os 3 do topo da aba — a rede de segurança, que não derruba o lote se falhar."""
+    try:
+        return pagina.ids_no_topo("linha_do_video", QUANTOS_RECENTES, segundos=PRAZO_POR_LINHA)
+    except Exception as exc:  # noqa: BLE001 — tela mudou: o lote sai sem os do topo
+        logger.warning("[Studio] não li o topo da aba %s: %s", aba, exc)
+        return []
 
 
 def _esperar_habilitado(pagina: PaginaDoStudio, alvo: str) -> None:

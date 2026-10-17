@@ -104,6 +104,10 @@ class PaginaFalsa:
         self.passos.append(("marcar", video_id))
         return True
 
+    def ids_no_topo(self, alvo, quantos, *, segundos):
+        # Os 3 do topo da aba (D-959) moram no dublê da D-959; aqui, só o lote.
+        return []
+
     def clicar(self, alvo, *, segundos):
         self.passos.append(("clicar", alvo))
 
