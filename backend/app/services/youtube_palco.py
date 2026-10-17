@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core import channel_paths, process_runner
+from app.core.por_loop import PorLoop
 from app.domain.corte.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,
@@ -31,6 +32,7 @@ from app.domain.corte.youtube_layout import (
     regioes_full_posicionadas,
     resolver_layout_em_cascata,
 )
+from app.services.render.pipeline_render_helpers import fingerprint_do_bundle_async
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +41,15 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 # `channel_paths.palco_cache_dir()` para seguir o canal ATIVO (D-156) — mesma
 # pasta que `_resolve_shared_fg_png` no ffmpeg_commands consome.
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-youtube-palco.mjs"
-# D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
-# 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
+_RENDERER_DIR = _REPO_ROOT / "video-renderer"
+# D-963: o pacote do palco (webpack do palco-entry), um por versão do renderer.
+_PACOTES_DIR = _RENDERER_DIR / ".bundle-cache-palco"
+# D-750: só existe para um Chromium travado não prender o render para sempre.
+# D-963: com o pacote pronto, o PNG leva ~19 s (medido no DEV).
 _TIMEOUT_DO_GERADOR_SEG = 300
+# D-963: a vez que empacota. Mesmo prazo do bundle dos overlays: o webpack leva
+# 60 s com a máquina quieta e passou de 300 s com os overlays rodando na PROD.
+_TIMEOUT_COM_EMPACOTAMENTO_SEG = 1800
 # D-942: o que o `remotion still` escreve quando o Chrome não atende em 25 s.
 _CHROME_NAO_ATENDEU = "while trying to connect to the browser"
 _TENTATIVAS_COM_CHROME_MUDO = 3
@@ -120,6 +128,10 @@ class PalcoPngGeracaoError(RuntimeError):
 # Dedupe de gerações concorrentes da MESMA chave — sem isso, salvar o layout
 # várias vezes dispara N bundles do Remotion em paralelo (o "storm").
 _inflight: set[str] = set()
+
+# D-963: enquanto o pacote não existe, só um node por vez o monta; os outros
+# esperam e saem direto para o still. Um por event loop (D-700).
+_vez_de_empacotar: PorLoop[asyncio.Lock] = PorLoop(asyncio.Lock)
 
 
 def _coerce_layout(layout_youtube: Any) -> dict | None:
@@ -339,13 +351,11 @@ async def _rodar_gerador(destino: Path, props_path: str) -> tuple[int, str]:
     e o render inteiro bloqueou por uma falha de carga. Outra falha não se
     repete: é de layout ou de ambiente, e a segunda tentativa daria o mesmo.
     """
+    pacote = await _pacote_do_palco()
+    argumentos = ["node", str(_GEN_SCRIPT), str(destino), props_path, str(pacote)]
     for tentativa in range(1, _TENTATIVAS_COM_CHROME_MUDO + 1):
         try:
-            resultado = await process_runner.rodar(
-                ["node", str(_GEN_SCRIPT), str(destino), props_path],
-                cwd=_REPO_ROOT,
-                timeout=_TIMEOUT_DO_GERADOR_SEG,
-            )
+            resultado = await _rodar_com_o_pacote(argumentos, pacote)
         except process_runner.ProcessoEstourouOTempo as exc:
             # Timeout cai no caminho de falha visível de sempre (D-750).
             return -1, str(exc)
@@ -360,6 +370,27 @@ async def _rodar_gerador(destino: Path, props_path: str) -> tuple[int, str]:
             )
             await asyncio.sleep(_ESPERA_ENTRE_TENTATIVAS_SEG)
     return resultado.returncode, resultado.saida
+
+
+async def _pacote_do_palco() -> Path:
+    """Pasta do pacote do palco para a versão atual do renderer (D-963).
+
+    Mesma impressão digital do bundle dos overlays (src, configuração e os assets
+    do canal que o webpack embute — D-190): mudou o renderer ou o canal, muda a
+    pasta, e o gerador monta um pacote novo.
+    """
+    return _PACOTES_DIR / await fingerprint_do_bundle_async(_RENDERER_DIR)
+
+
+async def _rodar_com_o_pacote(argumentos: list[str], pacote: Path) -> process_runner.Resultado:
+    """Roda o gerador; se o pacote falta, só um por vez o monta (D-963)."""
+    if not (pacote / "index.html").exists():
+        async with _vez_de_empacotar.obter():
+            if not (pacote / "index.html").exists():
+                return await process_runner.rodar(
+                    argumentos, cwd=_REPO_ROOT, timeout=_TIMEOUT_COM_EMPACOTAMENTO_SEG
+                )
+    return await process_runner.rodar(argumentos, cwd=_REPO_ROOT, timeout=_TIMEOUT_DO_GERADOR_SEG)
 
 
 async def _ensure_png_para_props(
