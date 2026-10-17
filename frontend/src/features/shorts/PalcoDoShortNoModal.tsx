@@ -25,23 +25,38 @@ export function usePalcoDoShort(corteId: string, aberto: boolean) {
   };
 }
 
+export type PalcoDoShort = ReturnType<typeof usePalcoDoShort>;
+
+/** D-960: o palco do modal — o do preset em edição, ou o do corte (que grava sozinho). */
+export function usePalcoNoModal(corteId: string, aberto: boolean, doPreset?: PalcoDoShort): PalcoDoShort {
+  const doCorte = usePalcoDoShort(corteId, aberto && !doPreset);
+  return doPreset ?? doCorte;
+}
+
 export const tituloDoPalco = (estilo: 'atual' | 'limpo') =>
   `Palco do short · estilo ${estilo === 'limpo' ? 'Limpo' : 'Atual'}`;
 
-export function PalcoDoShortNoModal({ palco }: { palco: ReturnType<typeof usePalcoDoModal> }) {
+/**
+ * D-960: no preset (`emPreset`) nada grava no corte: o palco vai junto quando o
+ * preset é salvo, e o rodapé do corte não se aplica.
+ */
+export function PalcoDoShortNoModal({ palco, emPreset = false }: { palco: ReturnType<typeof usePalcoDoModal>; emPreset?: boolean }) {
   const { mudou, aplicar, rascunho } = palco;
   useEffect(() => {
-    if (!mudou) return;
+    if (!mudou || emPreset) return;
     const id = window.setTimeout(() => aplicar(), FOLGA_MS);
     return () => window.clearTimeout(id);
     // `aplicar` muda a cada render; o gatilho é o rascunho.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rascunho, mudou]);
+  }, [rascunho, mudou, emPreset]);
 
   if (!palco.rascunho || !palco.efetivo) return null;
   return (
     <div className="grid gap-2">
       <PalcoDoTipoNoModal tipo="short" rascunho={palco.rascunho} efetivo={palco.efetivo} onMudar={palco.mudar} />
+      {emPreset ? (
+        <p className="text-[11.5px] text-[var(--wb-text-mute)]">Vai junto no preset: aplicá-lo traz este palco.</p>
+      ) : (
       <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-[var(--wb-text-mute)]">
         <span>{palco.salvando ? 'Salvando no corte…' : 'Vale só para os shorts deste corte.'}</span>
         {palco.origem === 'corte' && (
@@ -50,6 +65,7 @@ export function PalcoDoShortNoModal({ palco }: { palco: ReturnType<typeof usePal
           </Button>
         )}
       </div>
+      )}
     </div>
   );
 }

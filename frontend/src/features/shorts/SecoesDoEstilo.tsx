@@ -21,7 +21,8 @@ export const QUADRO_DO_SHORT = { largura: 1080, altura: 1920 };
 export interface SecoesDoModal {
   moldura?: number;
   fundo?: number;
-  palcoLimpo?: number;
+  /** O palco do estilo (cabeçalho, nome, @, legenda…) antes da legenda. */
+  palco?: number;
   legenda: number;
   preset: number;
   janelasDoAtual?: number;
@@ -29,11 +30,12 @@ export interface SecoesDoModal {
 
 /**
  * As seções depois das três fixas (arranjo, janelas, tamanho), numeradas na
- * ordem em que aparecem. No preset não há moldura nem palco do corte.
+ * ordem em que aparecem. No preset não há moldura, e o palco vem antes de
+ * guardar (D-960): é parte do que o preset leva.
  */
 export function numerarSecoes({ emPreset, limpo }: { emPreset: boolean; limpo: boolean }): SecoesDoModal {
-  if (emPreset) return { fundo: 4, legenda: 5, preset: 6 };
-  if (limpo) return { moldura: 4, palcoLimpo: 5, legenda: 6, preset: 7 };
+  if (emPreset) return limpo ? { palco: 4, legenda: 5, preset: 6 } : { fundo: 4, palco: 5, legenda: 6, preset: 7 };
+  if (limpo) return { moldura: 4, palco: 5, legenda: 6, preset: 7 };
   return { moldura: 4, fundo: 5, legenda: 6, preset: 7, janelasDoAtual: 8 };
 }
 

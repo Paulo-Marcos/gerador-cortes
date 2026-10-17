@@ -43,17 +43,23 @@ describe('seções do modal por estilo (D-937)', () => {
     const limpo = numerarSecoes({ emPreset: false, limpo: true });
     expect(limpo.fundo).toBeUndefined();
     expect(limpo.janelasDoAtual).toBeUndefined();
-    expect(limpo).toMatchObject({ moldura: 4, palcoLimpo: 5, legenda: 6, preset: 7 });
+    expect(limpo).toMatchObject({ moldura: 4, palco: 5, legenda: 6, preset: 7 });
   });
 
   it('no antigo ficam a textura e as janelas do antigo, sem o palco limpo', () => {
     const atual = numerarSecoes({ emPreset: false, limpo: false });
-    expect(atual.palcoLimpo).toBeUndefined();
+    expect(atual.palco).toBeUndefined();
     expect(atual).toMatchObject({ moldura: 4, fundo: 5, legenda: 6, preset: 7, janelasDoAtual: 8 });
   });
 
-  it('no preset não há moldura nem palco do corte, e a numeração não pula', () => {
-    expect(numerarSecoes({ emPreset: true, limpo: true })).toEqual({ fundo: 4, legenda: 5, preset: 6 });
+  // D-960: o preset montado pelos padrões do corte também segue o estilo — no
+  // limpo, sem a textura do antigo e com o palco (nome, @, cabeçalho, legenda).
+  it('no preset do limpo não há moldura nem textura, e o palco limpo entra', () => {
+    expect(numerarSecoes({ emPreset: true, limpo: true })).toEqual({ palco: 4, legenda: 5, preset: 6 });
+  });
+
+  it('no preset do antigo ficam a textura e o palco do antigo, antes de guardar', () => {
+    expect(numerarSecoes({ emPreset: true, limpo: false })).toEqual({ fundo: 4, palco: 5, legenda: 6, preset: 7 });
   });
 });
 
