@@ -29,7 +29,7 @@ export {
   type EstiloDasCenas,
 } from "./estilo-das-cenas";
 
-/** D-916: tipo → cena no estilo limpo. Todos os tipos de `renderCenaV2` têm par aqui. */
+/** D-916: tipo → cena no estilo limpo. Todo tipo de `renderCenaV2` tem par aqui, menos os de `SEM_LUGAR_NO_LIMPO`. */
 export const CENAS_LIMPAS: Record<string, FC<{ cena: CenaRemotion }>> = {
   barra_inferior: CenaBarraInferiorLimpo,
   card_informacao: CenaCardLimpo,
