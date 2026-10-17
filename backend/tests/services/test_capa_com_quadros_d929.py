@@ -71,7 +71,8 @@ def quadros(tmp_path):
 
 
 class TestRoboComQuadros:
-    def test_quadros_vao_no_lugar_das_fotos_do_banco(self, canal, robo, quadros):
+    def test_quadros_vao_junto_das_fotos_do_banco(self, canal, robo, quadros):
+        """D-962: as fotos do banco deixaram de sair quando há quadros."""
         capa_do_canal.gravar_estilo("apresentador", 95, 40)
 
         asyncio.run(
@@ -79,7 +80,8 @@ class TestRoboComQuadros:
         )
 
         pedido, anexos = robo[0]
-        assert anexos == quadros
+        assert anexos[:3] == quadros
+        assert [a.name for a in anexos[3:]] == ["grade.png"]
         assert "quadros da live no exato momento em que ele diz a frase da capa" in pedido
         assert "smirk" not in pedido
         assert "ignore the facial expressions" not in pedido
