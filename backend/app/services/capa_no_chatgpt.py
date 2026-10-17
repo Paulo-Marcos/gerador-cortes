@@ -440,8 +440,10 @@ async def gerar_imagem_com_quadros(
     return await _gerar(prompt, proporcao, pessoas, anunciar, quadros=quadros)
 
 
-def _referencias_do_apresentador(prompt: str, quadros: list[Path]) -> list[Path]:
-    return quadros or capa_do_canal.fotos_para_o_prompt(prompt)
+def _referencias_do_apresentador(prompt: str, quadros: list[Path]) -> tuple[list[Path], list[Path]]:
+    """Os quadros e as fotos do banco que vão JUNTO deles (D-962); sem quadros, só o banco."""
+    banco = capa_do_canal.fotos_para_o_prompt(prompt)
+    return (quadros, banco) if quadros else (banco, [])
 
 
 async def _gerar(
@@ -463,15 +465,18 @@ async def _gerar(
     ]
     # D-909: no modo apresentador o mascote sai da capa — as fichas dele também.
     apresentador = capa_do_canal.protagonista() == "apresentador"
-    referencias = _referencias_do_apresentador(prompt, quadros) if apresentador else _fichas()
+    referencias, banco = (
+        _referencias_do_apresentador(prompt, quadros) if apresentador else (_fichas(), [])
+    )
     pedido = montar_pedido(
         prompt,
         proporcao,
         [(nome, foto.name) for nome, foto in fotos],
         [r.name for r in referencias] if apresentador else None,
         quadros_da_live=apresentador and bool(quadros),
+        fotos_de_referencia=[f.name for f in banco],
     )
-    anexos = referencias + [foto for _, foto in fotos]
+    anexos = referencias + banco + [foto for _, foto in fotos]
     logger.info(
         "[ChatGPT] gerando capa %s com %d anexo(s), %d de pessoa(s)",
         proporcao,

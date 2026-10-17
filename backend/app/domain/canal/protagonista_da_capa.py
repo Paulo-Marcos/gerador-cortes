@@ -62,10 +62,14 @@ def bloco_do_modo(protagonista: Protagonista, *, mascote: str, expressoes: Seque
         "=== MODO DA CAPA: apresentador ===\n"
         'Siga a seção "MODO apresentador" da skill. O protagonista desta capa é o '
         "APRESENTADOR da live, e o robô anexa imagens reais dele como referência de rosto: "
-        "quadros da própria live no momento em que ele diz a frase da capa e, quando não "
-        "os acha, as fotos do banco. Escreva a cara dele numa linha própria, começando por "
+        "quadros da própria live no momento em que ele diz a frase da capa, junto das fotos "
+        "do banco. Escreva a cara dele numa linha própria, começando por "
         f"{MARCA_DA_EXPRESSAO_DO_APRESENTADOR}, e só nela: com os quadros, o robô troca essa "
         "linha pela expressão real que eles mostram. "
+        # D-962: a capa saía desafiadora, de clickbait, ao lado de convidados sóbrios.
+        "A cara dele é humana e contida, a de quem conversa com o público: nada de olhos "
+        "arregalados, sobrancelhas arqueadas, bochechas infladas, olhar desafiador ou careta "
+        "de desenho animado — nem na pose, nem nas tags, nem na descrição do personagem. "
         f"O {mascote} NÃO entra nesta capa: nem como protagonista, nem como coadjuvante, "
         f"nem citado no prompt final; as regras da skill sobre o {mascote} não valem aqui. "
         "Pessoas citadas no corte continuam podendo aparecer.\n"

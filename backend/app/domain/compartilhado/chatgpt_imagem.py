@@ -98,6 +98,7 @@ def montar_pedido(
     fotos_do_apresentador: Sequence[str] | None = None,
     *,
     quadros_da_live: bool = False,
+    fotos_de_referencia: Sequence[str] = (),
 ) -> str:
     """O texto que vai para o chat: o prompt do app e o quadro que a capa exige.
 
@@ -114,6 +115,8 @@ def montar_pedido(
     `quadros_da_live` (D-929): os anexos não são fotos do banco, e sim quadros
     da live no momento em que ele diz a frase da capa. Deles vem a identidade E
     a expressão; o prompt passa por `prompt_com_quadros` para não pedir outra.
+    `fotos_de_referencia` (D-962) são as fotos do banco que vão junto dos
+    quadros: o rosto bem iluminado que três quadros de webcam não garantem.
     """
     prompt = (prompt or "").strip()
     if not prompt:
@@ -127,9 +130,15 @@ def montar_pedido(
         referencia = (
             f"usando os anexos ({', '.join(fotos_do_apresentador)}) como referência do "
             "apresentador: são quadros da live no exato momento em que ele diz a frase da "
-            "capa. A identidade E a expressão dele vêm desses quadros — reproduza a cara "
-            "que eles mostram, no traço da casa, sem trocar por outra emoção."
+            "capa. A identidade E a expressão dele vêm desses quadros — reproduza a emoção "
+            "que eles mostram em intensidade natural e contida, a de uma pessoa conversando, "
+            "no traço da casa, sem trocar por outra emoção nem exagerá-la."
         )
+        if fotos_de_referencia:
+            referencia += (
+                f" As fotos do banco ({', '.join(fotos_de_referencia)}) são o mesmo homem: "
+                "use-as para o rosto, o cabelo e a barba, não para a expressão."
+            )
     elif fotos_do_apresentador:
         referencia = (
             f"usando as fotos anexas do apresentador ({', '.join(fotos_do_apresentador)}) "
@@ -148,11 +157,18 @@ def montar_pedido(
 
 
 # O que a linha de expressão do apresentador passa a dizer com os quadros (D-929).
+# D-962: "exatamente" copiava a sobrancelha que sobe no meio da fala, e o gerador
+# ainda a exagerava — a capa saía desafiadora, de clickbait. A emoção vem dos
+# quadros; a intensidade é a de uma pessoa real conversando.
 MARCA_DA_EXPRESSAO_DO_APRESENTADOR = "EXPRESSION (host):"
 EXPRESSAO_DOS_QUADROS = (
-    "EXPRESSION (host): exactly the facial expression he shows in the attached live frames, "
-    "captured at the moment he says the cover line — same eyes, brows, mouth and jaw, "
-    "translated into the house style; do not invent a different face."
+    "EXPRESSION (host): the emotion he shows in the attached live frames at the moment he "
+    "says the cover line, at a natural, human, conversational intensity — softened, never "
+    "amplified: brows relaxed near rest, eyes open normally, mouth as in the frames, facial "
+    "acting of a real person in an editorial portrait, not of an animated character. This "
+    "line overrides any other description of the host's face in this prompt. Never "
+    "wide-eyed, never eyebrows arched high, no single raised eyebrow, no puffed cheeks, no "
+    "challenging or intimidating stare, no clickbait or cartoon exaggeration."
 )
 # Frases que as skills escreviam para as fotos do banco ("use as fotos só para a
 # identidade") e que, com os quadros, mandariam o gerador jogar fora a expressão.
@@ -174,8 +190,8 @@ def prompt_com_quadros(prompt: str) -> str:
     regex sobre o prompt: ele chega pela requisição (o cuidado de
     `variacao_prompt.pessoas_do_prompt`).
 
-    >>> prompt_com_quadros("A.\\nEXPRESSION (host): smirk.\\nB.").splitlines()[1][:40]
-    'EXPRESSION (host): exactly the facial ex'
+    >>> prompt_com_quadros("A.\\nEXPRESSION (host): smirk.\\nB.").splitlines()[1][:36]
+    'EXPRESSION (host): the emotion he sh'
     """
     linhas = [
         EXPRESSAO_DOS_QUADROS
