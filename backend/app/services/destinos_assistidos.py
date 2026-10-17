@@ -36,7 +36,12 @@ from types import ModuleType
 from uuid import uuid4
 
 from app.domain.publicacao.agendamento import Agendamento
-from app.domain.publicacao.publicacao import ModoPublicacao, Plataforma, legenda_unica
+from app.domain.publicacao.publicacao import (
+    ModoPublicacao,
+    Plataforma,
+    legenda_unica,
+    segurar_sem_capa_vertical,
+)
 from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido, marca_da_aba
 from app.services import janela_do_robo
 from app.services.destinos_shorts import DestinoManual
@@ -90,7 +95,7 @@ class DestinoAssistido(DestinoManual):
         """O módulo do robô: `subir_assistido`, `aguardar_publicacao`, `perfil_do_chrome`."""
         raise NotImplementedError
 
-    async def _subir(self, pronto: dict, marca: str) -> dict:
+    async def _subir(self, pronto: dict, marca: str, publicar_sozinho: bool) -> dict:
         raise NotImplementedError
 
     @staticmethod
@@ -108,12 +113,16 @@ class DestinoAssistido(DestinoManual):
         # A marca é por ITEM, e não por lote: é ela que diz qual das abas
         # abertas é esta, e duas abas do mesmo lote precisam de nomes diferentes.
         marca = marca_da_aba(uuid4().hex[:12])
+        sozinho, avisos = segurar_sem_capa_vertical(
+            pronto["plataforma"], pronto.get("capa", ""), self.publicar_sozinho
+        )
         try:
-            relatorio = await self._subir(pronto, marca)
+            relatorio = await self._subir(pronto, marca, sozinho)
         except RoteiroInterrompido as exc:
             if exc.passo == Passo.PUBLICAR:
                 raise ConferirNaAba(self, marca, str(exc)) from exc
             raise
+        relatorio = {**relatorio, "avisos": [*avisos, *relatorio.get("avisos", [])]}
 
         if relatorio.get("publicado"):
             return {**pronto, **relatorio, "modo": self.modo.value}
@@ -151,13 +160,13 @@ class DestinoTikTokAssistido(DestinoAssistido):
 
         return tiktok_studio
 
-    async def _subir(self, pronto: dict, marca: str) -> dict:
+    async def _subir(self, pronto: dict, marca: str, publicar_sozinho: bool) -> dict:
         return await self._robo().subir_assistido(
             video=Path(pronto["video"]),
             legenda=self._legenda(pronto),
             capa=self._capa(pronto),
             marca=marca,
-            publicar_sozinho=self.publicar_sozinho,
+            publicar_sozinho=publicar_sozinho,
             agendamento=self.agendamento,
         )
 
@@ -188,13 +197,13 @@ class DestinoInstagramReelsAssistido(DestinoAssistido):
 
         return instagram_reels
 
-    async def _subir(self, pronto: dict, marca: str) -> dict:
+    async def _subir(self, pronto: dict, marca: str, publicar_sozinho: bool) -> dict:
         relatorio = await self._robo().subir_assistido(
             video=Path(pronto["video"]),
             legenda=self._legenda(pronto),
             capa=self._capa(pronto),
             marca=marca,
-            publicar_sozinho=self.publicar_sozinho,
+            publicar_sozinho=publicar_sozinho,
         )
         if not self.agendamento:
             return relatorio
