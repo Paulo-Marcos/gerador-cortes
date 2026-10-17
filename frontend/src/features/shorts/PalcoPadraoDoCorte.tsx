@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui/button';
+import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
+import { opcoesDoPalcoPadrao, useLevarPalcoDoPresetAoCorte } from './palcoDoPreset';
 import { useDefinirPalcoPadrao, usePalcoPadrao, useSeguirPalcoPadrao } from './useShortsDoCorte';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
@@ -46,11 +48,16 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
   const padrao = usePalcoPadrao(corteId);
   const definir = useDefinirPalcoPadrao(corteId);
   const seguir = useSeguirPalcoPadrao(corteId);
+  // D-960: só os palcos do estilo ativo, e escolher um leva o palco dele ao corte.
+  const doEstilo = useLayoutPresetsDoEstilo({ tipo: 'palco_short' }).data;
+  const levar = useLevarPalcoDoPresetAoCorte(corteId);
 
   if (padrao.isLoading || padrao.isError) return null;
 
-  const disponiveis = padrao.data?.disponiveis ?? [];
   const escolhido = padrao.data?.palco_padrao ?? '';
+  const disponiveis = opcoesDoPalcoPadrao(padrao.data?.disponiveis ?? [], doEstilo, escolhido);
+  const escolher = (id: string) =>
+    definir.mutate(id, { onSuccess: () => levar(doEstilo.find((preset) => preset.id === id)?.payload) });
   const customizados = padrao.data?.customizados ?? 0;
   const semTrecho = 'Crie um trecho antes: o palco é montado sobre o quadro dele.';
 
@@ -77,7 +84,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
           aria-label="Palco padrão deste corte — vale também para a legenda"
           value={escolhido}
           disabled={definir.isPending}
-          onChange={(e) => definir.mutate(e.target.value)}
+          onChange={(e) => escolher(e.target.value)}
           className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
           {/* "cada trecho decide" e não "nenhum": sem padrão o short não fica sem
