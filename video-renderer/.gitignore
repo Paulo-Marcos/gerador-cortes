@@ -12,3 +12,5 @@ out
 .bundle-cache/
 # Pacote do palco do YouTube (D-963), montado pelo gen-youtube-palco.mjs.
 .bundle-cache-palco/
+# Pacote do palco do short (D-964), montado pelo gen-short-palco.mjs.
+.bundle-cache-short/
