@@ -72,8 +72,9 @@ export function useMetadataCard({
   // Emoldurar, comprimir e trocar gravam por cima do MESMO nome de arquivo.
   // Sem trocar a URL, o navegador serve a imagem antiga do cache e a tela passa
   // a mentir sobre o que existe em disco — foi o que aconteceu ao aplicar a
-  // moldura e nada parecer mudar (D-556).
-  const [versaoDaCapa, setVersaoDaCapa] = useState(0);
+  // moldura e nada parecer mudar (D-556). D-968: a versão é a hora da leitura do
+  // metadado — o contador do card zerava ao reabrir o modal e voltava a capa velha.
+  const versaoDaCapa = metaQuery.dataUpdatedAt;
   // D-746: a capa era relida UMA vez, 15 s depois — se demorasse mais, o
   // operador via a antiga e achava que não tinha gerado. Agora confere a cada
   // 5 s por até 90 s, com o aviso "gerando capa…" enquanto isso.
@@ -82,7 +83,6 @@ export function useMetadataCard({
     if (!conferindoCapa) return;
     const tique = window.setInterval(() => {
       void queryClient.invalidateQueries({ queryKey: metadataKey(cut.id) });
-      setVersaoDaCapa((atual) => atual + 1);
     }, 5_000);
     const fim = window.setTimeout(() => setConferindoCapa(false), 90_000);
     return () => {
@@ -200,8 +200,8 @@ export function useMetadataCard({
       }),
   });
 
-  // Capa nova no disco (Ctrl+V, moldura, robô do ChatGPT): fura o cache da imagem.
-  const capaChegou = () => { invalidate(); setVersaoDaCapa((atual) => atual + 1); };
+  // Capa nova no disco (Ctrl+V, moldura, robô do ChatGPT): a releitura fura o cache da imagem.
+  const capaChegou = invalidate;
   const uploadThumbnail = useMutation({
     mutationFn: (file: File) => metadadosApi.uploadThumbnail(cut.id, file),
     onSuccess: () => {

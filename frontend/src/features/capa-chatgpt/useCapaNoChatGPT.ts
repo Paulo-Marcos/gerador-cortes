@@ -1,6 +1,6 @@
 // D-804: camada de I/O (react-query) da capa gerada no ChatGPT.
 import { useEffect, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   capaChatgptApi,
   elencoDaCapa,
@@ -9,6 +9,7 @@ import {
   type ConfiguracaoCapaChatgpt,
   type DestinoDaCapa,
   type PedidoCapaChatgpt,
+  type PessoaDaCapa,
 } from './api';
 
 const CONFIGURACAO_KEY = ['capa-chatgpt', 'configuracao'] as const;
@@ -106,6 +107,44 @@ export function useElencoDaCapa(prompt: string, ligado: boolean) {
     enabled: ligado && Boolean(prompt),
     staleTime: Infinity,
   });
+}
+
+/** Uma pessoa do elenco; `versao` fura o cache da foto que o operador trocou. */
+export type PessoaDoElenco = PessoaDaCapa & { versao?: number };
+
+// D-968: fora de `ELENCO_KEY` de propósito — a foto nova relê os elencos
+// sugeridos, e essa releitura não pode apagar o que o operador conferiu.
+const elencoEditadoKey = (destino: DestinoDaCapa, alvoId: string, origem: string) =>
+  ['capa-chatgpt', 'elenco-editado', destino, alvoId, origem] as const;
+
+/**
+ * Guarda o elenco que o operador conferiu nesta capa. No cache da tela, e não
+ * no estado do botão: fechar e reabrir o modal desmonta o botão, e a foto
+ * trocada sumia (D-968). A origem entra na chave: prompt refeito é outra capa.
+ */
+export function guardarElencoEditado(
+  qc: QueryClient,
+  destino: DestinoDaCapa,
+  alvoId: string,
+  origem: string,
+  pessoas: PessoaDoElenco[],
+) {
+  qc.setQueryData(elencoEditadoKey(destino, alvoId, origem), pessoas);
+}
+
+/** O elenco conferido nesta capa — `undefined` enquanto o operador não mexeu. */
+export function useElencoEditado(destino: DestinoDaCapa, alvoId: string, origem: string) {
+  const qc = useQueryClient();
+  const editado = useQuery<PessoaDoElenco[] | null>({
+    queryKey: elencoEditadoKey(destino, alvoId, origem),
+    queryFn: () => null,
+    enabled: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  }).data;
+  const guardar = (pessoas: PessoaDoElenco[]) =>
+    guardarElencoEditado(qc, destino, alvoId, origem, pessoas);
+  return [editado ?? undefined, guardar] as const;
 }
 
 export const useFotoDaPessoa = () => useMutation({ mutationFn: fotoDaPessoa });

@@ -7,16 +7,17 @@ import {
   retratoUrl,
   type DestinoDaCapa,
   type PedidoCapaChatgpt,
-  type PessoaDaCapa,
 } from './api';
 import {
   pedidoEmVoo,
   useConfiguracaoCapaChatgpt,
   useElencoDaCapa,
+  useElencoEditado,
   useFotoDaPessoa,
   usePedidoDaCapa,
   usePedirNoChatGPT,
   useSubirFotoDaPessoa,
+  type PessoaDoElenco,
 } from './useCapaNoChatGPT';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
@@ -75,7 +76,7 @@ export function GerarNoChatGPT({
   const texto = prompt?.trim() ?? '';
   const pedido = usePedidoDaCapa(destino, alvoId, texto, aoConcluir).data;
   const ocupado = pedir.isPending || pedidoEmVoo(pedido);
-  const elenco = useElencoConferido((promptDoElenco ?? prompt)?.trim() ?? '', configurado);
+  const elenco = useElencoConferido(destino, alvoId, (promptDoElenco ?? prompt)?.trim() ?? '', configurado);
 
   const motivo = !configurado
     ? 'Configure o projeto do ChatGPT em Canais → Capas no ChatGPT.'
@@ -136,7 +137,7 @@ export function AndamentoDoPedido({ pedido }: { pedido?: PedidoCapaChatgpt | nul
 // O elenco da capa (D-840)
 // --------------------------------------------------------------------------- //
 
-type Pessoa = PessoaDaCapa & { versao?: number };
+type Pessoa = PessoaDoElenco;
 
 /** A lista com `pessoa` no lugar de quem tem o mesmo nome, ou no fim. */
 export function comPessoa(lista: Pessoa[], pessoa: Pessoa): Pessoa[] {
@@ -162,16 +163,21 @@ interface ElencoConferido {
 }
 
 /** O elenco sugerido pelo backend até o operador mexer; depois, o dele. */
-function useElencoConferido(origem: string, ligado: boolean): ElencoConferido {
+export function useElencoConferido(
+  destino: DestinoDaCapa,
+  alvoId: string,
+  origem: string,
+  ligado: boolean,
+): ElencoConferido {
   const sugerido = useElencoDaCapa(origem, ligado);
   // Guardado com a origem: prompt refeito é outra capa, e o sugerido volta.
-  const [editado, setEditado] = useState<{ origem: string; pessoas: Pessoa[] } | null>(null);
-  const pessoas = editado?.origem === origem ? editado.pessoas : sugerido.data;
+  const [editado, guardar] = useElencoEditado(destino, alvoId, origem);
+  const pessoas = editado ?? sugerido.data;
   return {
     pessoas,
     buscando: sugerido.isFetching,
     versao: sugerido.dataUpdatedAt,
-    editar: (mudar) => setEditado({ origem, pessoas: mudar(pessoas ?? []) }),
+    editar: (mudar) => guardar(mudar(pessoas ?? [])),
   };
 }
 
