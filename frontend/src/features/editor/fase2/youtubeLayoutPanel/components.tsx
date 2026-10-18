@@ -10,7 +10,7 @@ import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 import { segParaMmSs } from '../../timeUtils';
 import { DefinirSplitButton } from '../DefinirSplitButton';
 import type { YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
-import { MODE_LABEL, MODE_SHORT, round } from './shared';
+import { legendaDoModoDoCorte, MODE_LABEL, MODE_SHORT, round } from './shared';
 import type { OrigemDoTipo } from '../youtubeLayoutPadrao';
 import { limitar } from '@/lib/limitar';
 import { Icon, type IconName } from '@/upgrade/Icon';
@@ -346,12 +346,6 @@ export function ModePills({
 //   - as duas linhas de modo ficam adjacentes e com o MESMO widget, então
 //     "este corte está em Full porque o projeto está em Full" se lê numa
 //     olhada, e mudar o padrão é um clique na linha de baixo.
-const ROTULO_ORIGEM: Record<OrigemDoTipo, string> = {
-  projeto: 'Projeto',
-  global: 'Global',
-  padrao: 'padrão do app',
-};
-
 export function ModoBlock({
   modoCorte,
   onChangeModoCorte,
@@ -383,11 +377,7 @@ export function ModoBlock({
         icon="scissors"
         tone="var(--wb-accent)"
         label="Este corte"
-        caption={
-          herdando
-            ? `↳ herdando do ${ROTULO_ORIGEM[origemTipoProjeto]}: ${MODE_LABEL[tipoProjeto]}`
-            : `sobrescrevendo o Projeto (${MODE_LABEL[tipoProjeto]})`
-        }
+        caption={legendaDoModoDoCorte(herdando, origemTipoProjeto, tipoProjeto)}
         value={modoCorte}
         onChange={onChangeModoCorte}
         herdando={herdando}
