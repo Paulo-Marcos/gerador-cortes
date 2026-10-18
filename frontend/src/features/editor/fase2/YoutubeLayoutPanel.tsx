@@ -85,8 +85,8 @@ export interface Props {
 // Helpers de posicionamento (RECT_LABEL, SharedRectKey, etc.) movidos para
 // `./posicionamentoControls.tsx` e usados pelo PosicionamentoModal.
 
-// Helpers `readPadraoModo` e `draftMatchesPreset` extraidos para
-// `./youtubeLayoutPadrao.ts` (testaveis em isolamento).
+// Helper `draftMatchesPreset` extraido para `./youtubeLayoutPadrao.ts`
+// (testavel em isolamento).
 
 export interface YoutubeLayoutPanelHandle {
   /** Salva se houver pendencias. Retorna true se disparou a mutation. */
@@ -100,7 +100,7 @@ export interface YoutubeLayoutPanelHandle {
 export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
   function YoutubeLayoutPanel(props: Props, ref) {
   const { corteId,   currentTime, duration, onSeek } = props;
-  const { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, herdarModo, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto } = useYoutubeLayoutPanel(props, ref);
+  const { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, herdarModo, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto, origemTipoProjeto } = useYoutubeLayoutPanel(props, ref);
 
 
     return (
@@ -163,17 +163,17 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               )}
             </div>
 
-            {/* D-423: as duas decisões de MODO juntas — a deste corte e a que
-              vale para novos cortes do projeto. A segunda tinha ido parar
-              dentro da linha Projeto da escada (D-421), onde a pílula COMP.
-              não cabia e ficava fora da área visível: não havia como pôr o
-              projeto em Compartilhada. O ↺ devolve o corte ao modo do projeto. */}
+            {/* D-423: as duas decisões de MODO juntas — a deste corte e a de
+              novos cortes. A segunda morava na linha Projeto da escada (D-421),
+              onde a pílula COMP. não cabia: não havia como pôr o projeto em
+              Compartilhada. O ↺ devolve o corte ao modo do projeto. */}
             <ModoBlock
               modoCorte={draft.modo_padrao}
               onChangeModoCorte={handleDefault}
               herdando={modoHerdando}
               onResetCorte={podeVoltarAHerdar(modoHerdando, dirty) ? herdarModo : undefined}
               tipoProjeto={tipoProjeto}
+              origemTipoProjeto={origemTipoProjeto}
               onChangeTipoProjeto={handleDefinirTipoProjeto}
               pendingProjeto={definirPadraoProjetoMutation.isPending}
             />

@@ -40,7 +40,13 @@ import {
   type YoutubePlaca,
   type YoutubeSharedConfig,
 } from '@/shared/palco/youtubeLayout';
-import { montarPadraoJson, padraoComPosicionamento, tipoDoProjeto } from './youtubeLayoutPadrao';
+import {
+  fullFromSynthetic,
+  montarPadraoJson,
+  origemDoTipoDoProjeto,
+  padraoComPosicionamento,
+  tipoDoProjeto,
+} from './youtubeLayoutPadrao';
 import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
@@ -227,6 +233,7 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
     const shared = useMemo(() => sharedRegions(draft, duration), [draft, duration]);
     // D-966: pela cascata — o projeto sem modo próprio herda o do Global.
     const tipoProjeto: YoutubeLayoutMode = tipoDoProjeto(padraoProjetoJson, padraoGlobalJson);
+    const origemTipoProjeto = origemDoTipoDoProjeto(padraoProjetoJson, padraoGlobalJson);
 
     // I-025 / D-966: herda o "Modo" enquanto o corte não grava `modo_padrao` (RN-10).
     // Lido do cache a cada render: é o cache que muda ao primeiro clique nas pílulas.
@@ -460,13 +467,6 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
           ? 'global'
           : 'default';
 
-    // F-060: o modal trabalha com config sintetico de 1 tela quando modo=full;
-    // na persistencia voltamos para o shape {crop, slot}.
-    const fullFromSynthetic = (config: YoutubeSharedConfig): YoutubeFullConfig => ({
-      crop: { ...config.crop_tela },
-      slot: { ...config.slot_tela },
-    });
-
     // Persiste config de posicionamento num escopo, no modo dado. F-060:
     // fundo/placa agora acompanham o posicionamento (vem do modal/preset) nos
     // escopos corte/projeto/global; segmentos herdam do corte e nao recebem.
@@ -662,5 +662,5 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
       );
     };
 
-  return { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, herdarModo, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto };
+  return { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, herdarModo, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto, origemTipoProjeto };
 }
