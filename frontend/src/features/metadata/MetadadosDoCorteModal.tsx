@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,7 @@ import { montarTira } from '@/upgrade/tiraDoCorte';
 import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import { MetadataCard } from '@/features/metadata/MetadataCard';
+import { useFocoDoModal } from '@/features/metadata/useFocoDoModal';
 
 // ─────────────────────────────────────────────────────────────────
 // D-746 · RODADA 3 · consultar o metadado de um corte sem sair da lista.
@@ -84,21 +85,7 @@ export function MetadadosDoCorteModal({
     enabled: !corte,
   });
 
-  useEffect(() => {
-    const gatilho = document.activeElement as HTMLElement | null;
-    caixa.current?.querySelector<HTMLElement>('button')?.focus();
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      // Para aqui: sem isso o Esc segue e fecha o que estiver atrás.
-      e.stopPropagation();
-      aoFechar();
-    };
-    document.addEventListener('keydown', aoTeclar, true);
-    return () => {
-      document.removeEventListener('keydown', aoTeclar, true);
-      gatilho?.focus?.();
-    };
-  }, [aoFechar]);
+  useFocoDoModal(caixa, aoFechar);
 
   const m = meta.data;
   const prompt = m?.prompt_thumbnail ?? '';
