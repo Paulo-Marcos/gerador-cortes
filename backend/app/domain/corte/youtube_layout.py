@@ -228,28 +228,15 @@ def _herdar_do_fallback(layout: dict[str, Any], fallback_layout: Any) -> str | N
 
 
 def _aplicar_modo(layout: dict[str, Any], payload: dict, fallback_modo: str | None) -> None:
+    # RN-10 / D-966: `modo_padrao` gravado e decisao; ausente herda. A leitura
+    # adivinhava pela sentinela {"modo_padrao":"full","regioes":[]} — escolher
+    # FULL num projeto COMP gravava a propria sentinela e voltava a COMP, e uma
+    # regiao nova "configurava" o corte e o fazia virar FULL sozinho.
     modo_payload = _normalizar_modo(payload.get("modo_padrao"))
-    # Um corte "intocado" carrega so a sentinela {"modo_padrao":"full","regioes":[]}.
-    # Nesse caso ele deve JA INICIALIZAR com o modo do padrao do projeto (F-020);
-    # assim que o usuario configura algo (fundo/placa/posicoes/regioes ou escolhe
-    # compartilhada explicitamente), passa a valer o modo do proprio corte.
-    corte_configurado = (
-        "fundo" in payload
-        or "placa" in payload
-        or "compartilhada" in payload
-        or "full" in payload
-        or bool(payload.get("regioes"))
-        or modo_payload == MODO_COMPARTILHADA
-    )
-    # D-712: o corte configurado que NAO escolheu modo herda o do padrao (RN-10:
-    # chave ausente e heranca) — antes caia no "full" fixo, e o preview (que
-    # herdava) mostrava outro modo que o render.
-    if corte_configurado and modo_payload:
+    if modo_payload:
         layout["modo_padrao"] = modo_payload
     elif fallback_modo:
         layout["modo_padrao"] = fallback_modo
-    elif modo_payload:
-        layout["modo_padrao"] = modo_payload
 
 
 def _aplicar_compartilhada(config: dict[str, Any], compartilhada: Any) -> None:

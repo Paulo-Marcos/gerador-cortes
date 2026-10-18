@@ -299,7 +299,7 @@ class TestPrepararOverlayChunksCascadeLayout:
     def _corte_intocado(self) -> dict:
         return {
             "id": "corte-i036",
-            "layout_youtube": json.dumps({"modo_padrao": "full", "regioes": []}),
+            "layout_youtube": json.dumps({"regioes": []}),  # intocado: sem modo (D-966)
             "cenas_remotion": json.dumps(
                 {
                     "cenas": [

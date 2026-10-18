@@ -258,11 +258,9 @@ def test_tela_cheia_sempre_renderiza_como_card():
 
 
 def test_corte_intocado_herda_modo_do_padrao_do_projeto():
-    # F-020: corte ainda na sentinela do banco JA inicializa no modo do padrao.
+    # F-020: corte intocado (sem modo gravado, D-966) JA inicializa no modo do padrao.
     padrao = {"modo_padrao": "compartilhada", "fundo": "hud-topo"}
-    layout = normalizar_layout_youtube(
-        {"modo_padrao": "full", "regioes": []}, fallback_layout=padrao
-    )
+    layout = normalizar_layout_youtube({"regioes": []}, fallback_layout=padrao)
 
     assert layout["modo_padrao"] == MODO_COMPARTILHADA
     assert layout["fundo"] == "hud-topo"
@@ -471,12 +469,13 @@ class TestCascadeLazy:
 
     def test_projeto_padrao_string_serializada_e_respeitado(self):
         # I-025: projeto.layout_youtube_padrao chega como string (Text no DB).
+        # D-966: o corte intocado e o que nasce sem modo gravado.
         # Antes o isinstance(payload, dict) descartava silenciosamente o
         # cascade, e todo corte intocado nascia em 'full' mesmo com projeto
         # configurado como 'compartilhada'.
         projeto_json = json.dumps({"modo_padrao": "compartilhada", "fundo": "cosmograph"})
         resolvido = resolver_layout_em_cascata(
-            corte_layout={"modo_padrao": "full", "regioes": []},
+            corte_layout={"regioes": []},
             projeto_padrao=projeto_json,
         )
         assert resolvido["modo_padrao"] == MODO_COMPARTILHADA

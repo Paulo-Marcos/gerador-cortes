@@ -229,7 +229,7 @@ class Corte(Base):
     cenas_remotion: Mapped[str] = mapped_column(Text, default="[]")
     layout_youtube: Mapped[str] = mapped_column(
         Text,
-        default='{"modo_padrao":"full","regioes":[]}',
+        default='{"regioes":[]}',  # D-966: sem modo_padrao, herda o do projeto (RN-10)
     )
     # E-036/D-487: o preset cujos crops alimentam o PALCO VERTICAL do short.
     # Coluna propria, e nao um campo dentro de `layout_youtube`: aquele bloco e

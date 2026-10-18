@@ -136,17 +136,6 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
   const zonaCard =
     normalizeZonaCard(raw.compartilhada?.zona_card) ?? fallback.compartilhada.zona_card;
 
-  // Corte "intocado" (so a sentinela {modo_padrao:'full',regioes:[]}) JA INICIALIZA
-  // com o modo do padrao do projeto (F-020). Assim que o usuario configura algo
-  // (fundo/placa/posicoes/regioes ou escolhe compartilhada), vale o modo do corte.
-  const corteConfigurado =
-    raw.compartilhada != null ||
-    raw.full != null ||
-    raw.fundo != null ||
-    raw.placa != null ||
-    (Array.isArray(raw.regioes) && raw.regioes.length > 0) ||
-    normalizeMode(raw.modo_padrao) === 'compartilhada';
-
   // F-060: posicionamento FULL (crop + slot proporcional ao crop).
   const fullConfig = normalizeFullConfig(raw.full, fallback.full);
   const rawFullSegmento = (raw as unknown as { full_segmento?: unknown }).full_segmento;
@@ -166,9 +155,10 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
   );
 
   const normalized: YoutubeLayout = {
-    modo_padrao: corteConfigurado
-      ? (normalizeMode(raw.modo_padrao) ?? fallback.modo_padrao)
-      : fallback.modo_padrao,
+    // D-966 (RN-10): modo gravado é decisão; ausente herda. Adivinhar pela
+    // sentinela {modo_padrao:'full', regioes:[]} fazia o FULL escolhido num
+    // projeto COMP voltar a COMP, e a região nova virar o corte em FULL.
+    modo_padrao: normalizeMode(raw.modo_padrao) ?? fallback.modo_padrao,
     fundo: normalizeBackground(raw.fundo, fallback.fundo),
     placa: normalizePlaca(raw.placa, fallback.placa),
     regioes: Array.isArray(raw.regioes)
@@ -721,6 +711,11 @@ function comoObjeto(valor: unknown): LayoutCru {
   return valor && typeof valor === 'object' && !Array.isArray(valor)
     ? { ...(valor as LayoutCru) }
     : {};
+}
+
+/** O corte não decidiu o modo (chave ausente ou ilegível): ele herda (D-966). */
+export function modoHerdado(layoutGravado: unknown): boolean {
+  return normalizeMode(comoObjeto(layoutGravado).modo_padrao) === null;
 }
 
 /** As chaves de primeiro nível cujo valor mudou de `antes` para `depois`. */

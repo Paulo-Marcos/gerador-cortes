@@ -676,7 +676,6 @@
   {
    "nome": "corte:sentinela",
    "corte": {
-    "modo_padrao": "full",
     "regioes": []
    },
    "projeto": null,
@@ -736,7 +735,6 @@
    "nome": "projeto:sentinela",
    "corte": null,
    "projeto": {
-    "modo_padrao": "full",
     "regioes": []
    },
    "global": null,
@@ -796,7 +794,6 @@
    "corte": null,
    "projeto": null,
    "global": {
-    "modo_padrao": "full",
     "regioes": []
    },
    "efetivo": {
@@ -3767,7 +3764,6 @@
   {
    "nome": "corte intocado herda o modo do projeto",
    "corte": {
-    "modo_padrao": "full",
     "regioes": []
    },
    "projeto": {
@@ -3828,7 +3824,6 @@
   {
    "nome": "corte intocado herda o modo do global",
    "corte": {
-    "modo_padrao": "full",
     "regioes": []
    },
    "projeto": null,
@@ -4038,7 +4033,7 @@
    },
    "global": null,
    "efetivo": {
-    "modo_padrao": "compartilhada",
+    "modo_padrao": "full",
     "fundo": "hud-forte",
     "placa": {
      "nome": "",
@@ -4167,7 +4162,7 @@
   },
   {
    "nome": "os tres em texto",
-   "corte": "{\"modo_padrao\": \"full\", \"regioes\": []}",
+   "corte": "{\"regioes\": []}",
    "projeto": "{\"modo_padrao\": \"compartilhada\"}",
    "global": "{\"fundo\": \"cosmograph\"}",
    "efetivo": {

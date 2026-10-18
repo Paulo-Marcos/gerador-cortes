@@ -172,7 +172,7 @@ describe('resolveLayoutChain — cascade global -> projeto -> corte (I-025)', ()
       modo_padrao: 'compartilhada',
       fundo: 'cosmograph',
     });
-    const corteSentinela = { modo_padrao: 'full', regioes: [] };
+    const corteSentinela = { regioes: [] }; // D-966: intocado = sem modo gravado
     const resolvido = resolveLayoutChain(corteSentinela, projetoJson);
     expect(resolvido.modo_padrao).toBe('compartilhada');
     expect(resolvido.fundo).toBe('cosmograph');
