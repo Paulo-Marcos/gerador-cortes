@@ -79,7 +79,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/lives/RankingLivesPage.tsx::RankingLivesPage": 159,
   "src/features/lives/RankingLivesPage.tsx::RankingRow": 167,
   "src/features/metadata/CapaTikTokSlot.tsx::CapaTikTokSlot": 255,
-  "src/features/metadata/MetadadosDoCorteModal.tsx::MetadadosDoCorteModal": 235,
+  "src/features/metadata/MetadadosDoCorteModal.tsx::MetadadosDoCorteModal": 221,
   "src/features/metadata/MetadataCard.tsx::MetadataCard": 612,
   "src/features/metadata/MetadataCard.tsx::PromptImportModal": 129,
   "src/features/metadata/MetadataPage.tsx::MetadataPage": 254,
