@@ -83,14 +83,14 @@ export function CapaTikTokSlot({
   const [copiado, setCopiado] = useState(false);
   // D-534: o caminho da capa nao muda quando ela e refeita — mesmo arquivo,
   // mesma URL —, entao o navegador servia a imagem do cache e o preview ficava
-  // na versao velha. O contador quebra o cache a cada acao concluida.
-  const [versao, setVersao] = useState(0);
+  // na versao velha. D-968: a hora da leitura do metadado (só assina a do card,
+  // sem buscar), e não um contador, que zerava ao reabrir o modal ou trocar de aba.
+  const versao = useQuery({ queryKey: metadataKey(corteId), enabled: false }).dataUpdatedAt;
   const base = resolveThumbUrl(projetoId, capaPath);
   const capaUrl = base ? `${base}${base.includes('?') ? '&' : '?'}v=${versao}` : base;
 
   const aoTerminar = () => {
     setErro('');
-    setVersao((n) => n + 1);
     onAtualizou();
     // D-658: a chave real é ['projeto', id, 'export-status'] — `['export-status']`
     // não é prefixo dela, e a invalidação não atingia nada (o polling de 8 s
