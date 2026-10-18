@@ -40,7 +40,7 @@ import {
   type YoutubePlaca,
   type YoutubeSharedConfig,
 } from '@/shared/palco/youtubeLayout';
-import { montarPadraoJson, tipoDoProjeto } from './youtubeLayoutPadrao';
+import { montarPadraoJson, padraoComPosicionamento, tipoDoProjeto } from './youtubeLayoutPadrao';
 import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
@@ -496,15 +496,7 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
         return;
       }
       const json = escopo === 'projeto' ? padraoProjetoJson : padraoGlobalJson;
-      // D-423 / D-966: definir posicionamento nao decide o modo — o JSON do
-      // escopo fica com o modo que tinha, inclusive AUSENTE (herdando).
-      const novoJson = montarPadraoJson(json, {
-        fundo: extras?.fundo,
-        placa: extras?.placa,
-        ...(modo === 'full'
-          ? { full: fullFromSynthetic(config) }
-          : { compartilhada: config }),
-      });
+      const novoJson = padraoComPosicionamento(json, modo, config, extras);
       if (escopo === 'global') {
         definirPadraoGlobalMutation.mutate(novoJson);
       } else {

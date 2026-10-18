@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { PosicionamentoModal } from '@/features/editor/fase2/PosicionamentoModal';
-import { modoPadraoDoEscopo } from '@/features/editor/fase2/youtubeLayoutPadrao';
 import { settingsApi } from '@/features/settings/api';
 import {
   DEFAULT_YOUTUBE_LAYOUT,
@@ -28,6 +27,11 @@ export function layoutGlobalDe(json: string | null | undefined): YoutubeLayout {
   }
 }
 
+/** O modo do Global como a cascata o lê: sem modo gravado, o padrão do app (D-966). */
+export function modoDoGlobal(json: string | null | undefined) {
+  return layoutGlobalDe(json).modo_padrao;
+}
+
 export function PadraoDoHorizontalNoCanal({ onClose }: { onClose: () => void }) {
   const { data: settings } = useQuery<AppSettings>({
     queryKey: ['app-settings'],
@@ -36,7 +40,7 @@ export function PadraoDoHorizontalNoCanal({ onClose }: { onClose: () => void }) 
   });
   if (!settings) return null;
   const json = settings.youtube_layout_padrao_global;
-  const modo = modoPadraoDoEscopo(json);
+  const modo = modoDoGlobal(json);
   const layout = layoutGlobalDe(json);
   return (
     <PosicionamentoModal

@@ -45,11 +45,6 @@ export interface PadraoPatch {
   full?: YoutubeFullConfig;
 }
 
-/** Modo de um escopo de padrao; sem nada salvo, novos cortes nascem em Full. */
-export function modoPadraoDoEscopo(raw?: string | null): YoutubeLayoutMode {
-  return readPadraoModo(raw) ?? 'full';
-}
-
 /**
  * O tipo do projeto pela cascata (D-966, RN-10): o projeto sem modo próprio
  * herda o do Global. Ler só o JSON do projeto fazia '{}' mostrar FULL.
@@ -102,6 +97,28 @@ export function montarPadraoJson(
   if (patch.compartilhada) novo.compartilhada = patch.compartilhada;
   if (patch.full) novo.full = patch.full;
   return JSON.stringify(novo);
+}
+
+/**
+ * O JSON de um escopo de padrão (Projeto/Global) depois de "Definir
+ * posicionamento" no `modo` dado. D-423 / D-966: o posicionamento nunca decide
+ * o modo — o escopo fica com o que tinha, inclusive AUSENTE (herdando); gravar
+ * o modo herdado pregaria o do Global no projeto (RN-10). Em `full`, o modal
+ * entrega o config sintético de 1 tela (`crop_tela`/`slot_tela`).
+ */
+export function padraoComPosicionamento(
+  padraoAtualJson: string | null | undefined,
+  modo: YoutubeLayoutMode,
+  config: YoutubeSharedConfig,
+  extras?: { fundo?: YoutubeBackgroundId; placa?: YoutubePlaca },
+): string {
+  return montarPadraoJson(padraoAtualJson, {
+    fundo: extras?.fundo,
+    placa: extras?.placa,
+    ...(modo === 'full'
+      ? { full: { crop: { ...config.crop_tela }, slot: { ...config.slot_tela } } }
+      : { compartilhada: config }),
+  });
 }
 
 /**
