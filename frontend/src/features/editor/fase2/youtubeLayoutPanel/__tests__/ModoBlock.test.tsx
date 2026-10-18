@@ -19,6 +19,7 @@ function render(props: Partial<Parameters<typeof ModoBlock>[0]> = {}) {
         onChangeModoCorte={noop}
         herdando
         tipoProjeto="full"
+        origemTipoProjeto="projeto"
         onChangeTipoProjeto={noop}
         pendingProjeto={false}
         {...props}

@@ -28,9 +28,9 @@ const ROTULO_ORIGEM: Record<OrigemDoTipo, string> = {
 };
 
 /**
- * A legenda da linha "Este corte" do ModoBlock (D-970, RN-10): herdando, cita o
- * escopo de onde o modo vem de verdade — antes dizia "do Projeto" mesmo quando
- * o projeto também herdava do Global.
+ * A legenda da linha "Este corte" do ModoBlock (D-970, RN-10): herdando ou
+ * sobrescrevendo, cita o escopo de onde o modo vem de verdade — antes dizia
+ * "do Projeto" mesmo quando o projeto também herdava do Global (D-971).
  */
 export function legendaDoModoDoCorte(
   herdando: boolean,
@@ -39,5 +39,5 @@ export function legendaDoModoDoCorte(
 ): string {
   return herdando
     ? `↳ herdando do ${ROTULO_ORIGEM[origem]}: ${MODE_LABEL[tipoProjeto]}`
-    : `sobrescrevendo o Projeto (${MODE_LABEL[tipoProjeto]})`;
+    : `sobrescrevendo o ${ROTULO_ORIGEM[origem]} (${MODE_LABEL[tipoProjeto]})`;
 }

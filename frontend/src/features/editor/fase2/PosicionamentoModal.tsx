@@ -40,6 +40,7 @@ import { CropPicker } from './CropPicker';
 import { SlotPreview } from './SlotPreview';
 import { componenteDoGrupo, edicaoDoRascunho } from './ComponentesArrastaveis';
 import { PresetsNaFaixa } from './BarraDePresets';
+import { fullFromSynthetic } from './youtubeLayoutPadrao';
 import { cenaDeExemplo } from './ExemploDoCard';
 import { cardsDoPreset, mudouDesdeOPreset } from './mudancasDoPreset';
 import { estiloDasCenasDe } from '@/shared/palco/palcoLimpo';
@@ -332,16 +333,10 @@ export function PosicionamentoModal({
   };
 
   // F-060: payload persistido nos presets — sempre o shape novo com fundo/placa.
-  const payloadAtual = () =>
-    isFullMode
-      ? {
-          full: { crop: { ...config.crop_tela }, slot: { ...config.slot_tela } },
-          fundo: draftFundo,
-          placa: { ...draftPlaca },
-          estilo: estiloDoPalco,
-          palco: palco.paraPreset(),
-        }
-      : { compartilhada: config, fundo: draftFundo, placa: { ...draftPlaca }, estilo: estiloDoPalco, palco: palco.paraPreset() };
+  const payloadAtual = () => ({
+    ...(isFullMode ? { full: fullFromSynthetic(config) } : { compartilhada: config }),
+    fundo: draftFundo, placa: { ...draftPlaca }, estilo: estiloDoPalco, palco: palco.paraPreset(),
+  });
 
   // F-048: detecta o preset selecionado e se o config atual divergiu dele,
   // habilitando "Atualizar preset".

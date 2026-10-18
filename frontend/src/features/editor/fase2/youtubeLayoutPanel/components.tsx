@@ -352,7 +352,7 @@ export function ModoBlock({
   herdando,
   onResetCorte,
   tipoProjeto,
-  origemTipoProjeto = 'projeto',
+  origemTipoProjeto,
   onChangeTipoProjeto,
   pendingProjeto,
 }: {
@@ -364,7 +364,7 @@ export function ModoBlock({
   onResetCorte?: () => void;
   tipoProjeto: YoutubeLayoutMode;
   /** D-970: de onde vem o `tipoProjeto` — a legenda do corte que herda cita a fonte real. */
-  origemTipoProjeto?: OrigemDoTipo;
+  origemTipoProjeto: OrigemDoTipo;
   onChangeTipoProjeto: (modo: YoutubeLayoutMode) => void;
   pendingProjeto: boolean;
 }) {
