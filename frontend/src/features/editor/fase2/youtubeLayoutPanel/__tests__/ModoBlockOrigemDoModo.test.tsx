@@ -16,6 +16,7 @@ function legendaDoCorte(props: Partial<Parameters<typeof ModoBlock>[0]>): string
         onChangeModoCorte={noop}
         herdando
         tipoProjeto="compartilhada"
+        origemTipoProjeto="projeto"
         onChangeTipoProjeto={noop}
         pendingProjeto={false}
         {...props}
