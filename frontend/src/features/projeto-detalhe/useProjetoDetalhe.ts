@@ -1,6 +1,6 @@
 import type { ProviderIA } from '@/lib/providerIa';
 import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { assinarProgresso } from '@/shared/api/realtime';
 import { cortesApi } from '@/features/editor/api/cortes';
 import {
@@ -11,6 +11,7 @@ import {
 import { geracaoIaApi } from '@/features/ia';
 import { projetosApi } from '@/features/projetos/api';
 import { useToast } from '@/components/ui/toaster';
+import { esquecerLegendasDosCortes } from '@/features/shorts/legendasDoCorte';
 import type { ProgressoUpdate } from '@/types/models';
 import { cortesProjetoKey, exportStatusKey, projetoKey } from '@/shared/chavesDeCache';
 import {
@@ -65,17 +66,23 @@ export function useAbrirPastaProjeto() {
   });
 }
 
+/** Após re-baixar a transcrição via json3, todos os cortes têm
+ * transcricao_corte/transcricao_final reescritos no banco. */
+export function aoRefazerTranscricao(qc: QueryClient, projetoId: string) {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) }),
+    qc.invalidateQueries({ queryKey: projetoKey(projetoId) }),
+    qc.invalidateQueries({ queryKey: ['corte'] }),
+    // D-972: e a legenda da prévia dos shorts, que sem isto ficava na antiga.
+    esquecerLegendasDosCortes(qc),
+  ]);
+}
+
 export function useRefazerTranscricao(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => analiseApi.refazerTranscricao(projetoId),
-    onSuccess: () => {
-      // Após re-baixar a transcrição via json3, todos os cortes têm
-      // transcricao_corte/transcricao_final reescritos no banco.
-      qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
-      qc.invalidateQueries({ queryKey: projetoKey(projetoId) });
-      qc.invalidateQueries({ queryKey: ['corte'] });
-    },
+    onSuccess: () => aoRefazerTranscricao(qc, projetoId),
   });
 }
 

@@ -99,7 +99,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/projetos/ProjetoCardAp.tsx::ProjetoCardAp": 334,
   "src/features/settings/AppSettingsControls.tsx::AppSettingsControls": 333,
   "src/features/shorts/BlocosArrastaveis.tsx::BlocosArrastaveis": 120,
-  "src/features/shorts/CabecalhoDoFire.tsx::CabecalhoDoFire": 133,
+  "src/features/shorts/CabecalhoDoFire.tsx::CabecalhoDoFire": 122,
   "src/features/shorts/CandidatoCard.tsx::CandidatoCard": 429,
   "src/features/shorts/CapaModal.tsx::ArteDaCapa": 139,
   "src/features/shorts/CapaModal.tsx::CapaModal": 264,
