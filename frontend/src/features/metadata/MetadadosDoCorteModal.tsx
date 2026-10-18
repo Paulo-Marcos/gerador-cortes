@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { metadataKey } from '@/features/metadata/useMetadataCard';
-import { resolveThumbUrl } from '@/lib/api';
+import { comVersao, resolveThumbUrl } from '@/lib/api';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { Corte, StatusExportCorte } from '@/types/models';
@@ -89,7 +89,7 @@ export function MetadadosDoCorteModal({
 
   const m = meta.data;
   const prompt = m?.prompt_thumbnail ?? '';
-  const capa = resolveThumbUrl(projetoId, m?.thumbnail_path || status.thumbnail_path);
+  const capa = comVersao(resolveThumbUrl(projetoId, m?.thumbnail_path || status.thumbnail_path), meta.dataUpdatedAt);
 
   const copiar = async () => {
     if (await copyTextToClipboard(prompt)) {

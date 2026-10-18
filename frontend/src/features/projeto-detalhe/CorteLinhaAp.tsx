@@ -6,7 +6,7 @@ import { confirmacaoExcluirCorte } from '@/features/editor/regeracaoConfirmacao'
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { resolveThumbUrl } from '@/lib/api';
+import { useCapaDaLinha } from './useCapaDaLinha';
 import { formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
@@ -170,7 +170,7 @@ export function CorteLinhaAp({
     });
 
   const estado = estadoDaLinha(corte, status);
-  const capa = resolveThumbUrl(projetoId, status.thumbnail_path);
+  const capa = useCapaDaLinha(projetoId, status.thumbnail_path);
   const [capaErro, setCapaErro] = useState(false);
   const [metaAberto, setMetaAberto] = useState(false);
   const [porQueAberto, setPorQueAberto] = useState(false);
