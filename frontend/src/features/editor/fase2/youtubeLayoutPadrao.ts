@@ -1,5 +1,6 @@
 import {
   normalizeYoutubeLayout,
+  resolveLayoutChain,
   type YoutubeBackgroundId,
   type YoutubeFullConfig,
   type YoutubeLayout,
@@ -36,8 +37,8 @@ export function readPadraoModo(raw?: string | null): YoutubeLayoutMode | null {
 
 /** Campos que um "Definir" pode escrever num escopo de padrao. */
 export interface PadraoPatch {
-  /** Modo com que novos cortes nascem. Sempre explicito — ver invariante abaixo. */
-  modo_padrao: YoutubeLayoutMode;
+  /** Modo com que novos cortes nascem. Ausente = o escopo mantém o que tem (D-966). */
+  modo_padrao?: YoutubeLayoutMode;
   fundo?: YoutubeBackgroundId;
   placa?: YoutubePlaca;
   compartilhada?: YoutubeSharedConfig;
@@ -47,6 +48,22 @@ export interface PadraoPatch {
 /** Modo de um escopo de padrao; sem nada salvo, novos cortes nascem em Full. */
 export function modoPadraoDoEscopo(raw?: string | null): YoutubeLayoutMode {
   return readPadraoModo(raw) ?? 'full';
+}
+
+/**
+ * O tipo do projeto pela cascata (D-966, RN-10): o projeto sem modo próprio
+ * herda o do Global. Ler só o JSON do projeto fazia '{}' mostrar FULL.
+ */
+export function tipoDoProjeto(projetoJson?: string | null, globalJson?: string | null) {
+  return resolveLayoutChain(undefined, projetoJson, globalJson).modo_padrao;
+}
+
+/**
+ * O ↺ (volta a herdar o modo) só aparece com o painel limpo (D-966): ele grava
+ * na hora, e a resposta do servidor substituiria as edições ainda não salvas.
+ */
+export function podeVoltarAHerdar(modoHerdando: boolean, painelSujo: boolean): boolean {
+  return !modoHerdando && !painelSujo;
 }
 
 /**
@@ -78,7 +95,8 @@ export function montarPadraoJson(
       // JSON corrompido no banco: parte do zero em vez de derrubar o painel.
     }
   }
-  const novo: Record<string, unknown> = { ...base, modo_padrao: patch.modo_padrao };
+  const novo: Record<string, unknown> = { ...base };
+  if (patch.modo_padrao) novo.modo_padrao = patch.modo_padrao;
   if (patch.fundo) novo.fundo = patch.fundo;
   if (patch.placa) novo.placa = patch.placa;
   if (patch.compartilhada) novo.compartilhada = patch.compartilhada;

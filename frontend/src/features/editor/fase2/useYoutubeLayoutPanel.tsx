@@ -28,7 +28,6 @@ import {
   mesclarNoLayoutDoCorte,
   modoHerdado,
   normalizeYoutubeLayout,
-  resolveLayoutChain,
   resolveYoutubeModeAt,
   sharedConfigDoPreset,
   sharedConfigFromFull,
@@ -41,7 +40,7 @@ import {
   type YoutubePlaca,
   type YoutubeSharedConfig,
 } from '@/shared/palco/youtubeLayout';
-import { modoPadraoDoEscopo, montarPadraoJson } from './youtubeLayoutPadrao';
+import { montarPadraoJson, tipoDoProjeto } from './youtubeLayoutPadrao';
 import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
@@ -163,7 +162,7 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
           global_update: true,
         }),
       onSuccess: (updated) => {
-        notify('Padrão global salvo. Vale para TODOS os projetos.', { tone: 'success' });
+        notify('Padrão global salvo. Vale para os projetos que não ajustaram o próprio.', { tone: 'success' });
         queryClient.setQueryData(['projeto', projetoId], updated);
         void queryClient.invalidateQueries({ queryKey: ['projeto'] });
         // F-024: backend tambem persistiu no app-settings — invalida o cache
@@ -226,10 +225,8 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
 
     const activeMode = resolveYoutubeModeAt(draft, currentTime);
     const shared = useMemo(() => sharedRegions(draft, duration), [draft, duration]);
-    const tipoProjeto: YoutubeLayoutMode = modoPadraoDoEscopo(padraoProjetoJson);
-    // D-423: mesmo par leitura/escrita do projeto, para o escopo Global. Sem ele
-    // `persistirEscopo` nao tinha o que preservar e reescrevia `modo_padrao`.
-    const tipoGlobal: YoutubeLayoutMode = modoPadraoDoEscopo(padraoGlobalJson);
+    // D-966: pela cascata — o projeto sem modo próprio herda o do Global.
+    const tipoProjeto: YoutubeLayoutMode = tipoDoProjeto(padraoProjetoJson, padraoGlobalJson);
 
     // I-025 / D-966: herda o "Modo" enquanto o corte não grava `modo_padrao` (RN-10).
     // Lido do cache a cada render: é o cache que muda ao primeiro clique nas pílulas.
@@ -264,12 +261,11 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
     };
 
     // D-966: o ↺ APAGA o modo do corte (volta a herdar); copiar o do projeto gravava uma decisão.
-    const herdarModo = () => {
-      mudadasRef.current.delete('modo_padrao');
-      const modo_padrao = resolveLayoutChain(undefined, padraoProjetoJson, padraoGlobalJson).modo_padrao;
-      setDraft((atual) => ({ ...atual, modo_padrao }));
-      atualizar.mutate({ layout_youtube: { modo_padrao: null } as Record<string, unknown> } as Partial<Corte>);
-    };
+    // Só com o painel limpo (`podeVoltarAHerdar`): a resposta do servidor substitui o cache.
+    const herdarModo = () =>
+      atualizar.mutate({ layout_youtube: { modo_padrao: null } as Record<string, unknown> } as Partial<Corte>, {
+        onError: (error) => notify(error instanceof Error ? error.message : 'Erro ao voltar a herdar o modo.', { tone: 'error' }),
+      });
 
     const handleRegion = (index: number, region: YoutubeLayoutRegion) => {
       const regioes = draft.regioes.map((item, idx) => (idx === index ? region : item));
@@ -500,13 +496,9 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
         return;
       }
       const json = escopo === 'projeto' ? padraoProjetoJson : padraoGlobalJson;
-      // D-423: o `modo_padrao` do escopo e PRESERVADO — definir posicionamento
-      // nao decide com que modo novos cortes nascem. Antes, num escopo ainda
-      // vazio o JSON era remontado a partir de DEFAULT_YOUTUBE_LAYOUT e o
-      // `modo_padrao: 'full'` dele entrava junto, mesmo salvando um preset
-      // Compartilhada.
+      // D-423 / D-966: definir posicionamento nao decide o modo — o JSON do
+      // escopo fica com o modo que tinha, inclusive AUSENTE (herdando).
       const novoJson = montarPadraoJson(json, {
-        modo_padrao: escopo === 'projeto' ? tipoProjeto : tipoGlobal,
         fundo: extras?.fundo,
         placa: extras?.placa,
         ...(modo === 'full'

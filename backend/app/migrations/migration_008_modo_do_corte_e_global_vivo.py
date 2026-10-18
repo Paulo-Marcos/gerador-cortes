@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # O que a leitura antiga (`corte_configurado`) via como "o corte configurou algo".
 _CHAVES_QUE_CONFIGURAVAM = ("fundo", "placa", "compartilhada", "full")
-_MODOS_FULL = ("full", "padrao", "tela_cheia")
+_MODOS_FULL = ("full", "padrao", "default", "tela_cheia")  # os apelidos de `_normalizar_modo`
 
 
 def _como_dict(valor: Any) -> dict[str, Any] | None:
@@ -87,7 +87,7 @@ def _global_salvo() -> str | None:
         from app.services.app_settings import AppSettingsService
 
         return AppSettingsService.get().youtube_layout_padrao_global
-    except Exception:  # noqa: BLE001 — sem o Global, só as cópias ficam para depois
+    except Exception:  # noqa: BLE001 — sem o Global, as cópias ficam (a 008 não roda de novo)
         logger.warning("[D-966] Global ilegível; as cópias nos projetos ficam", exc_info=True)
         return None
 

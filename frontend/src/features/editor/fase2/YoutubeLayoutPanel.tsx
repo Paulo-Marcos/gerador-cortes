@@ -42,6 +42,7 @@ import {
 import { EscopoLadder, ModoBlock, RegionItem } from './youtubeLayoutPanel/components';
 import { MODE_LABEL } from './youtubeLayoutPanel/shared';
 import { useYoutubeLayoutPanel } from './useYoutubeLayoutPanel';
+import { podeVoltarAHerdar } from './youtubeLayoutPadrao';
 import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
@@ -171,7 +172,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               modoCorte={draft.modo_padrao}
               onChangeModoCorte={handleDefault}
               herdando={modoHerdando}
-              onResetCorte={!modoHerdando ? herdarModo : undefined}
+              onResetCorte={podeVoltarAHerdar(modoHerdando, dirty) ? herdarModo : undefined}
               tipoProjeto={tipoProjeto}
               onChangeTipoProjeto={handleDefinirTipoProjeto}
               pendingProjeto={definirPadraoProjetoMutation.isPending}
