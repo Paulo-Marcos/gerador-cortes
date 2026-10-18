@@ -2,7 +2,7 @@ fastapi==0.142.2
 uvicorn[standard]==0.54.0
 sqlalchemy[asyncio]==2.1.4
 aiosqlite==0.22.1
-pydantic==2.13.5
+pydantic==2.14.1
 pydantic-settings==2.15.0
 httpx==0.28.1
 python-multipart==0.0.32
@@ -31,7 +31,7 @@ google-auth-oauthlib==1.5.0
 google-auth-httplib2==0.4.4
 Pillow==12.3.0
 # A 0.7.1 tirou o extra [opencv]; o opencv ja e declarado abaixo, com versao nossa.
-scenedetect==0.7.1
+scenedetect==0.7.2
 
 # O opencv e do scenedetect, mas a VERSAO e nossa (D-583) — e desde a 0.7.1
 # ele nao vem mais de carona: sem esta linha, nao seria instalado.
