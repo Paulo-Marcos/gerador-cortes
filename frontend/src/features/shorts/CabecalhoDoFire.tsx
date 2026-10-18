@@ -1,7 +1,13 @@
-import { OverflowMenu } from '@/components/ui/overflow-menu';
+import { type QueryClient, useIsFetching, useQueryClient } from '@tanstack/react-query';
+import { OverflowMenu, type OverflowMenuItem } from '@/components/ui/overflow-menu';
 import { cn } from '@/lib/utils';
 import { BotaoDeCluster } from './BotaoDeCluster';
 import { rotuloDescarteBruto } from './descarteBruto';
+import {
+  atualizarLegendasDoCorte,
+  itemAtualizarLegendas,
+  transcricaoDoCorteKey,
+} from './legendasDoCorte';
 import type { FireComBruto } from './shortsApi';
 import type { EdicaoDoShort } from './useEdicaoDoShort';
 import { Icon } from '@/upgrade/Icon';
@@ -175,27 +181,60 @@ export function CabecalhoDoFire({
             repeti-la aqui daria dois botoes para o mesmo lugar lado a lado. */}
 
         {fire && (
-          <OverflowMenu
-            label="Mais ações deste Fire"
-            align="right"
-            items={[
-              {
-                label: finalizado ? 'Reabrir (voltar para a fila)' : 'Marcar como finalizado',
-                icon: finalizado ? 'rotate-ccw' : 'check-check',
-                disabled: alternandoFinalizado,
-                onClick: onAlternarFinalizado,
-              },
-              {
-                label: rotuloDescarteBruto(fire.shorts, fire.bruto_mb),
-                icon: 'trash-2',
-                danger: true,
-                disabled: descartando,
-                onClick: onDescartar,
-              },
-            ]}
+          <MenuDoFire
+            fire={fire}
+            finalizado={finalizado}
+            alternandoFinalizado={alternandoFinalizado}
+            onAlternarFinalizado={onAlternarFinalizado}
+            descartando={descartando}
+            onDescartar={onDescartar}
           />
         )}
       </div>
     </header>
+  );
+}
+
+type PropsDoMenu = Pick<
+  Props,
+  'finalizado' | 'alternandoFinalizado' | 'onAlternarFinalizado' | 'descartando' | 'onDescartar'
+> & { fire: FireComBruto };
+
+/** D-972: os itens do ⋯ — exportado para o teste ver o menu de verdade. */
+export function itensDoMenuDoFire(
+  p: PropsDoMenu & { qc: QueryClient; atualizandoLegendas: boolean },
+): OverflowMenuItem[] {
+  return [
+    itemAtualizarLegendas(
+      () => void atualizarLegendasDoCorte(p.qc, p.fire.corte_id),
+      p.atualizandoLegendas,
+    ),
+    {
+      label: p.finalizado ? 'Reabrir (voltar para a fila)' : 'Marcar como finalizado',
+      icon: p.finalizado ? 'rotate-ccw' : 'check-check',
+      disabled: p.alternandoFinalizado,
+      onClick: p.onAlternarFinalizado,
+    },
+    {
+      label: rotuloDescarteBruto(p.fire.shorts, p.fire.bruto_mb),
+      icon: 'trash-2',
+      danger: true,
+      disabled: p.descartando,
+      onClick: p.onDescartar,
+    },
+  ];
+}
+
+function MenuDoFire(props: PropsDoMenu) {
+  // D-972: o botão de legendas mora no menu, e não na página, porque só ele o usa.
+  const qc = useQueryClient();
+  const atualizandoLegendas =
+    useIsFetching({ queryKey: transcricaoDoCorteKey(props.fire.corte_id) }) > 0;
+  return (
+    <OverflowMenu
+      label="Mais ações deste Fire"
+      align="right"
+      items={itensDoMenuDoFire({ ...props, qc, atualizandoLegendas })}
+    />
   );
 }

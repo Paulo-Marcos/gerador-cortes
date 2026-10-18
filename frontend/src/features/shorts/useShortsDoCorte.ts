@@ -14,6 +14,7 @@ import type {
 } from '@/types/presets';
 import { type AtualizarPostBody, type CapaDoShortApi, type GerarCapaBody, shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
 import { FIRES_KEY } from './useFires';
+import { transcricaoDoCorteKey } from './legendasDoCorte';
 import type { ProviderIA } from '@/lib/providerIa';
 
 export const shortsDoCorteKey = (corteId: string) => ['shorts', 'corte', corteId] as const;
@@ -396,13 +397,12 @@ export function usePublicarShort() {
   });
 }
 
-// D-479: as palavras do bruto mudam so quando a transcricao muda — nunca por
-// causa de uma aprovacao ou de um arraste de borda. Fica fora do
-// `shortsDoCorteKey` de proposito: senao cada PATCH refaria um download de
-// milhares de palavras para redesenhar a mesma legenda.
+// D-479: as palavras mudam so com a transcricao (D-972: quem a refaz descarta
+// este cache) — nunca por aprovacao ou arraste. Fora do `shortsDoCorteKey` de
+// proposito: senao cada PATCH baixaria de novo milhares de palavras.
 export function useTranscricaoDoCorte(corteId: string) {
   return useQuery({
-    queryKey: ['shorts', 'transcricao', corteId],
+    queryKey: transcricaoDoCorteKey(corteId),
     queryFn: () => shortsApi.transcricaoDoCorte(corteId),
     enabled: Boolean(corteId),
     staleTime: Infinity,
