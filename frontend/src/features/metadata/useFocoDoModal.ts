@@ -6,9 +6,12 @@ export function useFocoDoModal(caixa: RefObject<HTMLElement | null>, aoFechar: (
   // D-967: o pai entrega `aoFechar` como função nova a cada render. Se o efeito
   // dependesse dela, cada render do pai (refetch, polling) devolveria o foco ao
   // gatilho e o poria no 1º botão — e quem digitava o título perdia o campo.
-  // O Esc lê a versão mais recente por esta ref; o efeito roda só na abertura.
+  // O Esc lê a versão mais recente por esta ref (como no Modal de components/ui);
+  // o efeito do foco roda só na abertura.
   const fechar = useRef(aoFechar);
-  fechar.current = aoFechar;
+  useEffect(() => {
+    fechar.current = aoFechar;
+  }, [aoFechar]);
 
   useEffect(() => {
     const gatilho = document.activeElement as HTMLElement | null;
