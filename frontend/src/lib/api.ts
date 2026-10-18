@@ -38,6 +38,13 @@ export function resolveThumbUrl(projetoId: string, thumbPath?: string | null): s
   return `${VIDEOS_BASE}/${projetoId}/${clean}`;
 }
 
+/** A capa é regravada no MESMO arquivo, e o navegador guarda a imagem pela URL:
+ *  a versão (hora da leitura do dado que a alimenta) fura esse cache. */
+export function comVersao(url: string | null, versao: number): string | null {
+  // Versão 0 = dado nunca lido (nada a furar): a URL segue pura.
+  return url && versao ? `${url}${url.includes('?') ? '&' : '?'}v=${versao}` : url;
+}
+
 export function finalVideoUrl(projetoId: string, corteId: string): string {
   return `${VIDEOS_BASE}/${projetoId}/cortes/${corteId}/upload_ready/video.mp4`;
 }
