@@ -5,38 +5,7 @@ import {
   resolveLayoutChain,
   type YoutubeLayout,
 } from '@/shared/palco/youtubeLayout';
-import { draftMatchesPreset, montarPadraoJson, readPadraoModo } from '../youtubeLayoutPadrao';
-
-describe('readPadraoModo', () => {
-  it('retorna null para vazio / undefined / "{}"', () => {
-    expect(readPadraoModo(undefined)).toBeNull();
-    expect(readPadraoModo(null)).toBeNull();
-    expect(readPadraoModo('')).toBeNull();
-    expect(readPadraoModo('{}')).toBeNull();
-  });
-
-  it('retorna "full" quando o JSON tem modo_padrao=full', () => {
-    expect(readPadraoModo(JSON.stringify({ modo_padrao: 'full' }))).toBe('full');
-  });
-
-  it('retorna "compartilhada" quando explicitamente compartilhada', () => {
-    expect(readPadraoModo(JSON.stringify({ modo_padrao: 'compartilhada' }))).toBe('compartilhada');
-  });
-
-  it('default = compartilhada quando JSON existe mas modo_padrao está ausente', () => {
-    // Hand-off F-024 fase 4c: preset salvo SEM modo_padrao explicito
-    // assume compartilhada (preset so faz sentido em Compartilhada).
-    expect(readPadraoModo(JSON.stringify({ fundo: 'hud-topo' }))).toBe('compartilhada');
-  });
-
-  it('retorna null para modo_padrao desconhecido (invalido)', () => {
-    expect(readPadraoModo(JSON.stringify({ modo_padrao: 'amarelo' }))).toBeNull();
-  });
-
-  it('retorna null para JSON malformado', () => {
-    expect(readPadraoModo('{ ill formed')).toBeNull();
-  });
-});
+import { draftMatchesPreset, montarPadraoJson } from '../youtubeLayoutPadrao';
 
 describe('montarPadraoJson — escrita do padrao de um escopo (D-423)', () => {
   const base = normalizeYoutubeLayout(DEFAULT_YOUTUBE_LAYOUT) as YoutubeLayout;

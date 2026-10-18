@@ -1,4 +1,5 @@
 import {
+  modoHerdado,
   normalizeYoutubeLayout,
   resolveLayoutChain,
   type YoutubeBackgroundId,
@@ -15,25 +16,8 @@ import {
 //
 // O "Padrao" cobre fundo + placa + posicionamento (preset compartilhado).
 // O `modo_padrao` (tipo do projeto: Full|Compartilhada) vive no MESMO
-// JSON mas e tratado como conceito separado — preset salvo sempre vem
-// com modo_padrao='compartilhada' (preset so faz sentido em Compartilhada).
+// JSON mas e tratado como conceito separado.
 // ─────────────────────────────────────────────────────────────
-
-/**
- * Le o `modo_padrao` salvo no JSON (projeto.layout_youtube_padrao OU
- * appSettings.youtube_layout_padrao_global). Retorna null se vazio /
- * invalido. Usado para mostrar "Tipo do projeto: Full|Compartilhada".
- */
-export function readPadraoModo(raw?: string | null): YoutubeLayoutMode | null {
-  if (!raw || raw === '{}') return null;
-  try {
-    const parsed = JSON.parse(raw);
-    const modo = (parsed?.modo_padrao ?? 'compartilhada') as YoutubeLayoutMode;
-    return modo === 'full' || modo === 'compartilhada' ? modo : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Campos que um "Definir" pode escrever num escopo de padrao. */
 export interface PadraoPatch {
@@ -51,6 +35,22 @@ export interface PadraoPatch {
  */
 export function tipoDoProjeto(projetoJson?: string | null, globalJson?: string | null) {
   return resolveLayoutChain(undefined, projetoJson, globalJson).modo_padrao;
+}
+
+/** De que escopo vem o tipo do projeto: o primeiro da cascata que grava um modo. */
+export type OrigemDoTipo = 'projeto' | 'global' | 'padrao';
+
+/**
+ * A origem de `tipoDoProjeto` (D-970, RN-10): a legenda do corte que herda
+ * dizia "do Projeto" mesmo quando o projeto também herdava do Global.
+ */
+export function origemDoTipoDoProjeto(
+  projetoJson?: string | null,
+  globalJson?: string | null,
+): OrigemDoTipo {
+  if (!modoHerdado(projetoJson)) return 'projeto';
+  if (!modoHerdado(globalJson)) return 'global';
+  return 'padrao';
 }
 
 /**
@@ -100,6 +100,14 @@ export function montarPadraoJson(
 }
 
 /**
+ * F-060: em `full` o modal de posicionamento trabalha com um config sintético
+ * de 1 tela; na persistência ele volta ao shape `{crop, slot}`.
+ */
+export function fullFromSynthetic(config: YoutubeSharedConfig): YoutubeFullConfig {
+  return { crop: { ...config.crop_tela }, slot: { ...config.slot_tela } };
+}
+
+/**
  * O JSON de um escopo de padrão (Projeto/Global) depois de "Definir
  * posicionamento" no `modo` dado. D-423 / D-966: o posicionamento nunca decide
  * o modo — o escopo fica com o que tinha, inclusive AUSENTE (herdando); gravar
@@ -116,7 +124,7 @@ export function padraoComPosicionamento(
     fundo: extras?.fundo,
     placa: extras?.placa,
     ...(modo === 'full'
-      ? { full: { crop: { ...config.crop_tela }, slot: { ...config.slot_tela } } }
+      ? { full: fullFromSynthetic(config) }
       : { compartilhada: config }),
   });
 }
