@@ -41,6 +41,7 @@ from app.migrations import (
     migration_005_trechos_geracoes,
     migration_006_indices_filtros_quentes,
     migration_007_fire_no_corte,
+    migration_008_modo_do_corte_e_global_vivo,
     reconciliacao,
 )
 from app.models import Base
@@ -94,6 +95,11 @@ MIGRATIONS: tuple[Migration, ...] = (
         version=7,
         description="D-713 — is_fire e candidato_shorts passam do metadado para o corte",
         upgrade=migration_007_fire_no_corte.upgrade,
+    ),
+    Migration(
+        version=8,
+        description="D-966 — sai a sentinela de modo dos cortes e as cópias do Global dos projetos",
+        upgrade=migration_008_modo_do_corte_e_global_vivo.upgrade,
     ),
 )
 

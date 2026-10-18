@@ -21,7 +21,8 @@ from app.domain.corte.youtube_layout import resolver_layout_em_cascata
 
 TABELA = Path(__file__).resolve().parents[1] / "fixtures" / "cascata_layout_d712.json"
 
-SENTINELA = {"modo_padrao": "full", "regioes": []}
+# O corte intocado: o que a coluna grava ao nascer — sem modo, que herda (D-966).
+SENTINELA = {"regioes": []}
 RECORTE = {"x": 10, "y": 20, "w": 300, "h": 200}
 POOL = {
     "ausente": None,

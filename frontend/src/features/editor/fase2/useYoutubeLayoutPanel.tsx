@@ -26,6 +26,7 @@ import {
   
   
   mesclarNoLayoutDoCorte,
+  modoHerdado,
   normalizeYoutubeLayout,
   resolveYoutubeModeAt,
   sharedConfigDoPreset,
@@ -39,7 +40,7 @@ import {
   type YoutubePlaca,
   type YoutubeSharedConfig,
 } from '@/shared/palco/youtubeLayout';
-import { modoPadraoDoEscopo, montarPadraoJson } from './youtubeLayoutPadrao';
+import { montarPadraoJson, padraoComPosicionamento, tipoDoProjeto } from './youtubeLayoutPadrao';
 import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
@@ -161,7 +162,7 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
           global_update: true,
         }),
       onSuccess: (updated) => {
-        notify('Padrão global salvo. Vale para TODOS os projetos.', { tone: 'success' });
+        notify('Padrão global salvo. Vale para os projetos que não ajustaram o próprio.', { tone: 'success' });
         queryClient.setQueryData(['projeto', projetoId], updated);
         void queryClient.invalidateQueries({ queryKey: ['projeto'] });
         // F-024: backend tambem persistiu no app-settings — invalida o cache
@@ -224,39 +225,12 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
 
     const activeMode = resolveYoutubeModeAt(draft, currentTime);
     const shared = useMemo(() => sharedRegions(draft, duration), [draft, duration]);
-    const tipoProjeto: YoutubeLayoutMode = modoPadraoDoEscopo(padraoProjetoJson);
-    // D-423: mesmo par leitura/escrita do projeto, para o escopo Global. Sem ele
-    // `persistirEscopo` nao tinha o que preservar e reescrevia `modo_padrao`.
-    const tipoGlobal: YoutubeLayoutMode = modoPadraoDoEscopo(padraoGlobalJson);
+    // D-966: pela cascata — o projeto sem modo próprio herda o do Global.
+    const tipoProjeto: YoutubeLayoutMode = tipoDoProjeto(padraoProjetoJson, padraoGlobalJson);
 
-    // I-025: o corte herda o "Modo" do projeto até o usuário escolher
-    // explicitamente Full ou Compartilhada aqui. Considera "herdando" quando o
-    // JSON salvo do corte é o sentinela inicial (sem compartilhada/fundo/placa/
-    // regioes e sem modo='compartilhada' explícito) — espelha o `corte_configurado`
-    // do backend. Como `patch` atualiza o cache do React Query, a flag flipa
-    // imediatamente ao primeiro clique nas pílulas. Lido a cada render, e não
-    // memorizado: é o cache que muda, e o memo só enxergava isso pelo `draft`.
-    const modoHerdando = (() => {
-      const corteRaw = queryClient.getQueryData<Corte>(corteKey(corteId));
-      const rawLayout = (corteRaw as unknown as { layout_youtube?: unknown } | undefined)
-        ?.layout_youtube;
-      if (!rawLayout) return true;
-      try {
-        const parsed = typeof rawLayout === 'string' ? JSON.parse(rawLayout || '{}') : rawLayout;
-        if (!parsed || typeof parsed !== 'object') return true;
-        const obj = parsed as Record<string, unknown>;
-        const modoRaw = String(obj.modo_padrao ?? '').toLowerCase();
-        const corteConfigurado =
-          'compartilhada' in obj ||
-          'fundo' in obj ||
-          'placa' in obj ||
-          (Array.isArray(obj.regioes) && obj.regioes.length > 0) ||
-          modoRaw === 'compartilhada';
-        return !corteConfigurado;
-      } catch {
-        return true;
-      }
-    })();
+    // I-025 / D-966: herda o "Modo" enquanto o corte não grava `modo_padrao` (RN-10).
+    // Lido do cache a cada render: é o cache que muda ao primeiro clique nas pílulas.
+    const modoHerdando = modoHerdado(queryClient.getQueryData<Corte>(corteKey(corteId))?.layout_youtube);
 
     // syncQuery=false mantem a edicao apenas no draft local enquanto o
     // usuario digita num input controlado. Sincronizar o cache do React
@@ -285,6 +259,13 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
     const handleDefault = (modo: YoutubeLayoutMode) => {
       patch({ ...draft, modo_padrao: modo });
     };
+
+    // D-966: o ↺ APAGA o modo do corte (volta a herdar); copiar o do projeto gravava uma decisão.
+    // Só com o painel limpo (`podeVoltarAHerdar`): a resposta do servidor substitui o cache.
+    const herdarModo = () =>
+      atualizar.mutate({ layout_youtube: { modo_padrao: null } as Record<string, unknown> } as Partial<Corte>, {
+        onError: (error) => notify(error instanceof Error ? error.message : 'Erro ao voltar a herdar o modo.', { tone: 'error' }),
+      });
 
     const handleRegion = (index: number, region: YoutubeLayoutRegion) => {
       const regioes = draft.regioes.map((item, idx) => (idx === index ? region : item));
@@ -515,19 +496,7 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
         return;
       }
       const json = escopo === 'projeto' ? padraoProjetoJson : padraoGlobalJson;
-      // D-423: o `modo_padrao` do escopo e PRESERVADO — definir posicionamento
-      // nao decide com que modo novos cortes nascem. Antes, num escopo ainda
-      // vazio o JSON era remontado a partir de DEFAULT_YOUTUBE_LAYOUT e o
-      // `modo_padrao: 'full'` dele entrava junto, mesmo salvando um preset
-      // Compartilhada.
-      const novoJson = montarPadraoJson(json, {
-        modo_padrao: escopo === 'projeto' ? tipoProjeto : tipoGlobal,
-        fundo: extras?.fundo,
-        placa: extras?.placa,
-        ...(modo === 'full'
-          ? { full: fullFromSynthetic(config) }
-          : { compartilhada: config }),
-      });
+      const novoJson = padraoComPosicionamento(json, modo, config, extras);
       if (escopo === 'global') {
         definirPadraoGlobalMutation.mutate(novoJson);
       } else {
@@ -693,5 +662,5 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
       );
     };
 
-  return { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto };
+  return { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, herdarModo, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto };
 }

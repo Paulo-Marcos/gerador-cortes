@@ -42,6 +42,7 @@ import {
 import { EscopoLadder, ModoBlock, RegionItem } from './youtubeLayoutPanel/components';
 import { MODE_LABEL } from './youtubeLayoutPanel/shared';
 import { useYoutubeLayoutPanel } from './useYoutubeLayoutPanel';
+import { podeVoltarAHerdar } from './youtubeLayoutPadrao';
 import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ export interface YoutubeLayoutPanelHandle {
 export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
   function YoutubeLayoutPanel(props: Props, ref) {
   const { corteId,   currentTime, duration, onSeek } = props;
-  const { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto } = useYoutubeLayoutPanel(props, ref);
+  const { abrirModalPosicionamento, activeMode, aplicarOverrideSegmento, aplicarOverrideSegmentoFull, atualizar, commitRegionFim, commitRegionInicio, confirm, definirPadraoGlobalMutation, definirPadraoProjetoMutation, detectandoSegmentos, detectarSegmentos, dirty, draft, escopoAtivoCorte, escopoDefinido, handleDefault, handleDefinirTipoProjeto, herdarModo, handleModalSave, handlePresetEscopo, handleRegion, modal, modoEscada, modoHerdando, presetNomeDoEscopo, presetsDisponiveis, presetsFullDisponiveis, regioesOpen, removeRegion, removerPadraoSegmento, save, segmentosDetectados, setConfirm, setModal, setModoEscada, setRegioesOpen, shared, tipoProjeto } = useYoutubeLayoutPanel(props, ref);
 
 
     return (
@@ -171,11 +172,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               modoCorte={draft.modo_padrao}
               onChangeModoCorte={handleDefault}
               herdando={modoHerdando}
-              onResetCorte={
-                !modoHerdando && draft.modo_padrao !== tipoProjeto
-                  ? () => handleDefault(tipoProjeto)
-                  : undefined
-              }
+              onResetCorte={podeVoltarAHerdar(modoHerdando, dirty) ? herdarModo : undefined}
               tipoProjeto={tipoProjeto}
               onChangeTipoProjeto={handleDefinirTipoProjeto}
               pendingProjeto={definirPadraoProjetoMutation.isPending}

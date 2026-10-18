@@ -27,7 +27,6 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
-from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 _MAXIMO_DE_BLOCOS = 20
@@ -487,18 +486,10 @@ async def atualizar_render_config(
 
     if body.layout_youtube_padrao is not None:
         if body.global_update:
-            # F-020: o layout COMPARTILHADO e um preset PER-SHOW (formato per-show),
-            # nao per-projeto. Toda live usa a mesma composicao de fundo/placa/
-            # posicoes. Por isso "Definir como Padrao" propaga para TODOS os projetos
-            # — assim "Usar Padrao" em qualquer corte de qualquer projeto encontra
-            # o preset, e o auto-init na primeira abertura do corte tambem.
-            await db.execute(
-                sa_update(Projeto).values(layout_youtube_padrao=body.layout_youtube_padrao)
-            )
-            # F-024: ALEM de replicar em todos os projetos (mantem F-020 ativo),
-            # persistir no AppSettings global para que "Usar Global" no frontend
-            # tenha uma fonte explicita do escopo global. Permite ao usuario
-            # ter "Padrao Projeto" diferente de "Padrao Global".
+            # D-966 (RN-10): o Global grava só no Global e chega aos projetos pela
+            # cascata. Copiá-lo em todo projeto (F-020) dava a cada um um padrão
+            # "próprio" que barrava o Global mudado depois — e carimbava o modo
+            # do Global no tipo de cada projeto.
             AppSettingsService.update_youtube_layout_padrao_global(body.layout_youtube_padrao)
         else:
             # F-021: Permite definir o layout padrão apenas para o projeto atual
@@ -520,7 +511,7 @@ async def atualizar_render_config(
     # Idempotente + dedupe no service; render cai no fallback se ainda não pronto.
     if body.layout_youtube_padrao is not None:
         fire_and_forget(
-            ensure_palco_png(projeto.layout_youtube_padrao),
+            ensure_palco_png(body.layout_youtube_padrao),
             name=f"palco-png-{projeto.id[:8]}",
         )
 

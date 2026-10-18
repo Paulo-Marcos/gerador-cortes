@@ -35,7 +35,7 @@ EXTENSOES = {".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 GERADOS = {"frontend/src/shared/api/contract.ts"}
 
 EXCECOES = {
-    "backend/app/domain/corte/youtube_layout.py": 881,
+    "backend/app/domain/corte/youtube_layout.py": 868,
     "backend/app/domain/short/gancho_short.py": 561,
     "backend/app/infrastructure/claude_cli_client.py": 693,
     "backend/app/infrastructure/render/ffmpeg_commands.py": 512,
@@ -43,7 +43,7 @@ EXCECOES = {
     "backend/app/infrastructure/settings_store.py": 893,
     "backend/app/models.py": 908,
     "backend/app/routers/cortes.py": 698,
-    "backend/app/routers/projetos.py": 823,
+    "backend/app/routers/projetos.py": 814,
     "backend/app/routers/shorts.py": 1192,
     "backend/app/services/analise.py": 881,
     "backend/app/services/canal/editorial_scaffolds.py": 669,
@@ -69,7 +69,7 @@ EXCECOES = {
     "frontend/src/features/editor/fase2/EditorFase2.tsx": 571,
     "frontend/src/features/editor/fase2/PosicionamentoModal.tsx": 607,
     "frontend/src/features/editor/fase2/SceneTimeline.tsx": 1037,
-    "frontend/src/features/editor/fase2/useYoutubeLayoutPanel.tsx": 697,
+    "frontend/src/features/editor/fase2/useYoutubeLayoutPanel.tsx": 666,
     "frontend/src/features/editor/fase2/youtubeLayoutPanel/components.tsx": 752,
     "frontend/src/features/editor/useEditorPage.tsx": 681,
     "frontend/src/features/final-review/FinalReviewPage.tsx": 645,
@@ -85,7 +85,7 @@ EXCECOES = {
     "frontend/src/shared/atalhos/shortcutsRegistry.ts": 706,
     "frontend/src/shared/filaGlobal/useWorkbenchQueue.tsx": 619,
     "frontend/src/shared/palco/youtubeBackgrounds.tsx": 638,
-    "frontend/src/shared/palco/youtubeLayout.ts": 758,
+    "frontend/src/shared/palco/youtubeLayout.ts": 753,
     "frontend/src/upgrade/KitScreen.tsx": 602,
     "video-renderer/src/cenas-v2/CenaComparativo.tsx": 512,
 }
