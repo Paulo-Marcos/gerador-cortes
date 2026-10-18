@@ -82,7 +82,7 @@ export function useRefazerTranscricao(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => analiseApi.refazerTranscricao(projetoId),
-    onSuccess: () => aoRefazerTranscricao(qc, projetoId),
+    onSuccess: () => void aoRefazerTranscricao(qc, projetoId),
   });
 }
 
