@@ -3,6 +3,7 @@ import type { CenaRemotion } from "../schema";
 import { COR_DO_ACENTO } from "../youtube-bg/palco-limpo";
 import { Bloco, COLUNA, GIZ_35, GIZ_55, Kicker, TIPO, Traco, linhasDoBloco } from "./Bloco";
 import { Enquadramento, estaNaZona } from "./Enquadramento";
+import { useEstiloDasCenas } from "./estilo-das-cenas";
 
 // D-916: as cenas LARGAS, de quadro e de rodapé no estilo limpo (canvas
 // "Catálogo B"). Na coluna do palco compartilhado elas encolhem para 440 —
@@ -30,18 +31,27 @@ const Lado: FC<{ rotulo: string; texto?: string; corpo?: string; principal: bool
   />
 );
 
+/**
+ * D-965: o comparativo empilha onde o espaço é em pé — a coluna da
+ * compartilhada e a caixa do cheio mais alta que larga. Lado a lado numa caixa
+ * estreita, ele encolhia até a letra sumir.
+ */
+export function empilharComparativo(naZona: boolean, caixa: { w: number; h: number } | null): boolean {
+  return naZona || (caixa !== null && caixa.h > caixa.w);
+}
+
 /** Comparativo: o lado A no acento, o lado B em giz a 35%, com "vs" entre eles. */
 export const CenaComparativoLimpo: FC<Cena> = ({ cena }) => {
-  const naZona = estaNaZona(cena);
+  const empilhado = empilharComparativo(estaNaZona(cena), useEstiloDasCenas().zona_no_cheio);
   const rotuloA = cena.rotuloA || cena.contexto || "Lado A";
   const rotuloB = cena.rotuloB || "Lado B";
-  const vs = <div style={{ fontSize: 20, fontWeight: 800, color: GIZ_35, padding: naZona ? "0 0 0 34px" : "60px 0 0" }}>vs</div>;
+  const vs = <div style={{ fontSize: 20, fontWeight: 800, color: GIZ_35, padding: empilhado ? "0 0 0 34px" : "60px 0 0" }}>vs</div>;
   return (
     <Enquadramento cena={cena}>
-      <div style={{ display: "flex", flexDirection: naZona ? "column" : "row", gap: naZona ? 20 : 40, alignItems: "flex-start" }}>
-        <Lado rotulo={rotuloA} texto={cena.texto} principal largura={naZona ? COLUNA : 420} />
+      <div style={{ display: "flex", flexDirection: empilhado ? "column" : "row", gap: empilhado ? 20 : 40, alignItems: "flex-start" }}>
+        <Lado rotulo={rotuloA} texto={cena.texto} principal largura={empilhado ? COLUNA : 420} />
         {vs}
-        <Lado rotulo={rotuloB} texto={cena.subtexto} principal={false} largura={naZona ? COLUNA : 420} />
+        <Lado rotulo={rotuloB} texto={cena.subtexto} principal={false} largura={empilhado ? COLUNA : 420} />
       </div>
     </Enquadramento>
   );
