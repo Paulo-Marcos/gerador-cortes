@@ -2,6 +2,7 @@ import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/
 import { arranjoApi } from './api/arranjo';
 import { useToast } from '@/components/ui/toaster';
 import { corteKey, cortesProjetoKey } from '@/shared/chavesDeCache';
+import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
 import type { ArranjoBlocos } from '@/types/models';
 
 /**
@@ -35,6 +36,7 @@ export function useArranjoOps(corteId: string, projetoId?: string) {
     qc.setQueryData(arranjoKey(corteId), arranjo);
     qc.invalidateQueries({ queryKey: corteKey(corteId) });
     if (projetoId) qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
+    void atualizarLegendasDoCorte(qc, corteId);
   }
 
   function aoFalhar(erro: unknown, acao: string) {

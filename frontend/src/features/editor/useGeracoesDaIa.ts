@@ -2,6 +2,7 @@ import { useMutation, useMutationState, useQueryClient } from '@tanstack/react-q
 import { useToast } from '@/components/ui/toaster';
 import { geracaoIaApi } from '@/features/ia';
 import { invalidaCorte } from './useCortes';
+import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
 
 // As gerações do corte que chamam a IA pela assinatura: trechos, cenas e
 // metadados. D-723: saíram do useEditor.
@@ -58,6 +59,7 @@ export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
           : `Nenhum trecho novo a remover (total: ${data.total_desvios}).`;
       notify(msg, { tone: 'success' });
       invalidaCorte(qc, corteId, projetoId);
+      void atualizarLegendasDoCorte(qc, corteId);
     },
     onError: (error) => {
       notify(error instanceof Error ? error.message : 'Erro ao gerar trechos via IA.', {

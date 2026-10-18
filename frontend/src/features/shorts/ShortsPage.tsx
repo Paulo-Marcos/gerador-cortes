@@ -27,11 +27,12 @@
 // vira UM clique que baixa a live uma vez e atende todos (`agrupamentoPorLive.ts`).
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { motivoDoErro, shortsApi, type AndamentoDaLive, type FireComBruto } from './shortsApi';
 import { ANDAMENTO_DAS_LIVES_KEY, estaRodando, FIRES_KEY, useAndamentoDasLives, useFires } from './useFires';
 import { shortsDoCorteKey } from './useShortsDoCorte';
+import { atualizarLegendasDoCorte, esquecerLegendasDosCortes } from './legendasDoCorte';
 import { agruparPorLive, type GrupoDaLive } from './agrupamentoPorLive';
 import { SeloFinalizado } from './CabecalhoDoFire';
 import { ContagemChips } from './ContagemChips';
@@ -182,6 +183,23 @@ function ItemDaFila({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
  * caminho. Sem bruto, ele é refeito antes, sem tocar na transcrição nem nas
  * cenas (D-160). Nada do que já está na fila é apagado (RN-26).
  */
+/** D-973: sem bruto, gerar refaz o bruto — e ele ressincroniza a transcrição. */
+export function aoGerarShortsDoFire(qc: QueryClient, corteId: string) {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: FIRES_KEY }),
+    qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) }),
+    atualizarLegendasDoCorte(qc, corteId),
+  ]);
+}
+
+/** A live inteira roda em segundo plano: as legendas ficam marcadas como velhas. */
+export function aoDispararLive(qc: QueryClient) {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: ANDAMENTO_DAS_LIVES_KEY }),
+    esquecerLegendasDosCortes(qc),
+  ]);
+}
+
 function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: boolean }) {
   const queryClient = useQueryClient();
   const [aviso, setAviso] = useState('');
@@ -195,8 +213,7 @@ function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
           ? 'Bruto refeito; a IA propôs os trechos junto com ele.'
           : `${r.shorts.length} candidato(s) novo(s)${repetidos}`,
       );
-      void queryClient.invalidateQueries({ queryKey: FIRES_KEY });
-      void queryClient.invalidateQueries({ queryKey: shortsDoCorteKey(fire.corte_id) });
+      void aoGerarShortsDoFire(queryClient, fire.corte_id);
     },
     onError: (e) => setAviso(motivoDoErro(e, 'Não consegui gerar os shorts.')),
   });
@@ -253,7 +270,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
     mutationFn: () => shortsApi.gerarDaLive(grupo.projetoId),
     onSuccess: () => {
       setErro('');
-      void queryClient.invalidateQueries({ queryKey: ANDAMENTO_DAS_LIVES_KEY });
+      void aoDispararLive(queryClient);
     },
     onError: (e) => setErro(motivoDoErro(e, 'Não consegui disparar a live.')),
   });
