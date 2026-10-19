@@ -36,10 +36,14 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
 
     O ponto delicado e a regeneracao do bruto. Ela roda com
     `refazer_transcricao=False, refazer_cenas=False`, o modo que a D-160 criou
-    justamente para isto: refaz o VIDEO e nao encosta no texto nem nas cenas.
-    Assim a pos-producao ja feita — cenas, layout, metadados, thumbnail —
-    sobrevive intacta; o que muda no banco e so o ponteiro do clip e a duracao,
-    que sao recalculados iguais porque as bordas do corte nao mudaram.
+    justamente para isto: refaz o VIDEO sem refazer a transcricao bruta da live
+    nem as cenas. Assim a pos-producao ja feita — cenas, layout, metadados,
+    thumbnail — sobrevive intacta; o banco ganha o ponteiro do clip e a duracao,
+    recalculados iguais porque as bordas do corte nao mudaram.
+
+    Isso NAO deixa o texto do corte intocado: a salvaguarda de silencios do
+    `gerar_bruto_via_worker` roda sempre e termina em
+    `sincronizar_transcricao_corte`, que reescreve `Corte.transcricao_final`.
 
     Levanta `LookupError` (corte inexistente) e `ValueError` (corte sem Fire, ou
     bruto que nao pode ser regerado).
@@ -76,7 +80,11 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
 
 
 async def _regerar_bruto_preservando_pos_producao(corte_id: str) -> None:
-    """Refaz so o video do bruto — nem transcricao, nem cenas (D-160)."""
+    """Refaz o video do bruto sem refazer transcricao nem cenas (D-160).
+
+    A `transcricao_final` do corte ainda e ressincronizada pela salvaguarda de
+    silencios, que roda em toda geracao do bruto.
+    """
     resultado = await ExportService.gerar_bruto_via_worker(
         corte_id, refazer_transcricao=False, refazer_cenas=False
     )

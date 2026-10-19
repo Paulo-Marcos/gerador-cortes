@@ -86,11 +86,11 @@ class ExportService(
         Output: ``clip_raw_<timestamp_ms>.mkv`` na pasta do corte.  Nome
         único evita conflito de lock com o player do navegador.
 
-        D-160 — o vídeo bruto (silêncios + render) roda sempre; ``refazer_transcricao``
-        e ``refazer_cenas`` gateiam as etapas derivadas. O endpoint mantém os dois
-        ``True`` na 1ª geração (cadeia completa) e passa ``False`` na regeração
-        quando o usuário não pediu opt-in — assim reprocessar o recorte não refaz
-        texto/cenas que já estão bons.
+        D-160 — o bruto (silêncios + render) roda sempre; os flags só gateiam as
+        etapas derivadas: ``True`` na 1ª geração, ``False`` na regeração sem opt-in,
+        que não refaz a transcrição da live nem as cenas. A salvaguarda de silêncios
+        roda nos dois casos e ressincroniza a ``transcricao_final`` do corte
+        (``sincronizar_transcricao_corte``).
 
         Returns:
             ``{"status": "pronto", "clip_path": str}`` em caso de sucesso, ou
