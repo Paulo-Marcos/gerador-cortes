@@ -8,6 +8,10 @@ import { diarizacaoApi, type FalantesMap } from './api';
 import { geracaoIaApi } from '@/features/ia';
 import { useToast } from '@/components/ui/toaster';
 import { corteKey, cortesProjetoKey, exportStatusKey } from '@/shared/chavesDeCache';
+import {
+  atualizarLegendasDoCorte,
+  esquecerLegendasDosCortes,
+} from '@/features/shorts/legendasDoCorte';
 
 export const falantesKey = (id: string) => ['projeto', id, 'falantes'] as const;
 
@@ -60,6 +64,7 @@ export function useDiarizarCorte(corteId: string, projetoId: string | undefined)
         notify(`Corte diarizado: ${total} falante(s) no mapa do projeto.`, { tone: 'success' });
         qc.invalidateQueries({ queryKey: corteKey(corteId) });
         if (projetoId) qc.invalidateQueries({ queryKey: falantesKey(projetoId) });
+        void atualizarLegendasDoCorte(qc, corteId);
       } else {
         notify(data.motivo ?? 'Diarização indisponível.', { tone: 'error' });
       }
@@ -128,6 +133,8 @@ export function useAnalisarComDiarizacao(projetoId: string) {
       qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
       qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
       qc.invalidateQueries({ queryKey: ['projetos'] });
+      // D-973: a análise encadeia o refazer-transcrição de todos os cortes.
+      void esquecerLegendasDosCortes(qc);
     },
     onError: (error) => {
       notify(error instanceof Error ? error.message : 'Erro na análise por IA.', {

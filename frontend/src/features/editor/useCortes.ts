@@ -4,6 +4,7 @@ import { corteKey, cortesProjetoKey } from '@/shared/chavesDeCache';
 import type { AdicionarDesvioRequest, Corte } from '@/types/models';
 import { cortesApi, type AtualizarCorteRequest } from './api/cortes';
 import { metadadosApi } from '@/features/metadata/api/metadados';
+import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
 
 // O corte na edição: ler, editar, reordenar, dividir, juntar, aprovar, excluir,
 // as marcas (Fire, leitura) e os trechos a remover. D-723: saiu do useEditor.
@@ -37,13 +38,19 @@ export function invalidaCorte(
   if (projetoId) qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
 }
 
+/** D-973: as chaves do PATCH que fazem o backend ressincronizar a transcrição
+ * (`_depois_de_gravar`). As outras (status, layout) não mexem no texto. */
+const ressincroniza = (patch: AtualizarCorteRequest) =>
+  patch.desvios != null || patch.inicio_seg != null || patch.fim_seg != null;
+
 export function useAtualizarCorte(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (patch: AtualizarCorteRequest) => cortesApi.atualizarCorte(corteId, patch),
-    onSuccess: (data) => {
+    onSuccess: (data, patch) => {
       qc.setQueryData(corteKey(corteId), data);
       if (projetoId) qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
+      if (ressincroniza(patch)) void atualizarLegendasDoCorte(qc, corteId);
     },
   });
 }
@@ -111,6 +118,7 @@ export function useDividirCorte(corteId: string, projetoId?: string) {
       const [original] = cortes;
       if (original) qc.setQueryData(corteKey(original.id), original);
       invalidaCorte(qc, corteId, projetoId);
+      void atualizarLegendasDoCorte(qc, corteId);
       notify('Corte dividido em dois.', { tone: 'success' });
     },
     onError: (error) => {
@@ -130,6 +138,8 @@ export function useJuntarCortes(corteId: string, projetoId?: string) {
     onSuccess: (corte) => {
       qc.setQueryData(corteKey(corte.id), corte);
       invalidaCorte(qc, corteId, projetoId);
+      void atualizarLegendasDoCorte(qc, corteId);
+      void atualizarLegendasDoCorte(qc, corte.id);
       notify('Cortes juntados. Gere o bruto de novo para ver o resultado.', { tone: 'success' });
     },
     onError: (error) => {
@@ -182,7 +192,10 @@ export function useSincronizarTranscricao(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => cortesApi.sincronizarTranscricao(corteId),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
   });
 }
 
@@ -199,7 +212,10 @@ export function useImportarDesvios(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (trechos: unknown[]) => cortesApi.importarDesvios(corteId, trechos),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
   });
 }
 
@@ -207,7 +223,10 @@ export function useAnalisarDesvios(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (limparAnteriores: boolean) => cortesApi.analisarDesviosCorte(corteId, limparAnteriores),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
   });
 }
 

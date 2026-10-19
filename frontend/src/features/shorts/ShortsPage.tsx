@@ -30,8 +30,8 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { motivoDoErro, shortsApi, type AndamentoDaLive, type FireComBruto } from './shortsApi';
-import { ANDAMENTO_DAS_LIVES_KEY, estaRodando, FIRES_KEY, useAndamentoDasLives, useFires } from './useFires';
-import { shortsDoCorteKey } from './useShortsDoCorte';
+import { estaRodando, useAndamentoDasLives, useFires } from './useFires';
+import { aoDispararLive, aoGerarShortsDoFire } from './aposGerarShorts';
 import { agruparPorLive, type GrupoDaLive } from './agrupamentoPorLive';
 import { SeloFinalizado } from './CabecalhoDoFire';
 import { ContagemChips } from './ContagemChips';
@@ -195,8 +195,7 @@ function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
           ? 'Bruto refeito; a IA propôs os trechos junto com ele.'
           : `${r.shorts.length} candidato(s) novo(s)${repetidos}`,
       );
-      void queryClient.invalidateQueries({ queryKey: FIRES_KEY });
-      void queryClient.invalidateQueries({ queryKey: shortsDoCorteKey(fire.corte_id) });
+      void aoGerarShortsDoFire(queryClient, fire.corte_id);
     },
     onError: (e) => setAviso(motivoDoErro(e, 'Não consegui gerar os shorts.')),
   });
@@ -253,7 +252,7 @@ function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?:
     mutationFn: () => shortsApi.gerarDaLive(grupo.projetoId),
     onSuccess: () => {
       setErro('');
-      void queryClient.invalidateQueries({ queryKey: ANDAMENTO_DAS_LIVES_KEY });
+      void aoDispararLive(queryClient);
     },
     onError: (e) => setErro(motivoDoErro(e, 'Não consegui disparar a live.')),
   });

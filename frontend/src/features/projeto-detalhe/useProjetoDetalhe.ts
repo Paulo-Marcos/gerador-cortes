@@ -112,6 +112,7 @@ export function useAnalisarViaClaude(projetoId: string) {
       qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
       qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
       qc.invalidateQueries({ queryKey: ['projetos'] });
+      void esquecerLegendasDosCortes(qc);
     },
     onError: (error) => {
       notify(error instanceof Error ? error.message : 'Erro na análise via Claude.', {
@@ -128,6 +129,7 @@ export function useAnalisarViaClaude(projetoId: string) {
 const COOLDOWN_DESVIOS_TODOS_MS = 10_000;
 
 export function useAnalisarDesviosTodos(projetoId: string) {
+  const qc = useQueryClient();
   const { notify } = useToast();
   const [disparado, setDisparado] = useState(false);
   const cooldownRef = useRef<number | null>(null);
@@ -139,6 +141,9 @@ export function useAnalisarDesviosTodos(projetoId: string) {
   const mutation = useMutation({
     mutationFn: (provider: ProviderIA) => cortesApi.analisarDesviosTodos(projetoId, provider),
     onSuccess: () => {
+      // D-973: os trechos novos ressincronizam cada corte em segundo plano. Sem
+      // aviso de fim, marca as legendas como velhas: a prévia relê ao abrir.
+      void esquecerLegendasDosCortes(qc);
       notify(
         'Geração de trechos iniciada para todos os cortes: roda em segundo plano, corte a corte, e os desvios vão aparecendo aos poucos. Só ACRESCENTA aos trechos já marcados — nada é removido.',
         { tone: 'success' },

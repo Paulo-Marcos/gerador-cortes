@@ -1,23 +1,35 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toaster';
 import type { StatusBrutoResponse } from '@/types/models';
 import { brutoApi, type GerarBrutoOpcoes } from './api/bruto';
 import { invalidaCorte } from './useCortes';
+import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
 
 // O vídeo bruto do corte: o status, os passos e a geração. D-723: saiu do useEditor.
 
 export const statusBrutoKey = (id: string) => ['corte', id, 'status-bruto'] as const;
 
+const emAndamento = (status?: string) => status === 'processando' || status === 'cortando';
+
+/** D-973: o bruto só fica pronto depois de ressincronizar a transcrição do
+ * corte; quando a geração termina, a legenda guardada do short ficou velha. */
+export async function buscarStatusBruto(qc: QueryClient, corteId: string) {
+  const antes = qc.getQueryData<StatusBrutoResponse>(statusBrutoKey(corteId))?.status;
+  const agora = await brutoApi.statusClipBruto(corteId);
+  if (emAndamento(antes) && !emAndamento(agora.status)) void atualizarLegendasDoCorte(qc, corteId);
+  return agora;
+}
+
 export function useStatusBruto(corteId: string | undefined) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: statusBrutoKey(corteId ?? ''),
-    queryFn: () => brutoApi.statusClipBruto(corteId!),
+    queryFn: () => buscarStatusBruto(qc, corteId!),
     enabled: !!corteId,
     // Polling enquanto o backend processa ('cortando' é o valor real enviado).
     // 2,5s para o botão liberar logo que o vídeo fica pronto (antes era 15s).
     refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status === 'processando' || status === 'cortando' ? 2_500 : false;
+      return emAndamento(query.state.data?.status) ? 2_500 : false;
     },
   });
 }
@@ -69,6 +81,8 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
       // tenha avançado pra "pronto" ou "erro" muito rápido).
       qc.invalidateQueries({ queryKey: statusBrutoKey(corteId) });
       invalidaCorte(qc, corteId, projetoId);
+      // Se ninguém acompanhar o status até o fim, a prévia ao menos relê ao abrir.
+      void atualizarLegendasDoCorte(qc, corteId);
     },
     onError: (error, _vars, context) => {
       // Reverte o otimismo em caso de erro real (ex.: 404, 500).
