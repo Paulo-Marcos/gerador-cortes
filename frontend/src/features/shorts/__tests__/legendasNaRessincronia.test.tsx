@@ -57,7 +57,7 @@ const { useDiarizarCorte, useAnalisarComDiarizacao } = await import(
 const { useAnalisarViaClaude, useAnalisarDesviosTodos } = await import(
   '@/features/projeto-detalhe/useProjetoDetalhe'
 );
-const { aoGerarShortsDoFire, aoDispararLive } = await import('../ShortsPage');
+const { aoGerarShortsDoFire, aoDispararLive } = await import('../aposGerarShorts');
 
 function comLegendas() {
   const qc = new QueryClient();
