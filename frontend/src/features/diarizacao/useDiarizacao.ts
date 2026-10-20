@@ -3,7 +3,14 @@
 // Vivem num arquivo próprio (e não em useProjetoDetalhe.ts, que está sob lock)
 // para não tocar features protegidas. Reutilizam as query-keys existentes para
 // manter as invalidações consistentes com o resto do detalhe do projeto.
-import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { diarizacaoApi, type FalantesMap } from './api';
 import { geracaoIaApi } from '@/features/ia';
 import { useToast } from '@/components/ui/toaster';
@@ -12,6 +19,8 @@ import {
   atualizarLegendasDoCorte,
   esquecerLegendasDosCortes,
 } from '@/features/shorts/legendasDoCorte';
+import type { ProviderIA } from '@/lib/providerIa';
+import { analisarComAsDuas, avisoDasDuas } from './analiseComAsDuas';
 
 export const falantesKey = (id: string) => ['projeto', id, 'falantes'] as const;
 
@@ -130,11 +139,7 @@ export function useAnalisarComDiarizacao(projetoId: string) {
       notify(`Análise via ${via} concluída: ${data.total_cortes ?? 0} corte(s).`, {
         tone: 'success',
       });
-      qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
-      qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
-      qc.invalidateQueries({ queryKey: ['projetos'] });
-      // D-973: a análise encadeia o refazer-transcrição de todos os cortes.
-      void esquecerLegendasDosCortes(qc);
+      aoConcluirAnalise(qc, projetoId);
     },
     onError: (error) => {
       notify(error instanceof Error ? error.message : 'Erro na análise por IA.', {
@@ -142,4 +147,36 @@ export function useAnalisarComDiarizacao(projetoId: string) {
       });
     },
   });
+}
+
+function aoConcluirAnalise(qc: QueryClient, projetoId: string) {
+  qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
+  qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
+  qc.invalidateQueries({ queryKey: ['projetos'] });
+  // D-973: a análise encadeia o refazer-transcrição de todos os cortes.
+  void esquecerLegendasDosCortes(qc);
+}
+
+/** D-977: a análise com as duas IAs, o Claude e depois o Gemini. Usa a mesma
+ * chave da análise simples: para a tela, é uma análise da live em voo.
+ * `vez` diz qual IA está analisando agora, para girar o botão certo. */
+export function useAnalisarComAsDuas(projetoId: string) {
+  const qc = useQueryClient();
+  const { notify } = useToast();
+  const [vez, setVez] = useState<ProviderIA | null>(null);
+  const mutation = useMutation({
+    mutationKey: analiseClaudeKey(projetoId),
+    mutationFn: ({ usarDiarizacao }: { usarDiarizacao: boolean }) =>
+      analisarComAsDuas(
+        (provider) => geracaoIaApi.analisarViaClaude(projetoId, usarDiarizacao, provider),
+        setVez,
+      ),
+    onSuccess: (desfechos) => {
+      const aviso = avisoDasDuas(desfechos);
+      notify(aviso.texto, { tone: aviso.tom });
+      aoConcluirAnalise(qc, projetoId);
+    },
+    onSettled: () => setVez(null),
+  });
+  return { ...mutation, vez };
 }

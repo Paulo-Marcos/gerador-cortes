@@ -61,6 +61,12 @@ interface AcaoDeIaProps {
    * para saber qual dos dois gerava.
    */
   comNome?: boolean;
+  /**
+   * D-977: um terceiro botão, "As duas", que roda a ação com o Claude e depois
+   * com o Gemini. Só aparece onde a tela oferece a dupla (a análise da live);
+   * `emVoo` deixa o botão ocupado junto do provedor da vez.
+   */
+  asDuas?: { onGerar: () => void; emVoo: boolean };
   className?: string;
 }
 
@@ -76,6 +82,7 @@ export function AcaoDeIa({
   icone = ICONE_DO_CONCEITO.iaGera,
   apenasProvedores = false,
   comNome = false,
+  asDuas,
   className,
 }: AcaoDeIaProps) {
   const t = TAMANHOS[tamanho];
@@ -155,7 +162,55 @@ export function AcaoDeIa({
           {comNome ? <span className="truncate">{nome}</span> : null}
         </button>
       ))}
+      {asDuas && (
+        <BotaoDasDuas descricao={descricao} travado={travado} tamanho={tamanho} {...asDuas} />
+      )}
     </div>
+  );
+}
+
+/** D-977: o terceiro botão da ação — o Claude e, depois, o Gemini. */
+function BotaoDasDuas({
+  descricao,
+  onGerar,
+  travado,
+  emVoo,
+  tamanho,
+}: {
+  descricao: string;
+  onGerar: () => void;
+  travado: boolean;
+  emVoo: boolean;
+  tamanho: keyof typeof TAMANHOS;
+}) {
+  const t = TAMANHOS[tamanho];
+  return (
+    <button
+      type="button"
+      onClick={onGerar}
+      disabled={travado}
+      aria-label={`${descricao} com o Claude e o Gemini`}
+      aria-busy={emVoo}
+      title={`${descricao} com o Claude e depois com o Gemini`}
+      className={cn(
+        'flex shrink-0 items-center gap-1 border-l border-[var(--wb-border-soft)] px-2 font-medium text-[var(--wb-text)] transition-colors',
+        t.texto,
+        'hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
+        'disabled:cursor-not-allowed',
+        travado && !emVoo && 'opacity-40',
+      )}
+    >
+      {emVoo ? (
+        <Icon name="loader-2" size={t.icone} className="animate-spin" />
+      ) : (
+        PROVEDORES.map(({ id, cor, Icone }) => (
+          <span key={id} className="flex flex-none" style={{ color: cor }}>
+            <Icone size={t.icone - 2} />
+          </span>
+        ))
+      )}
+      <span>As duas</span>
+    </button>
   );
 }
 
