@@ -436,7 +436,7 @@ class AnaliseService:
         cortes_data: list,
         descartados: list | None = None,
         origem: str = "claude",
-    ):
+    ) -> list[str]:
         """Salva cortes vindos de IA externa com a mesma lógica do analisar_transcricao.
 
         I-034: além dos cortes, persiste `descartados` (blocos NÃO_RECOMENDADOS
@@ -789,9 +789,8 @@ class AnaliseService:
                 origem=provider,
             )
 
-            if encadear_transcricao:
-                await AnaliseService._refazer_transcricao(projeto_id)
-                # D-976: a análise marca poucos trechos; a trechos-expert completa.
+            # D-976: a análise marca poucos trechos; a trechos-expert completa.
+            if encadear_transcricao and await AnaliseService._refazer_transcricao(projeto_id):
                 depois_da_analise.disparar_trechos_dos_cortes_novos(projeto_id, criados, provider)
 
             logger.info(
@@ -850,9 +849,9 @@ class AnaliseService:
         return novos, pulados
 
     @staticmethod
-    async def _refazer_transcricao(projeto_id: str) -> None:
+    async def _refazer_transcricao(projeto_id: str) -> bool:
         """Replica o fluxo do botão 'Refazer transcrição' (em `depois_da_analise`)."""
-        await depois_da_analise.refazer_transcricao_dos_cortes(projeto_id)
+        return await depois_da_analise.refazer_transcricao_dos_cortes(projeto_id)
 
     @staticmethod
     async def _restaurar_status(projeto_id: str, status) -> None:

@@ -25,15 +25,18 @@ from sqlalchemy import select as sa_select
 logger = logging.getLogger(__name__)
 
 
-async def refazer_transcricao_dos_cortes(projeto_id: str) -> None:
+async def refazer_transcricao_dos_cortes(projeto_id: str) -> bool:
     """Replica o fluxo do botão 'Refazer transcrição': reextrai a legenda e
     sincroniza a transcrição final de cada corte (aplicando os desvios).
+
+    Devolve se refez: sem vídeo a etapa é pulada, e o corte fica sem a
+    transcrição que a `trechos-expert` lê.
     """
     async with AsyncSessionLocal() as db:
         projeto = await db.get(Projeto, projeto_id)
         if not projeto or not projeto.youtube_url or not projeto.arquivo_video_path:
             logger.info("[ClaudeIA] Sem vídeo para refazer transcrição; pulei a etapa.")
-            return
+            return False
         transcricao = await IngestaoService._extrair_legenda(
             projeto_id,
             projeto.youtube_url,
@@ -49,21 +52,33 @@ async def refazer_transcricao_dos_cortes(projeto_id: str) -> None:
     for corte_id in corte_ids:
         await CorteService.sincronizar_transcricao_corte(corte_id)
     logger.info("[ClaudeIA] Refazer transcrição: %d cortes sincronizados", len(corte_ids))
+    return True
 
 
-async def gerar_trechos_dos_cortes_novos(corte_ids: list[str], provider: ProviderIA) -> None:
-    """Roda a `trechos-expert` em cada corte, um de cada vez.
+# Cortes à espera dos trechos, por live. Uma fila só por live: a análise com as
+# duas IAs (D-977) termina duas vezes, e duas tarefas com o mesmo nome rodariam
+# em paralelo, disputando o registro da fila global (a primeira a acabar daria
+# a geração por concluída). A segunda análise só acrescenta à fila da primeira.
+_pendentes: dict[str, list[tuple[str, ProviderIA]]] = {}
 
-    A geração é aditiva (D-332): soma aos desvios que a análise já marcou.
+
+async def gerar_trechos_dos_cortes_novos(projeto_id: str) -> None:
+    """Roda a `trechos-expert` em cada corte da fila da live, um de cada vez,
+    até ela esvaziar. A geração é aditiva (D-332): soma aos desvios já marcados.
     """
-    for corte_id in corte_ids:
-        try:
-            await CorteService.gerar_trechos_via_claude(corte_id, provider)
-            # Mesma folga do lote do botão (analisar_desvios_todos_impl): a CLI
-            # da assinatura atende uma chamada por vez.
-            await asyncio.sleep(1)
-        except Exception as e:  # noqa: BLE001 — lote: um corte que falha não para os outros
-            operational_error("TrechosAposAnalise", f"Erro no corte {corte_id}: {e}")
+    fila = _pendentes[projeto_id]
+    try:
+        while fila:
+            corte_id, provider = fila.pop(0)
+            try:
+                await CorteService.gerar_trechos_via_claude(corte_id, provider)
+                # Mesma folga do lote do botão (analisar_desvios_todos_impl): a
+                # CLI da assinatura atende uma chamada por vez.
+                await asyncio.sleep(1)
+            except Exception as e:  # noqa: BLE001 — lote: um corte que falha não para os outros
+                operational_error("TrechosAposAnalise", f"Erro no corte {corte_id}: {e}")
+    finally:
+        del _pendentes[projeto_id]
 
 
 def disparar_trechos_dos_cortes_novos(
@@ -73,9 +88,14 @@ def disparar_trechos_dos_cortes_novos(
     são minutos de IA por corte, e a tela já pode mostrar os cortes."""
     if not corte_ids:
         return
+    novos: list[tuple[str, ProviderIA]] = [(corte_id, provider) for corte_id in corte_ids]
+    if projeto_id in _pendentes:
+        _pendentes[projeto_id].extend(novos)
+        return
+    _pendentes[projeto_id] = novos
     # O prefixo `desvios-todos-` é o da geração em lote do botão: o indicador de
     # tarefas ativas mostra "Gerando trechos" na live enquanto roda.
     fire_and_forget(
-        gerar_trechos_dos_cortes_novos(corte_ids, provider),
+        gerar_trechos_dos_cortes_novos(projeto_id),
         name=f"desvios-todos-{projeto_id[:8]}",
     )

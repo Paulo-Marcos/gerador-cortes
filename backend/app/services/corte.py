@@ -45,7 +45,7 @@ from app.domain.corte.segment_calculator import (
     dividir_desvios_no_ponto,
     duracao_liquida,
     normalizar_desvio,
-    somar_desvios_novos,
+    somar_aos_desvios_gravados,
 )
 from app.domain.corte.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
 from app.domain.corte.youtube_layout import mesclar_no_layout_do_corte, normalizar_layout_youtube
@@ -820,12 +820,12 @@ class CorteService:
             )
             for d in resultado.get("desvios", [])
         ]
-        mesclados, adicionados = somar_desvios_novos(desvios_existentes, normalizados_novos)
 
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
                 raise ValueError("Corte não encontrado")
+            mesclados, adicionados = somar_aos_desvios_gravados(corte.desvios, normalizados_novos)
             corte.desvios = json.dumps(mesclados, ensure_ascii=False)
             # D-334: conta esta invocação da skill trechos-expert — cobre tanto
             # o botão por-corte quanto o lote (analisar_desvios_todos_impl
