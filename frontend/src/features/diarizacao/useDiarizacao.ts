@@ -188,7 +188,12 @@ export function opcoesDaAnaliseComAsDuas(
     mutationFn: ({ usarDiarizacao }: PedidoDeAnalise): Promise<DesfechoDaAnalise[]> =>
       analisarComAsDuas(
         (provider) => analisar(provider, usarDiarizacao),
-        (provider) => qc.setQueryData(analiseVezKey(projetoId), provider),
+        (provider) => {
+          // A análise leva minutos e o operador pode estar em outra live: sem
+          // observador, a coleta padrão (5 min) apagaria a vez no meio.
+          qc.setQueryDefaults(analiseVezKey(projetoId), { gcTime: Infinity });
+          qc.setQueryData(analiseVezKey(projetoId), provider);
+        },
       ),
     onSuccess: (desfechos: DesfechoDaAnalise[]) => {
       const aviso = avisoDasDuas(desfechos);
