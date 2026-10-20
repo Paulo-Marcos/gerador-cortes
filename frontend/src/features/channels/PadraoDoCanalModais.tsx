@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
 import { PosicionamentoModal } from '@/features/editor/fase2/PosicionamentoModal';
 import { settingsApi } from '@/features/settings/api';
+import { DefinirPalcoDoCanalModal } from '@/features/shorts/DefinirPalcoDoCanal';
 import {
   DEFAULT_YOUTUBE_LAYOUT,
   normalizeYoutubeLayout,
@@ -10,8 +9,7 @@ import {
   type YoutubeLayout,
 } from '@/shared/palco/youtubeLayout';
 import type { AppSettings } from '@/types/models';
-import { PalcoDoTipoNoModal } from './PalcoDoTipoNoModal';
-import { usePalcoDoModal } from './usePalcoDoModal';
+import type { TipoDoPadrao } from './EstiloDoCanal';
 
 // D-938: o padrão do canal se edita no MESMO modal do ambiente de edição,
 // aberto pela tela de Canais no alvo `canal`: o rascunho é o palco do canal e
@@ -61,31 +59,10 @@ export function PadraoDoHorizontalNoCanal({ onClose }: { onClose: () => void }) 
   );
 }
 
-export function PadraoDoShortNoCanal({ onClose }: { onClose: () => void }) {
-  const palco = usePalcoDoModal({ tipo: 'short', projetoId: undefined, alvo: 'canal', aberto: true });
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title="Padrão do short do canal"
-      description="Vale para todo short do canal que não ajustou o próprio palco."
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="button" size="sm" disabled={!palco.mudou || palco.salvando} onClick={() => palco.aplicar(onClose)}>
-            {palco.salvando ? 'Salvando…' : 'Aplicar e fechar'}
-          </Button>
-        </div>
-      }
-    >
-      {palco.rascunho && palco.efetivo ? (
-        <PalcoDoTipoNoModal tipo="short" rascunho={palco.rascunho} efetivo={palco.efetivo} onMudar={palco.mudar} />
-      ) : (
-        <p className="text-sm text-[var(--wb-text-mute)]">Carregando o palco…</p>
-      )}
-    </Modal>
-  );
+/**
+ * D-946: o modal do padrão de cada tipo — o mesmo do ambiente de edição, no
+ * modo canal: o horizontal no `PosicionamentoModal`, o short no `DefinirPalcoModal`.
+ */
+export function PadraoDoCanal({ tipo, onClose }: { tipo: TipoDoPadrao; onClose: () => void }) {
+  return tipo === 'short' ? <DefinirPalcoDoCanalModal onClose={onClose} /> : <PadraoDoHorizontalNoCanal onClose={onClose} />;
 }
