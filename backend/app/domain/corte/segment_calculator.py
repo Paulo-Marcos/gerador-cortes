@@ -1,5 +1,7 @@
 """Calculadora de segmentos — lógica pura para remoção de desvios de uma timeline."""
 
+import json
+
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
 
 # Fatia mais curta que isso é instável: causa drift na transcrição e erro no FFmpeg.
@@ -322,3 +324,13 @@ def somar_desvios_novos(existentes: list, novos: list) -> tuple[list, int]:
         mesclados.append(d)
         adicionados += 1
     return mesclados, adicionados
+
+
+def somar_aos_desvios_gravados(desvios_json: str | None, novos: list) -> tuple[list, int]:
+    """`somar_desvios_novos` sobre os desvios como estão gravados AGORA.
+
+    A geração de trechos leva minutos de IA: quem soma ao que leu antes de
+    chamá-la apaga o que o operador marcou nesse meio-tempo (D-976).
+    """
+    gravados = [normalizar_desvio(d) for d in json.loads(desvios_json or "[]")]
+    return somar_desvios_novos(gravados, novos)
