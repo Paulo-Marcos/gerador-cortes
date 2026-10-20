@@ -1,48 +1,38 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { ToastProvider } from '@/components/ui/toaster';
-import { analiseClaudeKey } from '@/features/diarizacao/useDiarizacao';
+import { describe, expect, it, vi } from 'vitest';
 import { BotaoAnalisarLive } from '../BotaoAnalisarLive';
 
 // D-977: a análise da live oferece o Claude, o Gemini e as duas.
 
-function renderBotao(client: QueryClient): string {
-  return renderToStaticMarkup(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <BotaoAnalisarLive
-          projetoId="live-a"
-          usarDiarizacao
-          desabilitado={false}
-          aoConcluir={() => {}}
-        />
-      </ToastProvider>
-    </QueryClientProvider>,
+const render = (props: Partial<Parameters<typeof BotaoAnalisarLive>[0]> = {}) =>
+  renderToStaticMarkup(
+    <BotaoAnalisarLive
+      emVoo={null}
+      asDuasEmVoo={false}
+      desabilitado={false}
+      onGerar={vi.fn()}
+      onGerarAsDuas={vi.fn()}
+      {...props}
+    />,
   );
-}
 
 const botoes = (html: string) => html.match(/<button[^>]*>/g) ?? [];
 
 describe('BotaoAnalisarLive', () => {
   it('oferece analisar com o Claude, com o Gemini e com as duas', () => {
-    const html = renderBotao(new QueryClient());
+    const html = render();
     expect(html).toContain('aria-label="Analisar a live com o Claude"');
     expect(html).toContain('aria-label="Analisar a live com o Gemini"');
     expect(html).toContain('aria-label="Analisar a live com o Claude e o Gemini"');
   });
 
-  it('com uma análise desta live em voo, os três travam', () => {
-    const client = new QueryClient();
-    const mutation = client.getMutationCache().build<unknown, Error, void, unknown>(client, {
-      mutationKey: analiseClaudeKey('live-a'),
-      mutationFn: () => new Promise<never>(() => {}),
-    });
-    void mutation.execute(undefined);
-
-    const html = renderBotao(client);
+  it('com a dupla em voo e o Gemini na vez, gira o Gemini e "As duas", e os três travam', () => {
+    const html = render({ emVoo: 'gemini', asDuasEmVoo: true });
+    const [claude, gemini, asDuas] = botoes(html);
     expect(html).toContain('analisando…');
-    expect(botoes(html)).toHaveLength(3);
-    for (const botao of botoes(html)) expect(botao).toContain('disabled=""');
+    expect(gemini).toContain('aria-busy="true"');
+    expect(asDuas).toContain('aria-busy="true"');
+    expect(claude).toContain('aria-busy="false"');
+    for (const botao of [claude, gemini, asDuas]) expect(botao).toContain('disabled=""');
   });
 });

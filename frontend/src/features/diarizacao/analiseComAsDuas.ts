@@ -48,9 +48,35 @@ export function avisoDasDuas(desfechos: DesfechoDaAnalise[]): {
       ? `${NOME[d.provider]} trouxe ${d.totalCortes} corte(s)`
       : `${NOME[d.provider]} falhou (${d.erro})`,
   );
-  const algumaDeuCerto = desfechos.some((d) => d.ok);
   return {
     texto: `Análise com as duas IAs: ${partes.join('; ')}.`,
-    tom: algumaDeuCerto ? 'success' : 'error',
+    tom: algumaDeuCerto(desfechos) ? 'success' : 'error',
   };
+}
+
+/** O que vai para a mutação da análise: uma IA, ou as duas (`asDuas`). */
+export interface PedidoDeAnalise {
+  usarDiarizacao: boolean;
+  provider?: ProviderIA;
+  asDuas?: boolean;
+}
+
+/** Alguma IA respondeu: só então o modal fecha. Com as duas falhando ele fica
+ * aberto, para tentar de novo. */
+export function algumaDeuCerto(desfechos: DesfechoDaAnalise[]): boolean {
+  return desfechos.some((d) => d.ok);
+}
+
+/**
+ * Qual botão gira, a partir das análises desta live em voo: o provedor pedido,
+ * ou, na dupla, a IA da vez. Sem nada em voo, nenhum.
+ */
+export function quemAnalisa(
+  pedidos: (PedidoDeAnalise | undefined)[],
+  vez: ProviderIA | null,
+): { provider: ProviderIA | null; asDuas: boolean } {
+  if (pedidos.length === 0) return { provider: null, asDuas: false };
+  const pedido = pedidos[pedidos.length - 1];
+  if (pedido?.asDuas) return { provider: vez ?? 'claude', asDuas: true };
+  return { provider: pedido?.provider ?? 'claude', asDuas: false };
 }

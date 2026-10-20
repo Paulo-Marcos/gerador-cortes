@@ -3,10 +3,10 @@
 // Vivem num arquivo próprio (e não em useProjetoDetalhe.ts, que está sob lock)
 // para não tocar features protegidas. Reutilizam as query-keys existentes para
 // manter as invalidações consistentes com o resto do detalhe do projeto.
-import { useState } from 'react';
 import {
   useIsMutating,
   useMutation,
+  useMutationState,
   useQuery,
   useQueryClient,
   type QueryClient,
@@ -20,7 +20,13 @@ import {
   esquecerLegendasDosCortes,
 } from '@/features/shorts/legendasDoCorte';
 import type { ProviderIA } from '@/lib/providerIa';
-import { analisarComAsDuas, avisoDasDuas } from './analiseComAsDuas';
+import {
+  analisarComAsDuas,
+  avisoDasDuas,
+  quemAnalisa,
+  type DesfechoDaAnalise,
+  type PedidoDeAnalise,
+} from './analiseComAsDuas';
 
 export const falantesKey = (id: string) => ['projeto', id, 'falantes'] as const;
 
@@ -157,26 +163,60 @@ function aoConcluirAnalise(qc: QueryClient, projetoId: string) {
   void esquecerLegendasDosCortes(qc);
 }
 
-/** D-977: a análise com as duas IAs, o Claude e depois o Gemini. Usa a mesma
- * chave da análise simples: para a tela, é uma análise da live em voo.
- * `vez` diz qual IA está analisando agora, para girar o botão certo. */
+/** D-977: qual IA da dupla está analisando agora. Mora no cache, por live: o
+ * botão some ao fechar o modal, e ao reabrir tem de girar na IA certa. */
+export const analiseVezKey = (projetoId: string) => ['analise-vez', projetoId] as const;
+
+type AnalisarUma = (
+  provider: ProviderIA,
+  usarDiarizacao: boolean,
+) => Promise<{ total_cortes?: number | null }>;
+
+/** As opções da análise com as duas IAs, o Claude e depois o Gemini, fora do
+ * hook para o teste montar a mutação direto no cache. Usa a mesma chave da
+ * análise simples: para a tela é uma análise da live em voo, e os três botões
+ * travam juntos. */
+export function opcoesDaAnaliseComAsDuas(
+  qc: QueryClient,
+  projetoId: string,
+  avisar: (texto: string, tom: 'success' | 'error') => void,
+  analisar: AnalisarUma = (provider, usarDiarizacao) =>
+    geracaoIaApi.analisarViaClaude(projetoId, usarDiarizacao, provider),
+) {
+  return {
+    mutationKey: analiseClaudeKey(projetoId),
+    mutationFn: ({ usarDiarizacao }: PedidoDeAnalise): Promise<DesfechoDaAnalise[]> =>
+      analisarComAsDuas(
+        (provider) => analisar(provider, usarDiarizacao),
+        (provider) => qc.setQueryData(analiseVezKey(projetoId), provider),
+      ),
+    onSuccess: (desfechos: DesfechoDaAnalise[]) => {
+      const aviso = avisoDasDuas(desfechos);
+      avisar(aviso.texto, aviso.tom);
+      aoConcluirAnalise(qc, projetoId);
+    },
+    onSettled: () => qc.setQueryData(analiseVezKey(projetoId), null),
+  };
+}
+
 export function useAnalisarComAsDuas(projetoId: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
-  const [vez, setVez] = useState<ProviderIA | null>(null);
-  const mutation = useMutation({
-    mutationKey: analiseClaudeKey(projetoId),
-    mutationFn: ({ usarDiarizacao }: { usarDiarizacao: boolean }) =>
-      analisarComAsDuas(
-        (provider) => geracaoIaApi.analisarViaClaude(projetoId, usarDiarizacao, provider),
-        setVez,
-      ),
-    onSuccess: (desfechos) => {
-      const aviso = avisoDasDuas(desfechos);
-      notify(aviso.texto, { tone: aviso.tom });
-      aoConcluirAnalise(qc, projetoId);
-    },
-    onSettled: () => setVez(null),
+  return useMutation(
+    opcoesDaAnaliseComAsDuas(qc, projetoId, (texto, tone) => notify(texto, { tone })),
+  );
+}
+
+/** Quem analisa esta live agora, lido do cache (sobrevive a fechar o modal). */
+export function useQuemAnalisa(projetoId: string) {
+  const pedidos = useMutationState({
+    filters: { mutationKey: analiseClaudeKey(projetoId), exact: true, status: 'pending' },
+    select: (m) => m.state.variables as PedidoDeAnalise | undefined,
   });
-  return { ...mutation, vez };
+  const vez = useQuery<ProviderIA | null>({
+    queryKey: analiseVezKey(projetoId),
+    queryFn: () => null,
+    enabled: false,
+  }).data;
+  return quemAnalisa(pedidos, vez ?? null);
 }

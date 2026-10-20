@@ -13,6 +13,7 @@ import {
 import { useImportarAnalise, usePromptAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useAnaliseClaudeEmAndamento } from '@/features/diarizacao/useDiarizacao';
 import { BotaoAnalisarLive } from './BotaoAnalisarLive';
+import { useAcaoDeAnalisar } from './useAcaoDeAnalisar';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
 import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 
@@ -92,6 +93,7 @@ function AnaliseIaModalDaLive({
     setJsonErr(null);
     onClose();
   };
+  const acaoDeAnalisar = useAcaoDeAnalisar(projetoId, usarDiarizacao, fechar);
 
   const onSelecionarManual = async () => {
     setOrigem('manual');
@@ -343,12 +345,7 @@ function AnaliseIaModalDaLive({
           </Button>
         )}
         {origem === 'ia' && (
-          <BotaoAnalisarLive
-            projetoId={projetoId}
-            usarDiarizacao={usarDiarizacao}
-            desabilitado={importarAnalise.isPending}
-            aoConcluir={fechar}
-          />
+          <BotaoAnalisarLive {...acaoDeAnalisar} desabilitado={importarAnalise.isPending} />
         )}
       </div>
     </Modal>
