@@ -45,12 +45,6 @@ describe('settingsApi sobre o cliente gerado', () => {
     expect(await chamadas[0].json()).toEqual({ velocidade_player_padrao: 1.5 });
   });
 
-  it('lê a geometria da capa do TikTok', async () => {
-    await (await settings()).obterLayoutCapaTiktok();
-
-    expect(chamadas[0].url).toBe('http://api.test/api/settings/capa-tiktok/layout');
-  });
-
   it('D-924: grava só o papel do modelo que mudou', async () => {
     await (await settings()).gravarModelosIa({ gemini_pesado: 'gemini-3.8-flash-high' });
 

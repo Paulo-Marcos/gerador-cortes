@@ -398,6 +398,8 @@ export interface paths {
         /**
          * Obter Estilo Da Capa
          * @description O estilo do canal e como ele fica na capa deste corte.
+         *
+         *     Sem corte (D-947), a capa sai com o palco do canal e a área da arte vazia.
          */
         get: operations["obter_estilo_da_capa_api_capa_tiktok_estilo_get"];
         /**
@@ -3527,31 +3529,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings/capa-tiktok/layout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Obter Layout Da Capa Tiktok
-         * @description Onde cada componente da capa do TikTok esta, e onde estaria no padrao.
-         *
-         *     O editor NAO recalcula a geometria: recebe a resolvida. Duplicar a conta no
-         *     frontend criaria a divergencia que este epico passou inteiro evitando — um
-         *     pixel de diferenca entre o que o operador arrasta e o que o Remotion
-         *     desenha, sem erro nenhum aparecendo.
-         */
-        get: operations["obter_layout_da_capa_tiktok_api_settings_capa_tiktok_layout_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/shorts/corte/{corte_id}": {
         parameters: {
             query?: never;
@@ -6568,7 +6545,7 @@ export interface components {
         /** EstiloDaCapaTiktokRequest */
         EstiloDaCapaTiktokRequest: {
             /** Corte Id */
-            corte_id: string;
+            corte_id?: string | null;
             estilo: components["schemas"]["EstiloDaCapaTiktokSalvo"];
         };
         /**
@@ -7129,26 +7106,6 @@ export interface components {
         JuntarCortesRequest: {
             /** Outro Corte Id */
             outro_corte_id?: string | null;
-        };
-        /**
-         * LayoutCapaTiktokResponse
-         * @description A geometria resolvida da capa do TikTok (D-532): o editor não recalcula.
-         */
-        LayoutCapaTiktokResponse: {
-            /** Atual */
-            atual: {
-                [key: string]: components["schemas"]["RetanguloCapa"];
-            };
-            /** Componentes */
-            componentes: string[];
-            faixa_segura: components["schemas"]["FaixaSeguraCapa"];
-            /** Lado Minimo */
-            lado_minimo: number;
-            /** Padrao */
-            padrao: {
-                [key: string]: components["schemas"]["RetanguloCapa"];
-            };
-            quadro: components["schemas"]["QuadroCapa"];
         };
         /**
          * LayoutDoCorte
@@ -10771,8 +10728,8 @@ export interface operations {
     };
     obter_estilo_da_capa_api_capa_tiktok_estilo_get: {
         parameters: {
-            query: {
-                corte_id: string;
+            query?: {
+                corte_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -16270,26 +16227,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    obter_layout_da_capa_tiktok_api_settings_capa_tiktok_layout_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LayoutCapaTiktokResponse"];
                 };
             };
         };

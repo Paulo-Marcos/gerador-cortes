@@ -34,17 +34,6 @@ class FaixaSeguraCapa(RespostaApi):
     h: int
 
 
-class LayoutCapaTiktokResponse(RespostaApi):
-    """A geometria resolvida da capa do TikTok (D-532): o editor não recalcula."""
-
-    quadro: QuadroCapa
-    faixa_segura: FaixaSeguraCapa
-    componentes: list[str]
-    lado_minimo: int
-    padrao: dict[str, RetanguloCapa]
-    atual: dict[str, RetanguloCapa]
-
-
 class RenderSettingsModel(BaseModel):
     """Ajustes do pipeline de renderização (D-191: editáveis pela UI)."""
 
@@ -118,43 +107,6 @@ def _to_response(app: AppSettings) -> AppSettingsResponse:
         ),
         mascote_nome=_mascote_nome(),
     )
-
-
-@router.get("/capa-tiktok/layout", response_model=LayoutCapaTiktokResponse)
-def obter_layout_da_capa_tiktok():
-    """Onde cada componente da capa do TikTok esta, e onde estaria no padrao.
-
-    O editor NAO recalcula a geometria: recebe a resolvida. Duplicar a conta no
-    frontend criaria a divergencia que este epico passou inteiro evitando — um
-    pixel de diferenca entre o que o operador arrasta e o que o Remotion
-    desenha, sem erro nenhum aparecendo.
-    """
-    from app.domain.corte import capa_tiktok as layout_capa
-    from app.services.estilo_da_capa import ajuste_do_layout
-
-    return {
-        "quadro": {"largura": layout_capa.LARGURA, "altura": layout_capa.ALTURA},
-        # A faixa que a vitrine do perfil preserva (D-536). O editor desenha
-        # como guia: e olhando para ela que o operador decide o que aceita
-        # perder no recorte.
-        "faixa_segura": {
-            "y": layout_capa.TOPO_SEGURO,
-            "h": layout_capa.BASE_SEGURA - layout_capa.TOPO_SEGURO,
-        },
-        "componentes": list(layout_capa.COMPONENTES),
-        "lado_minimo": layout_capa.LADO_MINIMO,
-        "padrao": _em_componentes(layout_capa.layout_padrao()),
-        "atual": _em_componentes(layout_capa.montar_layout(ajuste_do_layout())),
-    }
-
-
-def _em_componentes(layout) -> dict:
-    """O layout no vocabulario do editor: etiqueta, arte, selo."""
-    return {
-        "etiqueta": layout.etiqueta.como_dict(),
-        "arte": layout.frame.como_dict(),
-        "selo": layout.selo.como_dict(),
-    }
 
 
 @router.get("", response_model=AppSettingsResponse)

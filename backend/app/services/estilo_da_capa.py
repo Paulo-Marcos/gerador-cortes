@@ -123,11 +123,14 @@ async def corte_conferido(corte_id: str) -> tuple[str, str]:
     return corte.projeto_id, corte.id
 
 
-def painel(projeto_id: str, corte_id: str, arte: Path | None, rascunho: dict | None = None) -> dict:
+def painel(
+    projeto_id: str | None, corte_id: str | None, arte: Path | None, rascunho: dict | None = None
+) -> dict:
     """Tudo que o modal de estilo precisa para desenhar a prévia (D-933).
 
     Com `rascunho`, o efetivo é o do rascunho — nada é gravado: é a prévia de
     quem ainda está arrastando. A geometria vem daqui, nunca é refeita na tela.
+    Sem corte (D-947, a tela de Canais), o palco é o do canal.
     """
     salvo = ler_salvo() if rascunho is None else dominio.normalizar(rascunho, FUNDOS)
     resolvido = resolver_para_corte(projeto_id, corte_id, salvo)
@@ -140,7 +143,7 @@ def painel(projeto_id: str, corte_id: str, arte: Path | None, rascunho: dict | N
             "faixas": _no_vocabulario_do_editor(resolvido.layout),
         },
         "padrao": _no_vocabulario_do_editor(geometria.montar_layout(ajuste_do_layout())),
-        "estilo_do_palco": estilo_do_palco(projeto_id, corte_id)["estilo"],
+        "estilo_do_palco": estilo_do_palco(projeto_id or "", corte_id or "")["estilo"],
         "fundo_do_atual": FUNDO_DO_ATUAL,
         "arte": data_uri(arte) if arte else "",
         "cabecalho": _cabecalho(),

@@ -30,7 +30,8 @@ class EstiloDaCapaTiktokSalvo(BaseModel):
 
 
 class EstiloDaCapaTiktokRequest(BaseModel):
-    corte_id: str
+    # Sem corte, o modal abre pela tela de Canais (D-947).
+    corte_id: str | None = None
     estilo: EstiloDaCapaTiktokSalvo
 
 
@@ -66,12 +67,15 @@ class PainelDoEstiloDaCapaTiktok(RespostaApi):
     lado_minimo: int
 
 
-async def _painel(corte_id: str, rascunho: dict | None = None) -> dict:
-    # O projeto vem do banco, nunca da requisição: ele vira caminho de arquivo.
-    projeto_id, corte_id = await estilo_da_capa.corte_conferido(corte_id)
-    # A prévia é pedida a cada gesto do modal: a arte (megabytes em base64) já
-    # veio no GET e não viaja de novo.
-    arte = None if rascunho is not None else capa_tiktok.arte_do_corte(projeto_id, corte_id)
+async def _painel(corte_id: str | None, rascunho: dict | None = None) -> dict:
+    projeto_id, arte = None, None
+    if corte_id is not None:
+        # O projeto vem do banco, nunca da requisição: ele vira caminho de arquivo.
+        projeto_id, corte_id = await estilo_da_capa.corte_conferido(corte_id)
+        # A prévia é pedida a cada gesto do modal: a arte (megabytes em base64)
+        # já veio no GET e não viaja de novo.
+        if rascunho is None:
+            arte = capa_tiktok.arte_do_corte(projeto_id, corte_id)
     # Lê a arte e o settings.db: fora do event loop.
     painel = await asyncio.to_thread(estilo_da_capa.painel, projeto_id, corte_id, arte, rascunho)
     return {
@@ -91,8 +95,11 @@ def _sem_nulos(estilo: EstiloDaCapaTiktokSalvo) -> dict:
 
 
 @router.get("/estilo", response_model=PainelDoEstiloDaCapaTiktok)
-async def obter_estilo_da_capa(corte_id: str):
-    """O estilo do canal e como ele fica na capa deste corte."""
+async def obter_estilo_da_capa(corte_id: str | None = None):
+    """O estilo do canal e como ele fica na capa deste corte.
+
+    Sem corte (D-947), a capa sai com o palco do canal e a área da arte vazia.
+    """
     return await _painel(corte_id)
 
 
@@ -106,7 +113,8 @@ async def prever_estilo_da_capa(body: EstiloDaCapaTiktokRequest):
 @router.put("/estilo", response_model=PainelDoEstiloDaCapaTiktok)
 async def gravar_estilo_da_capa(body: EstiloDaCapaTiktokRequest):
     """Grava o estilo do canal. A capa do corte se refaz pelo endpoint dela."""
-    await estilo_da_capa.corte_conferido(body.corte_id)
+    if body.corte_id is not None:
+        await estilo_da_capa.corte_conferido(body.corte_id)
     estilo_da_capa.gravar(_sem_nulos(body.estilo))
     return await _painel(body.corte_id)
 

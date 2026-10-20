@@ -4152,15 +4152,21 @@
       "EstiloDaCapaTiktokRequest": {
         "properties": {
           "corte_id": {
-            "title": "Corte Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corte Id"
           },
           "estilo": {
             "$ref": "#/components/schemas/EstiloDaCapaTiktokSalvo"
           }
         },
         "required": [
-          "corte_id",
           "estilo"
         ],
         "title": "EstiloDaCapaTiktokRequest",
@@ -5503,52 +5509,6 @@
           }
         },
         "title": "JuntarCortesRequest",
-        "type": "object"
-      },
-      "LayoutCapaTiktokResponse": {
-        "description": "A geometria resolvida da capa do TikTok (D-532): o editor não recalcula.",
-        "properties": {
-          "atual": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/RetanguloCapa"
-            },
-            "title": "Atual",
-            "type": "object"
-          },
-          "componentes": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Componentes",
-            "type": "array"
-          },
-          "faixa_segura": {
-            "$ref": "#/components/schemas/FaixaSeguraCapa"
-          },
-          "lado_minimo": {
-            "title": "Lado Minimo",
-            "type": "integer"
-          },
-          "padrao": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/RetanguloCapa"
-            },
-            "title": "Padrao",
-            "type": "object"
-          },
-          "quadro": {
-            "$ref": "#/components/schemas/QuadroCapa"
-          }
-        },
-        "required": [
-          "quadro",
-          "faixa_segura",
-          "componentes",
-          "lado_minimo",
-          "padrao",
-          "atual"
-        ],
-        "title": "LayoutCapaTiktokResponse",
         "type": "object"
       },
       "LayoutDoCorte": {
@@ -13967,16 +13927,23 @@
     },
     "/api/capa-tiktok/estilo": {
       "get": {
-        "description": "O estilo do canal e como ele fica na capa deste corte.",
+        "description": "O estilo do canal e como ele fica na capa deste corte.\n\nSem corte (D-947), a capa sai com o palco do canal e a área da arte vazia.",
         "operationId": "obter_estilo_da_capa_api_capa_tiktok_estilo_get",
         "parameters": [
           {
             "in": "query",
             "name": "corte_id",
-            "required": true,
+            "required": false,
             "schema": {
-              "title": "Corte Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Corte Id"
             }
           }
         ],
@@ -21820,28 +21787,6 @@
           }
         },
         "summary": "Update Settings",
-        "tags": [
-          "Settings"
-        ]
-      }
-    },
-    "/api/settings/capa-tiktok/layout": {
-      "get": {
-        "description": "Onde cada componente da capa do TikTok esta, e onde estaria no padrao.\n\nO editor NAO recalcula a geometria: recebe a resolvida. Duplicar a conta no\nfrontend criaria a divergencia que este epico passou inteiro evitando — um\npixel de diferenca entre o que o operador arrasta e o que o Remotion\ndesenha, sem erro nenhum aparecendo.",
-        "operationId": "obter_layout_da_capa_tiktok_api_settings_capa_tiktok_layout_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LayoutCapaTiktokResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Obter Layout Da Capa Tiktok",
         "tags": [
           "Settings"
         ]

@@ -3,7 +3,8 @@ import type { EstiloDaCapaTiktok } from '@/types/presets';
 
 // D-933: o estilo da capa do TikTok do canal — ler, prever e gravar.
 
-export type Alvo = { corteId: string };
+/** Sem corte, o modal abre pela tela de Canais e a prévia vai sem arte (D-947). */
+export type Alvo = { corteId?: string };
 
 /** D-938: o desenho da capa do canal — `palco` segue o palco, ou `atual`/`limpo` fixos. */
 export type EstiloDaCapaDoCanal = 'palco' | 'atual' | 'limpo';
@@ -17,7 +18,7 @@ export const estiloDaCapaApi = {
   obter: async ({ corteId }: Alvo) =>
     dados(
       api.GET('/api/capa-tiktok/estilo', {
-        params: { query: { corte_id: corteId } },
+        params: { query: corteId ? { corte_id: corteId } : {} },
       }),
     ),
   prever: async (alvo: Alvo, estilo: EstiloDaCapaTiktok) =>
