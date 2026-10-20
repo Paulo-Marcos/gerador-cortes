@@ -20,6 +20,7 @@ from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartado
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta
 from app.domain.projeto.transcricao_utils import motivo_transcricao_inutilizavel
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
+from app.services import depois_da_analise
 from app.services.canal import editorial_skills
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.claude_ia import (
@@ -452,6 +453,8 @@ class AnaliseService:
         são persistidos quando presentes e tolerados quando ausentes (skills
         anteriores à v2). Desvios de análise `origem="claude"` recebem esse
         rótulo de origem — pré-requisito do merge revisável da 2ª passada.
+
+        Devolve os ids dos cortes criados, na ordem da proposta (D-976).
         """
         async with AsyncSessionLocal() as db:
             # Continua a numeração a partir do MAIOR número já usado — robusto a
@@ -470,6 +473,7 @@ class AnaliseService:
             # Carregadas UMA vez; vazias em projeto sem timing (VTT) → âncora no-op.
             palavras_flat = await AnaliseService._palavras_word_level(db, projeto_id)
 
+            criados: list[str] = []
             for i, corte_data in enumerate(cortes_data):
                 desvios_normalizados = [
                     _normalizar_desvio(_com_origem_de_analise(d, origem))
@@ -516,6 +520,7 @@ class AnaliseService:
                     **_campos_v2_da_proposta(corte_data),
                 )
                 db.add(corte)
+                criados.append(corte.id)
                 db.add(_snapshot_da_proposta(corte, origem))
 
             projeto = await db.get(Projeto, projeto_id)
@@ -537,6 +542,7 @@ class AnaliseService:
             from app.services.corte import CorteService
 
             await CorteService.renumerar_por_tempo(db, projeto_id)
+        return criados
 
     @staticmethod
     async def analisar_transcricao(projeto_id: str):
@@ -776,7 +782,7 @@ class AnaliseService:
 
             # importar_resultado numera a partir do maior número já usado, então
             # os cortes existentes ficam preservados e os novos seguem a sequência.
-            await AnaliseService.importar_resultado(
+            criados = await AnaliseService.importar_resultado(
                 projeto_id,
                 cortes_novos,
                 descartados=descartados_mesclados,
@@ -785,6 +791,8 @@ class AnaliseService:
 
             if encadear_transcricao:
                 await AnaliseService._refazer_transcricao(projeto_id)
+                # D-976: a análise marca poucos trechos; a trechos-expert completa.
+                depois_da_analise.disparar_trechos_dos_cortes_novos(projeto_id, criados, provider)
 
             logger.info(
                 "[ClaudeIA] Projeto %s analisado via Claude (aditivo): +%d cortes, "
@@ -843,32 +851,8 @@ class AnaliseService:
 
     @staticmethod
     async def _refazer_transcricao(projeto_id: str) -> None:
-        """Replica o fluxo do botão 'Refazer transcrição': reextrai a legenda e
-        sincroniza a transcrição final de cada corte (aplicando os desvios).
-        """
-        from app.services.corte import CorteService
-        from app.services.ingestao import IngestaoService
-
-        async with AsyncSessionLocal() as db:
-            projeto = await db.get(Projeto, projeto_id)
-            if not projeto or not projeto.youtube_url or not projeto.arquivo_video_path:
-                logger.info("[ClaudeIA] Sem vídeo para refazer transcrição; pulei a etapa.")
-                return
-            transcricao = await IngestaoService._extrair_legenda(
-                projeto_id,
-                projeto.youtube_url,
-                legenda_offset_ms=projeto.legenda_offset_ms,
-            )
-            projeto.transcricao_raw = json.dumps(transcricao, ensure_ascii=False)
-            await db.commit()
-
-            result = await db.execute(sa_select(Corte.id).where(Corte.projeto_id == projeto_id))
-            corte_ids = [row[0] for row in result.all()]
-
-        # Cada sincronização abre a própria sessão (db=None) — isola commits.
-        for corte_id in corte_ids:
-            await CorteService.sincronizar_transcricao_corte(corte_id)
-        logger.info("[ClaudeIA] Refazer transcrição: %d cortes sincronizados", len(corte_ids))
+        """Replica o fluxo do botão 'Refazer transcrição' (em `depois_da_analise`)."""
+        await depois_da_analise.refazer_transcricao_dos_cortes(projeto_id)
 
     @staticmethod
     async def _restaurar_status(projeto_id: str, status) -> None:

@@ -21,7 +21,7 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 ## 2. Mapa de Funcionalidades
 
 ### 2.1 Análise da live (cortes)
-- **Descrição**: analisa a transcrição da live inteira e propõe os cortes (início/fim, título, tema), encadeando o refazer-transcrição.
+- **Descrição**: analisa a transcrição da live inteira e propõe os cortes (início/fim, título, tema), encadeando o refazer-transcrição e, em segundo plano, a geração de trechos a remover dos cortes novos com o mesmo provedor (D-976, `services/depois_da_analise.py`).
 - **Rota**: `POST /api/claude/projeto/{projeto_id}/analisar?usar_diarizacao=&provider=`
 - **Service**: `AnaliseService.analisar_via_claude` → `ClaudeIaService.gerar_cortes` / `_gerar_cortes_em_lote`
 - **Hook**: `useAnalisarComDiarizacao` (`frontend/src/hooks/useDiarizacao.ts`)
