@@ -50,7 +50,7 @@ from app.domain.short.destaque_do_gancho import sem_marcas
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
 from app.services.canal import capa_do_canal, editorial_scaffolds, editorial_skills
-from app.services.claude_ia import gerar_texto, registrar_skill_usada
+from app.services.claude_ia import registrar_skill_usada
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -367,7 +367,7 @@ async def _escrever_prompt_da_capa(short_id: str, provider: ProviderIA) -> str:
         texto_capa=texto_da_capa(contexto.gancho_tela, contexto.titulo),
     )
     registrar_skill_usada(_SKILL_CAPA_SHORT, skill, scaffold)
-    bruto = await gerar_texto(
+    bruto = await capa_do_canal.gerar_texto_sem_mascote(  # D-974
         provider,
         prompt,
         skill,

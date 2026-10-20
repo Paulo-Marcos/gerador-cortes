@@ -349,7 +349,7 @@ async def _escrever_prompt_da_arte(corte_id: str, texto_capa: str, provider: Pro
         prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
     )
     registrar_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
-    bruto = await gerar_texto(
+    bruto = await capa_do_canal.gerar_texto_sem_mascote(  # D-974
         provider,
         prompt,
         skill,

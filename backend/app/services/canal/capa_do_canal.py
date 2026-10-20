@@ -13,6 +13,7 @@ A configuração vive no `settings.db`, por canal (ADR-0012); as fotos, na pasta
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from app.core import channel_paths
@@ -28,14 +29,21 @@ from app.domain.canal.fotos_do_apresentador import (
 from app.domain.canal.protagonista_da_capa import (
     PROTAGONISTA_PADRAO,
     Protagonista,
+    aviso_de_mascote_na_capa,
     bloco_do_modo,
+    mascote_descrito,
     protagonista_valido,
 )
 from app.domain.compartilhado.chatgpt_imagem import tipo_da_imagem
-from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido, ServicoExternoFalhou
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte.claridade_da_capa import MetaDeClaridade, meta_valida
 from app.infrastructure import capa_do_canal_store
+from app.services.canal import editorial_skills
 from app.services.canal.editorial_identity import identidade_do_mascote
+from app.services.claude_ia import gerar_texto
+
+logger = logging.getLogger(__name__)
 
 
 def _banco_e_canal() -> tuple[Path, str]:
@@ -91,6 +99,40 @@ def bloco_do_modo_da_capa() -> str:
         mascote=identidade_do_mascote().nome,
         expressoes=estilo["expressoes"],
     )
+
+
+async def gerar_texto_sem_mascote(
+    provider: ProviderIA,
+    prompt: str,
+    skill: editorial_skills.SkillResolvida,
+    skill_key: str,
+    **ids: str | None,
+) -> str:
+    """O `gerar_texto` de uma capa vertical, sem o mascote no modo apresentador (D-974).
+
+    O envelope leva o prompt do YouTube e a skill fala do mascote em várias seções;
+    o modelo às vezes segue a maioria e ignora o bloco do modo. A resposta que o
+    descreve volta UMA vez, com um aviso; se voltar com ele de novo, a geração falha.
+    """
+    bruto = await gerar_texto(provider, prompt, skill, skill_key, **ids)
+    if protagonista() != "apresentador":
+        return bruto
+    mascote = identidade_do_mascote().nome
+    termos = mascote_descrito(bruto, mascote=mascote)
+    if not termos:
+        return bruto
+    logger.warning(
+        "[CapaDoCanal] %s: prompt com o mascote no modo apresentador %s", skill_key, termos
+    )
+    aviso = aviso_de_mascote_na_capa(termos, mascote=mascote)
+    bruto = await gerar_texto(provider, aviso + prompt, skill, skill_key, **ids)
+    if termos := mascote_descrito(bruto, mascote=mascote):
+        raise ServicoExternoFalhou(
+            f"A IA pôs o {mascote} na capa duas vezes ({', '.join(termos)}), e o modo "
+            "apresentador não aceita mascote. Gere de novo; se repetir, confira o corpo "
+            "da skill em /canais."
+        )
+    return bruto
 
 
 # --------------------------------------------------------------------------- #
