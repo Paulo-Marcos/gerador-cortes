@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ETIQUETA_DE_EXEMPLO, EstilizarCapa } from '@/features/metadata/EstiloDaCapaModal';
 import type { EstiloDaCapaDoCanal } from '@/features/metadata/estiloDaCapaApi';
 import type { EstiloDoPalco } from '@/shared/palco/presetsPorEstilo';
 import { Icon } from '@/upgrade/Icon';
@@ -72,8 +73,13 @@ export function EstiloPorTipo({ estilo, estiloDaCapa, onEstilo, onEstiloDaCapa, 
             </button>
           ))}
         </div>
+        {/* D-947: o mesmo modal da capa do corte, sem corte — grava no estilo do canal. */}
+        <div className="flex flex-wrap gap-2">
+          <EstilizarCapa ocupado={false} etiqueta={ETIQUETA_DE_EXEMPLO} />
+        </div>
         <p className="text-xs text-[var(--wb-text-dim)]">
-          Componentes, posições e presets da capa: no botão <strong>Estilizar capa</strong>, na capa de um corte.
+          Componentes, posições e presets da capa ficam no modal — o mesmo da capa de um corte. Sem corte, a prévia
+          vai sem a arte e com um texto de exemplo.
         </p>
       </div>
     </div>

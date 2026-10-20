@@ -12,17 +12,22 @@ import { useEstiloDaCapa, useGravarEstiloDaCapa, usePreviaDaCapa } from './useEs
 // D-933: "Estilizar capa" — o estilo da capa do TikTok do CANAL, como o modal
 // de posição faz com o palco: escolher o desenho, mostrar ou esconder cada
 // componente, arrastá-los na prévia e guardar presets. Salvar grava para o
-// canal; quem chamou refaz a capa deste corte.
+// canal; quem chamou refaz a capa deste corte. D-947: sem corte (a tela de
+// Canais), a prévia vai com a área da arte vazia e o texto de exemplo.
+
+/** O texto da prévia quando não há corte: mostra onde a etiqueta cabe. */
+export const ETIQUETA_DE_EXEMPLO = 'Texto da capa';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  corteId: string;
+  /** Ausente na tela de Canais: o estilo do canal sem um corte na mão. */
+  corteId?: string;
   /** O texto que a capa leva, para a prévia mostrar a capa de verdade. */
   etiqueta: string;
   /** Se o corte já tem capa: salvar a refaz. Sem capa, só grava o estilo. */
-  refazCapa: boolean;
-  onSalvou: () => void;
+  refazCapa?: boolean;
+  onSalvou?: () => void;
 };
 
 export function EstiloDaCapaModal({
@@ -30,7 +35,7 @@ export function EstiloDaCapaModal({
   onClose,
   corteId,
   etiqueta,
-  refazCapa,
+  refazCapa = false,
   onSalvou,
 }: Props) {
   const alvo = { corteId };
@@ -52,7 +57,10 @@ export function EstiloDaCapaModal({
       onClose={fechar}
       size="xl"
       title="Estilizar capa do TikTok"
-      description="Vale para todas as capas do canal. Arraste os componentes na prévia; o que fica sob o véu some na vitrine do perfil."
+      description={
+        'Vale para todas as capas do canal. Arraste os componentes na prévia; o que fica sob o véu some na vitrine do perfil.' +
+        (corteId ? '' : ' Sem corte, a prévia vai sem a arte e com um texto de exemplo.')
+      }
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={() => setRascunho({})}>
@@ -67,7 +75,7 @@ export function EstiloDaCapaModal({
               type="button"
               size="sm"
               disabled={!atual || gravar.isPending}
-              onClick={() => atual && gravar.mutate(atual, { onSuccess: () => (onSalvou(), fechar()) })}
+              onClick={() => atual && gravar.mutate(atual, { onSuccess: () => (onSalvou?.(), fechar()) })}
             >
               <Icon name={gravar.isPending ? 'loader-2' : 'save'} className={gravar.isPending ? 'animate-spin' : undefined} />
               {refazCapa ? 'Salvar e refazer a capa' : 'Salvar o estilo'}
@@ -90,7 +98,7 @@ export function EstiloDaCapaModal({
             onSoltar={(componente, retangulo) => setRascunho(comPosicao(atual, componente, retangulo))}
           />
           <div className="grid min-w-[260px] flex-1 content-start gap-4">
-            <EscolhaDoEstilo painel={painel} rascunho={atual} onMudar={setRascunho} />
+            <EscolhaDoEstilo painel={painel} rascunho={atual} onMudar={setRascunho} semCorte={!corteId} />
             <ComponentesDaCapa painel={painel} rascunho={atual} onMudar={setRascunho} />
             <PresetsDaCapa rascunho={atual} onAplicar={setRascunho} />
             {gravar.error && <p className="text-[11px] text-[var(--wb-err)]">{gravar.error.message}</p>}

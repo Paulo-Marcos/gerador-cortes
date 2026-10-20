@@ -5,10 +5,12 @@ import { estiloDaCapaApi, type Alvo, type EstiloDaCapaDoCanal } from './estiloDa
 // D-933: os hooks do modal "Estilizar capa".
 
 const CHAVE = 'capa-tiktok-estilo';
+// O painel sem corte (D-947) tem chave própria: `do-canal` já é a da escolha do desenho.
+const SEM_CORTE = 'sem-corte';
 
 export function useEstiloDaCapa(alvo: Alvo) {
   return useQuery({
-    queryKey: [CHAVE, alvo.corteId],
+    queryKey: [CHAVE, alvo.corteId ?? SEM_CORTE],
     queryFn: () => estiloDaCapaApi.obter(alvo),
   });
 }
@@ -16,7 +18,7 @@ export function useEstiloDaCapa(alvo: Alvo) {
 /** A prévia do rascunho; mantém a anterior na tela enquanto a nova chega. */
 export function usePreviaDaCapa(alvo: Alvo, rascunho: EstiloDaCapaTiktok | null) {
   return useQuery({
-    queryKey: [CHAVE, 'previa', alvo.corteId, rascunho],
+    queryKey: [CHAVE, 'previa', alvo.corteId ?? SEM_CORTE, rascunho],
     queryFn: () => estiloDaCapaApi.prever(alvo, rascunho ?? {}),
     enabled: rascunho !== null,
     placeholderData: keepPreviousData,

@@ -19,7 +19,8 @@ type Props = {
   onMudar: (rascunho: EstiloDaCapaTiktok) => void;
 };
 
-export function EscolhaDoEstilo({ painel, rascunho, onMudar }: Props) {
+/** `semCorte`: aberto pela tela de Canais (D-947), o palco seguido é o do canal. */
+export function EscolhaDoEstilo({ painel, rascunho, onMudar, semCorte = false }: Props & { semCorte?: boolean }) {
   const estilo = rascunho.estilo ?? 'palco';
   return (
     <div className="grid gap-2">
@@ -42,7 +43,7 @@ export function EscolhaDoEstilo({ painel, rascunho, onMudar }: Props) {
       </div>
       {estilo === 'palco' && (
         <p className="text-[11px] text-[var(--wb-text-mute)]">
-          O palco deste corte está no estilo <strong>{painel.estilo_do_palco}</strong>.
+          O palco {semCorte ? 'do canal' : 'deste corte'} está no estilo <strong>{painel.estilo_do_palco}</strong>.
         </p>
       )}
       {painel.efetivo.estilo === 'limpo' && (
