@@ -179,10 +179,11 @@ function ItemDaFila({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
  *
  * Existe porque o automático só roda quando o bruto termina: o Fire marcado
  * depois, o indicado à mão e a proposta que falhou ficavam sem short e sem
- * caminho. Sem bruto, ele é refeito antes, sem tocar na transcrição nem nas
- * cenas (D-160). Nada do que já está na fila é apagado (RN-26).
+ * caminho. Sem bruto, ele é refeito antes sem refazer a transcrição da live nem
+ * as cenas (D-160); a salvaguarda de silêncios ainda ressincroniza a
+ * transcrição do corte. Nada do que já está na fila é apagado (RN-26).
  */
-function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: boolean }) {
+export function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: boolean }) {
   const queryClient = useQueryClient();
   const [aviso, setAviso] = useState('');
 
@@ -220,7 +221,7 @@ function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
         title={
           fire.tem_bruto
             ? 'A IA propõe trechos novos. Nada da fila é apagado; trecho repetido fica de fora.'
-            : 'Refaz o bruto a partir da live (sem mexer na transcrição nem nas cenas) e a IA propõe os trechos.'
+            : 'Refaz o bruto a partir da live (sem refazer as cenas nem a transcrição da live; a do corte se ajusta aos silêncios) e a IA propõe os trechos.'
         }
       >
         {gerar.isPending ? (

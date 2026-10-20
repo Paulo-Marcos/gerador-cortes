@@ -37,6 +37,9 @@ async def iniciar_geracao(
     D-160 — na **1ª geração** (corte sem bruto) roda a cadeia completa
     (transcrição + cenas). Na **regeração** (bruto já existe) o default é
     **só o bruto**; refazer transcrição/cenas vira opt-in pelos parâmetros.
+    "Só o bruto" não refaz a transcrição da live, mas a salvaguarda de
+    silêncios roda sempre e, se o FFmpeg detecta os silêncios, ressincroniza a
+    `transcricao_final` do corte.
     """
     async with AsyncSessionLocal() as db, db.begin():
         corte = await db.get(Corte, corte_id)
