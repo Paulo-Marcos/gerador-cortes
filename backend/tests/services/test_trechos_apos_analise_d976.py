@@ -175,6 +175,16 @@ async def test_disparo_aparece_como_geracao_de_trechos_do_projeto(monkeypatch):
     depois_da_analise.disparar_trechos_dos_cortes_novos("abcdef123456", ["c1"], "claude")
 
     assert agendados == ["trechos-da-analise-abcdef12"]
+    # O mapa das tarefas ativas reconhece o nome: sem ele, nada de indicador nem
+    # de botão de cancelar na Fila.
+    from app.core.tarefas_ativas import classificar_background
+
+    assert classificar_background(agendados[0]) == (
+        "trechos",
+        "projeto",
+        "Gerando trechos dos cortes novos",
+        "abcdef12",
+    )
 
 
 @pytest.mark.asyncio
@@ -227,6 +237,19 @@ async def test_tarefa_cancelada_antes_de_comecar_nao_prende_a_fila(monkeypatch):
     await asyncio.sleep(0)
 
     assert depois_da_analise._pendentes == {}
+
+
+@pytest.mark.asyncio
+async def test_fim_da_tarefa_antiga_nao_apaga_a_fila_de_uma_analise_nova(monkeypatch):
+    """O fim de uma tarefa esquece só a fila DELA: se outra análise já abriu uma
+    fila nova para a live, essa continua."""
+    fila_velha = [("c-velho", "claude")]
+    fila_nova = [("c-novo", "gemini")]
+    monkeypatch.setattr(depois_da_analise, "_pendentes", {"p1": fila_nova})
+
+    depois_da_analise._esquecer_fila("p1", fila_velha)
+
+    assert depois_da_analise._pendentes == {"p1": fila_nova}
 
 
 # ── Auditoria do PR #245: o lote roda sozinho enquanto o operador revisa ──────
