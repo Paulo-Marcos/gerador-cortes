@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { AcaoDeIa } from '@/components/ui/acao-de-ia';
-import type { ProviderIA } from '@/lib/providerIa';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
@@ -13,7 +11,9 @@ import {
   extrairPartesPrompt,
 } from '@/components/PromptManualPanel';
 import { useImportarAnalise, usePromptAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/features/diarizacao/useDiarizacao';
+import { useAnaliseClaudeEmAndamento } from '@/features/diarizacao/useDiarizacao';
+import { BotaoAnalisarLive } from './BotaoAnalisarLive';
+import { useAcaoDeAnalisar } from './useAcaoDeAnalisar';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
 import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 
@@ -56,7 +56,6 @@ function AnaliseIaModalDaLive({
   const [usarDiarizacao, setUsarDiarizacao] = useState(true);
 
   const importarAnalise = useImportarAnalise(projetoId);
-  const analisarClaude = useAnalisarComDiarizacao(projetoId);
   const intervaloPrompt =
     modo === 'intervalo'
       ? { inicio_hms: inicioHms.trim(), fim_hms: fimHms.trim(), blocos: blocosPrompt }
@@ -79,9 +78,7 @@ function AnaliseIaModalDaLive({
   // A análise é ADITIVA (D-298): mostramos um aviso informativo — nunca bloqueante —
   // quando já há cortes, deixando claro que nada é apagado.
   const temCortesExistentes = totalCortesExistentes > 0;
-  // D-418: quem manda no spinner é a mutação DESTA live no cache, não o
-  // `isPending` do componente — assim a análise de uma live nunca desabilita o
-  // botão da outra, e voltar para a live em análise reencontra o "Gerando...".
+  // D-418: a análise em voo é a DESTA live, no cache (ver BotaoAnalisarLive).
   const analiseEmAndamento = useAnaliseClaudeEmAndamento(projetoId);
   const isPending = importarAnalise.isPending || analiseEmAndamento;
 
@@ -96,6 +93,7 @@ function AnaliseIaModalDaLive({
     setJsonErr(null);
     onClose();
   };
+  const acaoDeAnalisar = useAcaoDeAnalisar(projetoId, usarDiarizacao, fechar);
 
   const onSelecionarManual = async () => {
     setOrigem('manual');
@@ -106,10 +104,6 @@ function AnaliseIaModalDaLive({
     if (duracaoSegundos > 0) {
       setFimHms(segundosParaHms(duracaoSegundos));
     }
-  };
-
-  const onSubmitIA = (provider: ProviderIA) => {
-    analisarClaude.mutate({ usarDiarizacao, provider }, { onSuccess: fechar });
   };
 
   const onSubmitManual = () => {
@@ -301,6 +295,10 @@ function AnaliseIaModalDaLive({
                 são <strong>adicionados</strong> aos existentes; um corte que começa quase no mesmo
                 ponto de um atual é pulado. Nada é apagado.
               </p>
+              <p className="mt-1 text-text-300">
+                <strong>As duas</strong> roda o Claude e depois o Gemini: os cortes das duas somam,
+                e na avaliação você remove o que não servir.
+              </p>
             </div>
             <DiarizacaoPanel
               projetoId={projetoId}
@@ -347,17 +345,7 @@ function AnaliseIaModalDaLive({
           </Button>
         )}
         {origem === 'ia' && (
-          <AcaoDeIa
-            rotulo="Analisar a live" icone="brain"
-            rotuloEmVoo="analisando…"
-            tamanho="md"
-            destaque
-            emVoo={
-              analiseEmAndamento ? (analisarClaude.variables?.provider ?? 'claude') : null
-            }
-            desabilitado={importarAnalise.isPending}
-            onGerar={onSubmitIA}
-          />
+          <BotaoAnalisarLive {...acaoDeAnalisar} desabilitado={importarAnalise.isPending} />
         )}
       </div>
     </Modal>

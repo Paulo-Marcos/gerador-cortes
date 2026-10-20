@@ -3,7 +3,14 @@
 // Vivem num arquivo próprio (e não em useProjetoDetalhe.ts, que está sob lock)
 // para não tocar features protegidas. Reutilizam as query-keys existentes para
 // manter as invalidações consistentes com o resto do detalhe do projeto.
-import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useIsMutating,
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { diarizacaoApi, type FalantesMap } from './api';
 import { geracaoIaApi } from '@/features/ia';
 import { useToast } from '@/components/ui/toaster';
@@ -12,6 +19,14 @@ import {
   atualizarLegendasDoCorte,
   esquecerLegendasDosCortes,
 } from '@/features/shorts/legendasDoCorte';
+import type { ProviderIA } from '@/lib/providerIa';
+import {
+  analisarComAsDuas,
+  avisoDasDuas,
+  quemAnalisa,
+  type DesfechoDaAnalise,
+  type PedidoDeAnalise,
+} from './analiseComAsDuas';
 
 export const falantesKey = (id: string) => ['projeto', id, 'falantes'] as const;
 
@@ -130,11 +145,7 @@ export function useAnalisarComDiarizacao(projetoId: string) {
       notify(`Análise via ${via} concluída: ${data.total_cortes ?? 0} corte(s).`, {
         tone: 'success',
       });
-      qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
-      qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
-      qc.invalidateQueries({ queryKey: ['projetos'] });
-      // D-973: a análise encadeia o refazer-transcrição de todos os cortes.
-      void esquecerLegendasDosCortes(qc);
+      aoConcluirAnalise(qc, projetoId);
     },
     onError: (error) => {
       notify(error instanceof Error ? error.message : 'Erro na análise por IA.', {
@@ -142,4 +153,75 @@ export function useAnalisarComDiarizacao(projetoId: string) {
       });
     },
   });
+}
+
+function aoConcluirAnalise(qc: QueryClient, projetoId: string) {
+  qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
+  qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
+  qc.invalidateQueries({ queryKey: ['projetos'] });
+  // D-973: a análise encadeia o refazer-transcrição de todos os cortes.
+  void esquecerLegendasDosCortes(qc);
+}
+
+/** D-977: qual IA da dupla está analisando agora. Mora no cache, por live: o
+ * botão some ao fechar o modal, e ao reabrir tem de girar na IA certa. */
+export const analiseVezKey = (projetoId: string) => ['analise-vez', projetoId] as const;
+
+type AnalisarUma = (
+  provider: ProviderIA,
+  usarDiarizacao: boolean,
+) => Promise<{ total_cortes?: number | null }>;
+
+/** As opções da análise com as duas IAs, o Claude e depois o Gemini, fora do
+ * hook para o teste montar a mutação direto no cache. Usa a mesma chave da
+ * análise simples: para a tela é uma análise da live em voo, e os três botões
+ * travam juntos. */
+export function opcoesDaAnaliseComAsDuas(
+  qc: QueryClient,
+  projetoId: string,
+  avisar: (texto: string, tom: 'success' | 'error') => void,
+  analisar: AnalisarUma = (provider, usarDiarizacao) =>
+    geracaoIaApi.analisarViaClaude(projetoId, usarDiarizacao, provider),
+) {
+  return {
+    mutationKey: analiseClaudeKey(projetoId),
+    mutationFn: ({ usarDiarizacao }: PedidoDeAnalise): Promise<DesfechoDaAnalise[]> =>
+      analisarComAsDuas(
+        (provider) => analisar(provider, usarDiarizacao),
+        (provider) => {
+          // A análise leva minutos e o operador pode estar em outra live: sem
+          // observador, a coleta padrão (5 min) apagaria a vez no meio.
+          qc.setQueryDefaults(analiseVezKey(projetoId), { gcTime: Infinity });
+          qc.setQueryData(analiseVezKey(projetoId), provider);
+        },
+      ),
+    onSuccess: (desfechos: DesfechoDaAnalise[]) => {
+      const aviso = avisoDasDuas(desfechos);
+      avisar(aviso.texto, aviso.tom);
+      aoConcluirAnalise(qc, projetoId);
+    },
+    onSettled: () => qc.setQueryData(analiseVezKey(projetoId), null),
+  };
+}
+
+export function useAnalisarComAsDuas(projetoId: string) {
+  const qc = useQueryClient();
+  const { notify } = useToast();
+  return useMutation(
+    opcoesDaAnaliseComAsDuas(qc, projetoId, (texto, tone) => notify(texto, { tone })),
+  );
+}
+
+/** Quem analisa esta live agora, lido do cache (sobrevive a fechar o modal). */
+export function useQuemAnalisa(projetoId: string) {
+  const pedidos = useMutationState({
+    filters: { mutationKey: analiseClaudeKey(projetoId), exact: true, status: 'pending' },
+    select: (m) => m.state.variables as PedidoDeAnalise | undefined,
+  });
+  const vez = useQuery<ProviderIA | null>({
+    queryKey: analiseVezKey(projetoId),
+    queryFn: () => null,
+    enabled: false,
+  }).data;
+  return quemAnalisa(pedidos, vez ?? null);
 }
