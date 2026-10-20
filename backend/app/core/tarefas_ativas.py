@@ -82,6 +82,8 @@ TAREFAS_BACKGROUND: tuple[tuple[str, str, str, str], ...] = (
     ("ingestao-", "ingestao", "projeto", "Baixando e transcrevendo"),
     ("reanalise-", "analise", "projeto", "Reanalisando transcrição"),
     ("desvios-todos-", "trechos", "projeto", "Gerando trechos de todos os cortes"),
+    # D-976: os trechos que a análise da live gera sozinha nos cortes que criou.
+    ("trechos-da-analise-", "trechos", "projeto", "Gerando trechos dos cortes novos"),
     ("prompt-thumb-", "thumbnail", "corte", "Montando prompt da capa"),
     ("thumbnail-", "thumbnail", "corte", "Gerando imagem da capa"),
     ("metadados-", "metadados", "corte", "Gerando metadados"),

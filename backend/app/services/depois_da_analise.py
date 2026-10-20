@@ -61,6 +61,10 @@ async def refazer_transcricao_dos_cortes(projeto_id: str) -> bool:
 # a geração por concluída). A segunda análise só acrescenta à fila da primeira.
 _pendentes: dict[str, list[tuple[str, ProviderIA]]] = {}
 
+# Folga entre um corte e outro, a mesma do lote do botão (analisar_desvios_todos_impl):
+# a CLI da assinatura atende uma chamada por vez.
+FOLGA_ENTRE_CORTES_SEG = 1.0
+
 
 async def gerar_trechos_dos_cortes_novos(projeto_id: str) -> None:
     """Roda a `trechos-expert` em cada corte da fila da live, um de cada vez,
@@ -72,13 +76,11 @@ async def gerar_trechos_dos_cortes_novos(projeto_id: str) -> None:
             corte_id, provider = fila.pop(0)
             try:
                 await CorteService.gerar_trechos_via_claude(corte_id, provider)
-                # Mesma folga do lote do botão (analisar_desvios_todos_impl): a
-                # CLI da assinatura atende uma chamada por vez.
-                await asyncio.sleep(1)
+                await asyncio.sleep(FOLGA_ENTRE_CORTES_SEG)
             except Exception as e:  # noqa: BLE001 — lote: um corte que falha não para os outros
                 operational_error("TrechosAposAnalise", f"Erro no corte {corte_id}: {e}")
     finally:
-        del _pendentes[projeto_id]
+        _esquecer_fila(projeto_id, fila)
 
 
 def disparar_trechos_dos_cortes_novos(
@@ -93,9 +95,19 @@ def disparar_trechos_dos_cortes_novos(
         _pendentes[projeto_id].extend(novos)
         return
     _pendentes[projeto_id] = novos
-    # O prefixo `desvios-todos-` é o da geração em lote do botão: o indicador de
-    # tarefas ativas mostra "Gerando trechos" na live enquanto roda.
-    fire_and_forget(
+    # Nome próprio, não o `desvios-todos-` do botão de lote: com o mesmo nome as
+    # duas tarefas disputariam o registro da fila global. O prefixo está em
+    # `core/tarefas_ativas.py`, que mostra "Gerando trechos" na live.
+    tarefa = fire_and_forget(
         gerar_trechos_dos_cortes_novos(projeto_id),
-        name=f"desvios-todos-{projeto_id[:8]}",
+        name=f"trechos-da-analise-{projeto_id[:8]}",
     )
+    # Cancelada antes de começar, a tarefa não passa pelo `finally` que esvazia a
+    # fila: sem isto a live ficaria sem trechos até o backend reiniciar.
+    tarefa.add_done_callback(lambda _t: _esquecer_fila(projeto_id, novos))
+
+
+def _esquecer_fila(projeto_id: str, fila: list[tuple[str, ProviderIA]]) -> None:
+    # Só a fila desta tarefa: uma análise posterior pode já ter aberto outra.
+    if _pendentes.get(projeto_id) is fila:
+        del _pendentes[projeto_id]

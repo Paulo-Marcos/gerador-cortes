@@ -129,11 +129,8 @@ async def test_trechos_rodam_em_cada_corte_e_uma_falha_nao_para_os_outros(monkey
             raise RuntimeError("cota do Gemini acabou")
         return {"total_desvios": 5, "novos": 3}
 
-    async def sem_espera(_seg):
-        return None
-
     monkeypatch.setattr(CorteService, "gerar_trechos_via_claude", staticmethod(fake_gerar_trechos))
-    monkeypatch.setattr(depois_da_analise.asyncio, "sleep", sem_espera)
+    monkeypatch.setattr(depois_da_analise, "FOLGA_ENTRE_CORTES_SEG", 0)
     monkeypatch.setattr(
         depois_da_analise,
         "_pendentes",
@@ -166,49 +163,70 @@ async def test_disparo_aparece_como_geracao_de_trechos_do_projeto(monkeypatch):
     agendados: list = []
 
     def fake_fire(coro, name=None):
+        from unittest.mock import MagicMock
+
         coro.close()
         agendados.append(name)
+        return MagicMock()
 
     monkeypatch.setattr(depois_da_analise, "_pendentes", {})
     monkeypatch.setattr(depois_da_analise, "fire_and_forget", fake_fire)
 
     depois_da_analise.disparar_trechos_dos_cortes_novos("abcdef123456", ["c1"], "claude")
 
-    assert agendados == ["desvios-todos-abcdef12"]
+    assert agendados == ["trechos-da-analise-abcdef12"]
 
 
 @pytest.mark.asyncio
 async def test_segunda_analise_soma_a_fila_da_primeira(monkeypatch):
     """Com as duas IAs (D-977), a análise termina duas vezes: os cortes do Gemini
-    entram na fila que já roda, sem uma segunda tarefa em paralelo."""
+    entram na fila que JÁ RODA, sem uma segunda tarefa em paralelo."""
     chamados: list = []
+    primeira_na_ia = asyncio.Event()
     liberar = asyncio.Event()
 
     async def fake_gerar_trechos(corte_id, provider="claude"):
         chamados.append((corte_id, provider))
+        primeira_na_ia.set()
         await liberar.wait()
-
-    async def sem_espera(_seg):
-        return None
 
     tarefas: list = []
     monkeypatch.setattr(CorteService, "gerar_trechos_via_claude", staticmethod(fake_gerar_trechos))
-    monkeypatch.setattr(depois_da_analise.asyncio, "sleep", sem_espera)
+    monkeypatch.setattr(depois_da_analise, "FOLGA_ENTRE_CORTES_SEG", 0)
     monkeypatch.setattr(depois_da_analise, "_pendentes", {})
     monkeypatch.setattr(
         depois_da_analise,
         "fire_and_forget",
-        lambda coro, name=None: tarefas.append(asyncio.ensure_future(coro)),
+        lambda coro, name=None: tarefas.append(asyncio.ensure_future(coro)) or tarefas[-1],
     )
 
     depois_da_analise.disparar_trechos_dos_cortes_novos("p1", ["c-claude"], "claude")
-    await asyncio.sleep(0)
+    await asyncio.wait_for(primeira_na_ia.wait(), timeout=5)
     depois_da_analise.disparar_trechos_dos_cortes_novos("p1", ["c-gemini"], "gemini")
     liberar.set()
-    await asyncio.gather(*tarefas)
+    await asyncio.wait_for(asyncio.gather(*tarefas), timeout=5)
 
     assert len(tarefas) == 1
     assert chamados == [("c-claude", "claude"), ("c-gemini", "gemini")]
+    assert depois_da_analise._pendentes == {}
+
+
+@pytest.mark.asyncio
+async def test_tarefa_cancelada_antes_de_comecar_nao_prende_a_fila(monkeypatch):
+    tarefas: list = []
+    monkeypatch.setattr(depois_da_analise, "_pendentes", {})
+    monkeypatch.setattr(
+        depois_da_analise,
+        "fire_and_forget",
+        lambda coro, name=None: tarefas.append(asyncio.ensure_future(coro)) or tarefas[-1],
+    )
+
+    depois_da_analise.disparar_trechos_dos_cortes_novos("p1", ["c1"], "claude")
+    tarefas[0].cancel()
+    await asyncio.gather(*tarefas, return_exceptions=True)
+    await asyncio.sleep(0)
+
+    assert depois_da_analise._pendentes == {}
 
 
 # ── Auditoria do PR #245: o lote roda sozinho enquanto o operador revisa ──────
