@@ -7,7 +7,7 @@ import { mensagemErro } from '@/lib/mensagemErro';
 import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
 import { Icon } from '@/upgrade/Icon';
 import { EstiloPorTipo, ImagemDoCabecalho, type TipoDoPadrao } from './EstiloDoCanal';
-import { PadraoDoHorizontalNoCanal, PadraoDoShortNoCanal } from './PadraoDoCanalModais';
+import { PadraoDoCanal } from './PadraoDoCanalModais';
 import { edicaoDe, type RascunhoDoPalco } from './PalcoComponentesSection';
 import { paraComponentesDoPalco, urlDaImagem } from './palcoDoCanal';
 import {
@@ -94,8 +94,7 @@ export function PalcoComponentesSection() {
           />
         </>
       )}
-      {modal === 'horizontal' && <PadraoDoHorizontalNoCanal onClose={() => setModal(null)} />}
-      {modal === 'short' && <PadraoDoShortNoCanal onClose={() => setModal(null)} />}
+      {modal && <PadraoDoCanal tipo={modal} onClose={() => setModal(null)} />}
     </section>
   );
 }

@@ -705,7 +705,7 @@ export function DefinirPalcoModal({
   );
 }
 
-function Secao({
+export function Secao({
   numero,
   titulo,
   children,
