@@ -42,8 +42,9 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
     recalculados iguais porque as bordas do corte nao mudaram.
 
     Isso NAO deixa o texto do corte intocado: a salvaguarda de silencios do
-    `gerar_bruto_via_worker` roda sempre e termina em
-    `sincronizar_transcricao_corte`, que reescreve `Corte.transcricao_final`.
+    `gerar_bruto_via_worker` roda sempre e, quando o FFmpeg detecta os
+    silencios, termina em `sincronizar_transcricao_corte`, que reescreve
+    `Corte.transcricao_final`.
 
     Levanta `LookupError` (corte inexistente) e `ValueError` (corte sem Fire, ou
     bruto que nao pode ser regerado).
@@ -83,7 +84,8 @@ async def _regerar_bruto_preservando_pos_producao(corte_id: str) -> None:
     """Refaz o video do bruto sem refazer transcricao nem cenas (D-160).
 
     A `transcricao_final` do corte ainda e ressincronizada pela salvaguarda de
-    silencios, que roda em toda geracao do bruto.
+    silencios, que roda em toda geracao do bruto (so nao ressincroniza se a
+    deteccao do FFmpeg falhar).
     """
     resultado = await ExportService.gerar_bruto_via_worker(
         corte_id, refazer_transcricao=False, refazer_cenas=False

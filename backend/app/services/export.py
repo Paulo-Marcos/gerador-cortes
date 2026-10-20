@@ -89,8 +89,8 @@ class ExportService(
         D-160 — o bruto (silêncios + render) roda sempre; os flags só gateiam as
         etapas derivadas: ``True`` na 1ª geração, ``False`` na regeração sem opt-in,
         que não refaz a transcrição da live nem as cenas. A salvaguarda de silêncios
-        roda nos dois casos e ressincroniza a ``transcricao_final`` do corte
-        (``sincronizar_transcricao_corte``).
+        roda nos dois casos e, se o FFmpeg detecta, ressincroniza a
+        ``transcricao_final`` do corte (``sincronizar_transcricao_corte``).
 
         Returns:
             ``{"status": "pronto", "clip_path": str}`` em caso de sucesso, ou
