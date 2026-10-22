@@ -18,7 +18,7 @@ const ROTULO = 'mb-1.5 font-code text-[11px] font-bold uppercase tracking-[0.08e
 
 export interface ContextoDoPalco {
   palco: ReturnType<typeof usePalcoDoModal>;
-  /** O modal do padrão global não muda o palco (é do canal). */
+  /** No padrão global o palco é o do canal: não se edita aqui, só chega pelo preset (D-981). */
   global: boolean;
   /** D-938: o padrão do canal, aberto pela tela de Canais — só o palco do canal. */
   canal?: boolean;
