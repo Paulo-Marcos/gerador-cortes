@@ -10,6 +10,9 @@ conta, publicava ali sem aviso. A regra fecha esse buraco:
     estável (o id), nunca pelo nome, que o dono troca quando quer;
   - sem conta esperada gravada, a primeira conta vista é aprendida — o canal
     não para de publicar no dia do deploy, e daí em diante só ela passa;
+  - mas nunca a conta que já é de OUTRO canal: é o caso do token único do
+    Instagram no `.env`, ou do login do canal A feito na janela do canal B,
+    antes do primeiro envio — aprender ali seria gravar o erro;
   - conta que não se deixa ler também barra: na dúvida, não publica.
 
 Trocar de conta de propósito é "esquecer" a gravada na tela de Canais; o envio
@@ -59,19 +62,29 @@ def destino_conhecido(destino: str) -> str:
     return destino
 
 
-def conferir(destino: str, esperada: Conta | None, logada: Conta) -> bool:
+def conferir(
+    destino: str, esperada: Conta | None, logada: Conta, *, dono_da_logada: str = ""
+) -> bool:
     """Deixa o envio seguir ou o barra. `True` = aprender a `logada` (RN-31).
 
+    `dono_da_logada` é o OUTRO canal que já tem a `logada` gravada, se houver.
     Levanta `ContaIlegivel` sem id lido e `ContaDivergente` quando o id lido
-    não é o esperado.
+    não é o esperado — ou, sem esperado, quando ele já é de outro canal.
     """
     rotulo = ROTULOS[destino_conhecido(destino)]
     if not logada.id.strip():
         raise ContaIlegivel(
             f"Não consegui confirmar qual conta está logada no {rotulo}, e por isso "
-            "não enviei. Confira se a sessão do robô está aberta e tente de novo."
+            "não enviei. Se a janela do robô pedir login, entre na conta do canal "
+            "ali (uma vez só) e envie de novo."
         )
     if esperada is None:
+        if dono_da_logada:
+            raise ContaDivergente(
+                f"Envio recusado: o {rotulo} está logado em {logada.legivel()}, que já "
+                f"é a conta do canal {dono_da_logada}. Entre na conta deste canal (na "
+                "janela do robô, ou refazendo a autorização) e envie de novo."
+            )
         return True
     if esperada.id.strip() != logada.id.strip():
         raise ContaDivergente(

@@ -45,6 +45,20 @@ def ler_todas(db_path: Path, channel_id: str) -> dict[str, tuple[str, str, str]]
     return {destino: (conta_id, nome, gravada_em) for destino, conta_id, nome, gravada_em in linhas}
 
 
+def canal_da_conta(db_path: Path, destino: str, conta_id: str, exceto: str) -> str:
+    """O canal (fora `exceto`) que já tem esta conta gravada no destino, ou ""."""
+    conn = _conectar(db_path)
+    try:
+        row = conn.execute(
+            "SELECT channel_id FROM conta_do_destino "
+            "WHERE destino = ? AND conta_id = ? AND channel_id != ? LIMIT 1",
+            (destino, conta_id, exceto),
+        ).fetchone()
+    finally:
+        conn.close()
+    return row[0] if row is not None else ""
+
+
 def gravar(
     db_path: Path, channel_id: str, destino: str, conta_id: str, nome: str, gravada_em: str
 ) -> None:

@@ -53,7 +53,10 @@ def conferir_conta(destino: str, logada: Conta) -> None:
     banco, canal = _banco_e_canal()
     gravada = conta_do_destino_store.ler_todas(banco, canal).get(destino)
     esperada = Conta(id=gravada[0], nome=gravada[1]) if gravada else None
-    if conferir(destino, esperada, logada):
+    dono = (
+        "" if gravada else conta_do_destino_store.canal_da_conta(banco, destino, logada.id, canal)
+    )
+    if conferir(destino, esperada, logada, dono_da_logada=dono):
         agora = datetime.now(UTC).isoformat(timespec="seconds")
         conta_do_destino_store.gravar(banco, canal, destino, logada.id, logada.nome, agora)
         logger.info("[Conta] %s do canal %s aprendida: %s", destino, canal, logada.legivel())
