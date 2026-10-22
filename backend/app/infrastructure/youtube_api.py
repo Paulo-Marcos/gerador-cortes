@@ -41,11 +41,16 @@ def autorizar_no_navegador(client_secrets_path: str, scopes: list[str], porta: i
 
 def titulo_do_canal(creds) -> str:
     """Título do canal da conta; vazio se ela não tiver canal. Falha de rede sobe."""
+    return canal_da_conta(creds)[1]
+
+
+def canal_da_conta(creds) -> tuple[str, str]:
+    """`(id, título)` do canal da conta; vazios se ela não tiver canal. Falha de rede sobe."""
     resp = _cliente(creds).channels().list(part="snippet", mine=True, maxResults=1).execute()
     items = resp.get("items", [])
-    if items:
-        return items[0].get("snippet", {}).get("title", "")
-    return ""
+    if not items:
+        return "", ""
+    return str(items[0].get("id") or ""), str(items[0].get("snippet", {}).get("title") or "")
 
 
 def enviar_video(creds, arquivo: Path, corpo: dict, ao_progredir: Callable[[int], None]) -> str:
