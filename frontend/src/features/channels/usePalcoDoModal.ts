@@ -42,7 +42,10 @@ export function usePalcoDoModal({
   alvo: AlvoDoEstilo;
   aberto: boolean;
 }) {
-  const doCanal = alvo === 'canal';
+  // D-981: o palco do padrão global é o do canal. O preset aplicado ali grava
+  // os cards no canal; antes só a geometria ia para o global e os cards do
+  // preset sumiam, com o selo do preset dizendo que ele estava em uso.
+  const doCanal = alvo === 'canal' || alvo === 'global';
   const vigente = usePalcoDoEscopo(tipo, doCanal ? undefined : projetoId, alvo === 'corte' ? corteId : undefined).data;
   const doPalcoDoCanal = usePalcoDoCanalAtivo().data;
   const gravar = useGravarPalcoDoEscopo();
@@ -68,11 +71,11 @@ export function usePalcoDoModal({
     paraPreset: () => (rascunho ? edicaoDe(rascunho) : undefined),
     /** Aplica o palco de um preset no rascunho. */
     dePreset: (palco: unknown) => efetivo && setRascunho(rascunhoDe(comPalcoDoPreset(efetivo, palco))),
-    /** Grava o palco no corte, no projeto ou no canal do modal (nada no global do editor). */
+    /** Grava o palco no corte, no projeto ou no canal (o modal da tela de Canais e o do padrão global). */
     aplicar: (aoTerminar?: () => void) => {
       if (!rascunho) return;
-      if (alvo === 'canal') return efetivo && gravarNoCanal.gravar(efetivo.canal_id, edicaoDe(rascunho), aoTerminar);
-      if (alvo === 'global' || !projetoId) return;
+      if (doCanal) return efetivo && gravarNoCanal.gravar(efetivo.canal_id, edicaoDe(rascunho), aoTerminar);
+      if (!projetoId) return;
       const corpo = { escopo: alvo, tipo, projeto_id: projetoId, corte_id: corteId ?? null };
       gravar.mutate({ ...corpo, componentes: edicaoDe(rascunho) }, { onSuccess: aoTerminar });
     },
