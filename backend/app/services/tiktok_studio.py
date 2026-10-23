@@ -200,31 +200,27 @@ SELETORES: dict[str, str] = {
     # 4. O rotulo NAO e "Agendar": e "Programar". Procurar pelo texto obvio nao
     #    achava nada. Por isso a ancora aqui e o `value` do radio, que e do
     #    formulario e nao da traducao.
-    # 5. O campo da HORA vem ANTES do de data no DOM, ao contrario do que a
-    #    leitura da tela sugere. Trocar os dois preencheria data no seletor de
-    #    hora, em silencio.
     #
-    # Os dois campos sao `readonly`: nao ha o que digitar, so o que clicar.
+    # D-983, MEDIDO em 22/10/2026: o TikTok trocou os dois <input> por combobox
+    # (o `:nth-match(..., 2)` antigo esperava um campo que nao existe mais e
+    # travava o lote). A ancora agora e o `aria-label`, que vem em ingles mesmo
+    # com a tela em portugues — nao depende da traducao nem da ordem no DOM.
+    # O valor e o texto do combobox: "23 de out de 2026" e "00:05".
     "ligar_agendamento": '[data-e2e="schedule_container"] label:has(input[value="schedule"])',
     "agendamento_ligado": '[data-e2e="schedule_container"] input[value="schedule"]:checked',
-    "campo_da_hora": ':nth-match([data-e2e="schedule_container"] input.TUXTextInputCore-input, 1)',
-    "campo_da_data": ':nth-match([data-e2e="schedule_container"] input.TUXTextInputCore-input, 2)',
-    # So os dias DENTRO da janela de agendamento tem `valid`. Os de fora — e os
-    # do mes vizinho que aparecem na mesma grade — ficam sem a classe, entao
-    # pedir `.valid` ja e pedir "um dia que da para escolher".
-    "dia_do_calendario": ".calendar-wrapper .day-span-container .day.valid",
-    "mes_seguinte": ":nth-match(.calendar-wrapper .arrow, 2)",
-    # O seletor de hora vive no DOM o tempo todo, invisivel. Sem o `:not(...)`
-    # o robo clicaria numa opcao escondida e ficaria esperando um efeito que
-    # nunca vem.
-    "hora_do_seletor": (
-        ".tiktok-timepicker-time-picker-container:not(.tiktok-timepicker-invisible) "
-        ".tiktok-timepicker-option-text.tiktok-timepicker-left"
+    "campo_da_hora": '[data-e2e="schedule_container"] [role="combobox"][aria-label="Select time"]',
+    "campo_da_data": '[data-e2e="schedule_container"] [role="combobox"][aria-label="Select date"]',
+    # Os dias fora da janela de agendamento — e os do mes vizinho que aparecem
+    # na mesma grade — vem com `data-disabled`/`data-outside`: pedir os dois
+    # "false" ja e pedir "um dia que da para escolher".
+    "dia_do_calendario": (
+        '[role="dialog"] .DatePicker__day[data-outside="false"][data-disabled="false"]'
     ),
-    "minuto_do_seletor": (
-        ".tiktok-timepicker-time-picker-container:not(.tiktok-timepicker-invisible) "
-        ".tiktok-timepicker-option-text.tiktok-timepicker-right"
-    ),
+    "mes_seguinte": '[role="dialog"] .DatePicker__nav[aria-label="Next month"]',
+    # O painel do relogio so existe aberto, dentro do dialogo: nao ha opcao
+    # escondida em que clicar por engano.
+    "hora_do_seletor": '[role="dialog"] [role="listbox"][aria-label="Hours"] [role="option"]',
+    "minuto_do_seletor": '[role="dialog"] [role="listbox"][aria-label="Minutes"] [role="option"]',
 }
 
 # O texto que o cartão de status mostra quando o arquivo terminou de subir.
@@ -416,7 +412,7 @@ def _marcar_dia(pagina: Pagina, agendamento: Agendamento) -> None:
             "o TikTok so agenda dentro de uma janela curta",
         )
 
-    if pagina.valor_de("campo_da_data") == agendamento.data_iso():
+    if agendamento.mostrada_em(pagina.valor_de("campo_da_data")):
         return
 
     # Segunda chance pelo mesmo motivo do relogio: a grade pode ter se
@@ -425,7 +421,7 @@ def _marcar_dia(pagina: Pagina, agendamento: Agendamento) -> None:
     pagina.clicar_opcao("dia_do_calendario", agendamento.dia(), segundos=3.0)
 
     escrito = pagina.valor_de("campo_da_data")
-    if escrito != agendamento.data_iso():
+    if not agendamento.mostrada_em(escrito):
         raise RoteiroInterrompido(
             Passo.AGENDAMENTO, f"pedi {agendamento.data_iso()} e o campo ficou {escrito!r}"
         )
