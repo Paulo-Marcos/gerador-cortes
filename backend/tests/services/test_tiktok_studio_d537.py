@@ -24,6 +24,14 @@ from app.domain.publicacao.tiktok_studio import (
 )
 from app.services import capa_no_tiktok_studio, tiktok_studio
 
+_MESES_DA_TELA = "jan fev mar abr mai jun jul ago set out nov dez".split()
+
+
+def _como_o_tiktok_mostra(ano_mes: str, dia: str) -> str:
+    """O texto do combobox de data, MEDIDO em 22/10/2026: "23 de out de 2026"."""
+    ano, mes = ano_mes.split("-")
+    return f"{int(dia)} de {_MESES_DA_TELA[int(mes) - 1]} de {ano}"
+
 
 class PaginaFalsa:
     """Um dublê que registra o que pediram e obedece — ou falha sob encomenda."""
@@ -43,9 +51,10 @@ class PaginaFalsa:
         # o envio da capa ao TikTok termina segundos depois, e e ele que conta.
         self.servidor_confirma = True
         self.escutas: list[int] = []  # posicao em `chamadas` de cada escuta
-        # D-580: os campos de data e hora sao `readonly` e so mudam por clique
-        # no seletor. O duble imita isso — escrever neles nao existe.
-        self.campos = {"campo_da_data": "2026-09-12", "campo_da_hora": "00:00"}
+        # D-580: os campos de data e hora so mudam por clique no seletor. O
+        # duble imita isso — escrever neles nao existe. D-983: a data aparece
+        # por extenso, como o combobox novo do TikTok mostra.
+        self.campos = {"campo_da_data": "12 de set de 2026", "campo_da_hora": "00:00"}
         self.mes_visivel = "2026-09"
         # Opcoes que o seletor NAO oferece, no formato "chave:texto". E assim
         # que se encena "esse dia esta fora da janela de agendamento".
@@ -137,7 +146,7 @@ class PaginaFalsa:
         if f"{alvo}:{texto}" in self.opcoes_ausentes:
             return False
         if alvo == "dia_do_calendario":
-            self.campos["campo_da_data"] = f"{self.mes_visivel}-{texto.zfill(2)}"
+            self.campos["campo_da_data"] = _como_o_tiktok_mostra(self.mes_visivel, texto)
         elif alvo == "hora_do_seletor":
             _, minuto = self.campos["campo_da_hora"].split(":")
             self.campos["campo_da_hora"] = f"{texto}:{minuto}"
@@ -772,7 +781,7 @@ class TestAgendamento:
 
         assert Passo.AGENDAMENTO.value in relatorio["passos"]
         assert relatorio["agendado_para"] == agendamento.legivel()
-        assert pagina.campos["campo_da_data"] == agendamento.data_iso()
+        assert agendamento.mostrada_em(pagina.campos["campo_da_data"])
         assert pagina.campos["campo_da_hora"] == "14:05"
 
     def test_o_agendamento_vem_antes_da_revisao(self, arquivos):
@@ -806,7 +815,7 @@ class TestAgendamento:
         _rodar(pagina, arquivos, agendamento=agendamento)
 
         assert ("clicar", "mes_seguinte") in pagina.chamadas
-        assert pagina.campos["campo_da_data"] == agendamento.data_iso()
+        assert agendamento.mostrada_em(pagina.campos["campo_da_data"])
 
     def test_dia_fora_da_janela_interrompe_no_passo_certo(self, arquivos):
         agendamento = self._amanha()
@@ -840,7 +849,7 @@ class TestAgendamento:
             _rodar(pagina, arquivos, agendamento=agendamento)
 
         assert erro.value.passo == Passo.AGENDAMENTO
-        assert "2019-01" in str(erro.value)
+        assert "de jan de 2019" in str(erro.value)
 
     def test_reabre_o_seletor_quando_o_minuto_nao_entra_de_primeira(self, arquivos):
         agendamento = self._amanha("09:30")
@@ -852,6 +861,20 @@ class TestAgendamento:
 
         assert pagina.campos["campo_da_hora"] == "09:30"
         assert pagina.chamadas.count(("clicar", "campo_da_hora")) == 2
+
+    def test_seletores_do_formulario_novo_ancoram_no_aria_label(self):
+        """D-983: o `:nth-match(... input, 2)` esperava um campo que sumiu e
+        travou o lote. Os combobox medidos tem `aria-label` em ingles mesmo com
+        a tela em portugues — e a ancora que nao depende de traducao nem ordem."""
+        seletores = tiktok_studio.SELETORES
+
+        assert 'aria-label="Select date"' in seletores["campo_da_data"]
+        assert 'aria-label="Select time"' in seletores["campo_da_hora"]
+        assert "nth-match" not in seletores["campo_da_data"] + seletores["campo_da_hora"]
+        assert 'data-disabled="false"' in seletores["dia_do_calendario"]
+        assert 'aria-label="Next month"' in seletores["mes_seguinte"]
+        assert 'aria-label="Hours"' in seletores["hora_do_seletor"]
+        assert 'aria-label="Minutes"' in seletores["minuto_do_seletor"]
 
     def test_a_falha_do_agendamento_avisa_para_marcar_a_mao(self):
         assert "a mao" in ORIENTACOES[Passo.AGENDAMENTO]

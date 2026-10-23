@@ -230,17 +230,17 @@ class PaginaDoPlaywright:
     def valor_de(self, alvo: str) -> str:
         """O que o campo mostra AGORA — a propriedade, nao o atributo.
 
-        `atributo_de(alvo, "value")` devolveria o valor que veio no HTML, que
-        numa tela React e o inicial e nao o atual. Aqui a diferenca nao e
-        teorica: os campos de data e hora do TikTok sao `readonly` e so mudam
-        por clique no seletor, entao o atributo nunca acompanha. Ler a
-        propriedade e o unico jeito de CONFERIR que o clique pegou.
+        `atributo_de(alvo, "value")` devolveria o HTML inicial do React, nao o
+        atual — e data e hora do TikTok so mudam por clique no seletor. D-983:
+        num <input> e o `value`; nos combobox que substituiram os inputs, o
+        texto visivel.
         """
         try:
-            return self._page.locator(self._css(alvo)).first.input_value(
-                timeout=_ESPERA_PELO_CAMPO_MS
+            js = "e => ('value' in e ? e.value : e.innerText).trim()"
+            return self._page.locator(self._css(alvo)).first.evaluate(
+                js, timeout=_ESPERA_PELO_CAMPO_MS
             )
-        except Exception:  # noqa: BLE001 — campo sumiu ou nao e input
+        except Exception:  # noqa: BLE001 — campo sumiu
             return ""
 
     def existe(self, alvo: str, *, segundos: float, visivel: bool = True) -> bool:
