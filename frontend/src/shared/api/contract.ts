@@ -476,6 +476,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/channels/ativo/contas-dos-destinos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar Contas Dos Destinos */
+        get: operations["listar_contas_dos_destinos_api_channels_ativo_contas_dos_destinos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/channels/ativo/contas-dos-destinos/{destino}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Esquecer Conta Do Destino */
+        delete: operations["esquecer_conta_do_destino_api_channels_ativo_contas_dos_destinos__destino__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels/ativo/navegador-do-robo": {
         parameters: {
             query?: never;
@@ -5967,6 +6001,19 @@ export interface components {
              */
             url: string;
         };
+        /** ContaDoDestino */
+        ContaDoDestino: {
+            /** Conta Id */
+            conta_id: string;
+            /** Destino */
+            destino: string;
+            /** Gravada Em */
+            gravada_em: string;
+            /** Nome */
+            nome: string;
+            /** Rotulo */
+            rotulo: string;
+        };
         /**
          * ContagemDeShorts
          * @description Quantos shorts o corte tem, por estágio da curadoria.
@@ -10916,6 +10963,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CanalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_contas_dos_destinos_api_channels_ativo_contas_dos_destinos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContaDoDestino"][];
+                };
+            };
+        };
+    };
+    esquecer_conta_do_destino_api_channels_ativo_contas_dos_destinos__destino__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                destino: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContaDoDestino"][];
                 };
             };
             /** @description Validation Error */

@@ -8,6 +8,7 @@ import { api, dados, type Schema } from '@/shared/api';
 export type AtualizarSettingsBody = Schema<'UpdateAppSettingsRequest'>;
 export type Navegador = Schema<'NavegadorDoRobo'>['navegador'];
 export type RoboDoStudio = Schema<'RoboDoStudio'>;
+export type ContaDoDestino = Schema<'ContaDoDestino'>;
 export type PapelModelo = Schema<'PapelModeloResponse'>;
 export type ModelosDisponiveis = Schema<'ModelosDisponiveisResponse'>;
 
@@ -31,6 +32,15 @@ export const settingsApi = {
   obterRoboDoStudio: () => dados(api.GET('/api/channels/ativo/robo-do-studio')),
   gravarRoboDoStudio: (body: RoboDoStudio) =>
     dados(api.PUT('/api/channels/ativo/robo-do-studio', { body })),
+
+  /** D-980: a conta em que cada destino publica, aprendida no 1º envio (RN-31). */
+  listarContasDosDestinos: () => dados(api.GET('/api/channels/ativo/contas-dos-destinos')),
+  esquecerContaDoDestino: (destino: string) =>
+    dados(
+      api.DELETE('/api/channels/ativo/contas-dos-destinos/{destino}', {
+        params: { path: { destino } },
+      }),
+    ),
 
   /** D-924: que modelo atende cada faixa de IA, no canal ativo. Vazio = padrão. */
   obterModelosIa: () => dados(api.GET('/api/editorial-skills/modelos-ia')),

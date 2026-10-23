@@ -38,8 +38,10 @@ from pathlib import Path
 from app.config import settings
 from app.core.channel_paths import active_channel_root
 from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.conta_do_destino import Conta
 from app.domain.publicacao.publicacao import ModoPublicacao, Plataforma, legenda_unica
 from app.infrastructure import instagram_graph
+from app.services.conta_do_destino import conferir_conta
 from app.services.publicacao_destinos import Destino, PacotePublicacao
 
 logger = logging.getLogger(__name__)
@@ -146,6 +148,8 @@ def publicar_reel(video: Path, legenda: str, capa: Path | None) -> dict:
     if not token:
         raise instagram_graph.ErroDoInstagram(SEM_TOKEN)
     conta, usuario = instagram_graph.quem_sou(token)
+    # RN-31: o token do `.env` é um só para o app; dois canais o herdariam.
+    conferir_conta("instagram", Conta(id=conta, nome=f"@{usuario}" if usuario else ""))
 
     capa_url = ""
     if capa is not None:

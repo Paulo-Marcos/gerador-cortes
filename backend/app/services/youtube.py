@@ -15,7 +15,7 @@ from app.database import AsyncSessionLocal
 from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.infrastructure.imagem.thumbnail_encode import preparar_para_youtube
 from app.models import Corte, MetadadoCorte, Projeto
-from app.services import studio_youtube
+from app.services import conta_do_destino, studio_youtube
 from app.services.media_retention import MediaRetentionService
 from app.services.validacao_publicacao import ValidacaoPublicacaoService
 from google.auth.transport.requests import Request
@@ -152,7 +152,7 @@ class YouTubeService:
                     creds.refresh(Request())
                     with open(token_path, "w") as token:
                         token.write(creds.to_json())
-                    return creds, None
+                    # Renovado: segue para a conferência da conta, no fim (D-980).
                 except Exception as e:  # noqa: BLE001 — renovação que falha vira nova autorização
                     operational_error(
                         "YouTube",
@@ -178,7 +178,7 @@ class YouTubeService:
                     "na pasta 'backend' e reinicie o backend.",
                 )
 
-        return creds, None
+        return conta_do_destino.credenciais_conferidas(creds)
 
     @staticmethod
     def _obter_ou_criar_playlist(youtube, titulo_live: str) -> str | None:

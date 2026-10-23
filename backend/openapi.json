@@ -2869,6 +2869,39 @@
         "title": "ConfirmarPublicacaoRequest",
         "type": "object"
       },
+      "ContaDoDestino": {
+        "properties": {
+          "conta_id": {
+            "title": "Conta Id",
+            "type": "string"
+          },
+          "destino": {
+            "title": "Destino",
+            "type": "string"
+          },
+          "gravada_em": {
+            "title": "Gravada Em",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destino",
+          "rotulo",
+          "conta_id",
+          "nome",
+          "gravada_em"
+        ],
+        "title": "ContaDoDestino",
+        "type": "object"
+      },
       "ContagemDeShorts": {
         "description": "Quantos shorts o corte tem, por estágio da curadoria.",
         "properties": {
@@ -14174,6 +14207,77 @@
           }
         },
         "summary": "Criar Canal",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/ativo/contas-dos-destinos": {
+      "get": {
+        "operationId": "listar_contas_dos_destinos_api_channels_ativo_contas_dos_destinos_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContaDoDestino"
+                  },
+                  "title": "Response Listar Contas Dos Destinos Api Channels Ativo Contas Dos Destinos Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Listar Contas Dos Destinos",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/ativo/contas-dos-destinos/{destino}": {
+      "delete": {
+        "operationId": "esquecer_conta_do_destino_api_channels_ativo_contas_dos_destinos__destino__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "destino",
+            "required": true,
+            "schema": {
+              "title": "Destino",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContaDoDestino"
+                  },
+                  "title": "Response Esquecer Conta Do Destino Api Channels Ativo Contas Dos Destinos  Destino  Delete",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Esquecer Conta Do Destino",
         "tags": [
           "Canais"
         ]

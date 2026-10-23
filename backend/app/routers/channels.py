@@ -30,7 +30,13 @@ from app.routers.channels_palco_schemas import (
 )
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
-from app.services import navegador_do_robo, palco_componentes, palco_por_escopo, studio_youtube
+from app.services import (
+    conta_do_destino,
+    navegador_do_robo,
+    palco_componentes,
+    palco_por_escopo,
+    studio_youtube,
+)
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -295,6 +301,30 @@ async def gravar_robo_do_studio(body: RoboDoStudio):
             monetizar=body.monetizar, relacionar_short=body.relacionar_short
         )
     )
+
+
+# --------------------------------------------------------------------------- #
+# A conta de cada destino, no canal ativo (D-980, RN-31)
+# --------------------------------------------------------------------------- #
+
+
+class ContaDoDestino(BaseModel):
+    destino: str
+    rotulo: str
+    conta_id: str
+    nome: str
+    gravada_em: str
+
+
+@router.get("/ativo/contas-dos-destinos", response_model=list[ContaDoDestino])
+async def listar_contas_dos_destinos():
+    return conta_do_destino.contas_do_canal()
+
+
+@router.delete("/ativo/contas-dos-destinos/{destino}", response_model=list[ContaDoDestino])
+async def esquecer_conta_do_destino(destino: str):
+    conta_do_destino.esquecer_conta(destino)
+    return conta_do_destino.contas_do_canal()
 
 
 class PaletaModel(BaseModel):

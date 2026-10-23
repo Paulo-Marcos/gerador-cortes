@@ -62,7 +62,7 @@ from app.domain.publicacao.tiktok_studio import (
     leitura_do_envio,
     marco_do_envio,
 )
-from app.services import capa_no_tiktok_studio
+from app.services import capa_no_tiktok_studio, conta_do_destino
 from app.services.janela_do_robo import fechar_aba
 from app.services.navegador_assistido import (
     ChromeNaoAbriu,
@@ -752,12 +752,12 @@ async def subir_assistido(
 ) -> dict:
     """Deixa o post pronto para o operador conferir e publicar.
 
-    Com `publicar_sozinho` o robô também aperta o botão — só com o interruptor
-    que o operador ligou. Levanta `RoteiroInterrompido`, cuja mensagem já é a
-    instrução para a tela.
+    Antes, confere a conta logada (RN-31). Com `publicar_sozinho` o robô também
+    aperta Publicar. Levanta `RoteiroInterrompido`, cuja mensagem é a instrução.
     """
     if not video.is_file():
         raise RoteiroInterrompido(Passo.ARQUIVO, "o MP4 do pacote nao esta em disco")
+    await conta_do_destino.conferir_no_navegador("tiktok", perfil_do_chrome(), URL_DO_UPLOAD)
 
     logger.info("[TikTokStudio] subindo %s", video.name)
     return await asyncio.to_thread(

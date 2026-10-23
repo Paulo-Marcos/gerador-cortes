@@ -1,8 +1,7 @@
 """Upload assistido de Reels no instagram.com, pelo Chrome do operador (D-564).
 
-O irmão do `tiktok_studio`, e de propósito com a mesma forma: um roteiro que
-fala em intenções (`Pagina`), um mapa de seletores num lugar só, e uma falha que
-diz QUAL passo quebrou. A camada que fala Playwright é a mesma — `navegador_assistido`.
+O irmão do `tiktok_studio`, de propósito com a mesma forma: roteiro em intenções (`Pagina`),
+seletores num lugar só, falha que diz QUAL passo quebrou e a camada `navegador_assistido`.
 
 ## Os seletores foram MEDIDOS (10/09/2026)
 
@@ -43,9 +42,8 @@ nos dois sentidos:
    abre Original, 1:1, 9:16 e 16:9; o roteiro escolhe Original e confere que a
    janela de recorte ficou vertical (510x510 → 287x510) antes de avançar.
 
-O que continua sem prova, e é honesto dizer: `aviso_de_sucesso`. Ele só aparece
-depois de um post de verdade, e a calibração parou antes disso. É por isso que
-não achá-lo devolve "não sei" em vez de "não publicou".
+Sem prova, e é honesto dizer: `aviso_de_sucesso`, que só aparece depois de um post de verdade
+(a calibração parou antes). Por isso não achá-lo devolve "não sei" em vez de "não publicou".
 
 ## Por que o perfil é separado do TikTok
 
@@ -70,6 +68,7 @@ from app.domain.publicacao.instagram_reels import (
     recorte_vertical,
 )
 from app.domain.publicacao.publicacao import pode_publicar_sozinho
+from app.services import conta_do_destino
 from app.services.navegador_assistido import (
     ChromeNaoAbriu,
     Pagina,
@@ -657,9 +656,10 @@ async def subir_assistido(
     marca: str = "",
     publicar_sozinho: bool = False,
 ) -> dict:
-    """Deixa o Reel pronto no compositor, para o operador conferir e compartilhar."""
+    """Deixa o Reel pronto no compositor, conferida antes a conta logada (RN-31)."""
     if not video.is_file():
         raise RoteiroInterrompido(Passo.ARQUIVO, "o MP4 do pacote nao esta em disco")
+    await conta_do_destino.conferir_no_navegador("instagram_web", perfil_do_chrome(), URL_INICIAL)
 
     logger.info("[InstagramReels] subindo %s", video.name)
     return await asyncio.to_thread(_assistir, video, legenda, capa, marca, publicar_sozinho)
