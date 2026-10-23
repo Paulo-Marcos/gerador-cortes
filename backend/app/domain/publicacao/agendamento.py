@@ -22,6 +22,8 @@ saida e seguro, adivinhar na entrada nao e.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -30,7 +32,7 @@ from datetime import UTC, datetime, timedelta
 PASSO_DO_MINUTO_TIKTOK = 5
 
 # Ate onde cada plataforma deixa agendar, em dias. Medido no TikTok Studio em
-# 11/09/2026: dias fora da janela vem SEM a classe `valid` no calendario.
+# 11/09/2026 (e de novo em 22/10, D-983): dias fora da janela vem desabilitados.
 HORIZONTE_EM_DIAS = {
     "tiktok": 10,
     "instagram_reels": 75,
@@ -41,6 +43,14 @@ HORIZONTE_EM_DIAS = {
 # Margem minima entre agora e o instante pedido. Sem ela, um agendamento para
 # "daqui a um minuto" perderia a corrida contra o proprio upload.
 MARGEM_MINIMA = timedelta(minutes=5)
+
+# D-983: o campo de data do TikTok deixou de ser um <input> com ISO e passou a
+# mostrar o dia por extenso, na lingua da conta ("23 de out de 2026", ou
+# "Oct 23, 2026" numa conta em ingles). Tres letras bastam para os dois idiomas.
+MESES_POR_PREFIXO = {
+    **{p: i for i, p in enumerate("jan fev mar abr mai jun jul ago set out nov dez".split(), 1)},
+    **{p: i for i, p in enumerate("jan feb mar apr may jun jul aug sep oct nov dec".split(), 1)},
+}
 
 
 class AgendamentoInvalido(ValueError):
@@ -90,8 +100,31 @@ class Agendamento:
         return cls(instante)
 
     def data_iso(self) -> str:
-        """`AAAA-MM-DD` — o que o campo de data do TikTok mostra."""
+        """`AAAA-MM-DD` — como a falha cita a data pedida."""
         return self.quando.strftime("%Y-%m-%d")
+
+    def mostrada_em(self, exibido: str) -> bool:
+        """O campo de data da plataforma mostra ESTE dia? (D-983)
+
+        Confere dia, mes E ano: o defeito que isto pega e o dia certo no mes
+        errado, quando o calendario abriu noutra pagina.
+
+        >>> a = Agendamento.de_texto("2026-10-23T14:05")
+        >>> a.mostrada_em("23 de out de 2026"), a.mostrada_em("Oct 23, 2026")
+        (True, True)
+        >>> a.mostrada_em("23 de set de 2026"), a.mostrada_em("23 de out de 2027"), a.mostrada_em("")
+        (False, False, False)
+        """
+        texto = unicodedata.normalize("NFKD", exibido).encode("ascii", "ignore").decode().casefold()
+        dias = [int(n) for n in re.findall(r"\b\d{1,2}\b", texto)]
+        anos = [int(n) for n in re.findall(r"\b\d{4}\b", texto)]
+        meses = [
+            MESES_POR_PREFIXO[p[:3]]
+            for p in re.findall(r"[a-z]+", texto)
+            if p[:3] in MESES_POR_PREFIXO
+        ]
+        alvo = self.quando
+        return (dias[:1], meses[:1], anos[:1]) == ([alvo.day], [alvo.month], [alvo.year])
 
     def dia(self) -> str:
         """O numero do dia SEM zero a esquerda: e assim que o calendario escreve.
