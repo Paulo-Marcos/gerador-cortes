@@ -21,7 +21,6 @@ import {
   chavesMudadas,
   findMatchingFullPreset,
   findMatchingPreset,
-  fullConfigDoPreset,
   fundoPlacaDoPreset,
   
   
@@ -29,7 +28,6 @@ import {
   modoHerdado,
   normalizeYoutubeLayout,
   resolveYoutubeModeAt,
-  sharedConfigDoPreset,
   sharedConfigFromFull,
   sharedRegions,
   type YoutubeBackgroundId,
@@ -45,9 +43,11 @@ import {
   montarPadraoJson,
   origemDoTipoDoProjeto,
   padraoComPosicionamento,
+  posicionamentoDoPreset,
   tipoDoProjeto,
 } from './youtubeLayoutPadrao';
 import { useLayoutPresetsDoEstilo } from '@/features/channels/palcoDoEscopo';
+import { useAplicarPalcoDoPreset } from '@/features/channels/usePalcoDoModal';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import { MODE_LABEL, round } from './youtubeLayoutPanel/shared';
@@ -139,6 +139,7 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
     const { data: presetsDisponiveis = [] } = useLayoutPresetsDoEstilo({ tipo: 'posicionamento' });
     // F-060: presets do posicionamento FULL.
     const { data: presetsFullDisponiveis = [] } = useLayoutPresetsDoEstilo({ tipo: 'posicionamento_full' });
+    const aplicarPalcoDoPreset = useAplicarPalcoDoPreset(projetoId, corteId);
 
     // Modal de confirmacao generico. Usado por Usar/Definir × Projeto/Global.
     const [confirm, setConfirm] = useState<null | {
@@ -589,23 +590,14 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
       }
     };
 
-    const handlePresetEscopo = (
-      escopo: EscopoPadrao,
-      modo: YoutubeLayoutMode,
-      preset: LayoutPreset,
-    ) => {
-      // F-060: preset carrega fundo/placa — aplicados nos escopos corte/projeto/
-      // global. Presets legados (sem fundo/placa) preservam o que ja esta salvo.
-      const extras = escopo === 'segmento_padrao' ? undefined : fundoPlacaDoPreset(preset);
-      if (modo === 'full') {
-        const full = fullConfigDoPreset(preset);
-        if (!full) return;
-        persistirEscopo(escopo, 'full', sharedConfigFromFull(full), extras);
-        return;
-      }
-      const novoConfig = sharedConfigDoPreset(preset);
-      if (!novoConfig) return;
-      persistirEscopo(escopo, 'compartilhada', novoConfig, extras);
+    const handlePresetEscopo = (escopo: EscopoPadrao, modo: YoutubeLayoutMode, preset: LayoutPreset) => {
+      // F-060: preset carrega fundo/placa e, desde a D-985, os cards (como o "Aplicar" do modal) —
+      // nos escopos corte/projeto/global. Presets legados (sem fundo/placa) preservam o que ja esta salvo.
+      const config = posicionamentoDoPreset(preset, modo);
+      if (!config) return;
+      if (escopo === 'segmento_padrao') return persistirEscopo(escopo, modo, config);
+      aplicarPalcoDoPreset(escopo, (preset.payload as { palco?: unknown } | null)?.palco, modo);
+      persistirEscopo(escopo, modo, config, fundoPlacaDoPreset(preset));
     };
 
     // I-029 v2 / F-060: remove explicitamente o padrao de segmento do modo

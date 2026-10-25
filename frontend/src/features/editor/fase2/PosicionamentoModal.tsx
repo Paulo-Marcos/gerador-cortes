@@ -268,7 +268,7 @@ export function PosicionamentoModal({
     setConfig(presetConfig);
     // F-060: preset carrega fundo/placa. Presets legados (sem fundo/placa)
     // mantem o que esta no editor.
-    palco.dePreset((preset.payload as { palco?: unknown } | null)?.palco);
+    palco.dePreset((preset.payload as { palco?: unknown } | null)?.palco, mode);
     if (fundoPlacaEditavel) {
       const extras = fundoPlacaDoPreset(preset);
       if (extras.fundo) setDraftFundo(extras.fundo);
@@ -356,8 +356,8 @@ export function PosicionamentoModal({
     configOriginal: presetConfigOriginal,
     configMudou: (original) => !sharedConfigEquals(original, config),
     extras: presetExtrasOriginais,
-    fundo: draftFundo, placa: draftPlaca, // D-951: os cards do palco também contam
-    cards: { doPreset: cardsDoPreset(presetSelecionadoObj?.payload, palco.efetivo?.cards), atuais: palco.paraPreset()?.cards },
+    fundo: draftFundo, placa: draftPlaca, // D-951: os cards do palco contam; D-985: só no Full (no Compartilhado moram na zona)
+    cards: { doPreset: isFullMode ? cardsDoPreset(presetSelecionadoObj?.payload, palco.efetivo?.cards) : undefined, atuais: palco.paraPreset()?.cards },
   });
 
   const handleAtualizarPreset = () => {
