@@ -2,16 +2,25 @@
 
 O caso de uso morava no router `projetos`. Cada projeto sai com as contagens
 que a tela mostra: cortes, aprovados, com bruto, com metadado, publicados, com
-vídeo pronto, no ar, a próxima publicação agendada e os Fires pendentes. Cinco
-consultas agrupadas por projeto — nenhuma por projeto, sem N+1.
+vídeo pronto, no ar, a próxima publicação agendada, os Fires pendentes e as
+redes do horizontal (D-987). Cinco consultas agrupadas por projeto — nenhuma
+por projeto, sem N+1.
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 
 from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
+from app.domain.projeto.redes_do_projeto import (
+    TIKTOK_HORIZONTAL,
+    YOUTUBE_HORIZONTAL,
+    redes_do_projeto,
+)
 from app.domain.publicacao.agendamento import ja_esta_no_ar
 from app.models import Corte, MetadadoCorte, Projeto, StatusCorte
 from sqlalchemy import and_, case, func, select
@@ -52,20 +61,24 @@ async def listar_projetos() -> list[dict]:
         fires = await _fires_pendentes(db, ids)
         aprovados = await _aprovados(db, ids)
 
-    video_pronto, no_ar, proxima = _situacao_da_publicacao(aprovados)
+    publicacao = _situacao_da_publicacao(aprovados)
     lista = []
     for p in projetos:
         stats = cortes.get(p.id)
+        situacao = publicacao.get(p.id) or _SituacaoDoProjeto()
         item = {c: getattr(p, c) for c in _COLUNAS_DA_LISTAGEM}
         item["total_cortes"] = stats.total if stats else 0
         item["total_publicados"] = stats.publicados if stats else 0
         item["total_aprovados"] = stats.aprovados if stats else 0
         item["total_com_raw"] = stats.com_raw if stats else 0
         item["total_com_meta"] = com_meta.get(p.id, 0)
-        item["total_video_pronto"] = video_pronto.get(p.id, 0)
-        item["total_publicos"] = no_ar.get(p.id, 0)
-        item["proxima_publicacao"] = proxima.get(p.id, "")
+        item["total_video_pronto"] = situacao.video_pronto
+        item["total_publicos"] = situacao.no_ar
+        item["proxima_publicacao"] = situacao.proxima
         item["fires_pendentes"] = fires.get(p.id, 0)
+        item["redes_do_horizontal"] = redes_do_projeto(
+            situacao.video_pronto, situacao.publicados_por_rede
+        )
         lista.append(item)
     return lista
 
@@ -140,33 +153,58 @@ async def _fires_pendentes(db: AsyncSession, ids: list[str]) -> dict[str, int]:
 async def _aprovados(db: AsyncSession, ids: list[str]) -> list:
     res = await db.execute(
         select(
-            Corte.projeto_id, Corte.id, Corte.youtube_video_id, Corte.youtube_scheduled_at
+            Corte.projeto_id,
+            Corte.id,
+            Corte.youtube_video_id,
+            Corte.youtube_scheduled_at,
+            # D-987: a marca MANUAL do operador (D-512) é o único sinal de que o
+            # 16:9 está no TikTok — e vem na mesma consulta, sem N+1.
+            Corte.tiktok_publicado_em,
         ).where(Corte.projeto_id.in_(ids), Corte.status == StatusCorte.APROVADO)
     )
     return res.all()
 
 
-def _situacao_da_publicacao(aprovados: list) -> tuple[dict, dict, dict]:
-    """Por projeto: cortes com vídeo pronto, cortes no ar e a próxima publicação.
+@dataclass
+class _SituacaoDoProjeto:
+    """O que uma passada pelos cortes aprovados rende por projeto."""
+
+    video_pronto: int = 0
+    no_ar: int = 0
+    proxima: str = ""
+    publicados_por_rede: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+
+
+def _situacao_da_publicacao(aprovados: list) -> dict[str, _SituacaoDoProjeto]:
+    """Por projeto: cortes com vídeo pronto, no ar, a próxima publicação e as redes.
 
     Vídeo pronto é o que já subiu ao YouTube ou tem o `video.mp4` final no disco.
     A próxima publicação é o agendamento futuro mais cedo, comparado como texto
     ISO, como sempre foi.
+
+    D-987: as duas redes do horizontal contam DENTRO dessa população. Corte
+    marcado no TikTok sem vídeo pronto não entra no denominador, e somá-lo
+    acenderia a rede com mais publicados do que prontos.
     """
     pasta = projetos_dir()
     agora = datetime.now(UTC)
-    video_pronto: dict[str, int] = {}
-    no_ar: dict[str, int] = {}
-    proxima: dict[str, str] = {}
-    for projeto_id, corte_id, youtube_id, agendado_para in aprovados:
-        video_pronto.setdefault(projeto_id, 0)
-        no_ar.setdefault(projeto_id, 0)
-        if youtube_id:
-            video_pronto[projeto_id] += 1
+    por_projeto: dict[str, _SituacaoDoProjeto] = defaultdict(_SituacaoDoProjeto)
+    for projeto_id, corte_id, youtube_id, agendado_para, tiktok_em in aprovados:
+        situacao = por_projeto[projeto_id]
+        no_youtube = bool(youtube_id)
+        if not (no_youtube or _video_no_disco(pasta, projeto_id, corte_id)):
+            continue
+        situacao.video_pronto += 1
+        if no_youtube:
+            situacao.publicados_por_rede[YOUTUBE_HORIZONTAL] += 1
             if ja_esta_no_ar(agendado_para, agora):
-                no_ar[projeto_id] += 1
-            elif not proxima.get(projeto_id) or agendado_para < proxima[projeto_id]:
-                proxima[projeto_id] = agendado_para
-        elif (pasta / projeto_id / "cortes" / corte_id / "upload_ready" / "video.mp4").exists():
-            video_pronto[projeto_id] += 1
-    return video_pronto, no_ar, proxima
+                situacao.no_ar += 1
+            elif not situacao.proxima or agendado_para < situacao.proxima:
+                situacao.proxima = agendado_para
+        if tiktok_em:
+            situacao.publicados_por_rede[TIKTOK_HORIZONTAL] += 1
+    return por_projeto
+
+
+def _video_no_disco(pasta: Path, projeto_id: str, corte_id: str) -> bool:
+    return (pasta / projeto_id / "cortes" / corte_id / "upload_ready" / "video.mp4").exists()

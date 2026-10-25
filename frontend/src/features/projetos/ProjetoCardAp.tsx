@@ -1,15 +1,14 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
+import { CapaDoProjetoCard } from '@/features/projetos/CapaDoProjetoCard';
 import { limpezaDoProjeto } from '@/features/projetos/limpezaDoProjeto';
 import { construirEtapas } from '@/features/projetos/PipelineProgress';
-import { estadoDoProjeto } from '@/features/projetos/statusMaps';
+import { RedesDoProjeto } from '@/features/projetos/RedesDoProjeto';
 import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/features/projetos/useProjetos';
-import { formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
+import { formatarDataLive } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
 import { Icon, type IconName } from '@/upgrade/Icon';
-import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { SeloDeEstado, TOM_DA_ETAPA, TOM_DA_LIMPEZA, TOM_DO_PROJETO } from '@/upgrade/SeloDeEstado';
+import { SeloDeEstado, TOM_DA_ETAPA, TOM_DA_LIMPEZA } from '@/upgrade/SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O card da Biblioteca na linguagem nova.
@@ -44,23 +43,15 @@ export const ICONE_ETAPA: Record<string, IconName> = {
   Publicação: 'rocket',
 };
 
-const HUES = [22, 280, 160, 340, 240, 60, 200, 100];
-
 export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?: number }) {
   const navigate = useNavigate();
   const remover = useRemoverProjeto();
   const limpar = useLimparArquivos();
   const rebaixar = useRebaixarVideo();
-  const [thumbErro, setThumbErro] = useState(false);
   const confirmacao = useConfirmacao();
 
-  const estado = estadoDoProjeto(projeto);
   const etapas = construirEtapas(projeto);
-  const thumb = thumbnailUrl(projeto.youtube_url, 'mq');
-  const hue = HUES[index % HUES.length];
-  const baixando = projeto.status === 'baixando';
   const limpo = projeto.arquivos_limpos;
-  const nota = Math.round(projeto.pontuacao_ranking);
   const rebaixando = Boolean(projeto.rebaixando_video) || rebaixar.isPending;
 
   const abrir = () => navigate(`/projetos/${projeto.id}`);
@@ -125,99 +116,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
         className="card"
         style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
-        {/* D-746: moldura em três camadas (passe-partout, bisel, vinheta) —
-            a R2 era só respiro + filete, e a arte da live parecia colada. */}
-        <MolduraDeVideo
-          mat={8}
-          proporcao="16/9"
-          onClick={abrir}
-          rotulo={`Abrir projeto ${projeto.titulo_live} — ${estado.label}`}
-        >
-          {/* O gradiente mora DENTRO da moldura: live sem miniatura continua
-              emoldurada, só troca a arte. */}
-          <span
-            aria-hidden
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: `linear-gradient(135deg,oklch(0.6 0.06 ${hue}),oklch(0.3 0.05 ${hue}))`,
-            }}
-          />
-          {thumb && !thumbErro ? (
-            <img
-              src={thumb}
-              alt=""
-              loading="lazy"
-              onError={() => setThumbErro(true)}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-              }}
-            />
-          ) : null}
-
-          <span style={{ position: 'absolute', top: 8, left: 8 }}>
-            <SeloDeEstado tom={TOM_DO_PROJETO[estado.key]} sobreArte>
-              {estado.label}
-              {baixando ? ` ${Math.round(projeto.progresso_download)}%` : ''}
-            </SeloDeEstado>
-          </span>
-
-          {nota > 0 ? (
-            <span
-              className="chip gl"
-              title={`Nota do projeto no ranking de lives: ${nota}/100`}
-              style={{ position: 'absolute', top: 8, right: 8, fontFamily: 'var(--mono)' }}
-            >
-              <Icon name="trophy" />
-              {nota}
-            </span>
-          ) : null}
-
-          {projeto.duracao_segundos > 0 ? (
-            <span
-              style={{
-                position: 'absolute',
-                bottom: 8,
-                right: 8,
-                fontFamily: 'var(--mono)',
-                fontSize: 11,
-                color: '#fff',
-                background: 'rgb(10 14 24 / 0.68)',
-                padding: '2px 6px',
-                borderRadius: 'var(--r1)',
-              }}
-            >
-              {formatarDuracao(projeto.duracao_segundos)}
-            </span>
-          ) : null}
-
-          {baixando ? (
-            <span
-              style={{
-                position: 'absolute',
-                insetInline: 0,
-                bottom: 0,
-                height: 3,
-                background: 'rgb(0 0 0/.3)',
-              }}
-              aria-hidden
-            >
-              <span
-                style={{
-                  display: 'block',
-                  height: '100%',
-                  width: `${Math.max(0, Math.min(100, projeto.progresso_download))}%`,
-                  background: 'var(--warn)',
-                }}
-              />
-            </span>
-          ) : null}
-        </MolduraDeVideo>
+        <CapaDoProjetoCard projeto={projeto} index={index} abrir={abrir} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 11 }}>
           <span style={{ minWidth: 0 }}>
@@ -297,6 +196,13 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
               );
             })}
           </div>
+
+          {/* D-987 · "já subiu tudo?" fecha a leitura da fita: ela diz ONDE a
+              live parou, e os chips dizem se o último passo terminou. Linha
+              própria, e não ao lado de "N publicados": aquela linha mono já
+              carrega as três ações do card e, a 300 px de grade, mais dois
+              chips a estouram. */}
+          <RedesDoProjeto projeto={projeto} />
 
           <div
             style={{

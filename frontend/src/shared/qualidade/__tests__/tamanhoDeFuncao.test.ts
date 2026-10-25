@@ -96,7 +96,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/projeto-detalhe/WorkspaceProjetoPage.tsx::WorkspaceProjetoPage": 438,
   "src/features/projeto-detalhe/useWorkspaceProjeto.tsx::useWorkspaceProjeto": 322,
   "src/features/projetos/BibliotecaPage.tsx::BibliotecaPage": 208,
-  "src/features/projetos/ProjetoCardAp.tsx::ProjetoCardAp": 334,
+  "src/features/projetos/ProjetoCardAp.tsx::ProjetoCardAp": 243,
   "src/features/settings/AppSettingsControls.tsx::AppSettingsControls": 333,
   "src/features/shorts/BlocosArrastaveis.tsx::BlocosArrastaveis": 120,
   "src/features/shorts/CabecalhoDoFire.tsx::CabecalhoDoFire": 122,

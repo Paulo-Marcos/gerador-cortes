@@ -8463,6 +8463,11 @@ export interface components {
              */
             rebaixando_video: boolean;
             /**
+             * Redes Do Horizontal
+             * @default []
+             */
+            redes_do_horizontal: components["schemas"]["RedeDoProjeto"][];
+            /**
              * Sombra Nivel Padrao
              * @default nenhuma
              * @enum {string}
@@ -8665,6 +8670,21 @@ export interface components {
          * @description Uma rede do short, vista pelo corte inteiro (D-905).
          */
         RedeDoCorte: {
+            /** Completa */
+            completa: boolean;
+            /** Plataforma */
+            plataforma: string;
+            /** Publicados */
+            publicados: number;
+        };
+        /**
+         * RedeDoProjeto
+         * @description Uma rede do horizontal, vista pela live inteira (D-987).
+         *
+         *     Mesma forma do `RedeDoCorte` do short (D-905): a tela lê os dois cartões
+         *     com o mesmo vocabulário, e só a pergunta muda de altura.
+         */
+        RedeDoProjeto: {
             /** Completa */
             completa: boolean;
             /** Plataforma */

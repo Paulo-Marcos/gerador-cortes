@@ -1,7 +1,5 @@
 import json
 import logging
-from datetime import datetime
-from typing import Literal
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.core.logging import operational_error, operational_info
@@ -11,7 +9,12 @@ from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
 from app.routers import analises_schemas, projetos_schemas
 from app.routers.errors import erro_interno
-from app.routers.resposta_api import MensagemResponse, PromptEmPartesResponse, RespostaApi
+from app.routers.projetos_schemas import (
+    LAYOUTS_CARD_VALIDOS,
+    SOMBRAS_VALIDAS,
+    ProjetoResponse,
+)
+from app.routers.resposta_api import MensagemResponse, PromptEmPartesResponse
 from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
 from app.services.app_settings import AppSettingsService
@@ -25,7 +28,7 @@ from app.services.youtube_palco import ensure_palco_png
 from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import RedirectResponse, Response
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,55 +45,6 @@ router = APIRouter()
 class CriarProjetoRequest(BaseModel):
     youtube_url: str
     canal_origem: str | None = None
-
-
-# Os vocabulários que a configuração de render do projeto aceita. A rota de
-# PATCH valida a escrita contra eles, e o schema de resposta os declara — o
-# contrato do frontend recebe a união, não um texto qualquer (D-722).
-SOMBRAS_VALIDAS = ("nenhuma", "leve", "media", "forte")
-LAYOUTS_CARD_VALIDOS = ("horizontal", "vertical")
-# O renderer V1 foi desativado para a escrita, mas há projetos antigos em v1.
-VERSOES_RENDERER = ("v1", "v2")
-
-
-class ProjetoResponse(RespostaApi):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    youtube_url: str
-    titulo_live: str
-    canal_origem: str
-    duracao_segundos: int
-    data_live: str = ""
-    # O enum e não Literal: o ORM entrega o membro do enum, que o Literal recusa.
-    status: StatusProjeto
-    progresso_download: float
-    arquivo_video_path: str
-    # I-023: filtro_padrao por projeto removido (vivia em Projeto.filtro_padrao).
-    # Quem precisa do filtro de render usa GET /api/settings → filtro_global_padrao.
-    arquivos_limpos: bool = False
-    rebaixando_video: bool = False
-    criado_em: datetime
-    ultima_analise_em: datetime | None = None
-    # Renderer V1 desativado — projetos sempre operam em V2.
-    versao_renderer: Literal[VERSOES_RENDERER] = "v2"
-    sombra_nivel_padrao: Literal[SOMBRAS_VALIDAS] = "nenhuma"
-    layout_card_padrao: Literal[LAYOUTS_CARD_VALIDOS] = "vertical"
-    layout_youtube_padrao: str | None = None
-    fonte_preset: Literal[tuple(sorted(FONTE_PRESETS_VALIDOS))] = "atual"
-    # F-052: pontuação herdada do ranking de lives no momento do download.
-    pontuacao_ranking: float = 0.0
-    total_cortes: int = 0
-    total_publicados: int = 0
-    total_aprovados: int = 0
-    total_com_raw: int = 0
-    total_video_pronto: int = 0
-    total_com_meta: int = 0
-    total_publicos: int = 0  # cortes já visíveis ao público
-    proxima_publicacao: str = ""  # ISO8601 do próximo corte que ainda não é público
-    # Brutos de Fire que a limpeza ainda deve preservar para a fabrica de Shorts.
-    fires_pendentes: int = 0
-    erro_msg: str | None = None
 
 
 class AtualizarRenderConfigRequest(BaseModel):

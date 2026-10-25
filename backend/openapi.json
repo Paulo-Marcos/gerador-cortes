@@ -8934,6 +8934,14 @@
             "title": "Rebaixando Video",
             "type": "boolean"
           },
+          "redes_do_horizontal": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RedeDoProjeto"
+            },
+            "title": "Redes Do Horizontal",
+            "type": "array"
+          },
           "sombra_nivel_padrao": {
             "default": "nenhuma",
             "enum": [
@@ -9042,6 +9050,7 @@
           "total_publicos",
           "proxima_publicacao",
           "fires_pendentes",
+          "redes_do_horizontal",
           "erro_msg"
         ],
         "title": "ProjetoResponse",
@@ -9410,6 +9419,30 @@
           "completa"
         ],
         "title": "RedeDoCorte",
+        "type": "object"
+      },
+      "RedeDoProjeto": {
+        "description": "Uma rede do horizontal, vista pela live inteira (D-987).\n\nMesma forma do `RedeDoCorte` do short (D-905): a tela lê os dois cartões\ncom o mesmo vocabulário, e só a pergunta muda de altura.",
+        "properties": {
+          "completa": {
+            "title": "Completa",
+            "type": "boolean"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          },
+          "publicados": {
+            "title": "Publicados",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plataforma",
+          "publicados",
+          "completa"
+        ],
+        "title": "RedeDoProjeto",
         "type": "object"
       },
       "ReferenciaDoPublicoRequest": {
