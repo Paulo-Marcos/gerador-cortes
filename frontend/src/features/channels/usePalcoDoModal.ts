@@ -11,8 +11,21 @@ import { useGravarPalco, usePalcoDoCanalAtivo } from './useChannels';
 // formulário do palco junto com a casca. D-938: no alvo `canal` (o modal
 // aberto pela tela de Canais) o rascunho é o palco do próprio canal.
 
+/** O modo do preset do horizontal; o do short não tem modo. */
+type ModoDoPreset = 'full' | 'compartilhada';
+
+/**
+ * Os cards que o preset leva. D-985: no Compartilhado os cards sentam na zona
+ * do layout, então a posição e a caixa deles no vídeo cheio não são do preset —
+ * levá-las desarrumava os cortes em Full do mesmo nível. Fica só o que se esconde.
+ */
+function cardsDoPresetNoModo(cards: Partial<PalcoComponentes['cards']> | undefined, modo?: ModoDoPreset) {
+  if (modo !== 'compartilhada' || !cards) return cards;
+  return cards.ocultos ? { ocultos: cards.ocultos } : undefined;
+}
+
 /** O palco do preset por cima do que vale agora (o preset antigo, sem palco, não muda nada). */
-function comPalcoDoPreset(efetivo: PalcoComponentes, palco: unknown): PalcoComponentes {
+function comPalcoDoPreset(efetivo: PalcoComponentes, palco: unknown, modo?: ModoDoPreset): PalcoComponentes {
   if (!palco || typeof palco !== 'object') return efetivo;
   const p = palco as Partial<PalcoComponentes>;
   return {
@@ -20,7 +33,7 @@ function comPalcoDoPreset(efetivo: PalcoComponentes, palco: unknown): PalcoCompo
     ...p,
     cabecalho: { ...efetivo.cabecalho, ...p.cabecalho },
     placa: { ...efetivo.placa, ...p.placa },
-    cards: { ...efetivo.cards, ...p.cards },
+    cards: { ...efetivo.cards, ...cardsDoPresetNoModo(p.cards, modo) },
   };
 }
 
@@ -70,7 +83,8 @@ export function usePalcoDoModal({
     /** O palco que o preset salvo leva junto. */
     paraPreset: () => (rascunho ? edicaoDe(rascunho) : undefined),
     /** Aplica o palco de um preset no rascunho. */
-    dePreset: (palco: unknown) => efetivo && setRascunho(rascunhoDe(comPalcoDoPreset(efetivo, palco))),
+    dePreset: (palco: unknown, modo?: ModoDoPreset) =>
+      efetivo && setRascunho(rascunhoDe(comPalcoDoPreset(efetivo, palco, modo))),
     /** Grava o palco no corte, no projeto ou no canal (o modal da tela de Canais e o do padrão global). */
     aplicar: (aoTerminar?: () => void) => {
       if (!rascunho) return;
@@ -90,6 +104,34 @@ export function usePalcoDoModal({
     salvando: gravar.isPending || gravarNoCanal.isPending,
     /** O rascunho difere do que está gravado (há o que salvar). */
     mudou: Boolean(rascunho && efetivo && JSON.stringify(edicaoDe(rascunho)) !== JSON.stringify(edicaoDe(rascunhoDe(efetivo)))),
+  };
+}
+
+type EscopoDoPreset = 'corte' | 'projeto' | 'global';
+
+/**
+ * D-985: o palco do preset aplicado pelo atalho "Definir ▾ → preset" da escada
+ * de escopos, sem abrir o modal. Grava no mesmo nível em que as telas vão: o
+ * corte, o projeto ou (no global) o canal. Preset antigo, sem palco, não grava.
+ */
+export function useAplicarPalcoDoPreset(projetoId: string, corteId: string) {
+  const doCorte = usePalcoDoEscopo('horizontal', projetoId, corteId).data?.efetivo;
+  const doProjeto = usePalcoDoEscopo('horizontal', projetoId).data?.efetivo;
+  const doCanal = usePalcoDoCanalAtivo().data;
+  const gravar = useGravarPalcoDoEscopo();
+  const gravarNoCanal = useGravarNoCanal();
+  return (escopo: EscopoDoPreset, palco: unknown, modo: ModoDoPreset) => {
+    const efetivo = escopo === 'corte' ? doCorte : escopo === 'projeto' ? doProjeto : doCanal;
+    if (!efetivo || !palco || typeof palco !== 'object') return;
+    const componentes = edicaoDe(rascunhoDe(comPalcoDoPreset(efetivo, palco, modo)));
+    if (escopo === 'global') return gravarNoCanal.gravar(efetivo.canal_id, componentes);
+    gravar.mutate({
+      escopo,
+      tipo: 'horizontal',
+      projeto_id: projetoId,
+      corte_id: escopo === 'corte' ? corteId : null,
+      componentes,
+    });
   };
 }
 

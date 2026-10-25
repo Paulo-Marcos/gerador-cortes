@@ -69,7 +69,7 @@ EXCECOES = {
     "frontend/src/features/editor/fase2/EditorFase2.tsx": 571,
     "frontend/src/features/editor/fase2/PosicionamentoModal.tsx": 602,
     "frontend/src/features/editor/fase2/SceneTimeline.tsx": 1037,
-    "frontend/src/features/editor/fase2/useYoutubeLayoutPanel.tsx": 666,
+    "frontend/src/features/editor/fase2/useYoutubeLayoutPanel.tsx": 658,
     "frontend/src/features/editor/fase2/youtubeLayoutPanel/components.tsx": 752,
     "frontend/src/features/editor/useEditorPage.tsx": 681,
     "frontend/src/features/final-review/FinalReviewPage.tsx": 645,

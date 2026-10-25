@@ -1,7 +1,11 @@
+import type { LayoutPreset } from '@/types/presets';
 import {
+  fullConfigDoPreset,
   modoHerdado,
   normalizeYoutubeLayout,
   resolveLayoutChain,
+  sharedConfigDoPreset,
+  sharedConfigFromFull,
   type YoutubeBackgroundId,
   type YoutubeFullConfig,
   type YoutubeLayout,
@@ -18,6 +22,16 @@ import {
 // O `modo_padrao` (tipo do projeto: Full|Compartilhada) vive no MESMO
 // JSON mas e tratado como conceito separado.
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * O posicionamento que o preset traz para o modo, no formato do editor (o
+ * Full como sintético de 1 tela); null quando o preset não tem esse modo.
+ */
+export function posicionamentoDoPreset(preset: LayoutPreset, modo: YoutubeLayoutMode): YoutubeSharedConfig | null {
+  if (modo === 'compartilhada') return sharedConfigDoPreset(preset);
+  const full = fullConfigDoPreset(preset);
+  return full ? sharedConfigFromFull(full) : null;
+}
 
 /** Campos que um "Definir" pode escrever num escopo de padrao. */
 export interface PadraoPatch {

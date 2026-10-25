@@ -67,7 +67,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase2/YoutubeLayoutPanel.tsx::forwardRef": 296,
   "src/features/editor/fase2/posicionamentoControls.tsx::SharedRectEditor": 138,
   "src/features/editor/fase2/useEditorFase2.tsx::useEditorFase2": 458,
-  "src/features/editor/fase2/useYoutubeLayoutPanel.tsx::useYoutubeLayoutPanel": 589,
+  "src/features/editor/fase2/useYoutubeLayoutPanel.tsx::useYoutubeLayoutPanel": 581,
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::DefinirScopeRow": 103,
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::EscopoLadder": 134,
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::RegionItem": 194,
