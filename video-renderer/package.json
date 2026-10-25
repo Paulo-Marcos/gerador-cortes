@@ -15,7 +15,10 @@
     "react-dom": "19.3.0",
     "remotion": "4.0.535",
     "tailwindcss": "4.3.3",
-    "zod": "4.5.4"
+    "zod": "4.6.7"
+  },
+  "overrides": {
+    "zod": "$zod"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.535",
