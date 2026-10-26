@@ -20,6 +20,7 @@ from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, sco
 from app.domain.corte.desvio_categoria import classificar_desvio
 from app.models import Corte
 from fastapi import HTTPException
+from sqlalchemy import inspect
 
 # O ffprobe da duração só lê o cabeçalho do arquivo.
 _TIMEOUT_DO_FFPROBE_S = 10
@@ -54,6 +55,18 @@ def _lista_json(corte: Corte, coluna: str) -> list:
         return []
 
 
+def _origem_da_analise(corte: Corte) -> str | None:
+    """D-988: quem propôs o corte; None no corte criado na mão (sem snapshot).
+
+    Lê só o snapshot que já veio carregado (`selectin`). Criar e dividir devolvem
+    o corte que acabaram de gravar, sem reler: tocar a relação ali dispararia um
+    lazy load fora do contexto assíncrono (MissingGreenlet). Esse corte nasceu
+    agora, sem proposta de IA, então None é a resposta certa.
+    """
+    snapshot = inspect(corte).attrs.snapshot.loaded_value
+    return getattr(snapshot, "origem_analise", None)
+
+
 def _corte_to_dict(corte: Corte) -> dict:
     # WHY: itera por __table__.columns — colunas novas (ex.: I-034 `justificativa`)
     # entram automaticamente no payload. Só ajustamos abaixo campos JSON-encoded.
@@ -72,9 +85,7 @@ def _corte_to_dict(corte: Corte) -> dict:
     d["score"] = score_do_corte(getattr(corte, "score_json", None))
     # D-713: o Fire é coluna do corte agora; a API sempre o entregou booleano.
     d["is_fire"] = bool(getattr(corte, "is_fire", False))
-    # D-988: quem propôs o corte. Sem snapshot = criado na mão (ou anterior à
-    # telemetria): sai None, e a tela mostra "sem origem".
-    d["origem_analise"] = corte.snapshot.origem_analise if corte.snapshot else None
+    d["origem_analise"] = _origem_da_analise(corte)
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""
