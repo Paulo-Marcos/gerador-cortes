@@ -198,6 +198,9 @@ class CorteResponse(BaseModel):
     frase_gancho_texto: str = ""
     contextualizacao: str = ""
     score: dict[str, int | float] = {}
+    # D-988: a IA que propôs o corte ("claude", "gemini" ou "manual"); None no
+    # corte criado na mão, que não tem proposta congelada (D-303).
+    origem_analise: str | None = None
     # A publicação no YouTube, gravada no corte.
     youtube_video_id: str = ""
     youtube_url_publicado: str = ""

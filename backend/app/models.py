@@ -317,6 +317,8 @@ class Corte(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    # D-988: a proposta congelada (D-303) diz qual IA propôs o corte; só leitura.
+    snapshot: Mapped["CorteSnapshot | None"] = relationship(viewonly=True, lazy="selectin")
     # E-030: shorts extraidos deste corte. `lazy` default (nao selectin) de
     # proposito — a esteira de cortes nao carrega shorts sem pedir.
     shorts: Mapped[list["Short"]] = relationship(
@@ -359,9 +361,7 @@ class CorteSnapshot(Base):
     frase_gancho_texto: Mapped[str] = mapped_column(Text, default="")
     contextualizacao: Mapped[str] = mapped_column(Text, default="")
     score_json: Mapped[str] = mapped_column(Text, default="{}")
-    # Proveniência da análise que propôs o corte: "claude" (pipeline interno)
-    # ou "manual" (paste de JSON de uma IA externa). Novos providers registram
-    # o próprio rótulo aqui.
+    # Quem propôs o corte: o provider da análise ("claude", "gemini") ou "manual".
     origem_analise: Mapped[str] = mapped_column(String(30), default="claude")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

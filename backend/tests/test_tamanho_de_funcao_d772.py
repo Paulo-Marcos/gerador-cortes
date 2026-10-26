@@ -44,8 +44,6 @@ EXCECOES = {
     "app/infrastructure/render/ffmpeg_commands.py::build_cinematic_grade_cmd::C901": 12,
     "app/main.py::servir_video::C901": 17,
     "app/main.py::servir_video::PLR0915": 51,
-    "app/routers/cortes_helpers.py::_corte_to_dict::C901": 12,
-    "app/routers/cortes_helpers.py::_corte_to_dict::PLR0915": 47,
     "app/routers/metadados.py::atualizar_metadado::C901": 11,
     "app/routers/projetos.py::atualizar_render_config::C901": 11,
     "app/services/analise.py::AnaliseService.analisar_intervalo::PLR0915": 41,

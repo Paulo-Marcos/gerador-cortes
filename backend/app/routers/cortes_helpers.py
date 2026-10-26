@@ -46,6 +46,14 @@ def _hms_to_seg(hms: str) -> float:
         ) from erro
 
 
+def _lista_json(corte: Corte, coluna: str) -> list:
+    """Uma coluna de lista JSON do corte; vazia, ausente ou ilegível vira []."""
+    try:
+        return json.loads(getattr(corte, coluna, None) or "[]")
+    except (ValueError, TypeError):
+        return []
+
+
 def _corte_to_dict(corte: Corte) -> dict:
     # WHY: itera por __table__.columns — colunas novas (ex.: I-034 `justificativa`)
     # entram automaticamente no payload. Só ajustamos abaixo campos JSON-encoded.
@@ -64,6 +72,9 @@ def _corte_to_dict(corte: Corte) -> dict:
     d["score"] = score_do_corte(getattr(corte, "score_json", None))
     # D-713: o Fire é coluna do corte agora; a API sempre o entregou booleano.
     d["is_fire"] = bool(getattr(corte, "is_fire", False))
+    # D-988: quem propôs o corte. Sem snapshot = criado na mão (ou anterior à
+    # telemetria): sai None, e a tela mostra "sem origem".
+    d["origem_analise"] = corte.snapshot.origem_analise if corte.snapshot else None
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""
@@ -81,21 +92,12 @@ def _corte_to_dict(corte: Corte) -> dict:
     d["cenas_validadas_em"] = getattr(corte, "cenas_validadas_em", None)
     # F-054: lista pode estar vazia (corte ainda não rodou detecção) ou
     # ausente em cortes legados — sempre devolve [].
-    try:
-        d["segmentos_detectados"] = json.loads(getattr(corte, "segmentos_detectados", None) or "[]")
-    except (ValueError, TypeError):
-        d["segmentos_detectados"] = []
+    d["segmentos_detectados"] = _lista_json(corte, "segmentos_detectados")
     # D-576: ordem de exibição dos blocos. Lista vazia = ordem cronológica, que
     # é o caso da esmagadora maioria dos cortes — e o que os legados devolvem.
-    try:
-        d["arranjo_blocos"] = json.loads(getattr(corte, "arranjo_blocos", None) or "[]")
-    except (ValueError, TypeError):
-        d["arranjo_blocos"] = []
+    d["arranjo_blocos"] = _lista_json(corte, "arranjo_blocos")
     # D-334: log de invocações da skill trechos-expert (telemetria D-303).
-    try:
-        d["trechos_geracoes_log"] = json.loads(getattr(corte, "trechos_geracoes_log", None) or "[]")
-    except (ValueError, TypeError):
-        d["trechos_geracoes_log"] = []
+    d["trechos_geracoes_log"] = _lista_json(corte, "trechos_geracoes_log")
 
     d["is_pos_producao"] = getattr(corte, "is_pos_producao", 0)
 
