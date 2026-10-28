@@ -20,6 +20,7 @@ import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
 import { estadoDaLinha, maisDaLinha, ondeJaSubiu, primarioDaLinha } from './acoesDaLinha';
 import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 import { SeloDaNota } from '@/features/porque-do-corte/SeloDaNota';
+import { SeloDaOrigem } from './SeloDaOrigem';
 import { PorQueDoCorteModal } from '@/features/porque-do-corte/PorQueDoCorteModal';
 
 // ─────────────────────────────────────────────────────────────────
@@ -314,20 +315,8 @@ export function CorteLinhaAp({
             onClick={irEditor}
             title={status.titulo ?? undefined}
             style={{
-              minWidth: 0,
-              // R4: o título abre o corte e media 20 px de altura clicável.
-              minHeight: 24,
-              padding: 0,
-              border: 0,
-              background: 'none',
-              fontSize: 13,
-              fontWeight: 700,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              textAlign: 'left',
+              ...TITULO,
               textDecoration: estado === 'rejeitado' ? 'line-through' : 'none',
-              cursor: 'pointer',
             }}
           >
             {status.titulo || `Corte #${status.numero}`}
@@ -338,6 +327,7 @@ export function CorteLinhaAp({
             </span>
           ) : null}
           <SeloDeEstado tom={TOM_DO_CORTE[estado]}>{estado}</SeloDeEstado>
+          <SeloDaOrigem origem={corte?.origem_analise} />
           <SeloDaNota score={corte?.score} onAbrir={() => setPorQueAberto(true)} />
         </span>
 
@@ -427,6 +417,22 @@ const DURACAO_NA_MINIATURA = {
 
 // D-868: os alvos das ações da linha têm 32 px (o `.btn` tem 30).
 const ALVO = { height: 32 } as const;
+
+const TITULO = {
+  minWidth: 0,
+  // R4: o título abre o corte e media 20 px de altura clicável.
+  minHeight: 24,
+  padding: 0,
+  border: 0,
+  background: 'none',
+  fontSize: 13,
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  textAlign: 'left',
+  cursor: 'pointer',
+} as const;
 
 // R4: reordenar é o menor alvo da casca e o gesto que erra mais caro — ele
 // muda a LISTA, não o corte. Sobe para o piso de alvo clicável.

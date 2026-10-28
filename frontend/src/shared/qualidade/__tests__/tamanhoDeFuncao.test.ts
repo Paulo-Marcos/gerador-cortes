@@ -89,7 +89,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/post-production/RenderStepsModal.tsx::RenderStepsModal": 162,
   "src/features/post-production/ScenesPostProductionPage.tsx::ScenesPostProductionPage": 462,
   "src/features/projeto-detalhe/AnaliseIaModal.tsx::AnaliseIaModalDaLive": 313,
-  "src/features/projeto-detalhe/CorteLinhaAp.tsx::CorteLinhaAp": 271,
+  "src/features/projeto-detalhe/CorteLinhaAp.tsx::CorteLinhaAp": 260,
   "src/features/projeto-detalhe/DiarizacaoPanel.tsx::DiarizacaoPanel": 121,
   "src/features/projeto-detalhe/PublicarMassaModal.tsx::PublicarMassaModal": 121,
   "src/features/projeto-detalhe/PublicarTiktokModal.tsx::LinhaDoCorte": 226,

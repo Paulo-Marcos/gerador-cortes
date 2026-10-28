@@ -6121,6 +6121,8 @@ export interface components {
             layout_youtube: components["schemas"]["LayoutDoCorte"];
             /** Numero */
             numero: number;
+            /** Origem Analise */
+            origem_analise?: string | null;
             /**
              * Parte Leitura
              * @default 1

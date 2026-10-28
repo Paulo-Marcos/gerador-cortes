@@ -3075,6 +3075,17 @@
             "title": "Numero",
             "type": "integer"
           },
+          "origem_analise": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origem Analise"
+          },
           "parte_leitura": {
             "default": 1,
             "title": "Parte Leitura",
