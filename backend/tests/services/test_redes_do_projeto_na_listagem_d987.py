@@ -131,3 +131,37 @@ async def test_corte_so_proposto_nao_entra_e_a_live_sem_pronto_nao_acende(banco)
 
     assert [r["completa"] for r in redes.values()] == [False, False]
     assert [r["publicados"] for r in redes.values()] == [0, 0]
+
+
+@pytest.mark.asyncio
+async def test_corte_processado_pelo_render_final_continua_na_populacao(banco):
+    """D-992: terminar o render tirava a live dos chips.
+
+    O ciclo do corte move APROVADO -> PROCESSADO quando o render final acaba
+    (`ciclo_corte._PELO_SISTEMA`). A listagem só contava APROVADO, então a live
+    já pronta e publicada zerava o denominador e o card não mostrava rede
+    nenhuma — 129 das 186 lives com corte publicado na PROD em 29/10/2026.
+    """
+    fabrica, _ = banco
+    await _gravar(
+        fabrica,
+        Projeto(id="p1", youtube_url="u1"),
+        _corte(
+            "c1",
+            yt="yt1",
+            tiktok_em=datetime(2026, 10, 25, tzinfo=UTC),
+            status=StatusCorte.PROCESSADO,
+        ),
+    )
+
+    (projeto,) = await listar_projetos()
+    redes = {rede["plataforma"]: rede for rede in projeto["redes_do_horizontal"]}
+
+    # Zero aqui é o que fazia `RedesDoProjeto` devolver null antes de olhar a rede.
+    assert projeto["total_video_pronto"] == 1
+    assert redes["youtube"] == {"plataforma": "youtube", "publicados": 1, "completa": True}
+    assert redes["tiktok_horizontal"] == {
+        "plataforma": "tiktok_horizontal",
+        "publicados": 1,
+        "completa": True,
+    }
