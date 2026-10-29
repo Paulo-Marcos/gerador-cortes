@@ -238,17 +238,20 @@ export function LinhaDeLista({ item }: { item: ItemDeLista }) {
       >
         {item.thumb ? <MiniaturaDaLinha thumb={item.thumb} dur={item.dur} /> : null}
         <span style={{ minWidth: 0, flex: 1 }}>
-          <span
-            style={{
-              display: 'block',
-              fontSize: 11.5,
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {item.titulo}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+            <span
+              style={{
+                minWidth: 0,
+                fontSize: 11.5,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {item.titulo}
+            </span>
+            {item.selo}
           </span>
           {item.legenda || item.dur ? (
             <span

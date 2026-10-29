@@ -141,6 +141,34 @@ function Trilha({ itens, ref }: { itens: Migalha[]; ref?: Ref<HTMLElement> }) {
   );
 }
 
+function RotuloDoSeletor({ atual }: { atual: ChromeAtual }) {
+  return (
+    <>
+      <Icon name="scissors" style={{ color: 'var(--accent)' }} />
+      {atual.num ? (
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
+          #{atual.num}
+        </span>
+      ) : null}
+      <span
+        style={{
+          minWidth: 0,
+          flex: 1,
+          fontSize: 12,
+          fontWeight: 600,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          textAlign: 'left',
+        }}
+      >
+        {atual.titulo}
+      </span>
+      {atual.selo}
+    </>
+  );
+}
+
 function Seletor({
   atual,
   compacto,
@@ -183,30 +211,7 @@ function Seletor({
     if (compacto) setAberto(false);
   }, [compacto]);
 
-  const rotulo = (
-    <>
-      <Icon name="scissors" style={{ color: 'var(--accent)' }} />
-      {atual.num ? (
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-          #{atual.num}
-        </span>
-      ) : null}
-      <span
-        style={{
-          minWidth: 0,
-          flex: 1,
-          fontSize: 12,
-          fontWeight: 600,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          textAlign: 'left',
-        }}
-      >
-        {atual.titulo}
-      </span>
-    </>
-  );
+  const rotulo = <RotuloDoSeletor atual={atual} />;
 
   return (
     <div

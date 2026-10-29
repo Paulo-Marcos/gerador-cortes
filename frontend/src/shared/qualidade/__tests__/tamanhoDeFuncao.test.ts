@@ -138,7 +138,7 @@ const EXCECOES: Record<string, number> = {
   "src/upgrade/KitScreen.tsx::KitScreen": 208,
   "src/upgrade/KitScreen.tsx::ModalDemo": 146,
   "src/upgrade/PaletaDeComandos.tsx::PaletaDeComandos": 351,
-  "src/upgrade/TopBar.tsx::Seletor": 213,
+  "src/upgrade/TopBar.tsx::Seletor": 190,
   "src/upgrade/UpgradeModal.tsx::UpgradeModal": 158,
   "src/upgrade/UpgradeShell.tsx::Casca": 188,
 };
