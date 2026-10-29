@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReadingModal } from '@/features/editor/CommonTopBar';
 import type { ReadingPatch } from '@/lib/readingMetadata';
+import { SeloDaOrigem } from '@/features/projeto-detalhe/SeloDaOrigem';
 import { useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { estaAprovado } from '@/lib/statusDoCorte';
@@ -89,6 +90,20 @@ export type BancadaChromeProps = {
   barra?: Partial<ChromeBarra>;
 };
 
+// A capa que a tela der; sem ela, a do export, quando já existe.
+function capaDoCorteOuExport(
+  c: Corte,
+  projetoId: string,
+  exportStatus: StatusExportCorte[],
+  thumbDoCorte?: (c: Corte) => string | undefined,
+) {
+  return (
+    thumbDoCorte?.(c) ??
+    resolveThumbUrl(projetoId, exportStatus.find((s) => s.corte_id === c.id)?.thumbnail_path) ??
+    undefined
+  );
+}
+
 export function BancadaChrome({
   projetoId,
   tituloLive,
@@ -136,15 +151,14 @@ export function BancadaChrome({
   const capaDaLive =
     thumbLive ?? thumbnailUrl(projeto.data?.youtube_url ?? '', 'mq') ?? undefined;
   const capaDoCorte = (c: Corte) =>
-    thumbDoCorte?.(c) ??
-    resolveThumbUrl(projetoId, exportStatus.find((s) => s.corte_id === c.id)?.thumbnail_path) ??
-    undefined;
+    capaDoCorteOuExport(c, projetoId, exportStatus, thumbDoCorte);
 
   const itens: ItemDeLista[] = cortes.map((c) => ({
     id: c.id,
     num: String(c.numero),
     titulo: c.titulo_proposto,
     legenda: `#${c.numero} · ${c.inicio_hms} → ${c.fim_hms}`,
+    selo: <SeloDaOrigem origem={c.origem_analise} />,
     thumb: capaDoCorte(c),
     // R4: o ponto de estado vem do vocabulário do selo — a cópia local aqui
     // ainda pintava "aprovado" com a tinta dos botões (--accent2).
@@ -181,6 +195,7 @@ export function BancadaChrome({
       atual: {
         num: String(corte.numero),
         titulo: corte.titulo_proposto,
+        selo: <SeloDaOrigem origem={corte.origem_analise} />,
         onAnterior: () => irPara(-1),
         onProximo: () => irPara(1),
         onVerTodos: () => navigate(`/projetos/${projetoId}`),

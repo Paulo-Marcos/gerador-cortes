@@ -54,6 +54,8 @@ export type ItemDeLista = {
   thumb?: string;
   /** Cor da bolinha de estado à direita. */
   dot: string;
+  /** D-991: marca opcional ao lado do título (ex.: quem propôs o corte). */
+  selo?: ReactNode;
   ativo?: boolean;
   onClick?: () => void;
   /** D-746: onde o corte parou (cenas, render, publicação), em versão mini.
@@ -78,6 +80,8 @@ export type ChromeLista = {
 export type ChromeAtual = {
   num?: string;
   titulo: string;
+  /** D-991: marca opcional junto do título do item em foco. */
+  selo?: ReactNode;
   onAnterior?: () => void;
   onProximo?: () => void;
   onVerTodos?: () => void;
