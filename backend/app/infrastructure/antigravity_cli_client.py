@@ -68,10 +68,16 @@ _ENV_FORCA_API = (
     "GOOGLE_CLOUD_PROJECT",
 )
 
+# Desde a 1.4.x o login devolve um código para colar no próprio `agy`. O código é
+# do CLI: o CutCut não o recebe nem o guarda (ver os termos no topo).
 _MSG_LOGIN = (
-    "O Antigravity CLI não está logado nesta máquina. Abra um terminal, rode `agy` "
-    "uma vez e entre com a conta Google da assinatura."
+    "O Antigravity CLI não está logado nesta máquina. Abra um terminal, rode `agy`, "
+    "entre no navegador com a conta Google da assinatura e cole o código gerado de "
+    "volta no terminal, não no CutCut. Depois, tente de novo."
 )
+
+# A frase muda entre versões: 1.2.3 dizia a primeira; 1.4.9, a segunda.
+_FRASES_SEM_LOGIN = ("authentication required", "not logged into antigravity")
 
 # Folga do timeout do processo sobre o `--print-timeout`: o `agy` deve estourar
 # primeiro e explicar o motivo no evento `result`, antes de o matarmos às cegas.
@@ -141,7 +147,8 @@ def _evento_result(stdout: str) -> dict | None:
 
 
 def _pede_login(texto: str) -> bool:
-    return "authentication required" in (texto or "").lower()
+    minusculo = (texto or "").lower()
+    return any(frase in minusculo for frase in _FRASES_SEM_LOGIN)
 
 
 def _encerrar(proc: subprocess.Popen, *, respondeu: bool) -> None:
