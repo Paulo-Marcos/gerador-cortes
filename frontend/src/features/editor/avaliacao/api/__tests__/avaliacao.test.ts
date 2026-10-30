@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// D-722: as avaliações (humana por corte e automática do bruto) passaram para o
-// cliente gerado. Cada função bate na rota certa e devolve o mesmo recorte do
-// corpo que devolvia (`motivos`, `avaliacao`, `avaliacoes`).
+// D-722: a avaliação automática do bruto passou para o cliente gerado. Cada
+// função bate na rota certa e devolve o mesmo recorte do corpo que devolvia
+// (`avaliacao`, `avaliacoes`). A humana por corte saiu na D-999.
 
 let chamadas: Request[] = [];
 let corpo: unknown = {};
@@ -26,25 +26,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const corte = async () => (await import('../avaliacaoCorte')).avaliacaoCorteApi;
 const bruto = async () => (await import('../avaliacaoBruto')).avaliacaoBrutoApi;
-
-describe('avaliação do corte', () => {
-  it('motivos devolve a lista', async () => {
-    corpo = { motivos: [{ slug: 'ritmo', rotulo: 'Ritmo' }] };
-
-    expect(await (await corte()).motivos()).toEqual([{ slug: 'ritmo', rotulo: 'Ritmo' }]);
-    expect(chamadas[0].url).toBe('http://api.test/api/avaliacao-cortes/motivos');
-  });
-
-  it('salvar manda o voto pelo PUT do corte', async () => {
-    await (await corte()).salvar('c1', { voto: 4, motivos: ['ritmo'], comentario: '' });
-
-    expect(chamadas[0].method).toBe('PUT');
-    expect(chamadas[0].url).toBe('http://api.test/api/avaliacao-cortes/corte/c1');
-    expect(await chamadas[0].json()).toEqual({ voto: 4, motivos: ['ritmo'], comentario: '' });
-  });
-});
 
 describe('avaliação do bruto', () => {
   it('obter devolve só a avaliação (null = nunca avaliado)', async () => {

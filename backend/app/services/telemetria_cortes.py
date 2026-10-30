@@ -7,8 +7,8 @@ de projeto e cross-projeto (JSON/CSV).
 
 import json
 
-from app.domain.corte.avaliacao_corte import motivos_persistidos
 from app.domain.corte.motivo_apagado import contar_apagados_por_motivo
+from app.domain.corte.mudancas_do_corte import mudancas_por_origem
 from app.domain.corte.telemetria_cortes import (
     SITUACAO_COM_SNAPSHOT,
     diff_proposta_vs_final,
@@ -32,6 +32,7 @@ class TelemetriaCortesService:
         diffs = _diffs(cortes, snapshots)
         com_snapshot = sum(1 for d in diffs if d["situacao"] == SITUACAO_COM_SNAPSHOT)
 
+        apagados = await _apagados(db, projeto_id)
         return {
             "projeto_id": projeto_id,
             "titulo_live": projeto.titulo_live or "",
@@ -40,7 +41,9 @@ class TelemetriaCortesService:
             "sem_snapshot": len(diffs) - com_snapshot,
             "cortes": diffs,
             # D-993: as propostas que o operador apagou, por motivo.
-            "apagados": contar_apagados_por_motivo(await _motivos_apagados(db, projeto_id)),
+            "apagados": contar_apagados_por_motivo(motivo for _, motivo in apagados),
+            # D-999: o que o editor mudou, somado por quem propôs.
+            "mudancas_por_origem": mudancas_por_origem(diffs, apagados),
         }
 
     @staticmethod
@@ -59,6 +62,16 @@ class TelemetriaCortesService:
                 diff["projeto_titulo"] = projeto.titulo_live or ""
                 linhas.append(diff)
         return linhas
+
+    @staticmethod
+    async def exportacao_json(db: AsyncSession, linhas: list[dict]) -> dict:
+        """O export JSON: as linhas e, desde a D-999, as mudanças de todas as
+        lives somadas por origem da proposta, com os apagados."""
+        return {
+            "total_cortes": len(linhas),
+            "cortes": linhas,
+            "mudancas_por_origem": mudancas_por_origem(linhas, await _apagados(db)),
+        }
 
     @staticmethod
     def csv_agregado(linhas: list[dict]) -> str:
@@ -82,13 +95,15 @@ async def _snapshots_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[s
     return {s.corte_id: s for s in result.scalars().all()}
 
 
-async def _motivos_apagados(db: AsyncSession, projeto_id: str) -> list[str]:
-    result = await db.execute(
-        select(CorteSnapshot.motivo_apagado).where(
-            CorteSnapshot.projeto_id == projeto_id, CorteSnapshot.apagado_em.is_not(None)
-        )
+async def _apagados(db: AsyncSession, projeto_id: str | None = None) -> list[tuple[str, str]]:
+    """(origem, motivo) de cada proposta apagada; sem `projeto_id`, de todas as lives."""
+    consulta = select(CorteSnapshot.origem_analise, CorteSnapshot.motivo_apagado).where(
+        CorteSnapshot.apagado_em.is_not(None)
     )
-    return list(result.scalars().all())
+    if projeto_id is not None:
+        consulta = consulta.where(CorteSnapshot.projeto_id == projeto_id)
+    result = await db.execute(consulta)
+    return [(origem, motivo) for origem, motivo in result.all()]
 
 
 def _diffs(cortes: list[Corte], snapshots: dict[str, CorteSnapshot]) -> list[dict]:
@@ -125,10 +140,6 @@ def _corte_para_diff(corte: Corte) -> dict:
         "status": corte.status or "",
         "desvios": _json_lista(corte.desvios),
         "trechos_geracoes": corte.trechos_geracoes or 0,
-        # D-419: a nota que o editor deu ao corte na 1ª geração do bruto.
-        "voto_qualidade": corte.voto_qualidade,
-        "voto_qualidade_motivos": motivos_persistidos(corte.voto_qualidade_motivos),
-        "voto_qualidade_comentario": corte.voto_qualidade_comentario or "",
     }
 
 

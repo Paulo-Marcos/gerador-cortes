@@ -21,7 +21,6 @@ import { MetadadosDoCorteModal, statusMinimo } from '@/features/metadata/Metadad
 import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
 import { useWorkbenchQueueOptional } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { rotuloCurtoProjeto } from '@/shared/filaGlobal/rotulo';
-import { AvaliacaoCorteModal } from '@/features/editor/avaliacao/AvaliacaoCorteModal';
 import { RenderStepsModal } from './RenderStepsModal';
 
 // D-599: com a casca nova quem desenha a lista de cortes, a trilha e a barra
@@ -69,9 +68,6 @@ export function ScenesPostProductionPage() {
   // URL nova (via `key={src}` no Player) e re-fetchar o arquivo do disco.
   const [videoBust, setVideoBust] = useState<number>(() => Date.now());
   const [metadataOpen, setMetadataOpen] = useState(false);
-  // D-419: a nota do corte é perguntada uma vez, no clique de "Gerar bruto"
-  // (tela Bruta). Aqui ela só fica reabrível para ajuste.
-  const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
   // D-430: fonte do player escolhida a mao. `null` = segue o padrao
   // bruto-first do D-368. Zerada ao trocar de corte (effect abaixo).
   const [fonteEscolhida, setFonteEscolhida] = useState<VideoFontePos | null>(null);
@@ -377,12 +373,6 @@ export function ScenesPostProductionPage() {
           aoFechar={() => setMetadataOpen(false)}
         />
       ) : null}
-      <AvaliacaoCorteModal
-        open={avaliacaoOpen}
-        corteId={corte.id}
-        onClose={() => setAvaliacaoOpen(false)}
-        descricao={corte.titulo_proposto}
-      />
     </>
   );
 

@@ -31,11 +31,13 @@ vi.mock('@/shared/atalhos/shortcuts', async (original) => ({
     h.atalhos.push(bindings);
   },
 }));
-// A avaliação do operador (D-419) busca e grava na API; aqui basta saber que abriu.
-vi.mock('@/features/editor/avaliacao/AvaliacaoCorteModal', () => ({
-  AvaliacaoCorteModal: (p: { corteId: string; descricao: string; onClose: () => void }) => (
-    <div data-avaliacao={p.corteId}>{p.descricao}</div>
-  ),
+// D-999: o que o operador mudou vem da telemetria pela API; aqui, um diff fixo.
+vi.mock('../MudancasDoCorte', async (original) => ({
+  ...(await original<typeof import('../MudancasDoCorte')>()),
+  useDiffDoCorte: () => ({
+    situacao: 'com_snapshot',
+    mudancas: [{ tipo: 'titulo_trocado', valor: 1, descricao: 'Título trocado' }],
+  }),
 }));
 
 const casca = { nome: '.ap' };
@@ -136,7 +138,7 @@ describe('ConteudoDoPorQue', () => {
 });
 
 describe('PorQueDoCorteModal', () => {
-  it('abre por portal na casca, com o título do corte e a nota do operador no rodapé', () => {
+  it('abre por portal na casca, com o título do corte e um botão só para fechar', () => {
     vi.stubGlobal('document', { querySelector: (s: string) => (s === '.ap' ? casca : null), body: corpo });
     const fechar = vi.fn();
     const { quadros, html } = encenar(PorQueDoCorteModal, { corte: corte(), aoFechar: fechar }, []);
@@ -148,8 +150,8 @@ describe('PorQueDoCorteModal', () => {
       onClose: fechar,
       title: 'Por que a IA escolheu o corte #7',
       subtitle: 'Pedro II e a Igreja',
-      secondaryLabel: 'Fechar',
-      primaryLabel: 'Dar a minha nota',
+      secondaryLabel: null,
+      primaryLabel: 'Fechar',
       primaryStrong: false,
     });
     expect(html).toContain('role="dialog"');
@@ -162,19 +164,13 @@ describe('PorQueDoCorteModal', () => {
     expect(h.portais[0].alvo).toBe(corpo);
   });
 
-  it('"Dar a minha nota" troca o porquê pela avaliação do operador (D-419)', () => {
+  it('mostra o que o operador mudou na proposta, no lugar do voto (D-999)', () => {
     vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
-    const fechar = vi.fn();
-    const { quadros, html } = encenar(PorQueDoCorteModal, { corte: corte(), aoFechar: fechar }, [
-      (modal) => (modal.props as { onPrimary: () => void }).onPrimary(),
-    ]);
-    expect(quadros).toHaveLength(2);
-    const avaliacao = quadros[1] as ReactElement<Record<string, unknown>>;
-    expect(avaliacao.props).toMatchObject({ open: true, corteId: 'c7', onClose: fechar });
-    expect(h.portais[1].alvo).toBe(casca);
-    expect(html).toContain('data-avaliacao="c7"');
-    expect(html).toContain('A sua nota, ao lado da que a IA deu');
-    expect(html).not.toContain('role="dialog"');
+    const { quadros, html } = encenar(PorQueDoCorteModal, { corte: corte(), aoFechar: vi.fn() }, []);
+    expect(quadros).toHaveLength(1);
+    expect(html).toContain('O que você mudou');
+    expect(html).toContain('Título trocado');
+    expect(html).not.toContain('Dar a minha nota');
   });
 });
 

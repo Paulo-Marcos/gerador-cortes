@@ -324,7 +324,7 @@ async def exportar_telemetria_cortes(formato: str = "json", db: AsyncSession = D
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": 'attachment; filename="telemetria-cortes.csv"'},
         )
-    return {"total_cortes": len(linhas), "cortes": linhas}
+    return await TelemetriaCortesService.exportacao_json(db, linhas)
 
 
 @router.get(

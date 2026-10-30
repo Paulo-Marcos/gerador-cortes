@@ -66,7 +66,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/CommonTopBar.tsx": 2,
   "src/features/editor/ShortcutsHelpModal.tsx": 1,
   "src/features/editor/avaliacao/AvaliacaoBrutoPanel.tsx": 7,
-  "src/features/editor/avaliacao/AvaliacaoCorteForm.tsx": 4,
   "src/features/editor/fase1/AudioSyncControl.tsx": 7,
   "src/features/editor/fase1/BlocosPanel.tsx": 2,
   "src/features/editor/fase1/BrutoContextStrip.tsx": 4,

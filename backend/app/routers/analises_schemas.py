@@ -53,12 +53,12 @@ class TelemetriaDesvios(RespostaApi):
     finais_por_origem: dict[str, int]
 
 
-class TelemetriaAvaliacao(RespostaApi):
-    """A avaliação humana do corte (D-419); `voto` None = não avaliado."""
+class TelemetriaMudanca(RespostaApi):
+    """D-999: uma mudança do editor sobre a proposta (`domain/corte/mudancas_do_corte.py`)."""
 
-    voto: int | None
-    motivos: list[str]
-    comentario: str
+    tipo: str
+    valor: float
+    descricao: str
 
 
 class TelemetriaCorteDiff(RespostaApi):
@@ -72,7 +72,7 @@ class TelemetriaCorteDiff(RespostaApi):
     desvios: TelemetriaDesvios
     trechos_geracoes: int
     desvios_claude_por_geracao: float
-    avaliacao: TelemetriaAvaliacao
+    mudancas: list[TelemetriaMudanca]
 
 
 class TelemetriaApagados(RespostaApi):
@@ -80,6 +80,16 @@ class TelemetriaApagados(RespostaApi):
 
     total: int
     por_motivo: dict[str, int]
+
+
+class TelemetriaMudancasPorOrigem(RespostaApi):
+    """D-999: quantos cortes de cada origem tiveram cada mudança, e os apagados."""
+
+    origem: str
+    cortes: int
+    sem_mudanca: int
+    por_tipo: dict[str, int]
+    apagados: TelemetriaApagados
 
 
 class TelemetriaProjetoResponse(RespostaApi):
@@ -90,6 +100,7 @@ class TelemetriaProjetoResponse(RespostaApi):
     sem_snapshot: int
     cortes: list[TelemetriaCorteDiff]
     apagados: TelemetriaApagados
+    mudancas_por_origem: list[TelemetriaMudancasPorOrigem]
 
 
 # ─── Estatísticas do YouTube (D-305) ─────────────────────────────────────────

@@ -117,9 +117,8 @@ class Projeto(Base):
     # F-052: pontuação herdada da tela de Ranking de Lives no momento do download.
     # 0.0 quando o projeto não veio do ranking (fluxo legado do YoutubeBrowser).
     pontuacao_ranking: Mapped[float] = mapped_column(Float, default=0.0)
-    # D-372: voto MANUAL do operador (1-5) sobre a qualidade real da live, dado
-    # depois de assistir/cortar — referência comparativa contra `pontuacao_ranking`,
-    # que às vezes diverge. None enquanto o operador não votou.
+    # D-372: voto manual (1-5) da qualidade da live. Sem uso desde a D-999 (0 de
+    # 202 lives votadas): a coluna fica pelo histórico, sem migration.
     voto_qualidade_live: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
@@ -292,12 +291,10 @@ class Corte(Base):
     # JSON lista de {"em", "adicionados", "total_apos"}, um item por invocação.
     trechos_geracoes: Mapped[int] = mapped_column(Integer, default=0)
     trechos_geracoes_log: Mapped[str] = mapped_column(Text, default="[]")
-    # D-419: avaliação humana da qualidade DESTE corte, colhida quando o editor
-    # manda gerar o bruto pela 1ª vez — com o corte fresco na cabeça. O voto da
-    # live (`Projeto.voto_qualidade_live`, D-372) chega tarde demais para isso:
-    # quando a live inteira termina, metade dos cortes já saiu da memória.
-    # `voto` 1-5 (NULL = ainda não avaliado); `motivos` é lista JSON de slugs do
-    # vocabulário em `domain/corte/avaliacao_corte.py`. Entra na telemetria (D-303).
+    # D-419: voto humano (1-5) da qualidade do corte, com motivos e comentário.
+    # Sem uso desde a D-999, que o trocou pelo "o que você mudou" derivado do
+    # diff proposta × final (`domain/corte/mudancas_do_corte.py`). As colunas
+    # ficam pelo histórico, sem migration (como as marcas antigas na D-713).
     voto_qualidade: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     voto_qualidade_motivos: Mapped[str] = mapped_column(Text, default="[]")
     voto_qualidade_comentario: Mapped[str] = mapped_column(Text, default="")
@@ -813,8 +810,7 @@ class AvaliacaoBruto(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     corte_id: Mapped[str] = mapped_column(String(36), ForeignKey("cortes.id"), index=True)
     projeto_id: Mapped[str] = mapped_column(String(36), default="", index=True)
-    # Nota 1-5 na MESMA escala do voto humano por corte (D-419), de propósito:
-    # é o que permite cruzar o que a IA achou com o que o editor achou.
+    # Nota 1-5, a escala que o voto humano por corte (D-419) usava.
     nota: Mapped[int] = mapped_column(Integer, default=0)
     veredito: Mapped[str] = mapped_column(String(20), default="aceitavel")
     parecer: Mapped[str] = mapped_column(Text, default="")

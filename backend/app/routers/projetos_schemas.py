@@ -173,3 +173,5 @@ class TelemetriaExportadaResponse(RespostaApi):
 
     total_cortes: int
     cortes: list[dict[str, Any]]
+    # D-999: o que o editor mudou, somado por origem da proposta, em todas as lives.
+    mudancas_por_origem: list[dict[str, Any]]

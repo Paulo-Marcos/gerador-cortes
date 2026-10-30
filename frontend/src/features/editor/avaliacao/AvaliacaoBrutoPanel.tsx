@@ -17,8 +17,8 @@ import { providerDoModelo, providerEmVoo } from '@/lib/providerIa';
 import { Icon } from '@/upgrade/Icon';
 
 // D-447: o parecer automático sobre a ESTRUTURA do bruto — nota, veredito e os
-// pontos que não fecham. Irmão do D-419 (voto humano sobre a PROPOSTA): este lê
-// o resultado, aquele lê a intenção.
+// pontos que não fecham. Irmão do "o que você mudou" (D-999, o diff sobre a
+// PROPOSTA): este lê o resultado, aquele lê a intenção.
 //
 // O painel não dispara a avaliação no fluxo normal: ela roda sozinha ao fim de
 // cada geração de bruto. O botão de reavaliar existe para quando a skill do

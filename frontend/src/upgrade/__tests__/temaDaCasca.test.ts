@@ -152,7 +152,6 @@ describe('estado fala uma língua só', () => {
 
   it.each([
     'features/editor/avaliacao/AvaliacaoBrutoPanel.tsx',
-    'features/editor/avaliacao/AvaliacaoCorteForm.tsx',
     'features/editor/fase2/AlertaCenasForaDoCorte.tsx',
     'features/editor/fase1/AudioSyncControl.tsx',
     'features/projeto-detalhe/AuditoriaAnaliseModal.tsx',

@@ -132,9 +132,6 @@ export function useEditorPage() {
   const velocidadeTrabalhoRef = useRef(VELOCIDADE_TRABALHO_INICIAL);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [trechosManualOpen, setTrechosManualOpen] = useState(false);
-  // D-419: avaliação da qualidade do corte, perguntada uma única vez — no
-  // clique que dispara a 1ª geração do bruto.
-  const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
   const [intervaloAberto, setIntervaloAberto] = useState(false);
   // Trecho comeca DESTRAVADO por default (decisao de produto): usuario pode
   // gerenciar tamanho dos trechos na waveform sem precisar destravar manualmente.
@@ -288,10 +285,6 @@ export function useEditorPage() {
     if (brutoOcupado()) return;
     dispararBruto(undefined);
     gerarMetadadosClaude.mutate('claude');
-    // D-419: pergunta a qualidade AGORA, não quando o bruto ficar pronto — é
-    // neste clique que o editor acabou de ver e ajustar o corte. A geração já
-    // saiu acima e corre em segundo plano; o modal não a bloqueia.
-    setAvaliacaoOpen(true);
   };
 
   // D-160 — regeração (bruto já existe): por DEFAULT roda só o bruto. Os opt-ins
@@ -677,5 +670,5 @@ export function useEditorPage() {
 
   useShortcuts(bindings, !!corte);
 
-  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, avaliacaoOpen, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onRemoverDesvio, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, removerDesvio, salvarMudancas, selectedDesvioIdx, setAvaliacaoOpen, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
+  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onRemoverDesvio, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, removerDesvio, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
 }

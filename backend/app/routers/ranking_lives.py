@@ -16,14 +16,11 @@ from app.models import StatusLiveCandidata
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 from app.services.ranking_lives import (
     RankingIndisponivel,
-    definir_voto_qualidade,
     enfileirar_candidata,
     gerar_ranking,
-    obter_voto_qualidade,
     rejeitar_candidata,
 )
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -88,18 +85,6 @@ class CandidataEnfileiradaResponse(RespostaComCamposOpcionais):
     pontuacao_ranking: float | None = None
 
 
-class VotoQualidadeResponse(RespostaApi):
-    """O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu."""
-
-    projeto_id: str
-    voto_qualidade_live: int | None
-    pontuacao_ranking: float
-
-
-class VotoQualidadeRequest(BaseModel):
-    voto: int
-
-
 @router.get("", response_model=RankingLivesResponse, response_model_exclude_unset=True)
 async def listar_ranking(forcar_refresh: bool = False):
     """Top candidatas pendentes. Quando `forcar_refresh=true`, ignora o cache de 24h."""
@@ -138,27 +123,3 @@ async def rejeitar(video_id: str):
 async def enfileirar(video_id: str):
     """Cria o Projeto da candidata e dispara a ingestão, copiando a pontuação."""
     return await enfileirar_candidata(video_id)
-
-
-# --------------------------------------------------------------------------- #
-# Voto de qualidade da live (D-372) — endpoint irmão, não em routers/projetos.py
-# (travado por f024-pos-layout-youtube, feature não relacionada a este voto).
-# --------------------------------------------------------------------------- #
-
-
-@router.get("/projetos/{projeto_id}/voto-qualidade", response_model=VotoQualidadeResponse)
-async def obter_voto(projeto_id: str):
-    try:
-        return await obter_voto_qualidade(projeto_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-@router.put("/projetos/{projeto_id}/voto-qualidade", response_model=VotoQualidadeResponse)
-async def salvar_voto(projeto_id: str, body: VotoQualidadeRequest):
-    try:
-        return await definir_voto_qualidade(projeto_id, body.voto)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc

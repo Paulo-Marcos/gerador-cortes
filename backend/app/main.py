@@ -19,7 +19,6 @@ from app.infrastructure import settings_store
 from app.routers import (
     alertas_conferir,
     avaliacao_bruto,
-    avaliacao_cortes,
     avaliacoes_thumbnail,
     capa_no_chatgpt,
     capa_tiktok_estilo,
@@ -150,9 +149,6 @@ app.include_router(claude_ia.router, prefix="/api/claude", tags=["Claude IA"])
 app.include_router(diarizacao.router, prefix="/api/diarizacao", tags=["Diarização"])
 app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
 app.include_router(ranking_lives.router, prefix="/api/ranking-lives", tags=["Ranking Lives"])
-app.include_router(
-    avaliacao_cortes.router, prefix="/api/avaliacao-cortes", tags=["Avaliação de Cortes"]
-)
 app.include_router(
     avaliacoes_thumbnail.router, prefix="/api/avaliacoes-thumbnail", tags=["Avaliações Thumbnail"]
 )

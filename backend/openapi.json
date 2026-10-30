@@ -1478,83 +1478,6 @@
         "title": "AvaliacaoBrutoResponse",
         "type": "object"
       },
-      "AvaliacaoCorteRequest": {
-        "properties": {
-          "comentario": {
-            "default": "",
-            "title": "Comentario",
-            "type": "string"
-          },
-          "motivos": {
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "title": "Motivos",
-            "type": "array"
-          },
-          "voto": {
-            "title": "Voto",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "voto"
-        ],
-        "title": "AvaliacaoCorteRequest",
-        "type": "object"
-      },
-      "AvaliacaoCorteResponse": {
-        "description": "A avaliação do corte (D-419). `voto` None = ainda não avaliado.",
-        "properties": {
-          "avaliado_em": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avaliado Em"
-          },
-          "comentario": {
-            "title": "Comentario",
-            "type": "string"
-          },
-          "corte_id": {
-            "title": "Corte Id",
-            "type": "string"
-          },
-          "motivos": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Motivos",
-            "type": "array"
-          },
-          "voto": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Voto"
-          }
-        },
-        "required": [
-          "corte_id",
-          "voto",
-          "motivos",
-          "comentario",
-          "avaliado_em"
-        ],
-        "title": "AvaliacaoCorteResponse",
-        "type": "object"
-      },
       "AvaliacaoRegistradaResponse": {
         "properties": {
           "avaliacao": {
@@ -6195,22 +6118,6 @@
         "title": "ListaLlmCallsResponse",
         "type": "object"
       },
-      "ListaMotivosResponse": {
-        "properties": {
-          "motivos": {
-            "items": {
-              "$ref": "#/components/schemas/MotivoAvaliacaoResponse"
-            },
-            "title": "Motivos",
-            "type": "array"
-          }
-        },
-        "required": [
-          "motivos"
-        ],
-        "title": "ListaMotivosResponse",
-        "type": "object"
-      },
       "ListaPapeisModeloResponse": {
         "properties": {
           "papeis": {
@@ -7205,24 +7112,6 @@
           "moldura"
         ],
         "title": "MolduraAplicadaResponse",
-        "type": "object"
-      },
-      "MotivoAvaliacaoResponse": {
-        "properties": {
-          "rotulo": {
-            "title": "Rotulo",
-            "type": "string"
-          },
-          "slug": {
-            "title": "Slug",
-            "type": "string"
-          }
-        },
-        "required": [
-          "slug",
-          "rotulo"
-        ],
-        "title": "MotivoAvaliacaoResponse",
         "type": "object"
       },
       "MoverBlocoRequest": {
@@ -11507,40 +11396,6 @@
         "title": "TelemetriaApagados",
         "type": "object"
       },
-      "TelemetriaAvaliacao": {
-        "description": "A avaliação humana do corte (D-419); `voto` None = não avaliado.",
-        "properties": {
-          "comentario": {
-            "title": "Comentario",
-            "type": "string"
-          },
-          "motivos": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Motivos",
-            "type": "array"
-          },
-          "voto": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Voto"
-          }
-        },
-        "required": [
-          "voto",
-          "motivos",
-          "comentario"
-        ],
-        "title": "TelemetriaAvaliacao",
-        "type": "object"
-      },
       "TelemetriaBordas": {
         "properties": {
           "delta_duracao_seg": {
@@ -11638,9 +11493,6 @@
       },
       "TelemetriaCorteDiff": {
         "properties": {
-          "avaliacao": {
-            "$ref": "#/components/schemas/TelemetriaAvaliacao"
-          },
           "bordas": {
             "$ref": "#/components/schemas/TelemetriaBordas"
           },
@@ -11654,6 +11506,13 @@
           "desvios_claude_por_geracao": {
             "title": "Desvios Claude Por Geracao",
             "type": "number"
+          },
+          "mudancas": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetriaMudanca"
+            },
+            "title": "Mudancas",
+            "type": "array"
           },
           "numero": {
             "title": "Numero",
@@ -11702,7 +11561,7 @@
           "desvios",
           "trechos_geracoes",
           "desvios_claude_por_geracao",
-          "avaliacao"
+          "mudancas"
         ],
         "title": "TelemetriaCorteDiff",
         "type": "object"
@@ -11815,6 +11674,14 @@
             "title": "Cortes",
             "type": "array"
           },
+          "mudancas_por_origem": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Mudancas Por Origem",
+            "type": "array"
+          },
           "total_cortes": {
             "title": "Total Cortes",
             "type": "integer"
@@ -11822,9 +11689,70 @@
         },
         "required": [
           "total_cortes",
-          "cortes"
+          "cortes",
+          "mudancas_por_origem"
         ],
         "title": "TelemetriaExportadaResponse",
+        "type": "object"
+      },
+      "TelemetriaMudanca": {
+        "description": "D-999: uma mudança do editor sobre a proposta (`domain/corte/mudancas_do_corte.py`).",
+        "properties": {
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          },
+          "valor": {
+            "title": "Valor",
+            "type": "number"
+          }
+        },
+        "required": [
+          "tipo",
+          "valor",
+          "descricao"
+        ],
+        "title": "TelemetriaMudanca",
+        "type": "object"
+      },
+      "TelemetriaMudancasPorOrigem": {
+        "description": "D-999: quantos cortes de cada origem tiveram cada mudança, e os apagados.",
+        "properties": {
+          "apagados": {
+            "$ref": "#/components/schemas/TelemetriaApagados"
+          },
+          "cortes": {
+            "title": "Cortes",
+            "type": "integer"
+          },
+          "origem": {
+            "title": "Origem",
+            "type": "string"
+          },
+          "por_tipo": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Por Tipo",
+            "type": "object"
+          },
+          "sem_mudanca": {
+            "title": "Sem Mudanca",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "origem",
+          "cortes",
+          "sem_mudanca",
+          "por_tipo",
+          "apagados"
+        ],
+        "title": "TelemetriaMudancasPorOrigem",
         "type": "object"
       },
       "TelemetriaProjetoResponse": {
@@ -11841,6 +11769,13 @@
               "$ref": "#/components/schemas/TelemetriaCorteDiff"
             },
             "title": "Cortes",
+            "type": "array"
+          },
+          "mudancas_por_origem": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetriaMudancasPorOrigem"
+            },
+            "title": "Mudancas Por Origem",
             "type": "array"
           },
           "projeto_id": {
@@ -11867,7 +11802,8 @@
           "com_snapshot",
           "sem_snapshot",
           "cortes",
-          "apagados"
+          "apagados",
+          "mudancas_por_origem"
         ],
         "title": "TelemetriaProjetoResponse",
         "type": "object"
@@ -12651,50 +12587,6 @@
         "title": "VersoesResponse",
         "type": "object"
       },
-      "VotoQualidadeRequest": {
-        "properties": {
-          "voto": {
-            "title": "Voto",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "voto"
-        ],
-        "title": "VotoQualidadeRequest",
-        "type": "object"
-      },
-      "VotoQualidadeResponse": {
-        "description": "O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu.",
-        "properties": {
-          "pontuacao_ranking": {
-            "title": "Pontuacao Ranking",
-            "type": "number"
-          },
-          "projeto_id": {
-            "title": "Projeto Id",
-            "type": "string"
-          },
-          "voto_qualidade_live": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Voto Qualidade Live"
-          }
-        },
-        "required": [
-          "projeto_id",
-          "voto_qualidade_live",
-          "pontuacao_ranking"
-        ],
-        "title": "VotoQualidadeResponse",
-        "type": "object"
-      },
       "YouTubeUploadRequest": {
         "properties": {
           "scheduled_at": {
@@ -13372,119 +13264,6 @@
         "summary": "Listar Tipos",
         "tags": [
           "Avaliação do Bruto"
-        ]
-      }
-    },
-    "/api/avaliacao-cortes/corte/{corte_id}": {
-      "get": {
-        "operationId": "obter_api_avaliacao_cortes_corte__corte_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "corte_id",
-            "required": true,
-            "schema": {
-              "title": "Corte Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AvaliacaoCorteResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Obter",
-        "tags": [
-          "Avaliação de Cortes"
-        ]
-      },
-      "put": {
-        "operationId": "salvar_api_avaliacao_cortes_corte__corte_id__put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "corte_id",
-            "required": true,
-            "schema": {
-              "title": "Corte Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AvaliacaoCorteRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AvaliacaoCorteResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Salvar",
-        "tags": [
-          "Avaliação de Cortes"
-        ]
-      }
-    },
-    "/api/avaliacao-cortes/motivos": {
-      "get": {
-        "operationId": "listar_motivos_api_avaliacao_cortes_motivos_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListaMotivosResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Listar Motivos",
-        "tags": [
-          "Avaliação de Cortes"
         ]
       }
     },
@@ -21748,98 +21527,6 @@
           }
         },
         "summary": "Listar Ranking",
-        "tags": [
-          "Ranking Lives"
-        ]
-      }
-    },
-    "/api/ranking-lives/projetos/{projeto_id}/voto-qualidade": {
-      "get": {
-        "operationId": "obter_voto_api_ranking_lives_projetos__projeto_id__voto_qualidade_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "projeto_id",
-            "required": true,
-            "schema": {
-              "title": "Projeto Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VotoQualidadeResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Obter Voto",
-        "tags": [
-          "Ranking Lives"
-        ]
-      },
-      "put": {
-        "operationId": "salvar_voto_api_ranking_lives_projetos__projeto_id__voto_qualidade_put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "projeto_id",
-            "required": true,
-            "schema": {
-              "title": "Projeto Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VotoQualidadeRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VotoQualidadeResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Salvar Voto",
         "tags": [
           "Ranking Lives"
         ]
