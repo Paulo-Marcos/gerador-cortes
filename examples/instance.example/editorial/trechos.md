@@ -22,22 +22,21 @@ editor vê no badge do painel de trechos:
 - **Interação com o chat ao vivo** (`chat`): ler nomes, responder doações, bate-boca.
 - **Enrolação** (`enrolacao`) sem conteúdo (pausas técnicas, procura de link,
   silêncio longo sem função retórica).
-- **Afirmações possivelmente imprecisas ou erradas** (`imprecisao`): ver a seção
-  própria abaixo.
 - **Conteúdo fora do tom** (`tom`, NÃO_RECOMENDADO): desabafos pessoais, histórias
   constrangedoras.
 
-## Imprecisão factual (`imprecisao`)
+## Afirmação a conferir (`conferir`, NÃO é desvio)
 
 Fala ao vivo é dita de memória: número aproximado, data trocada, frase atribuída
-ao autor errado, generalização apresentada como fato. **Marque esses trechos** — o
-critério é a **dúvida**, não a certeza do erro.
+ao autor errado. Uma afirmação assim **não sai do corte** — tirá-la tira
+conteúdo. Ela vai para a lista `conferir`: o trecho **fica**, e o editor vê um
+alerta na timeline para checar o fato antes de publicar.
 
-1. O motivo **deve começar com "Possível imprecisão"** e dizer o que pode estar
-   errado (ex.: "Possível imprecisão — cita 40% sem fonte").
-2. Marque o **menor trecho** que contém a afirmação duvidosa.
-3. Se a afirmação **sustenta o argumento**, não marque — vale o guardrail abaixo.
-4. Opinião e juízo de valor não são imprecisão: a categoria é sobre fato verificável.
+1. O critério é a **dúvida** sobre um fato verificável (número, data, nome,
+   autoria, estatística), não a certeza do erro. Opinião não entra.
+2. Marque o **menor trecho** que contém a afirmação.
+3. O motivo diz **o que conferir**, em poucas palavras.
+4. Nunca ponha a mesma afirmação em `desvios`: o que está em `conferir` fica no corte.
 
 ## Guardrail semântico (como decidir a dúvida)
 
@@ -81,7 +80,7 @@ marcado, só acrescenta.
    "repetição da tese", "tangente sobre áudio").
 4. **`categoria` sempre presente**, do vocabulário fechado acima.
 5. Lista vazia é uma resposta válida e correta: sem nada a remover, retorne
-   `"desvios": []`.
+   `"desvios": []`; sem nada a conferir, `"conferir": []`.
 
 ## Formato de saída (JSON puro, sem markdown, sem texto fora do JSON)
 
@@ -91,8 +90,15 @@ marcado, só acrescenta.
     {
       "inicio_hms": "HH:MM:SS",
       "fim_hms": "HH:MM:SS",
-      "categoria": "repeticao | disfluencia | tangente | chat | enrolacao | imprecisao | tom",
+      "categoria": "repeticao | disfluencia | tangente | chat | enrolacao | tom",
       "motivo": "descrição breve do trecho removido"
+    }
+  ],
+  "conferir": [
+    {
+      "inicio_hms": "HH:MM:SS",
+      "fim_hms": "HH:MM:SS",
+      "motivo": "o que conferir (ex.: cita 40% sem dizer a fonte)"
     }
   ]
 }

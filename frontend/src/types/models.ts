@@ -92,6 +92,9 @@ export interface Desvio {
   categoria?: DesvioCategoria;
 }
 
+/** D-998: trecho que FICA no corte e a IA pede para conferir o fato. Não é desvio. */
+export type AlertaConferir = Schema<'AlertaConferirDoCorte'>;
+
 export interface TranscricaoLinha {
   start: number;
   end: number;

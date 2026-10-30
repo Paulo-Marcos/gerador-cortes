@@ -12,13 +12,14 @@ import { createPortal } from 'react-dom';
 import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
-import type { Desvio } from '@/types/models';
-import { corDoSegmento } from './trechoBadge';
+import type { AlertaConferir, Desvio } from '@/types/models';
+import { drawRegions, type RegionsInstance } from './regioesDaOnda';
+import { AlertasConferir } from './AlertasConferir';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
 import { Tooltip } from '@/components/ui/tooltip';
 import { fetchWaveformPeaks } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { hmsParaSeg, segParaHms, segParaMmSs } from '../timeUtils';
+import { segParaHms, segParaMmSs } from '../timeUtils';
 import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
@@ -40,6 +41,9 @@ interface Props {
   inicioSeg: number;
   fimSeg: number;
   desvios: Desvio[];
+  /** D-998: trechos que ficam no corte e a IA pede para conferir. */
+  alertas?: AlertaConferir[];
+  corteId?: string;
   currentTime: number;
   playbackRate: number;
   playerRef?: RefObject<PlayerHandle | null>;
@@ -91,6 +95,9 @@ const WB = {
   err: 'var(--wb-err)',
 };
 
+// Estável: um `[]` novo a cada render redesenharia as regiões a cada tique.
+const SEM_ALERTAS: AlertaConferir[] = [];
+const COR_DO_CORTE = 'oklch(0.58 0.13 225 / 0.18)';
 const TIMECODE_SLOTS = 7;
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 20;
@@ -156,57 +163,6 @@ function buildTimecodes(inicio: number, fim: number): string[] {
   return Array.from({ length: TIMECODE_SLOTS }, (_, idx) => segParaHms(inicio + step * idx));
 }
 
-type RegionsInstance = ReturnType<typeof RegionsPlugin.create>;
-
-function drawRegions(
-  regions: RegionsInstance,
-  inicioSeg: number,
-  fimSeg: number,
-  desvios: Desvio[],
-  offset: number,
-  locked: boolean,
-) {
-  regions.clearRegions();
-  const canMove = !locked;
-  const mainRegion = regions.addRegion({
-    id: 'corte-principal',
-    start: Math.max(0, inicioSeg - offset),
-    end: Math.max(0.1, fimSeg - offset),
-    color: 'oklch(0.58 0.13 225 / 0.18)',
-    drag: false,
-    resize: false,
-  });
-  const regionEl = (mainRegion as unknown as { element: HTMLElement }).element;
-  if (regionEl) {
-    regionEl.style.overflow = 'visible';
-    regionEl.style.pointerEvents = 'none';
-  }
-  desvios.forEach((d, idx) => {
-    try {
-      const start = hmsParaSeg(d.inicio_hms) - offset;
-      const end = hmsParaSeg(d.fim_hms) - offset;
-      if (end <= start) return;
-      // D-515: a cor vem da CATEGORIA, e da mesma fonte que pinta o badge do
-      // card. Antes era um vermelho unico cravado aqui: vinte trechos, vinte
-      // barras iguais, e a unica forma de saber qual era qual era clicar.
-      const region = regions.addRegion({
-        id: `desvio-${idx}`,
-        start: Math.max(0, start),
-        end: Math.max(0.1, end),
-        color: corDoSegmento(d),
-        drag: canMove,
-        resize: canMove,
-      });
-      if (!canMove) {
-        const el = (region as unknown as { element: HTMLElement }).element;
-        if (el) el.style.pointerEvents = 'none';
-      }
-    } catch {
-      // skip malformed desvio
-    }
-  });
-}
-
 /** Insere alpha num oklch sem canal-A (formato `--wb-*` do index.css: `oklch(L C H)`).
  *  Strings que ja trazem "/" (com alpha) voltam intocadas. */
 function withAlpha(oklch: string, alpha: number): string {
@@ -221,6 +177,7 @@ interface WaveformProps {
   inicioSeg: number;
   fimSeg: number;
   desvios: Desvio[];
+  alertas: AlertaConferir[];
   currentTime: number;
   zoomLevel: number;
   locked: boolean;
@@ -247,6 +204,7 @@ function Waveform({
   inicioSeg,
   fimSeg,
   desvios,
+  alertas,
   currentTime,
   zoomLevel,
   locked,
@@ -276,6 +234,7 @@ function Waveform({
     inicioSeg,
     fimSeg,
     desvios,
+    alertas,
     locked,
     currentTime,
     onSeek,
@@ -293,6 +252,7 @@ function Waveform({
     inicioSeg,
     fimSeg,
     desvios,
+    alertas,
     locked,
     currentTime,
     onSeek,
@@ -413,14 +373,8 @@ function Waveform({
       wsReadyRef.current = true;
       setIsLoading(false);
       latestRef.current.onLoadingChange?.(false);
-      const {
-        audioOffsetSec: offset,
-        inicioSeg: inicio,
-        fimSeg: fim,
-        desvios: dvs,
-        locked: lck,
-      } = latestRef.current;
-      drawRegions(regions, inicio, fim, dvs, offset, lck);
+      const l = latestRef.current;
+      drawRegions(regions, l.inicioSeg, l.fimSeg, l.desvios, l.audioOffsetSec, l.locked, l.alertas, COR_DO_CORTE);
       requestAnimationFrame(() => {
         const cursor = queryShadow(containerRef.current, '.cursor');
         cursorRef.current = cursor;
@@ -567,8 +521,8 @@ function Waveform({
   useEffect(() => {
     const regions = regionsRef.current;
     if (!regions) return;
-    drawRegions(regions, inicioSeg, fimSeg, desvios, audioOffsetSec, locked);
-  }, [inicioSeg, fimSeg, desvios, audioOffsetSec, locked]);
+    drawRegions(regions, inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas, COR_DO_CORTE);
+  }, [inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas]);
 
   useEffect(() => {
     if (!wsReadyRef.current) return;
@@ -1198,6 +1152,8 @@ export function TimelinePanel({
   inicioSeg,
   fimSeg,
   desvios,
+  alertas = SEM_ALERTAS,
+  corteId,
   currentTime,
   playbackRate,
   playerRef,
@@ -1283,11 +1239,8 @@ export function TimelinePanel({
   const alternarPlay = useFuncaoEstavel(handlePlayPause);
   const zoomLabel = `${zoomLevel.toFixed(1)}×`;
   const rateLabel = `${playbackRate.toFixed(2)}×`;
-  // AUDITORIA-v2 §7 (CP7): "TIMELINE + tempo" do cabecalho compacto —
-  // elapsed/total relativos ao INICIO DO CORTE (mesma convencao de
-  // "NO CORTE" no BrutoContextStrip: currentTime - inicioSeg). Puramente
-  // um label formatado a partir de props ja existentes — nao mexe no
-  // cursor/regions/scroll da Waveform.
+  // AUDITORIA-v2 §7 (CP7): tempo decorrido/total relativo ao INICIO DO CORTE, como o
+  // "NO CORTE" do BrutoContextStrip. Só um rótulo: não mexe no cursor nem na onda.
   const tempoLabel = `${segParaMmSs(Math.max(0, currentTime - inicioSeg), true)} / ${segParaMmSs(Math.max(0, fimSeg - inicioSeg), true)}`;
 
   return (
@@ -1299,11 +1252,9 @@ export function TimelinePanel({
       {/* Em coluna estreita o cabecalho quebra em duas linhas em vez de
           esconder o ⚙. */}
       <header className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        {/* AUDITORIA-v2 §7 (CP7): cabecalho reduzido a TIMELINE+tempo,
-            transporte, In/Out, cadeado, espacador e o menu ⚙. Velocidade/
-            dividir/trecho/atualizar-onda migraram pro AdvancedMenu — ver
-            abaixo — e o badge solto de trechos saiu (ja aparece em
-            Tempos/CP6). */}
+        {/* AUDITORIA-v2 §7 (CP7): tempo, transporte, In/Out, cadeado e o menu ⚙.
+            Velocidade/dividir/trecho/onda foram para o AdvancedMenu; o badge de
+            trechos saiu (já aparece em Tempos/CP6). */}
         {/* D-610: na casca nova o transporte voltou para cá. A barra própria
             acima gastava uma linha inteira do player para cinco controles
             que cabem folgados neste cabeçalho. */}
@@ -1394,6 +1345,8 @@ export function TimelinePanel({
         />
       </header>
 
+      {corteId && <AlertasConferir corteId={corteId} alertas={alertas} onSeek={handleSeek} />}
+
       {/* Waveform — corpo */}
       <div className="flex flex-1 flex-col p-3" style={{ minHeight: 0 }}>
         <Waveform
@@ -1404,6 +1357,7 @@ export function TimelinePanel({
           fimSeg={fimSeg}
           currentTime={currentTime}
           desvios={desvios}
+          alertas={alertas}
           zoomLevel={zoomLevel}
           locked={locked}
           pointer={pointer}

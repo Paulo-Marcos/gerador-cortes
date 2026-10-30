@@ -18,7 +18,7 @@ from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
-from app.domain.corte import ciclo_corte
+from app.domain.corte import alerta_conferir, ciclo_corte
 from app.domain.corte.ancora_match import ancorar_desvio
 from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
@@ -795,21 +795,14 @@ class CorteService:
         resultado = await ClaudeIaService.gerar_desvios(
             transcricao_bruta, meta, desvios_existentes, mapa_falantes, provider
         )
-        # WHY: a `origem` (o provider que propôs) permite o frontend exibir o badge
-        # (Bug-2 do I-020). D-332: aditivo puro — sem revisão dos existentes.
-        # D-339: encaixa cada desvio NOVO na borda real de palavra (snap
-        # determinístico) ANTES do merge. Só os desvios do Claude passam por aqui;
-        # os já existentes (manual/técnico/claude anterior) ficam intocados. Sem
-        # timing por palavra (corte antigo) `palavras_corte` sai vazia e o snap é
-        # no-op — back-compat total.
+        # WHY: a `origem` (o provider que propôs) dá o badge na tela (I-020). D-332:
+        # aditivo puro, sem revisão dos existentes. D-339: cada desvio NOVO encaixa na
+        # borda real de palavra antes do merge; sem timing por palavra o snap é no-op.
         palavras_corte = palavras_do_corte(transcricao_raw_projeto, corte_inicio_seg, corte_fim_seg)
-        # D-355: quando o desvio traz a citação (inicio_texto/fim_texto), ancora a
-        # borda na palavra real (busca janelada ~5s) ANTES do snap — o snap então
-        # só faz o ajuste fino. Sem citação, ancoragem é no-op e o snap age sozinho.
-        # D-422: `classificar_desvio` reconcilia a `categoria` devolvida pela skill
-        # com o vocabulário canônico (e garante o aviso no motivo dos imprecisos)
-        # antes de qualquer ajuste de borda — a UI badgeia o MOTIVO da remoção, não
-        # a origem.
+        # D-355: com citação (inicio_texto/fim_texto) a borda ancora na palavra real
+        # antes do snap. D-422: a categoria vira o vocabulário canônico antes de tudo.
+        # D-998: a imprecisão e a chave `conferir` viram alerta; o trecho fica no corte.
+        desvios_ia, alertas_novos = alerta_conferir.alertas_da_resposta(resultado, provider)
         normalizados_novos = [
             snap_desvio_a_palavras(
                 ancorar_desvio(
@@ -818,7 +811,7 @@ class CorteService:
                 ),
                 palavras_corte,
             )
-            for d in resultado.get("desvios", [])
+            for d in desvios_ia
         ]
 
         async with AsyncSessionLocal() as db:
@@ -827,6 +820,10 @@ class CorteService:
                 raise ValueError("Corte não encontrado")
             mesclados, adicionados = somar_aos_desvios_gravados(corte.desvios, normalizados_novos)
             corte.desvios = json.dumps(mesclados, ensure_ascii=False)
+            if alertas_novos:
+                gravados = alerta_conferir.alertas_gravados(corte.alertas_conferir)
+                alertas, _ = alerta_conferir.somar_alertas(gravados, alertas_novos)
+                corte.alertas_conferir = json.dumps(alertas, ensure_ascii=False)
             # D-334: conta esta invocação da skill trechos-expert — cobre tanto
             # o botão por-corte quanto o lote (analisar_desvios_todos_impl
             # chama esta mesma função por corte).

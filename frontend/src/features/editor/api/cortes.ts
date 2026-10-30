@@ -109,6 +109,14 @@ export const cortesApi = {
       }),
     ),
 
+  // D-998: o editor conferiu o fato; o trecho segue no corte e o alerta sai da timeline.
+  marcarAlertaConferido: (corteId: string, alertaId: string) =>
+    dados(
+      api.POST('/api/alertas-conferir/{corte_id}/{alerta_id}/conferido', {
+        params: { path: { corte_id: corteId, alerta_id: alertaId } },
+      }),
+    ),
+
   sincronizarTranscricao: (corteId: string) =>
     dados(api.POST('/api/cortes/{corte_id}/sincronizar-transcricao', doCorte(corteId))),
 

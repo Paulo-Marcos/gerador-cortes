@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/alertas-conferir/{corte_id}/{alerta_id}/conferido": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Marcar Conferido
+         * @description O editor conferiu o fato: o alerta sai da timeline e o trecho segue no corte.
+         */
+        post: operations["marcar_conferido_api_alertas_conferir__corte_id___alerta_id__conferido_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/avaliacao-bruto/corte/{corte_id}": {
         parameters: {
             query?: never;
@@ -5061,6 +5081,30 @@ export interface components {
             itens: components["schemas"]["LinhaDaAgenda"][];
         };
         /**
+         * AlertaConferirDoCorte
+         * @description Um trecho que FICA no corte e a IA pede para conferir o fato (D-998).
+         *
+         *     Não é desvio: não entra no líquido, na transcrição final nem no render.
+         */
+        AlertaConferirDoCorte: {
+            /** Conferido */
+            conferido: boolean;
+            /** Fim Hms */
+            fim_hms: string;
+            /** Fim Seg */
+            fim_seg: number;
+            /** Id */
+            id: string;
+            /** Inicio Hms */
+            inicio_hms: string;
+            /** Inicio Seg */
+            inicio_seg: number;
+            /** Motivo */
+            motivo: string;
+            /** Origem */
+            origem: string;
+        };
+        /**
          * AmbienteResponse
          * @description D-627: o que o app precisa nesta máquina. `pronto` é falso se falta um
          *     obrigatório.
@@ -6053,6 +6097,11 @@ export interface components {
         };
         /** CorteResponse */
         CorteResponse: {
+            /**
+             * Alertas Conferir
+             * @default []
+             */
+            alertas_conferir: components["schemas"]["AlertaConferirDoCorte"][];
             /** Arquivo Clip Path */
             arquivo_clip_path: string;
             /**
@@ -10053,6 +10102,38 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    marcar_conferido_api_alertas_conferir__corte_id___alerta_id__conferido_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+                alerta_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     obter_api_avaliacao_bruto_corte__corte_id__get: {
         parameters: {
             query?: never;

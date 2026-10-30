@@ -245,3 +245,13 @@ export function useRemoverDesvio(corteId: string) {
     onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
   });
 }
+
+// D-998: dispensa o alerta "conferir". Desvios e líquido não mudam, então as
+// legendas do corte não precisam ser refeitas.
+export function useMarcarAlertaConferido(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (alertaId: string) => cortesApi.marcarAlertaConferido(corteId, alertaId),
+    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+  });
+}

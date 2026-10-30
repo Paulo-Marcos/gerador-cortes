@@ -398,13 +398,11 @@ class ClaudeIaService:
         mapa_falantes: dict | None = None,
         provider: ProviderIA = "claude",
     ) -> dict:
-        # WHY: o prompt antigo (minimalista) sub-extraía desvios (~3 por corte longo).
-        # Reaproveitamos o pipeline rico do fluxo "manual IA": limpamos+granularizamos
-        # a transcrição, chunkificamos em partes (~40min com 5min de overlap) e mandamos
-        # cada chunk com regras explícitas. Empata em qualidade com PROMPT_ANALISAR_DESVIOS
-        # mas pede saída com a chave `desvios` (compatível com a skill trechos-expert).
-        # D-332: retorna só {"desvios": [...]} agregados dos chunks — a revisão
-        # automática da D-302 foi revogada; um eventual `revisoes` no JSON é ignorado.
+        # WHY: o prompt minimalista sub-extraía desvios (~3 por corte longo). Usamos o
+        # pipeline rico do fluxo "manual IA": transcrição limpa e granular, em partes de
+        # ~40min com 5min de overlap, cada uma com as regras da skill trechos-expert.
+        # Devolve `desvios` e `conferir` (D-998) agregados dos chunks; um eventual
+        # `revisoes` é ignorado (D-332 revogou a revisão automática da D-302).
         transcricao_limpa = limpar_e_ordenar_transcricao(transcricao_bruta)
         transcricao_granular = dividir_segmentos_longos(
             transcricao_limpa, max_duracao=4.0, max_palavras=6
@@ -423,6 +421,7 @@ class ClaudeIaService:
         )
 
         novos: list = []
+        conferir: list = []
         for indice, chunk in enumerate(chunks):
             texto_chunk = ClaudeIaService._formatar_chunk_para_prompt(chunk, mapa_falantes)
             prompt = ClaudeIaService._montar_prompt_trechos(
@@ -441,6 +440,7 @@ class ClaudeIaService:
             # devolver `trechos` (chave do fluxo manual). Aceitamos ambos.
             chunk_desvios = resultado.get("desvios") or resultado.get("trechos") or []
             novos.extend(chunk_desvios)
+            conferir.extend(resultado.get("conferir") or [])
             logger.info(
                 "[ClaudeIA/trechos] chunk %d/%d: %d trechos em %.1fs",
                 indice + 1,
@@ -449,7 +449,7 @@ class ClaudeIaService:
                 time.perf_counter() - t,
             )
 
-        return {"desvios": novos}
+        return {"desvios": novos, "conferir": conferir}
 
     @staticmethod
     def _cabecalho_meta_corte(meta: dict, existentes: list) -> str:
