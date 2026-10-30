@@ -118,12 +118,9 @@ class Settings(BaseSettings):
     agy_cli_max_concurrent: int = 1
     agy_cli_retries: int = 1
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
-    # D-454: faixa que o operador aceita num candidato a short. 15-30s serve
-    # Reels, ate 90s serve conteudo denso; abaixo de 15 nao entrega ideia e acima
-    # de 90 e o corte de novo. A quantidade e TETO de trabalho, nao cota: a skill
-    # manda explicitamente nao encher linguica para bater o numero.
-    shorts_duracao_min_seg: float = 15.0
-    shorts_duracao_max_seg: float = 90.0
+    # D-454: quantos candidatos a short a skill propoe. E TETO de trabalho, nao
+    # cota: a skill manda explicitamente nao encher linguica para bater o numero.
+    # A faixa de duracao saiu daqui na D-997: e do canal (`services/canal/faixa_do_short`).
     shorts_quantidade_min: int = 5
     shorts_quantidade_max: int = 8
     # D-455: disparo automatico da fabrica de shorts ao fim do bruto de um corte

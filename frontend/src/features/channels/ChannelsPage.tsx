@@ -19,6 +19,7 @@ import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
 import { EscalonamentoSection } from './EscalonamentoSection';
+import { FaixaDoShortSection } from './FaixaDoShortSection';
 import { PreRequisitosSection } from './PreRequisitosSection';
 import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
@@ -385,6 +386,7 @@ function AparenciaECapasDoCanal() {
       <PalcoComponentesSection />
       <CapaChatgptSection />
       <EstiloDaCapaSection />
+      <FaixaDoShortSection />
     </>
   );
 }

@@ -14,8 +14,10 @@ Sem I/O, sem SQLAlchemy, sem cliente externo — só as regras.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
+from app.domain.compartilhado.erros import PedidoInvalido
 from app.domain.compartilhado.time_convert import to_seg
 
 # Folga para o `fim` que passa do fim do bruto por arredondamento do modelo.
@@ -27,6 +29,11 @@ _TOLERANCIA_FIM_SEG = 1.0
 _NOTA_MINIMA = 0.0
 _NOTA_MAXIMA = 10.0
 
+# D-997: a faixa de duração é do canal (tela de Canais); estes são os padrões de
+# quem nunca a configurou. 15-30s serve Reels, até 90s serve conteúdo denso.
+DURACAO_MIN_PADRAO_SEG = 15.0
+DURACAO_MAX_PADRAO_SEG = 90.0
+
 
 @dataclass(frozen=True)
 class FaixaShort:
@@ -36,8 +43,8 @@ class FaixaShort:
     15-30s serve Reels, até 90s serve conteúdo denso.
     """
 
-    duracao_min_seg: float = 15.0
-    duracao_max_seg: float = 90.0
+    duracao_min_seg: float = DURACAO_MIN_PADRAO_SEG
+    duracao_max_seg: float = DURACAO_MAX_PADRAO_SEG
     quantidade_min: int = 5
     quantidade_max: int = 8
 
@@ -60,6 +67,25 @@ class FaixaShort:
             '5 a 8'
         """
         return f"{self.quantidade_min} a {self.quantidade_max}"
+
+
+def faixa_de_duracao_valida(minimo_seg: float, maximo_seg: float) -> tuple[float, float]:
+    """A faixa de duração pedida pelo operador, ou `PedidoInvalido` (D-997).
+
+    >>> faixa_de_duracao_valida(20, 120)
+    (20.0, 120.0)
+    """
+    # NaN passaria pelas duas comparações abaixo, e o JSON do Pydantic o aceita.
+    if not (math.isfinite(minimo_seg) and math.isfinite(maximo_seg)):
+        raise PedidoInvalido("A duração do short precisa ser um número de segundos.")
+    if minimo_seg <= 0:
+        raise PedidoInvalido("A duração mínima do short precisa ser maior que zero.")
+    if minimo_seg >= maximo_seg:
+        raise PedidoInvalido(
+            f"A duração mínima ({minimo_seg:g} s) precisa ser menor que a máxima "
+            f"({maximo_seg:g} s)."
+        )
+    return float(minimo_seg), float(maximo_seg)
 
 
 @dataclass(frozen=True)
