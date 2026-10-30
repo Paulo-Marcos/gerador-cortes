@@ -22,6 +22,7 @@ from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.live_candidata.ranking_lives import (
+    SENTIMENTO_NEUTRO,
     PesosRanking,
     SinaisLive,
     pontuar_lote,
@@ -143,13 +144,12 @@ def _ranking_esta_atualizado(mais_recente: datetime | None) -> bool:
 
 async def avaliar_sentimento_dos_comentarios(
     comentarios: list[ComentarioTopo],
-) -> tuple[float, list[str]]:
+) -> tuple[float | None, list[str]]:
     """Manda os comentários para o Claude e devolve (score 0-10, destaques).
 
-    Score 5 é o ponto neutro (nenhum sinal). Sem comentários, devolve 5 e [].
-    """
+    Sem comentários, ou com o Claude falhando, devolve `None`: sem sinal (D-1000)."""
     if not comentarios:
-        return 5.0, []
+        return None, []
 
     linhas = []
     for idx, c in enumerate(comentarios, start=1):
@@ -158,7 +158,7 @@ async def avaliar_sentimento_dos_comentarios(
             continue
         linhas.append(f"[{idx}] (👍 {c.likes}) {texto[:280]}")
     if not linhas:
-        return 5.0, []
+        return None, []
 
     prompt = prompts_utilitarios.resolver_prompt("sentimento-ranking").format(
         comentarios="\n".join(linhas)
@@ -177,8 +177,8 @@ async def avaliar_sentimento_dos_comentarios(
             ),
         )
     except claude_cli_client.ClaudeCliError as exc:
-        logger.warning("[Ranking] Sentimento via Claude falhou (%s) — uso neutro", exc)
-        return 5.0, []
+        logger.warning("[Ranking] Sentimento via Claude falhou (%s) — sem sinal", exc)
+        return None, []
 
     score = float(bruto.get("score") or 5)
     score = max(0.0, min(10.0, score))
@@ -312,7 +312,7 @@ async def _avaliar_e_persistir(videos: list[VideoResumo]) -> list[LiveCandidata]
     sinais: list[SinaisLive] = []
     for video in videos:
         stats = stats_map.get(video.video_id) or VideoStats(video.video_id, 0, 0, 0)
-        score_sent, _ = sentimentos.get(video.video_id, (5.0, []))
+        score_sent, _ = sentimentos.get(video.video_id, (None, []))
         sinais.append(
             SinaisLive(
                 video_id=video.video_id,
@@ -333,7 +333,7 @@ async def _avaliar_e_persistir(videos: list[VideoResumo]) -> list[LiveCandidata]
         for video in videos:
             ponto = pontuadas_map.get(video.video_id)
             stats = stats_map.get(video.video_id) or VideoStats(video.video_id, 0, 0, 0)
-            score_sent, destaques = sentimentos.get(video.video_id, (5.0, []))
+            score_sent, destaques = sentimentos.get(video.video_id, (None, []))
 
             existente = await _carregar_por_video_id(db, video.video_id)
             if existente and existente.status != StatusLiveCandidata.PENDENTE:
@@ -354,7 +354,7 @@ async def _avaliar_e_persistir(videos: list[VideoResumo]) -> list[LiveCandidata]
             destino.views = stats.views
             destino.likes = stats.likes
             destino.comentarios = stats.comentarios
-            destino.sentimento_score = score_sent
+            destino.sentimento_score = SENTIMENTO_NEUTRO if score_sent is None else score_sent
             destino.sentimento_destaques = json.dumps(destaques, ensure_ascii=False)
             destino.pontuacao_total = ponto.pontuacao_total if ponto else 0.0
             destino.componentes_pontuacao = json.dumps(
@@ -372,15 +372,15 @@ async def _avaliar_e_persistir(videos: list[VideoResumo]) -> list[LiveCandidata]
 
 async def _avaliar_sentimentos_em_paralelo(
     video_ids: list[str],
-) -> dict[str, tuple[float, list[str]]]:
-    async def _avaliar(vid: str) -> tuple[str, tuple[float, list[str]]]:
+) -> dict[str, tuple[float | None, list[str]]]:
+    async def _avaliar(vid: str) -> tuple[str, tuple[float | None, list[str]]]:
         try:
             comentarios = await buscar_top_comentarios(
                 vid, max_comentarios=settings.ranking_max_comentarios_por_live
             )
         except YoutubeDataApiError as exc:
             logger.warning("[Ranking] falha ao buscar comentários de %s: %s", vid, exc)
-            return vid, (5.0, [])
+            return vid, (None, [])
         score, destaques = await avaliar_sentimento_dos_comentarios(comentarios)
         return vid, (score, destaques)
 

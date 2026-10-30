@@ -82,15 +82,23 @@ def validar_pesos(valores: dict) -> None:
         raise ValueError("A meia-vida da recência (dias) deve ser maior que 0.")
 
 
+# Nota mostrada quando não há sentimento (sem comentários ou o haiku falhou).
+SENTIMENTO_NEUTRO = 5.0
+
+
 @dataclass(frozen=True)
 class SinaisLive:
-    """Sinais brutos coletados de uma live. tz-aware obrigatório em `data_publicacao`."""
+    """Sinais brutos coletados de uma live. tz-aware obrigatório em `data_publicacao`.
+
+    `sentimento_0a10` é `None` quando não há sinal: a live fica no meio da escala do
+    lote em vez de virar a pior nota dele.
+    """
 
     video_id: str
     views: int
     likes: int
     comentarios: int
-    sentimento_0a10: float
+    sentimento_0a10: float | None
     data_publicacao: datetime
 
 
@@ -217,13 +225,13 @@ def pontuar_lote(
     comm_taxa = [(s.comentarios / s.views) if s.views > 0 else 0.0 for s in sinais_lista]
     vph_valores = [calcular_vph(s.views, s.data_publicacao, hoje) for s in sinais_lista]
     vph_log = [math.log1p(v) for v in vph_valores]
-    sentimentos = [s.sentimento_0a10 for s in sinais_lista]
+    sentimentos = [s.sentimento_0a10 for s in sinais_lista if s.sentimento_0a10 is not None]
 
     v_min, v_max = min(views_log), max(views_log)
     l_min, l_max = min(likes_taxa), max(likes_taxa)
     c_min, c_max = min(comm_taxa), max(comm_taxa)
     vph_min, vph_max = min(vph_log), max(vph_log)
-    s_min, s_max = min(sentimentos), max(sentimentos)
+    s_min, s_max = (min(sentimentos), max(sentimentos)) if sentimentos else (0.0, 0.0)
 
     peso_total = (
         pesos.views
@@ -242,7 +250,8 @@ def pontuar_lote(
         v_norm = normalizar_minmax(views_log[i], v_min, v_max)
         l_norm = normalizar_minmax(likes_taxa[i], l_min, l_max)
         c_norm = normalizar_minmax(comm_taxa[i], c_min, c_max)
-        s_norm = normalizar_minmax(sentimentos[i], s_min, s_max)
+        sentimento = sinal.sentimento_0a10
+        s_norm = 0.5 if sentimento is None else normalizar_minmax(sentimento, s_min, s_max)
         r_norm = calcular_recencia(sinal.data_publicacao, hoje, pesos.meia_vida_dias)
         vph_norm = normalizar_minmax(vph_log[i], vph_min, vph_max)
         idade_dias = max(0.0, (hoje - sinal.data_publicacao).total_seconds() / 86_400.0)
@@ -253,7 +262,12 @@ def pontuar_lote(
             ("views", float(sinal.views), v_norm, pesos.views),
             ("likes_por_view", likes_taxa[i], l_norm, pesos.likes_por_view),
             ("comentarios_por_view", comm_taxa[i], c_norm, pesos.comentarios_por_view),
-            ("sentimento", sinal.sentimento_0a10, s_norm, pesos.sentimento),
+            (
+                "sentimento",
+                SENTIMENTO_NEUTRO if sentimento is None else sentimento,
+                s_norm,
+                pesos.sentimento,
+            ),
             ("recencia", idade_dias, r_norm, pesos.recencia),
             ("vph", vph_valores[i], vph_norm, pesos.vph),
         )
