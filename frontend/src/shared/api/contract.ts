@@ -96,41 +96,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/avaliacao-cortes/corte/{corte_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obter */
-        get: operations["obter_api_avaliacao_cortes_corte__corte_id__get"];
-        /** Salvar */
-        put: operations["salvar_api_avaliacao_cortes_corte__corte_id__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/avaliacao-cortes/motivos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listar Motivos */
-        get: operations["listar_motivos_api_avaliacao_cortes_motivos_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/avaliacoes-thumbnail": {
         parameters: {
             query?: never;
@@ -3425,24 +3390,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/ranking-lives/projetos/{projeto_id}/voto-qualidade": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obter Voto */
-        get: operations["obter_voto_api_ranking_lives_projetos__projeto_id__voto_qualidade_get"];
-        /** Salvar Voto */
-        put: operations["salvar_voto_api_ranking_lives_projetos__projeto_id__voto_qualidade_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/ranking-lives/refresh": {
         parameters: {
             query?: never;
@@ -5548,37 +5495,6 @@ export interface components {
              */
             veredito: "coesa" | "aceitavel" | "quebrada";
         };
-        /** AvaliacaoCorteRequest */
-        AvaliacaoCorteRequest: {
-            /**
-             * Comentario
-             * @default
-             */
-            comentario: string;
-            /**
-             * Motivos
-             * @default []
-             */
-            motivos: string[];
-            /** Voto */
-            voto: number;
-        };
-        /**
-         * AvaliacaoCorteResponse
-         * @description A avaliação do corte (D-419). `voto` None = ainda não avaliado.
-         */
-        AvaliacaoCorteResponse: {
-            /** Avaliado Em */
-            avaliado_em: string | null;
-            /** Comentario */
-            comentario: string;
-            /** Corte Id */
-            corte_id: string;
-            /** Motivos */
-            motivos: string[];
-            /** Voto */
-            voto: number | null;
-        };
         /** AvaliacaoRegistradaResponse */
         AvaliacaoRegistradaResponse: {
             avaliacao: components["schemas"]["AvaliacaoThumbnailResponse"];
@@ -7479,11 +7395,6 @@ export interface components {
             /** Chamadas */
             chamadas: components["schemas"]["LlmCallResponse"][];
         };
-        /** ListaMotivosResponse */
-        ListaMotivosResponse: {
-            /** Motivos */
-            motivos: components["schemas"]["MotivoAvaliacaoResponse"][];
-        };
         /** ListaPapeisModeloResponse */
         ListaPapeisModeloResponse: {
             /** Papeis */
@@ -7862,13 +7773,6 @@ export interface components {
             message: string;
             /** Moldura */
             moldura: string;
-        };
-        /** MotivoAvaliacaoResponse */
-        MotivoAvaliacaoResponse: {
-            /** Rotulo */
-            rotulo: string;
-            /** Slug */
-            slug: string;
         };
         /** MoverBlocoRequest */
         MoverBlocoRequest: {
@@ -9591,18 +9495,6 @@ export interface components {
             /** Total */
             total: number;
         };
-        /**
-         * TelemetriaAvaliacao
-         * @description A avaliação humana do corte (D-419); `voto` None = não avaliado.
-         */
-        TelemetriaAvaliacao: {
-            /** Comentario */
-            comentario: string;
-            /** Motivos */
-            motivos: string[];
-            /** Voto */
-            voto: number | null;
-        };
         /** TelemetriaBordas */
         TelemetriaBordas: {
             /** Delta Duracao Seg */
@@ -9626,13 +9518,14 @@ export interface components {
         };
         /** TelemetriaCorteDiff */
         TelemetriaCorteDiff: {
-            avaliacao: components["schemas"]["TelemetriaAvaliacao"];
             bordas: components["schemas"]["TelemetriaBordas"];
             /** Corte Id */
             corte_id: string;
             desvios: components["schemas"]["TelemetriaDesvios"];
             /** Desvios Claude Por Geracao */
             desvios_claude_por_geracao: number;
+            /** Mudancas */
+            mudancas: components["schemas"]["TelemetriaMudanca"][];
             /** Numero */
             numero: number;
             /** Origem Analise */
@@ -9688,8 +9581,41 @@ export interface components {
             cortes: {
                 [key: string]: unknown;
             }[];
+            /** Mudancas Por Origem */
+            mudancas_por_origem: {
+                [key: string]: unknown;
+            }[];
             /** Total Cortes */
             total_cortes: number;
+        };
+        /**
+         * TelemetriaMudanca
+         * @description D-999: uma mudança do editor sobre a proposta (`domain/corte/mudancas_do_corte.py`).
+         */
+        TelemetriaMudanca: {
+            /** Descricao */
+            descricao: string;
+            /** Tipo */
+            tipo: string;
+            /** Valor */
+            valor: number;
+        };
+        /**
+         * TelemetriaMudancasPorOrigem
+         * @description D-999: quantos cortes de cada origem tiveram cada mudança, e os apagados.
+         */
+        TelemetriaMudancasPorOrigem: {
+            apagados: components["schemas"]["TelemetriaApagados"];
+            /** Cortes */
+            cortes: number;
+            /** Origem */
+            origem: string;
+            /** Por Tipo */
+            por_tipo: {
+                [key: string]: number;
+            };
+            /** Sem Mudanca */
+            sem_mudanca: number;
         };
         /** TelemetriaProjetoResponse */
         TelemetriaProjetoResponse: {
@@ -9698,6 +9624,8 @@ export interface components {
             com_snapshot: number;
             /** Cortes */
             cortes: components["schemas"]["TelemetriaCorteDiff"][];
+            /** Mudancas Por Origem */
+            mudancas_por_origem: components["schemas"]["TelemetriaMudancasPorOrigem"][];
             /** Projeto Id */
             projeto_id: string;
             /** Sem Snapshot */
@@ -9978,23 +9906,6 @@ export interface components {
             corte_id: string;
             /** Versoes */
             versoes: components["schemas"]["VersaoExport"][];
-        };
-        /** VotoQualidadeRequest */
-        VotoQualidadeRequest: {
-            /** Voto */
-            voto: number;
-        };
-        /**
-         * VotoQualidadeResponse
-         * @description O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu.
-         */
-        VotoQualidadeResponse: {
-            /** Pontuacao Ranking */
-            pontuacao_ranking: number;
-            /** Projeto Id */
-            projeto_id: string;
-            /** Voto Qualidade Live */
-            voto_qualidade_live: number | null;
         };
         /** YouTubeUploadRequest */
         YouTubeUploadRequest: {
@@ -10302,92 +10213,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListaTiposApontamentoResponse"];
-                };
-            };
-        };
-    };
-    obter_api_avaliacao_cortes_corte__corte_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                corte_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AvaliacaoCorteResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    salvar_api_avaliacao_cortes_corte__corte_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                corte_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AvaliacaoCorteRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AvaliacaoCorteResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listar_motivos_api_avaliacao_cortes_motivos_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListaMotivosResponse"];
                 };
             };
         };
@@ -16177,72 +16002,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RankingLivesResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    obter_voto_api_ranking_lives_projetos__projeto_id__voto_qualidade_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projeto_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VotoQualidadeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    salvar_voto_api_ranking_lives_projetos__projeto_id__voto_qualidade_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projeto_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["VotoQualidadeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VotoQualidadeResponse"];
                 };
             };
             /** @description Validation Error */

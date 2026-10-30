@@ -5,8 +5,7 @@ apagadas, e ninguém sabia de qual live nem por quê: o snapshot da proposta
 (D-303) ficava órfão. Agora ele guarda o projeto e a hora do apagar, e aceita
 um motivo — opcional, para o gesto de apagar continuar rápido.
 
-O motivo é vocabulário fechado, como os de `avaliacao_corte.py`, e pelo mesmo
-motivo: texto livre não agrega. Cada slug aponta para uma decisão distinta da
+O motivo é vocabulário fechado porque texto livre não agrega. Cada slug aponta para uma decisão distinta da
 análise, para o levantamento saber QUAL parte da skill corrigir.
 
 Sem I/O — vocabulário e contagem puros; o service é quem fala com o banco.

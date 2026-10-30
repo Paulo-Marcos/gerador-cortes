@@ -1,7 +1,7 @@
 """D-447: avaliação automática do BRUTO — a estrutura que sobrou após os cortes.
 
-O voto humano por corte (D-419) diz se a PROPOSTA agradou; ele é dado antes de
-o bruto existir. Falta a pergunta seguinte: depois de remover os trechos, o que
+O que o editor mudou na proposta (D-999) diz se a PROPOSTA acertou; isso se
+vê antes de o bruto existir. Falta a pergunta seguinte: depois de remover os trechos, o que
 sobrou ainda se sustenta? É onde moram os defeitos que só aparecem na emenda —
 resposta sem a pergunta, exemplo sem o caso, raciocínio cortado no meio.
 
@@ -48,7 +48,7 @@ VEREDITO_PADRAO = "aceitavel"
 
 # Vocabulário fechado dos defeitos. Cada tipo aponta para uma decisão distinta
 # da GERAÇÃO (onde cortar, quanto remover, o que manter), para que o
-# levantamento saiba o que melhorar — mesma lógica dos motivos do D-419.
+# levantamento saiba o que melhorar — mesma lógica dos motivos do apagar (D-993).
 TIPOS_APONTAMENTO: tuple[dict[str, str], ...] = (
     {"slug": "emenda_abrupta", "rotulo": "Emenda abrupta"},
     {"slug": "contexto_perdido", "rotulo": "Contexto perdido na remoção"},
@@ -324,7 +324,7 @@ def _apontamentos_validos(bruto) -> list[dict]:
 
     Tipo desconhecido é descartado em silêncio: o apontamento é dado de apoio à
     nota — derrubar a avaliação inteira porque o modelo inventou um slug custaria
-    mais do que perder a ressalva (mesma escolha do D-419).
+    mais do que perder a ressalva (mesma escolha do motivo do apagar, D-993).
     """
     if not isinstance(bruto, list):
         return []

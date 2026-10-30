@@ -7,7 +7,6 @@ import { BrutoContextStrip } from './fase1/BrutoContextStrip';
 import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { hmsParaSeg, segParaMmSs } from './timeUtils';
 import { BancadaChrome } from '@/features/editor/BancadaChrome';
-import { AvaliacaoCorteModal } from './avaliacao/AvaliacaoCorteModal';
 import { resolveWaveformWindow } from './editorEditState';
 import { resolveCorteStagePath } from '@/features/post-production/postProductionNavigation';
 import { ORIGEM_API } from '@/lib/apiBase';
@@ -20,7 +19,7 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
 }
 
 export function EditorPage() {
-  const { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, avaliacaoOpen, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onRemoverDesvio, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, removerDesvio, salvarMudancas, selectedDesvioIdx, setAvaliacaoOpen, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef } = useEditorPage();
+  const { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onRemoverDesvio, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, removerDesvio, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef } = useEditorPage();
 
 
   if (!projetoId) return <Navigate to="/projetos" replace />;
@@ -115,12 +114,6 @@ export function EditorPage() {
         open={trechosManualOpen}
         onClose={() => setTrechosManualOpen(false)}
         corteId={corteId}
-      />
-      <AvaliacaoCorteModal
-        open={avaliacaoOpen}
-        corteId={corteId}
-        onClose={() => setAvaliacaoOpen(false)}
-        descricao="O bruto está sendo gerado em segundo plano"
       />
       <ConfirmDialog
         pedido={confirmacao.pedido}

@@ -1,8 +1,8 @@
 import type { ProviderIA } from '@/lib/providerIa';
 import { api, dados, type Schema } from '@/shared/api';
 // D-447: cliente HTTP da avaliação automática da ESTRUTURA do bruto — a nota que
-// a IA dá depois de ler o que sobrou com as emendas marcadas. Irmão HUMANO por
-// corte: a avaliação do corte (D-419). Endpoints em routers/avaliacao_bruto.py.
+// a IA dá depois de ler o que sobrou com as emendas marcadas. Endpoints em
+// routers/avaliacao_bruto.py.
 // D-722: pelo cliente gerado; o veredito e a gravidade vêm do domínio.
 
 export type TipoApontamento = Schema<'TipoApontamentoResponse'>;

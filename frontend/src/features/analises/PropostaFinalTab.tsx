@@ -3,7 +3,7 @@
 // corte de um projeto. Nasce vazia: escolha um projeto para carregar o diff.
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { analisesApi, type TelemetriaCorteDiff } from './api';
+import { analisesApi, type TelemetriaCorteDiff, type TelemetriaProjeto } from './api';
 import { cn } from '@/lib/utils';
 import { useProjetosAnalises, useTelemetriaCortes } from './useAnalises';
 import {
@@ -15,6 +15,7 @@ import {
   tomDelta,
 } from './analisesFormat';
 import { Icon } from '@/upgrade/Icon';
+import { MudancasPorOrigem } from './MudancasPorOrigem';
 
 const TOM_DELTA_CLASSE: Record<ReturnType<typeof tomDelta>, string> = {
   pos: 'text-[var(--wb-warn)]',
@@ -54,6 +55,29 @@ function ResumoChip({ rotulo, valor }: { rotulo: string; valor: number }) {
       </span>
       <span className="text-[22px] font-medium leading-none text-[var(--wb-text)]">{valor}</span>
     </div>
+  );
+}
+
+function ResumoDoProjeto({ telemetria }: { telemetria: TelemetriaProjeto }) {
+  return (
+    <div className="flex flex-wrap gap-2.5">
+      <ResumoChip rotulo="Cortes" valor={telemetria.total_cortes} />
+      <ResumoChip rotulo="Com proposta da IA" valor={telemetria.com_snapshot} />
+      <ResumoChip rotulo="Sem snapshot" valor={telemetria.sem_snapshot} />
+    </div>
+  );
+}
+
+/** D-999: o que o operador mudou na proposta, no lugar do voto (D-419). */
+function MudancasCell({ diff }: { diff: TelemetriaCorteDiff }) {
+  if (diff.situacao !== 'com_snapshot') return <span className="text-[var(--wb-text-dim)]">—</span>;
+  if (diff.mudancas.length === 0) return <span className="text-[var(--wb-text-dim)]">Nada</span>;
+  return (
+    <ul className="grid gap-0.5">
+      {diff.mudancas.map((m) => (
+        <li key={m.tipo}>{m.descricao}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -130,6 +154,9 @@ function CorteRow({ diff }: { diff: TelemetriaCorteDiff }) {
           </div>
         )}
       </td>
+      <td className="px-3 py-3 text-[13px] text-[var(--wb-text-mute)]">
+        <MudancasCell diff={diff} />
+      </td>
     </tr>
   );
 }
@@ -200,11 +227,8 @@ export function PropostaFinalTab() {
 
       {projetoId && telemetria.data && (
         <>
-          <div className="flex flex-wrap gap-2.5">
-            <ResumoChip rotulo="Cortes" valor={telemetria.data.total_cortes} />
-            <ResumoChip rotulo="Com proposta da IA" valor={telemetria.data.com_snapshot} />
-            <ResumoChip rotulo="Sem snapshot" valor={telemetria.data.sem_snapshot} />
-          </div>
+          <ResumoDoProjeto telemetria={telemetria.data} />
+          <MudancasPorOrigem grupos={telemetria.data.mudancas_por_origem} />
 
           {telemetria.data.cortes.length === 0 ? (
             <div className="rounded-[var(--radius)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center text-[15px] text-[var(--wb-text-mute)]">
@@ -221,6 +245,7 @@ export function PropostaFinalTab() {
                     <th className="px-3 py-2 font-medium">Bordas</th>
                     <th className="px-3 py-2 font-medium">Duração</th>
                     <th className="px-3 py-2 font-medium">Desvios</th>
+                    <th className="px-3 py-2 font-medium">O que você mudou</th>
                   </tr>
                 </thead>
                 <tbody>

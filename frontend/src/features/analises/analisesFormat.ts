@@ -76,3 +76,17 @@ export function resumirOrigens(mapa: Record<string, number> | null | undefined):
   if (pares.length === 0) return '—';
   return pares.map(([origem, n]) => `${origem} ${n}`).join(' · ');
 }
+
+/**
+ * D-999: apagados por motivo → "Repete outro corte 2 · sem motivo 1", na ordem
+ * do vocabulário do apagar (D-993) e só os que aconteceram. Nenhum → "—".
+ */
+export function resumirApagados(
+  porMotivo: Record<string, number>,
+  rotulos: readonly { slug: string; rotulo: string }[],
+): string {
+  const partes = [...rotulos, { slug: 'sem_motivo', rotulo: 'sem motivo' }]
+    .filter(({ slug }) => (porMotivo[slug] ?? 0) > 0)
+    .map(({ slug, rotulo }) => `${rotulo} ${porMotivo[slug]}`);
+  return partes.length ? partes.join(' · ') : '—';
+}

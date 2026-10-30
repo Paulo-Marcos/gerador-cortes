@@ -25,7 +25,8 @@ type UpgradeModalProps = {
   width?: string;
   /** Texto miúdo à esquerda no rodapé: custo, estimativa, aviso. */
   footerNote?: string;
-  secondaryLabel?: string;
+  /** `null` = sem botão secundário (o modal só informa e o primário fecha). */
+  secondaryLabel?: string | null;
   onSecondary?: () => void;
   primaryLabel: string;
   primaryIcon: IconName;
@@ -177,9 +178,9 @@ export function UpgradeModal({
             <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>{footerNote}</span>
           ) : null}
           <div style={{ flex: 1, minWidth: 8 }} />
-          <button type="button" className="btn" onClick={onSecondary ?? onClose}>
-            {secondaryLabel}
-          </button>
+          {secondaryLabel !== null && (
+            <button type="button" className="btn" onClick={onSecondary ?? onClose}>{secondaryLabel}</button>
+          )}
           <button
             type="button"
             className={primaryStrong ? 'btn btn-pri' : 'btn'}

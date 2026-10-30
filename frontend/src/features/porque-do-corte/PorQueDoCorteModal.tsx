@@ -1,9 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { AvaliacaoCorteModal } from '@/features/editor/avaliacao/AvaliacaoCorteModal';
 import type { Corte } from '@/types/models';
 import { COR_DO_SELO } from '@/upgrade/SeloDeEstado';
 import { ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
+import { MudancasDoCorte, useDiffDoCorte } from './MudancasDoCorte';
 import { NOTA_MAXIMA, lerNotaDoCorte, type NotaDoCorte } from './notaDoCorte';
 
 // ─────────────────────────────────────────────────────────────────
@@ -13,28 +13,16 @@ import { NOTA_MAXIMA, lerNotaDoCorte, type NotaDoCorte } from './notaDoCorte';
 // A resposta já estava gravada desde a análise — a `justificativa` (I-034) e
 // o `score` (D-302) —, mas só a auditoria da análise inteira a mostrava.
 // Aqui ela vem do corte, em quatro blocos curtos: a nota, o porquê, o gancho
-// e o tema. O rodapé leva à nota do operador (D-419), que é a outra metade
-// da comparação: o quão longe a IA está do que ele acha bom.
+// e o tema. Embaixo, o que o operador mudou na proposta (D-999), que é a
+// outra metade da comparação: o quão longe a IA ficou do corte que saiu.
 // ─────────────────────────────────────────────────────────────────
 
 export function PorQueDoCorteModal({ corte, aoFechar }: { corte: Corte; aoFechar: () => void }) {
-  const [avaliando, setAvaliando] = useState(false);
   const nota = lerNotaDoCorte(corte.score);
+  const diff = useDiffDoCorte(corte);
   // Portal para a `.ap`: o vidro (`backdrop-filter`) da linha e da barra vira
   // a referência do `position: fixed` e prenderia o modal dentro delas.
   const alvo = document.querySelector('.ap') ?? document.body;
-  if (avaliando) {
-    return createPortal(
-      <AvaliacaoCorteModal
-        open
-        corteId={corte.id}
-        tituloCorte={corte.titulo_proposto}
-        descricao="A sua nota, ao lado da que a IA deu"
-        onClose={aoFechar}
-      />,
-      alvo,
-    );
-  }
   return createPortal(
     <UpgradeModal
       open
@@ -42,13 +30,13 @@ export function PorQueDoCorteModal({ corte, aoFechar }: { corte: Corte; aoFechar
       icon="sparkles"
       title={`Por que a IA escolheu o corte #${corte.numero}`}
       subtitle={corte.titulo_proposto}
-      secondaryLabel="Fechar"
-      primaryLabel="Dar a minha nota"
-      primaryIcon="star"
+      secondaryLabel={null}
+      primaryLabel="Fechar"
+      primaryIcon="x"
       primaryStrong={false}
-      onPrimary={() => setAvaliando(true)}
     >
       <ConteudoDoPorQue corte={corte} nota={nota} />
+      <MudancasDoCorte diff={diff} />
     </UpgradeModal>,
     alvo,
   );
