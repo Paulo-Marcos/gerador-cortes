@@ -31,9 +31,10 @@ from app.domain.corte.avaliacao_bruto import (
     normalizar_avaliacao,
     rotulo_do_tipo,
     tipos_disponiveis,
+    trecho_seguinte,
 )
 from app.domain.corte.segment_calculator import normalizar_desvio
-from app.models import AvaliacaoBruto, Corte
+from app.models import AvaliacaoBruto, Corte, Projeto
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, modelo_usado, registrar_skill_usada, sha1_curto
 from sqlalchemy import select
@@ -93,6 +94,13 @@ async def montar_contexto(corte_id: str) -> ContextoAvaliacao:
         duracao = float(corte.duracao_clip_seg or 0.0) or sum(
             float(s["end"]) - float(s["start"]) for s in segmentos
         )
+        # D-996: o fim do bruto é o do último segmento exibido (o corte pode
+        # terminar num desvio, ou num bloco que o arranjo pôs por último).
+        projeto = await db.get(Projeto, corte.projeto_id)
+        seguinte = trecho_seguinte(
+            _json_lista(projeto.transcricao_raw if projeto else None),
+            float(segmentos[-1]["end"]) if segmentos else fim,
+        )
 
         return ContextoAvaliacao(
             corte_id=corte.id,
@@ -101,7 +109,7 @@ async def montar_contexto(corte_id: str) -> ContextoAvaliacao:
             tema_central=corte.tema_central or "",
             duracao_seg=round(duracao, 2),
             emendas=emendas,
-            texto_avaliado=montar_texto_avaliado(transcricao, emendas),
+            texto_avaliado=montar_texto_avaliado(transcricao, emendas, seguinte),
         )
 
 
