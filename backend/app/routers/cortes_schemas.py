@@ -86,6 +86,24 @@ class DesvioDoCorte(ItemDoCorte):
     tipo: str | Ausente = None
 
 
+class AlertaConferirDoCorte(BaseModel):
+    """Um trecho que FICA no corte e a IA pede para conferir o fato (D-998).
+
+    Não é desvio: não entra no líquido, na transcrição final nem no render.
+    """
+
+    id: str
+    inicio_hms: str
+    fim_hms: str
+    inicio_seg: float
+    fim_seg: float
+    motivo: str
+    # Quem pediu a checagem: claude ou gemini.
+    origem: str
+    # O editor já conferiu: a timeline não o mostra mais.
+    conferido: bool
+
+
 class LinhaDaTranscricao(ItemDoCorte):
     start: float
     end: float
@@ -164,6 +182,7 @@ class CorteResponse(BaseModel):
     inicio_seg: float
     fim_seg: float
     desvios: list[DesvioDoCorte]
+    alertas_conferir: list[AlertaConferirDoCorte] = []
     # O vocabulário do ciclo do corte (RN-04): a coluna é texto, mas só a tabela
     # de transições do domínio grava nela.
     status: StatusCorte

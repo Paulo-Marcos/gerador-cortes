@@ -157,6 +157,9 @@ class Corte(Base):
     inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
     fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
     desvios: Mapped[str] = mapped_column(Text, default="[]")
+    # D-998: trechos que FICAM no corte e a IA pede para conferir o fato. Não é
+    # desvio: nada que calcula o corte lê esta coluna (domain/corte/alerta_conferir).
+    alertas_conferir: Mapped[str] = mapped_column(Text, default="[]")
     # D-302: campos da proposta v2 da análise. `frase_gancho_*` é o ponto de
     # entrada mais forte do argumento (borda inicial editorial); `contextualizacao`
     # é a frase curta que situa o assunto (alimenta a 1ª cena, D-295; vazia =
@@ -169,10 +172,8 @@ class Corte(Base):
     score_json: Mapped[str] = mapped_column(Text, default="{}")
     status: Mapped[str] = mapped_column(String(50), default=StatusCorte.PROPOSTO)
     arquivo_clip_path: Mapped[str] = mapped_column(String(1000), default="")
-    # Duração real (em segundos) do `arquivo_clip_path`, medida via ffprobe
-    # após cada geração de bruto.  Usada pelo frontend para exibir a duração
-    # exata do arquivo (evita estimativas baseadas em soma de segmentos que
-    # acumulam drift).  0.0 quando ainda não há clip gerado.
+    # Duração real (s) do `arquivo_clip_path`, pelo ffprobe a cada bruto: a tela a
+    # usa no lugar da soma dos segmentos, que acumula drift. 0.0 = sem clip.
     duracao_clip_seg: Mapped[float] = mapped_column(Float, default=0.0)
     # F-063: deslocamento fino do áudio em relação ao vídeo (lip-sync), em
     # milissegundos. Positivo atrasa o áudio; negativo adianta. Aplicado na
@@ -182,7 +183,6 @@ class Corte(Base):
     youtube_url_publicado: Mapped[str] = mapped_column(String(200), default="")
     youtube_scheduled_at: Mapped[str] = mapped_column(String(30), default="")
     # D-512: quando o operador confirmou que subiu ESTE corte para o TikTok.
-    #
     # O TikTok e publicacao MANUAL (a API so posta em modo privado sem
     # auditoria), entao ninguem alem dele sabe que aconteceu. A marca existe
     # porque a limpeza automatica do `upload_ready/video.mp4` passou a depender

@@ -200,6 +200,8 @@ export function EditorFase1({
                 inicioSeg={corte.inicio_seg}
                 fimSeg={corte.fim_seg}
                 desvios={corte.desvios ?? []}
+                alertas={corte.alertas_conferir}
+                corteId={corte.id}
                 currentTime={currentTime}
                 playbackRate={playbackRate}
                 playerRef={playerRef}
@@ -238,10 +240,8 @@ export function EditorFase1({
         )}
 
         {/* Direita: RightTabsPanel vertical inteiro */}
-        {/* 32% e nao 26%: a casca ja gasta 462px com trilho + contexto, e 26% do
-          que sobra numa tela de 1366px dava ~230px — a lista de trechos
-          quebrava palavra por letra. 32% fica perto dos 320px do design nas
-          larguras comuns (1366 a 1920). */}
+        {/* 32% e não 26%: com 462px da casca, 26% de 1366px dava ~230px e a lista
+          quebrava palavra por letra; 32% fica perto dos 320px do design. */}
         {trechosRecolhidos ? null : (
           <Panel
             id="bancada-trechos"

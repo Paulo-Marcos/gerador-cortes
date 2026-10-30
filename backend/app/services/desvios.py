@@ -4,6 +4,7 @@ from app.core.logging import operational_error
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.time_convert import hms_to_seg
+from app.domain.corte.alerta_conferir import alertas_da_resposta, alertas_gravados, somar_alertas
 from app.domain.corte.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
 from app.models import Corte
 
@@ -14,7 +15,7 @@ PROMPT_ANALISAR_DESVIOS = """Você é um editor de vídeo especialista. Receber�
 3. **CHAT** — Interação com o chat ao vivo: ler nomes, agradecer doações, pedir like/inscrição.
 4. **DISFLUENCIA** — Muletas, gagueira, falsos começos, autocorreções e formulações abandonadas que o locutor refaz de forma limpa em seguida.
 5. **ENROLACAO** — Enrolação sem conteúdo: procurar link, pausa técnica, silêncio longo sem função retórica.
-6. **IMPRECISAO** — Afirmação factualmente **imprecisa ou possivelmente errada**: número, data, nome, atribuição de autoria ou estatística que soa duvidoso, ou generalização apresentada como fato. Marque mesmo sem ter certeza do erro: a dúvida é o critério.
+6. **IMPRECISAO** — Afirmação factualmente **imprecisa ou possivelmente errada**: número, data, nome, atribuição de autoria ou estatística que soa duvidoso, ou generalização apresentada como fato. Marque mesmo sem ter certeza do erro: a dúvida é o critério. Este trecho **não é removido**: fica no corte e vira um alerta para o editor conferir o fato.
 7. **TOM** — Conteúdo fora do tom: desabafos, tretas, histórias constrangedoras.
 
 Retorne um JSON com a lista de trechos a remover. Para cada trecho, identifique o timestamp exato de início e fim (no formato HH:MM:SS, com os mesmos valores da transcrição) e uma descrição breve do motivo.
@@ -42,7 +43,7 @@ Retorne APENAS o JSON, sem explicações. Formato esperado:
 Regras importantes:
 - Seja conservador: só remova o que claramente não agrega.
 - Para REPETICAO: só marque se a ideia já foi explicada anteriormente e a repetição não traz ângulo novo.
-- Para IMPRECISAO: marque o menor trecho que contém a afirmação duvidosa; se ela sustenta o argumento inteiro (removê-la quebra o que vem depois), NÃO marque.
+- Para IMPRECISAO: marque o menor trecho que contém a afirmação duvidosa.
 - Não remova transições naturais de raciocínio, apenas redundâncias reais.
 - Os timestamps devem estar dentro do intervalo da transcrição fornecida.
 - Se não houver nada a remover, retorne {{"trechos": []}}.
@@ -180,11 +181,16 @@ class DesviosService:
 
             desvios_existentes = json.loads(corte.desvios or "[]")
 
+            # D-998: a imprecisão não sai do corte; vira alerta para conferir.
+            trechos, alertas_novos = alertas_da_resposta({"desvios": trechos}, origem)
             novos = [d for d in (desvio_de_trecho(t, origem) for t in trechos) if d]
 
             todos = desvios_existentes + novos
             todos.sort(key=lambda d: d.get("inicio_seg", 0))
             corte.desvios = json.dumps(todos, ensure_ascii=False)
+            if alertas_novos:
+                alertas, _ = somar_alertas(alertas_gravados(corte.alertas_conferir), alertas_novos)
+                corte.alertas_conferir = json.dumps(alertas, ensure_ascii=False)
 
             await db.commit()
             await db.refresh(corte)

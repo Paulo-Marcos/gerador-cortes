@@ -17,6 +17,7 @@ from app.core.logging import install_log_controls
 from app.database import init_db
 from app.infrastructure import settings_store
 from app.routers import (
+    alertas_conferir,
     avaliacao_bruto,
     avaliacao_cortes,
     avaliacoes_thumbnail,
@@ -130,6 +131,9 @@ app.add_middleware(GuardaDeOrigemLocal)
 
 app.include_router(projetos.router, prefix="/api/projetos", tags=["Projetos"])
 app.include_router(cortes.router, prefix="/api/cortes", tags=["Cortes"])
+app.include_router(
+    alertas_conferir.router, prefix="/api/alertas-conferir", tags=["Alertas para conferir"]
+)
 app.include_router(metadados.router, prefix="/api/metadados", tags=["Metadados"])
 app.include_router(export.router, prefix="/api/export", tags=["Export"])
 app.include_router(youtube_browser.router, prefix="/api/youtube", tags=["YouTube Browser"])

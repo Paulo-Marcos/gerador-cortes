@@ -16,6 +16,7 @@ import logging
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.domain.compartilhado.time_convert import hms_to_seg
+from app.domain.corte.alerta_conferir import alertas_gravados
 from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, score_do_corte
 from app.domain.corte.desvio_categoria import classificar_desvio
 from app.models import Corte
@@ -76,6 +77,7 @@ def _corte_to_dict(corte: Corte) -> dict:
     # migrar banco e sem replicar a tabela de inferência no frontend. Este é o
     # único ponto de serialização de corte da API, então cobre todas as rotas.
     d["desvios"] = [classificar_desvio(x) for x in json.loads(corte.desvios or "[]")]
+    d["alertas_conferir"] = alertas_gravados(corte.alertas_conferir)
     # D-314: `score_json` (proposta v2, D-302) é ranking relativo entre os cortes
     # da mesma análise — {hook, flow, value, total}. Sai parseado como objeto no
     # campo `score` para o editor priorizar qual corte tratar primeiro. Corte

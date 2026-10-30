@@ -65,6 +65,55 @@
         "title": "AgendaPrevistaResponse",
         "type": "object"
       },
+      "AlertaConferirDoCorte": {
+        "description": "Um trecho que FICA no corte e a IA pede para conferir o fato (D-998).\n\nNão é desvio: não entra no líquido, na transcrição final nem no render.",
+        "properties": {
+          "conferido": {
+            "title": "Conferido",
+            "type": "boolean"
+          },
+          "fim_hms": {
+            "title": "Fim Hms",
+            "type": "string"
+          },
+          "fim_seg": {
+            "title": "Fim Seg",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inicio_hms": {
+            "title": "Inicio Hms",
+            "type": "string"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          },
+          "motivo": {
+            "title": "Motivo",
+            "type": "string"
+          },
+          "origem": {
+            "title": "Origem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "inicio_hms",
+          "fim_hms",
+          "inicio_seg",
+          "fim_seg",
+          "motivo",
+          "origem",
+          "conferido"
+        ],
+        "title": "AlertaConferirDoCorte",
+        "type": "object"
+      },
       "AmbienteResponse": {
         "description": "D-627: o que o app precisa nesta máquina. `pronto` é falso se falta um\nobrigatório.",
         "properties": {
@@ -2938,6 +2987,14 @@
       },
       "CorteResponse": {
         "properties": {
+          "alertas_conferir": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AlertaConferirDoCorte"
+            },
+            "title": "Alertas Conferir",
+            "type": "array"
+          },
           "arquivo_clip_path": {
             "title": "Arquivo Clip Path",
             "type": "string"
@@ -13003,6 +13060,58 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/alertas-conferir/{corte_id}/{alerta_id}/conferido": {
+      "post": {
+        "description": "O editor conferiu o fato: o alerta sai da timeline e o trecho segue no corte.",
+        "operationId": "marcar_conferido_api_alertas_conferir__corte_id___alerta_id__conferido_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "alerta_id",
+            "required": true,
+            "schema": {
+              "title": "Alerta Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Marcar Conferido",
+        "tags": [
+          "Alertas para conferir"
+        ]
+      }
+    },
     "/api/avaliacao-bruto/corte/{corte_id}": {
       "get": {
         "operationId": "obter_api_avaliacao_bruto_corte__corte_id__get",
