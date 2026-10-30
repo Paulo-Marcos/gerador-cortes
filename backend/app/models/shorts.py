@@ -245,7 +245,7 @@ class Short(Base):
     )
 
     # "Corte" vive em projeto.py; importá-lo aqui fecharia um ciclo de import (D-695).
-    corte: Mapped["Corte"] = relationship("Corte", back_populates="shorts")  # noqa: F821
+    corte: Mapped["Corte"] = relationship("Corte", back_populates="shorts")  # noqa: F821  # pyright: ignore[reportUndefinedVariable]
     metadado: Mapped["MetadadoShort"] = relationship(
         "MetadadoShort",
         back_populates="short",
