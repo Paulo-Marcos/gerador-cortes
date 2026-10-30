@@ -13,6 +13,7 @@ import {
 } from './useAnalises';
 import { formatarNumero, formatarPct, formatarSeg } from './analisesFormat';
 import { Icon } from '@/upgrade/Icon';
+import { AvisoFalhaSync } from './AvisoFalhaSync';
 
 const GRUPO_ROTULO: Record<string, string> = {
   comprimento: 'Comprimento do título',
@@ -114,8 +115,6 @@ export function YoutubeDesempenhoTab() {
   const titulo = useLevantamentoTitulo();
   const sync = useSincronizarYoutube();
 
-  const precisaReautorizar =
-    sync.data?.status === 'erro' && sync.data.precisa_reautorizar === true;
   const semDados = (status.data?.total ?? 0) === 0;
 
   const handleSync = () => {
@@ -178,18 +177,10 @@ export function YoutubeDesempenhoTab() {
         </Button>
       </div>
 
-      {precisaReautorizar && (
-        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-wb-warn/40 bg-[var(--wb-bg-card)] p-4">
-          <Icon name="triangle-alert" size={20} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
-          <div className="text-[14px] text-[var(--wb-text-mute)]">
-            <p className="font-medium text-[var(--wb-text)]">Reautorização necessária</p>
-            <p className="mt-1">
-              {sync.data?.mensagem ??
-                'Falta o escopo de YouTube Analytics no token OAuth. Reautorize em Configurações → Canais e sincronize novamente.'}
-            </p>
-          </div>
-        </div>
-      )}
+      <AvisoFalhaSync
+        falha={status.data?.falha ?? null}
+        sincronizadoEm={status.data?.sincronizado_em ?? null}
+      />
 
       {semDados && !status.isLoading ? (
         <div className="rounded-[var(--radius)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">

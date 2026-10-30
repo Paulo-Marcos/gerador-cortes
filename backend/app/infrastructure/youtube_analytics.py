@@ -47,8 +47,10 @@ _MAX_RESULTS = 200
 
 _INSTRUCAO_REAUTORIZAR = (
     "O token do YouTube não tem o escopo de estatísticas (yt-analytics.readonly). "
-    "Rode 'python dev-utils/auth_youtube.py' na pasta 'backend' (agora ele pede o "
-    "escopo de analytics), autorize com a conta do canal e reinicie o backend."
+    "Rode 'python dev-utils/auth_youtube.py' na pasta 'backend' DA INSTALAÇÃO que "
+    "sincroniza (a PROD fica em C:/PRD/gerador-cortes; rodado em outra pasta, o "
+    "script grava o token daquela pasta) e autorize com a conta do canal. Não precisa "
+    "reiniciar: o token é relido a cada sincronização."
 )
 
 # Instrução para quando a API está desabilitada no projeto do Google Cloud. Não é

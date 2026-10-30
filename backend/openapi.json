@@ -12807,6 +12807,30 @@
         "title": "YoutubeAuthStatusResponse",
         "type": "object"
       },
+      "YoutubeStatsFalha": {
+        "description": "Por que a última sincronização não deu certo (D-994).",
+        "properties": {
+          "em": {
+            "title": "Em",
+            "type": "string"
+          },
+          "mensagem": {
+            "title": "Mensagem",
+            "type": "string"
+          },
+          "precisa_reautorizar": {
+            "title": "Precisa Reautorizar",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mensagem",
+          "precisa_reautorizar",
+          "em"
+        ],
+        "title": "YoutubeStatsFalha",
+        "type": "object"
+      },
       "YoutubeStatsStatusResponse": {
         "properties": {
           "casados_por_titulo": {
@@ -12827,6 +12851,16 @@
               }
             ],
             "title": "Dias Desde Sync"
+          },
+          "falha": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YoutubeStatsFalha"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sincronizado_em": {
             "anyOf": [
@@ -12862,6 +12896,7 @@
           "sincronizado_em",
           "stale",
           "dias_desde_sync",
+          "falha",
           "videos"
         ],
         "title": "YoutubeStatsStatusResponse",

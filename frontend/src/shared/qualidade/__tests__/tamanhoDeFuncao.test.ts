@@ -31,7 +31,7 @@ const EXCECOES: Record<string, number> = {
   "src/components/PromptManualPanel.tsx::PromptManualPanel.map": 103,
   "src/components/ui/modal.tsx::Modal": 103,
   "src/features/analises/PropostaFinalTab.tsx::PropostaFinalTab": 102,
-  "src/features/analises/YoutubeDesempenhoTab.tsx::YoutubeDesempenhoTab": 122,
+  "src/features/analises/YoutubeDesempenhoTab.tsx::YoutubeDesempenhoTab": 112,
   "src/features/atalhos/AtalhosPage.tsx::AtalhosPage": 226,
   "src/features/channels/ChannelCard.tsx::ChannelCard": 144,
   "src/features/channels/ChannelForm.tsx::ChannelForm": 142,
