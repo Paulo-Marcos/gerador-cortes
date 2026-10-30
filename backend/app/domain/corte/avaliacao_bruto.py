@@ -25,6 +25,14 @@ from dataclasses import dataclass
 # Vão até isso é arredondamento entre segmentos, não material que falta.
 _VAO_NULO_SEG = 0.05
 
+# Quanto da live, DEPOIS do fim do corte, o avaliador enxerga (marcado como fora
+# do corte). A transcrição chega em linhas de legenda — só 16% terminam em
+# pontuação —, então "termina no meio de uma frase" é o que o avaliador vê em
+# quase todo fecho (175 de 231 brutos levaram `fecho_fraco` grave na PROD,
+# D-996). Com a continuação à vista ele distingue ideia cortada de simples quebra
+# de linha. 15s cobrem a frase seguinte sem convidar a avaliar o que não é corte.
+JANELA_SEGUINTE_SEG = 15.0
+
 NOTA_MINIMA = 1
 NOTA_MAXIMA = 5
 
@@ -162,11 +170,71 @@ def _motivo_do_intervalo(desvios: list[dict], inicio: float, fim: float) -> str:
     return ""
 
 
-def montar_texto_avaliado(transcricao_final: list[dict], emendas: list[Emenda]) -> str:
+@dataclass(frozen=True)
+class TrechoSeguinte:
+    """O que a live diz logo depois do fim do corte — contexto, nunca material.
+
+    `falas` vem com `start` relativo ao fim do corte. `fim_da_live` separa dois
+    silêncios que o avaliador não pode confundir: a live acabou ali (fecho
+    natural) ou só não houve fala na janela.
+    """
+
+    falas: list[dict]
+    fim_da_live: bool
+
+
+def trecho_seguinte(
+    transcricao_live: list[dict], fim_seg: float, janela_seg: float = JANELA_SEGUINTE_SEG
+) -> TrechoSeguinte | None:
+    """As falas da live nos `janela_seg` após `fim_seg`; `None` sem transcrição da live.
+
+    Sem a transcrição da live não há como afirmar nada — nem "a live acabou" —,
+    então o material fica como era, sem seção.
+
+    Exemplo:
+        >>> t = trecho_seguinte(
+        ...     [{"start": 95.0, "texto": "dentro"}, {"start": 103.0, "texto": "depois"}], 100.0
+        ... )
+        >>> t.falas, t.fim_da_live
+        ([{'start': 3.0, 'texto': 'depois'}], True)
+    """
+    if not transcricao_live:
+        return None
+    falas = []
+    ultimo_inicio = 0.0
+    for fala in transcricao_live:
+        inicio = float(fala.get("start", 0.0) or 0.0)
+        ultimo_inicio = max(ultimo_inicio, inicio)
+        texto = str(fala.get("texto", "")).strip()
+        if fim_seg < inicio <= fim_seg + janela_seg and texto:
+            falas.append({"start": round(inicio - fim_seg, 2), "texto": texto})
+    falas.sort(key=lambda f: f["start"])
+    return TrechoSeguinte(falas=falas, fim_da_live=ultimo_inicio <= fim_seg)
+
+
+def _linhas_do_seguinte(seguinte: TrechoSeguinte) -> list[str]:
+    cabecalho = (
+        f"─── FORA DO CORTE · {int(JANELA_SEGUINTE_SEG)}s que a live diz DEPOIS do fim "
+        "(não está no vídeo; serve só para ver se o fecho cortou uma ideia) ───"
+    )
+    if seguinte.fim_da_live:
+        return [cabecalho, "(a live termina aqui — não há nada depois do fim do corte)"]
+    if not seguinte.falas:
+        return [cabecalho, "(sem fala nesse intervalo)"]
+    return [cabecalho, *(f"[+{_mmss(f['start'])}] {f['texto']}" for f in seguinte.falas)]
+
+
+def montar_texto_avaliado(
+    transcricao_final: list[dict],
+    emendas: list[Emenda],
+    seguinte: TrechoSeguinte | None = None,
+) -> str:
     """Transcrição do bruto com as emendas marcadas, pronta para o prompt.
 
     As falas saem com marcador `[MM:SS]` (mesmo dialeto do prompt de metadados) e
     cada costura vira uma linha explícita — é ela que o avaliador precisa julgar.
+    Com `seguinte`, uma seção final marcada "FORA DO CORTE" mostra o que a live
+    diz depois do fim, com tempo relativo `[+MM:SS]` para não parecer parte do bruto.
 
     Exemplo:
         >>> texto = montar_texto_avaliado(
@@ -192,6 +260,9 @@ def montar_texto_avaliado(transcricao_final: list[dict], emendas: list[Emenda]) 
 
     for indice in range(proxima, len(marcas)):
         linhas.append(_linha_de_emenda(indice + 1, marcas[indice]))
+
+    if seguinte is not None:
+        linhas.extend(_linhas_do_seguinte(seguinte))
 
     return "\n".join(linhas)
 
