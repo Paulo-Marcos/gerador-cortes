@@ -510,6 +510,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/channels/ativo/faixa-do-short": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obter Faixa Do Short */
+        get: operations["obter_faixa_do_short_api_channels_ativo_faixa_do_short_get"];
+        /**
+         * Gravar Faixa Do Short
+         * @description Grava a faixa; mínimo maior ou igual ao máximo é recusado com 400.
+         */
+        put: operations["gravar_faixa_do_short_api_channels_ativo_faixa_do_short_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels/ativo/navegador-do-robo": {
         parameters: {
             query?: never;
@@ -6676,6 +6697,24 @@ export interface components {
             /** Intensidade */
             intensidade: string;
         };
+        /** FaixaDoShort */
+        FaixaDoShort: {
+            /** Duracao Max Seg */
+            duracao_max_seg: number;
+            /** Duracao Min Seg */
+            duracao_min_seg: number;
+            /** Padrao Max Seg */
+            padrao_max_seg: number;
+            /** Padrao Min Seg */
+            padrao_min_seg: number;
+        };
+        /** FaixaDoShortRequest */
+        FaixaDoShortRequest: {
+            /** Duracao Max Seg */
+            duracao_max_seg: number;
+            /** Duracao Min Seg */
+            duracao_min_seg: number;
+        };
         /** FaixaSeguraCapa */
         FaixaSeguraCapa: {
             /** H */
@@ -11036,6 +11075,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContaDoDestino"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_faixa_do_short_api_channels_ativo_faixa_do_short_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaixaDoShort"];
+                };
+            };
+        };
+    };
+    gravar_faixa_do_short_api_channels_ativo_faixa_do_short_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FaixaDoShortRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaixaDoShort"];
                 };
             };
             /** @description Validation Error */

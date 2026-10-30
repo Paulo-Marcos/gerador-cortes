@@ -37,6 +37,7 @@ from app.services import (
     palco_por_escopo,
     studio_youtube,
 )
+from app.services.canal import faixa_do_short
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -301,6 +302,33 @@ async def gravar_robo_do_studio(body: RoboDoStudio):
             monetizar=body.monetizar, relacionar_short=body.relacionar_short
         )
     )
+
+
+# --------------------------------------------------------------------------- #
+# Faixa de duração dos shorts, no canal ativo (D-997)
+# --------------------------------------------------------------------------- #
+
+
+class FaixaDoShortRequest(BaseModel):
+    duracao_min_seg: float
+    duracao_max_seg: float
+
+
+class FaixaDoShort(FaixaDoShortRequest):
+    # O padrão de quem nunca configurou, para a tela oferecer a volta a ele.
+    padrao_min_seg: float
+    padrao_max_seg: float
+
+
+@router.get("/ativo/faixa-do-short", response_model=FaixaDoShort)
+async def obter_faixa_do_short():
+    return FaixaDoShort(**faixa_do_short.ler_faixa())
+
+
+@router.put("/ativo/faixa-do-short", response_model=FaixaDoShort)
+async def gravar_faixa_do_short(body: FaixaDoShortRequest):
+    """Grava a faixa; mínimo maior ou igual ao máximo é recusado com 400."""
+    return FaixaDoShort(**faixa_do_short.gravar_faixa(body.duracao_min_seg, body.duracao_max_seg))
 
 
 # --------------------------------------------------------------------------- #

@@ -946,12 +946,12 @@ async def sugerir_shorts(corte_id: str, provider: ProviderIA = "claude") -> dict
     final). Quem chama no fluxo automático trata a falha como não-fatal: a
     sugestão de shorts é derivada do bruto, não parte da entrega dele.
     """
-    from app.domain.short.shorts import FaixaShort, normalizar_sugestoes
+    from app.domain.short.shorts import normalizar_sugestoes
+    from app.services.canal.faixa_do_short import faixa_do_canal
 
     contexto = await montar_contexto(corte_id)
-    faixa = FaixaShort(
-        duracao_min_seg=settings.shorts_duracao_min_seg,
-        duracao_max_seg=settings.shorts_duracao_max_seg,
+    # D-997: a duração vem do canal (tela de Canais); a quantidade, do config.
+    faixa = faixa_do_canal(
         quantidade_min=settings.shorts_quantidade_min,
         quantidade_max=settings.shorts_quantidade_max,
     )

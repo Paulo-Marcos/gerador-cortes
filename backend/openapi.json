@@ -4433,6 +4433,52 @@
         "title": "FaixaDoPublicoModel",
         "type": "object"
       },
+      "FaixaDoShort": {
+        "properties": {
+          "duracao_max_seg": {
+            "title": "Duracao Max Seg",
+            "type": "number"
+          },
+          "duracao_min_seg": {
+            "title": "Duracao Min Seg",
+            "type": "number"
+          },
+          "padrao_max_seg": {
+            "title": "Padrao Max Seg",
+            "type": "number"
+          },
+          "padrao_min_seg": {
+            "title": "Padrao Min Seg",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duracao_min_seg",
+          "duracao_max_seg",
+          "padrao_min_seg",
+          "padrao_max_seg"
+        ],
+        "title": "FaixaDoShort",
+        "type": "object"
+      },
+      "FaixaDoShortRequest": {
+        "properties": {
+          "duracao_max_seg": {
+            "title": "Duracao Max Seg",
+            "type": "number"
+          },
+          "duracao_min_seg": {
+            "title": "Duracao Min Seg",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duracao_min_seg",
+          "duracao_max_seg"
+        ],
+        "title": "FaixaDoShortRequest",
+        "type": "object"
+      },
       "FaixaSeguraCapa": {
         "properties": {
           "h": {
@@ -14322,6 +14368,67 @@
           }
         },
         "summary": "Esquecer Conta Do Destino",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/ativo/faixa-do-short": {
+      "get": {
+        "operationId": "obter_faixa_do_short_api_channels_ativo_faixa_do_short_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaixaDoShort"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Obter Faixa Do Short",
+        "tags": [
+          "Canais"
+        ]
+      },
+      "put": {
+        "description": "Grava a faixa; mínimo maior ou igual ao máximo é recusado com 400.",
+        "operationId": "gravar_faixa_do_short_api_channels_ativo_faixa_do_short_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FaixaDoShortRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaixaDoShort"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gravar Faixa Do Short",
         "tags": [
           "Canais"
         ]
