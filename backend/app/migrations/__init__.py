@@ -42,6 +42,7 @@ from app.migrations import (
     migration_006_indices_filtros_quentes,
     migration_007_fire_no_corte,
     migration_008_modo_do_corte_e_global_vivo,
+    migration_009_snapshot_sobrevive_ao_corte,
     reconciliacao,
 )
 from app.models import Base
@@ -100,6 +101,11 @@ MIGRATIONS: tuple[Migration, ...] = (
         version=8,
         description="D-966 — sai a sentinela de modo dos cortes e as cópias do Global dos projetos",
         upgrade=migration_008_modo_do_corte_e_global_vivo.upgrade,
+    ),
+    Migration(
+        version=9,
+        description="D-993 — o snapshot da proposta sobrevive ao corte (sem FK, com projeto)",
+        upgrade=migration_009_snapshot_sobrevive_ao_corte.upgrade,
     ),
 )
 

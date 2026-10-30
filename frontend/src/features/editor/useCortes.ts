@@ -159,7 +159,7 @@ export function useAprovar(corteId: string, projetoId?: string) {
 export function useDeletarCorte(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => cortesApi.deletarCorte(corteId),
+    mutationFn: (motivo?: string) => cortesApi.deletarCorte(corteId, motivo),
     onSuccess: () => invalidaCorte(qc, corteId, projetoId),
   });
 }

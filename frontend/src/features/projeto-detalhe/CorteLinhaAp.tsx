@@ -127,9 +127,10 @@ function useTriagemPeloTeclado({
     else if (acao === 'explicar') explicar();
     else if (acao === 'excluir') {
       linhaQuePediu.current = linha;
-      confirmacao.executarOuPedir(confirmacaoExcluirCorte(status.numero, status.titulo ?? ''), () => {
+      const pedido = confirmacaoExcluirCorte(status.numero, status.titulo ?? '', corte?.origem_analise);
+      confirmacao.executarOuPedir(pedido, (motivo) => {
         const vizinha = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
-        deletar.mutate(undefined, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });
+        deletar.mutate(motivo, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });
       });
     } else {
       e.stopPropagation();

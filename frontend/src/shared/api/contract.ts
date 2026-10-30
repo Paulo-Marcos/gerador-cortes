@@ -9580,6 +9580,18 @@ export interface components {
             largura: number;
         };
         /**
+         * TelemetriaApagados
+         * @description D-993: propostas apagadas; `por_motivo` traz todo slug, mais `sem_motivo`.
+         */
+        TelemetriaApagados: {
+            /** Por Motivo */
+            por_motivo: {
+                [key: string]: number;
+            };
+            /** Total */
+            total: number;
+        };
+        /**
          * TelemetriaAvaliacao
          * @description A avaliação humana do corte (D-419); `voto` None = não avaliado.
          */
@@ -9681,6 +9693,7 @@ export interface components {
         };
         /** TelemetriaProjetoResponse */
         TelemetriaProjetoResponse: {
+            apagados: components["schemas"]["TelemetriaApagados"];
             /** Com Snapshot */
             com_snapshot: number;
             /** Cortes */
@@ -12118,7 +12131,9 @@ export interface operations {
     };
     deletar_corte_api_cortes__corte_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                motivo?: string | null;
+            };
             header?: never;
             path: {
                 corte_id: string;

@@ -203,7 +203,7 @@ describe('saída do editor quando salvar falha (D-883)', () => {
   });
 
   it('excluir descarta o ajuste antes de tudo, em qualquer caminho', () => {
-    const aoExcluir = hook.match(/function excluirConfirmado\(\) \{(.*?)\r?\n {2}\}\r?\n/s)![1];
+    const aoExcluir = hook.match(/function excluirConfirmado\(motivo\?: string\) \{(.*?)\r?\n {2}\}\r?\n/s)![1];
     expect(aoExcluir).toMatch(/onSuccess: \(\) => \{\s*editHistory\.reset\(\{\}\);\s*if \(cortes\.length > 1\)/);
   });
 });
