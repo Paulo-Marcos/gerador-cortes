@@ -243,8 +243,8 @@ class Short(Base):
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
     # Importar Corte aqui fecharia o ciclo projeto<->shorts, que test_ciclos_de_import_d695 reprova.
-    # "Corte" vive em projeto.py; importá-lo aqui fecharia um ciclo de import (D-695).
     corte: Mapped["Corte"] = relationship("Corte", back_populates="shorts")  # noqa: F821  # pyright: ignore[reportUndefinedVariable]
     metadado: Mapped["MetadadoShort"] = relationship(
         "MetadadoShort",
