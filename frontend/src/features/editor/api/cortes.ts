@@ -50,7 +50,13 @@ export const cortesApi = {
   aprovarCorte: (corteId: string) =>
     dados(api.POST('/api/cortes/{corte_id}/aprovar', doCorte(corteId))),
 
-  deletarCorte: (corteId: string) => dados(api.DELETE('/api/cortes/{corte_id}', doCorte(corteId))),
+  // D-993: o motivo (opcional) fica no snapshot da proposta.
+  deletarCorte: (corteId: string, motivo?: string) =>
+    dados(
+      api.DELETE('/api/cortes/{corte_id}', {
+        params: { path: { corte_id: corteId }, query: { motivo } },
+      }),
+    ),
 
   abrirPastaCorte: (corteId: string) =>
     dados(api.POST('/api/cortes/{corte_id}/abrir-pasta', doCorte(corteId))),

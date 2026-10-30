@@ -11485,6 +11485,28 @@
         "title": "TelaDoShort",
         "type": "object"
       },
+      "TelemetriaApagados": {
+        "description": "D-993: propostas apagadas; `por_motivo` traz todo slug, mais `sem_motivo`.",
+        "properties": {
+          "por_motivo": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Por Motivo",
+            "type": "object"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "por_motivo"
+        ],
+        "title": "TelemetriaApagados",
+        "type": "object"
+      },
       "TelemetriaAvaliacao": {
         "description": "A avaliação humana do corte (D-419); `voto` None = não avaliado.",
         "properties": {
@@ -11807,6 +11829,9 @@
       },
       "TelemetriaProjetoResponse": {
         "properties": {
+          "apagados": {
+            "$ref": "#/components/schemas/TelemetriaApagados"
+          },
           "com_snapshot": {
             "title": "Com Snapshot",
             "type": "integer"
@@ -11841,7 +11866,8 @@
           "total_cortes",
           "com_snapshot",
           "sem_snapshot",
-          "cortes"
+          "cortes",
+          "apagados"
         ],
         "title": "TelemetriaProjetoResponse",
         "type": "object"
@@ -15948,6 +15974,22 @@
             "schema": {
               "title": "Corte Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "motivo",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Motivo"
             }
           }
         ],

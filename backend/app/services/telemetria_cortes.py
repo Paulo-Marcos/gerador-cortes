@@ -8,6 +8,7 @@ de projeto e cross-projeto (JSON/CSV).
 import json
 
 from app.domain.corte.avaliacao_corte import motivos_persistidos
+from app.domain.corte.motivo_apagado import contar_apagados_por_motivo
 from app.domain.corte.telemetria_cortes import (
     SITUACAO_COM_SNAPSHOT,
     diff_proposta_vs_final,
@@ -38,6 +39,8 @@ class TelemetriaCortesService:
             "com_snapshot": com_snapshot,
             "sem_snapshot": len(diffs) - com_snapshot,
             "cortes": diffs,
+            # D-993: as propostas que o operador apagou, por motivo.
+            "apagados": contar_apagados_por_motivo(await _motivos_apagados(db, projeto_id)),
         }
 
     @staticmethod
@@ -77,6 +80,15 @@ async def _snapshots_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[s
         return {}
     result = await db.execute(select(CorteSnapshot).where(CorteSnapshot.corte_id.in_(corte_ids)))
     return {s.corte_id: s for s in result.scalars().all()}
+
+
+async def _motivos_apagados(db: AsyncSession, projeto_id: str) -> list[str]:
+    result = await db.execute(
+        select(CorteSnapshot.motivo_apagado).where(
+            CorteSnapshot.projeto_id == projeto_id, CorteSnapshot.apagado_em.is_not(None)
+        )
+    )
+    return list(result.scalars().all())
 
 
 def _diffs(cortes: list[Corte], snapshots: dict[str, CorteSnapshot]) -> list[dict]:

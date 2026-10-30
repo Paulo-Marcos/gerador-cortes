@@ -1,5 +1,6 @@
 import type { PedidoConfirmacao } from '@/components/ui/confirm-dialog';
 import type { RegerarBrutoOpcoes } from './regerarBrutoPlan';
+import { MOTIVOS_APAGADO } from './motivoApagado';
 
 // ─────────────────────────────────────────────────────────────
 // regeracaoConfirmacao (D-428) — decide se uma acao do editor e' PRIMEIRA
@@ -84,7 +85,12 @@ export function confirmacaoRegerarBruto(
  * Apaga o corte e os arquivos dele do disco, sem volta; a tecla sozinha nunca
  * pode bastar. Quem so' queria tirar a aprovacao tem o A, que alterna.
  */
-export function confirmacaoExcluirCorte(numero: number, titulo: string): PedidoConfirmacao {
+export function confirmacaoExcluirCorte(
+  numero: number,
+  titulo: string,
+  /** D-988: quem propôs o corte; null/vazio = criado na mão. */
+  origemAnalise?: string | null,
+): PedidoConfirmacao {
   return {
     titulo: 'Excluir o corte de vez',
     detalhe: `Corte #${numero} · ${titulo}`,
@@ -92,5 +98,9 @@ export function confirmacaoExcluirCorte(numero: number, titulo: string): PedidoC
       'O corte e todos os arquivos dele (bruto, render, capa) saem do disco. Não há como desfazer. Para só tirar a aprovação, use Devolver (A).',
     confirmLabel: 'Excluir de vez',
     tone: 'danger',
+    // D-993: só a proposta da IA tem motivo a medir; o corte feito na mão não.
+    ...(origemAnalise
+      ? { escolha: { pergunta: 'Por que sai? (opcional)', opcoes: MOTIVOS_APAGADO } }
+      : {}),
   };
 }

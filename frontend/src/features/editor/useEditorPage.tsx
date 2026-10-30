@@ -594,13 +594,13 @@ export function useEditorPage() {
   function excluirCorte() {
     if (!corteUI) return;
     confirmacao.executarOuPedir(
-      confirmacaoExcluirCorte(corteUI.numero, corteUI.titulo_proposto),
+      confirmacaoExcluirCorte(corteUI.numero, corteUI.titulo_proposto, corteUI.origem_analise),
       excluirConfirmado,
     );
   }
 
-  function excluirConfirmado() {
-    deletarCorte.mutate(undefined, {
+  function excluirConfirmado(motivo?: string) {
+    deletarCorte.mutate(motivo, {
       onSuccess: () => {
         // D-883: o ajuste morre com o corte — a saída o salvaria no excluído (404).
         editHistory.reset({});

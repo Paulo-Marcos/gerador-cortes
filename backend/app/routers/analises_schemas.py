@@ -75,6 +75,13 @@ class TelemetriaCorteDiff(RespostaApi):
     avaliacao: TelemetriaAvaliacao
 
 
+class TelemetriaApagados(RespostaApi):
+    """D-993: propostas apagadas; `por_motivo` traz todo slug, mais `sem_motivo`."""
+
+    total: int
+    por_motivo: dict[str, int]
+
+
 class TelemetriaProjetoResponse(RespostaApi):
     projeto_id: str
     titulo_live: str
@@ -82,6 +89,7 @@ class TelemetriaProjetoResponse(RespostaApi):
     com_snapshot: int
     sem_snapshot: int
     cortes: list[TelemetriaCorteDiff]
+    apagados: TelemetriaApagados
 
 
 # ─── Estatísticas do YouTube (D-305) ─────────────────────────────────────────

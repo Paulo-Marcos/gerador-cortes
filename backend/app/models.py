@@ -318,7 +318,9 @@ class Corte(Base):
         lazy="selectin",
     )
     # D-988: a proposta congelada (D-303) diz qual IA propôs o corte; só leitura.
-    snapshot: Mapped["CorteSnapshot | None"] = relationship(viewonly=True, lazy="selectin")
+    snapshot: Mapped["CorteSnapshot | None"] = relationship(
+        primaryjoin="foreign(CorteSnapshot.corte_id) == Corte.id", viewonly=True, lazy="selectin"
+    )
     # E-030: shorts extraidos deste corte. `lazy` default (nao selectin) de
     # proposito — a esteira de cortes nao carrega shorts sem pedir.
     shorts: Mapped[list["Short"]] = relationship(
@@ -329,22 +331,20 @@ class Corte(Base):
 class CorteSnapshot(Base):
     """D-303: snapshot imutável da proposta da IA no momento da importação.
 
-    Congela o que a análise propôs (título, tema, resumo, justificativa,
-    bordas e desvios) ANTES de qualquer edição humana. Gravado uma única vez
-    quando o corte nasce em `AnaliseService.importar_resultado` (ou na análise
-    de intervalo) e nunca mais atualizado — é a régua proposta×final da
-    telemetria editorial. Corte sem snapshot é sinal, não erro: o editor criou
-    na mão (a IA não propôs) ou o corte é anterior à telemetria. Se o corte
-    for deletado o snapshot fica órfão e fora do levantamento (v1 não mede
-    cortes deletados).
+    Congela a proposta ANTES da edição humana e nunca muda: é a régua proposta×
+    final da telemetria. Corte sem snapshot foi criado na mão ou é anterior a ela.
+    D-993: sobrevive ao corte. Apagar o corte grava `apagado_em` e o motivo
+    (`domain/corte/motivo_apagado.py`); `corte_id` não é FK (migration 009),
+    porque a linha guarda o id de um corte que pode não existir mais.
     """
 
     __tablename__ = "corte_snapshots"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    corte_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("cortes.id"), unique=True, index=True
-    )
+    corte_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    projeto_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    apagado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+    motivo_apagado: Mapped[str] = mapped_column(String(30), default="")
     numero: Mapped[int] = mapped_column(Integer, default=0)
     titulo_proposto: Mapped[str] = mapped_column(String(500), default="")
     tema_central: Mapped[str] = mapped_column(String(500), default="")

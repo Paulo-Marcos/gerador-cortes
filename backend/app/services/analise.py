@@ -74,15 +74,15 @@ def _bordas_ancoradas_do_corte(
 def _snapshot_da_proposta(corte: Corte, origem: str) -> CorteSnapshot:
     """D-303: congela a proposta da IA no instante em que o corte nasce.
 
-    Copia os campos do Corte recém-construído (ainda sem edição humana);
-    o snapshot nunca é atualizado depois — é a régua proposta×final da
-    telemetria editorial. Coalesce com defaults porque atributos não setados
-    de um ORM ainda não flushado valem None (ex.: justificativa na análise
-    de intervalo).
+    Copia os campos do Corte recém-construído (ainda sem edição humana); a
+    proposta não muda depois. Coalesce com defaults: atributo não setado de
+    um ORM ainda não flushado vale None (ex.: justificativa no intervalo).
+    D-993: o projeto vai junto; apagado o corte, o snapshot ainda diz a live.
     """
     return CorteSnapshot(
         id=str(uuid.uuid4()),
         corte_id=corte.id,
+        projeto_id=corte.projeto_id,
         numero=corte.numero or 0,
         titulo_proposto=corte.titulo_proposto or "",
         tema_central=corte.tema_central or "",
