@@ -62,16 +62,17 @@ export function useLevantamentoTitulo() {
 }
 
 /**
- * Dispara o sync. Só invalida os levantamentos quando o backend aceitou o
- * disparo (status !== 'erro') — sync com token/escopo faltando não muda dados.
+ * Dispara o sync. O status sempre é refeito (D-994: é nele que a falha aparece);
+ * os levantamentos só quando o backend aceitou o disparo (status !== 'erro') —
+ * sync com token/escopo faltando não muda dados.
  */
 export function useSincronizarYoutube() {
   const qc = useQueryClient();
   return useMutation<YoutubeStatsSyncResult>({
     mutationFn: analisesApi.sincronizarYoutubeStats,
     onSuccess: (resultado) => {
+      qc.invalidateQueries({ queryKey: YT_STATUS_KEY });
       if (resultado.status !== 'erro') {
-        qc.invalidateQueries({ queryKey: YT_STATUS_KEY });
         qc.invalidateQueries({ queryKey: YT_DURACAO_KEY });
         qc.invalidateQueries({ queryKey: YT_TITULO_KEY });
       }

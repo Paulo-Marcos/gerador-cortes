@@ -48,12 +48,13 @@ from app.routers.errors import registrar_tratadores
 from app.routers.resposta_api import RespostaApi
 from app.routers.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
 from app.services import channels as channels_service
-from app.services import encerramento
+from app.services import encerramento, youtube_stats
 from app.services.app_settings import AppSettingsService
 from app.services.canal import editorial_scaffolds
 from app.services.canal import editorial_skills as editorial_skills_service
 from app.services.canal.channel_layout_migration import garantir_layout_de_canais
 from app.services.render.remotion_render import RemotionRenderService
+from app.services.tasks import fire_and_forget
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -94,6 +95,11 @@ async def lifespan(app: FastAPI):
         await RemotionRenderService.sincronizar_tarefas_concluidas()
     except Exception as e:  # noqa: BLE001 — a sincronização do boot não impede o app de subir
         logger.warning("[Main] Erro na sincronização inicial: %s", e)
+
+    # D-994: a sync das métricas do YouTube roda sozinha (a falha silenciosa de
+    # 10/07 a 27/10 nasceu de ela depender de um clique). Task de fundo: não segura
+    # o boot, e o encerramento a cancela.
+    fire_and_forget(youtube_stats.sincronizar_periodicamente(), name="youtube-stats-periodico")
 
     yield
 

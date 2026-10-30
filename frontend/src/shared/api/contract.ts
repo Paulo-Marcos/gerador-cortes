@@ -10031,6 +10031,18 @@ export interface components {
             /** Fluxo Em Andamento */
             fluxo_em_andamento: boolean;
         };
+        /**
+         * YoutubeStatsFalha
+         * @description Por que a última sincronização não deu certo (D-994).
+         */
+        YoutubeStatsFalha: {
+            /** Em */
+            em: string;
+            /** Mensagem */
+            mensagem: string;
+            /** Precisa Reautorizar */
+            precisa_reautorizar: boolean;
+        };
         /** YoutubeStatsStatusResponse */
         YoutubeStatsStatusResponse: {
             /** Casados Por Titulo */
@@ -10039,6 +10051,7 @@ export interface components {
             com_corte: number;
             /** Dias Desde Sync */
             dias_desde_sync: number | null;
+            falha: components["schemas"]["YoutubeStatsFalha"] | null;
             /** Sincronizado Em */
             sincronizado_em: string | null;
             /** Stale */

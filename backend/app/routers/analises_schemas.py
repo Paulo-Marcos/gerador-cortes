@@ -103,6 +103,14 @@ class YoutubeVideoStat(RespostaApi):
     sincronizado_em: str | None
 
 
+class YoutubeStatsFalha(RespostaApi):
+    """Por que a última sincronização não deu certo (D-994)."""
+
+    mensagem: str
+    precisa_reautorizar: bool
+    em: str
+
+
 class YoutubeStatsStatusResponse(RespostaApi):
     total: int
     com_corte: int
@@ -110,6 +118,7 @@ class YoutubeStatsStatusResponse(RespostaApi):
     sincronizado_em: str | None
     stale: bool
     dias_desde_sync: int | None
+    falha: YoutubeStatsFalha | None
     videos: list[YoutubeVideoStat]
 
 

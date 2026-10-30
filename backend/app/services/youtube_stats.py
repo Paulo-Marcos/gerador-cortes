@@ -10,8 +10,8 @@ agregações). Responsabilidades:
 - **casamento** vídeo↔corte: por `Corte.youtube_video_id` e, na falta, por
   título normalizado (heurístico, marcado `match_por_titulo`).
 - **staleness**: o status informa `sincronizado_em` e se está velho; como o sync
-  é idempotente, pode ser redisparado à vontade (não há agendador embutido — o
-  lifespan é território travado; ver o relatório do D-305).
+  é idempotente, pode ser redisparado à vontade; `sincronizar_periodicamente`
+  (D-994) o redispara sozinho, e a última falha vai no status para a tela avisar.
 - **levantamentos**: duração×retenção e título×desempenho (JSON/CSV), o insumo
   para calibrar os próximos cortes.
 """
@@ -36,8 +36,34 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # quiser (upsert idempotente).
 DIAS_STALE = 7
 
+# D-994: sync sozinha. A 1ª rodada espera o boot assentar; depois, uma por dia
+# (o limiar de "velho" é de 7 dias, então há folga para falhas passageiras).
+INTERVALO_SYNC_SEG = 24 * 3600
+ESPERA_INICIAL_SYNC_SEG = 60
+# Teto de uma rodada: a API do Google já deu travada de rede sem erro.
+TIMEOUT_SYNC_SEG = 600
+
 # Janela do relatório do Analytics: do começo do YouTube até hoje = lifetime.
 _DATA_INICIO_LIFETIME = "2005-01-01"
+
+
+# Última falha da sync (limpa quando uma sync dá certo). Em memória de propósito: a
+# rodada periódica a repõe logo após o boot, e a causa é sempre a de agora.
+_ultima_falha: dict | None = None
+
+
+def _registrar_falha(mensagem: str, *, precisa_reautorizar: bool) -> None:
+    global _ultima_falha
+    _ultima_falha = {
+        "mensagem": mensagem,
+        "precisa_reautorizar": precisa_reautorizar,
+        "em": datetime.utcnow().isoformat(),
+    }
+
+
+def _limpar_falha() -> None:
+    global _ultima_falha
+    _ultima_falha = None
 
 
 class YoutubeStatsService:
@@ -52,11 +78,8 @@ class YoutubeStatsService:
         try:
             await asyncio.to_thread(youtube_analytics.carregar_credenciais)
         except YoutubeAnalyticsError as exc:
-            return {
-                "status": "erro",
-                "precisa_reautorizar": exc.precisa_reautorizar,
-                "mensagem": str(exc),
-            }
+            _registrar_falha(str(exc), precisa_reautorizar=exc.precisa_reautorizar)
+            return _erro(exc)
         return {"status": "ok"}
 
     @staticmethod
@@ -69,6 +92,7 @@ class YoutubeStatsService:
             creds = await asyncio.to_thread(youtube_analytics.carregar_credenciais)
         except YoutubeAnalyticsError as exc:
             operational_error("YouTubeStats", f"Sync abortado: {exc}")
+            _registrar_falha(str(exc), precisa_reautorizar=exc.precisa_reautorizar)
             return _erro(exc)
 
         start_date, end_date = _janela_lifetime()
@@ -83,6 +107,7 @@ class YoutubeStatsService:
             )
         except YoutubeAnalyticsError as exc:
             operational_error("YouTubeStats", f"Sync falhou: {exc}")
+            _registrar_falha(str(exc), precisa_reautorizar=exc.precisa_reautorizar)
             return _erro(exc)
 
         agora = datetime.utcnow()
@@ -91,6 +116,7 @@ class YoutubeStatsService:
             casamento = await _casar_com_cortes(db)
             await db.commit()
 
+        _limpar_falha()
         operational_info(
             "YouTubeStats",
             f"Sync concluído: {total} vídeos "
@@ -118,6 +144,7 @@ class YoutubeStatsService:
             "sincronizado_em": ultimo.isoformat() if ultimo else None,
             "stale": _esta_stale(ultimo),
             "dias_desde_sync": _dias_desde(ultimo),
+            "falha": _ultima_falha,
             "videos": [_serializar(s) for s in stats],
         }
 
@@ -136,6 +163,33 @@ class YoutubeStatsService:
     @staticmethod
     def csv_titulo_desempenho(linhas: list[dict]) -> str:
         return dom.csv_titulo_desempenho(linhas)
+
+
+async def sincronizar_periodicamente(
+    *,
+    espera_inicial_seg: float = ESPERA_INICIAL_SYNC_SEG,
+    intervalo_seg: float = INTERVALO_SYNC_SEG,
+    timeout_seg: float = TIMEOUT_SYNC_SEG,
+) -> None:
+    """Laço de fundo (D-994): sincroniza sozinho, para a falha não depender de o
+    operador lembrar de clicar. Nunca morre por erro de uma rodada; só o
+    cancelamento (fechar o app) o encerra."""
+    await asyncio.sleep(espera_inicial_seg)
+    while True:
+        try:
+            async with asyncio.timeout(timeout_seg):
+                await YoutubeStatsService.sincronizar()
+        except TimeoutError:
+            operational_error("YouTubeStats", f"Sync periódica passou de {timeout_seg}s.")
+            _registrar_falha(
+                f"A sincronização passou do tempo limite ({timeout_seg:g}s). "
+                "Ela tenta de novo na próxima rodada.",
+                precisa_reautorizar=False,
+            )
+        except Exception as exc:  # noqa: BLE001 — o laço de fundo não pode morrer
+            operational_error("YouTubeStats", f"Sync periódica falhou: {exc}")
+            _registrar_falha(f"Erro inesperado na sincronização: {exc}", precisa_reautorizar=False)
+        await asyncio.sleep(intervalo_seg)
 
 
 # ── internos ────────────────────────────────────────────────────────────────

@@ -115,6 +115,8 @@ function StatCard({
 
 export function AnalisesPage() {
   const [aba, setAba] = useState<AbaId>('proposta-final');
+  // D-994: a falha da sync do YouTube precisa ser vista sem abrir a aba.
+  const syncFalhou = !!useYoutubeStatsStatus().data?.falha;
 
   // D-599: o titulo e o subtitulo passam para a casca; a faixa de STATS e
   // as abas continuam aqui, que e onde o design as coloca — logo abaixo do
@@ -152,6 +154,13 @@ export function AnalisesPage() {
               )}
             >
               {rotulo}
+              {id === 'youtube' && syncFalhou && (
+                <span
+                  role="img"
+                  aria-label="sincronização com falha"
+                  className="ml-2 inline-block size-2 rounded-full bg-[var(--wb-warn)]"
+                />
+              )}
             </button>
           ))}
         </nav>
