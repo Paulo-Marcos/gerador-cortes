@@ -58,8 +58,8 @@ _CRITERIOS: tuple[CriterioRanking, ...] = (
         rotulo="Positividade dos comentários (o público disse que foi bom?)",
         descricao=(
             "Quanto pesa o tom dos comentários (score 0-10 avaliado pelo Claude). "
-            "Alto = público entusiasmado; baixo = rejeição. O sinal mais forte do "
-            "que o público genuinamente curtiu."
+            "Comparado com as outras candidatas do ranking: a nota mais alta do lote "
+            "vale o peso inteiro e a mais baixa vale zero."
         ),
         eh_peso=True,
     ),
