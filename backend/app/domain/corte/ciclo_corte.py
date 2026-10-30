@@ -42,6 +42,18 @@ _PELO_SISTEMA: dict[str, frozenset[str]] = {
     APROVADO: frozenset({PROCESSADO}),
 }
 
+# D-992: o corte que CONTA como trabalho entregue da live. Mora aqui porque a
+# resposta depende da tabela acima: `processado` é o `aprovado` depois que o
+# render final passou, e quem pergunta "quantos cortes a live entregou?" quer
+# os dois. A listagem da Biblioteca perguntava só por `aprovado`, e a live
+# terminada zerava — o corte saía da conta justamente por ter acabado.
+#
+# `proposto` fica fora porque ainda espera curadoria; `rejeitado` fica fora
+# porque é legado (hoje "Rejeitar" exclui o corte, e nada mais grava o status).
+#
+# Tupla, e não frozenset, para o `IN` do SQL sair sempre na mesma ordem.
+CONTAM_NA_PUBLICACAO: tuple[str, ...] = (APROVADO, PROCESSADO)
+
 
 class TransicaoDeCorteInvalida(PedidoInvalido, ValueError):
     """O status pedido não existe ou não é alcançável a partir do atual.

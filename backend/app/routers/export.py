@@ -9,7 +9,8 @@ from app.core.channel_paths import (
 )
 from app.core.logging import operational_info
 from app.database import get_db
-from app.models import Corte, MetadadoCorte, StatusCorte
+from app.domain.corte.ciclo_corte import CONTAM_NA_PUBLICACAO
+from app.models import Corte, MetadadoCorte
 from app.routers import export_schemas
 from app.routers.errors import erro_interno
 
@@ -87,14 +88,11 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Corte)
         .where(Corte.projeto_id == projeto_id)
-        .where(
-            Corte.status.in_(
-                [
-                    StatusCorte.APROVADO,
-                    StatusCorte.PROCESSADO,
-                ]
-            )
-        )
+        # D-992: a mesma regra da Biblioteca, do mesmo lugar. Esta tela sempre
+        # pediu os dois status, mas com a lista escrita à mão aqui; a listagem
+        # dos cards tinha a própria cópia, ficou só com `aprovado` e a live
+        # terminada sumia dos chips. Duas cópias da regra, uma errada.
+        .where(Corte.status.in_(CONTAM_NA_PUBLICACAO))
         .order_by(Corte.numero)
     )
     cortes = result.scalars().all()

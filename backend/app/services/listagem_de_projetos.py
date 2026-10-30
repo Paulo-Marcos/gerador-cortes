@@ -5,6 +5,12 @@ que a tela mostra: cortes, aprovados, com bruto, com metadado, publicados, com
 vídeo pronto, no ar, a próxima publicação agendada, os Fires pendentes e as
 redes do horizontal (D-987). Cinco consultas agrupadas por projeto — nenhuma
 por projeto, sem N+1.
+
+D-992: quem entra nas contagens é `ciclo_corte.CONTAM_NA_PUBLICACAO`, e não
+só `aprovado`. O render final move o corte para `processado`, e com o filtro
+antigo a live acabada zerava todas as colunas — o corte saía da conta por ter
+terminado. Os nomes públicos (`total_aprovados`) são contrato com a tela e
+ficaram como estavam; os internos passaram a dizer "entregue".
 """
 
 from __future__ import annotations
@@ -16,6 +22,7 @@ from pathlib import Path
 
 from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
+from app.domain.corte.ciclo_corte import CONTAM_NA_PUBLICACAO
 from app.domain.projeto.redes_do_projeto import (
     TIKTOK_HORIZONTAL,
     YOUTUBE_HORIZONTAL,
@@ -57,11 +64,11 @@ async def listar_projetos() -> list[dict]:
             return []
         ids = [p.id for p in projetos]
         cortes = await _contagens_dos_cortes(db, ids)
-        com_meta = await _aprovados_com_metadado(db, ids)
+        com_meta = await _entregues_com_metadado(db, ids)
         fires = await _fires_pendentes(db, ids)
-        aprovados = await _aprovados(db, ids)
+        entregues = await _cortes_entregues(db, ids)
 
-    publicacao = _situacao_da_publicacao(aprovados)
+    publicacao = _situacao_da_publicacao(entregues)
     lista = []
     for p in projetos:
         stats = cortes.get(p.id)
@@ -100,12 +107,12 @@ async def _contagens_dos_cortes(db: AsyncSession, ids: list[str]) -> dict:
                     )
                 )
             ).label("publicados"),
-            func.count(case((Corte.status == StatusCorte.APROVADO, 1))).label("aprovados"),
+            func.count(case((Corte.status.in_(CONTAM_NA_PUBLICACAO), 1))).label("aprovados"),
             func.count(
                 case(
                     (
                         and_(
-                            Corte.status == StatusCorte.APROVADO,
+                            Corte.status.in_(CONTAM_NA_PUBLICACAO),
                             Corte.arquivo_clip_path.is_not(None),
                             Corte.arquivo_clip_path != "",
                         ),
@@ -120,13 +127,13 @@ async def _contagens_dos_cortes(db: AsyncSession, ids: list[str]) -> dict:
     return {row.projeto_id: row for row in res.all()}
 
 
-async def _aprovados_com_metadado(db: AsyncSession, ids: list[str]) -> dict[str, int]:
+async def _entregues_com_metadado(db: AsyncSession, ids: list[str]) -> dict[str, int]:
     res = await db.execute(
         select(Corte.projeto_id, func.count(MetadadoCorte.id).label("com_meta"))
         .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
         .where(
             Corte.projeto_id.in_(ids),
-            Corte.status == StatusCorte.APROVADO,
+            Corte.status.in_(CONTAM_NA_PUBLICACAO),
             MetadadoCorte.titulo_youtube != "",
             MetadadoCorte.titulo_youtube.is_not(None),
         )
@@ -150,7 +157,7 @@ async def _fires_pendentes(db: AsyncSession, ids: list[str]) -> dict[str, int]:
     return {row.projeto_id: row.total for row in res.all()}
 
 
-async def _aprovados(db: AsyncSession, ids: list[str]) -> list:
+async def _cortes_entregues(db: AsyncSession, ids: list[str]) -> list:
     res = await db.execute(
         select(
             Corte.projeto_id,
@@ -160,14 +167,14 @@ async def _aprovados(db: AsyncSession, ids: list[str]) -> list:
             # D-987: a marca MANUAL do operador (D-512) é o único sinal de que o
             # 16:9 está no TikTok — e vem na mesma consulta, sem N+1.
             Corte.tiktok_publicado_em,
-        ).where(Corte.projeto_id.in_(ids), Corte.status == StatusCorte.APROVADO)
+        ).where(Corte.projeto_id.in_(ids), Corte.status.in_(CONTAM_NA_PUBLICACAO))
     )
     return res.all()
 
 
 @dataclass
 class _SituacaoDoProjeto:
-    """O que uma passada pelos cortes aprovados rende por projeto."""
+    """O que uma passada pelos cortes entregues rende por projeto."""
 
     video_pronto: int = 0
     no_ar: int = 0
@@ -175,7 +182,7 @@ class _SituacaoDoProjeto:
     publicados_por_rede: dict[str, int] = field(default_factory=lambda: defaultdict(int))
 
 
-def _situacao_da_publicacao(aprovados: list) -> dict[str, _SituacaoDoProjeto]:
+def _situacao_da_publicacao(entregues: list) -> dict[str, _SituacaoDoProjeto]:
     """Por projeto: cortes com vídeo pronto, no ar, a próxima publicação e as redes.
 
     Vídeo pronto é o que já subiu ao YouTube ou tem o `video.mp4` final no disco.
@@ -189,7 +196,7 @@ def _situacao_da_publicacao(aprovados: list) -> dict[str, _SituacaoDoProjeto]:
     pasta = projetos_dir()
     agora = datetime.now(UTC)
     por_projeto: dict[str, _SituacaoDoProjeto] = defaultdict(_SituacaoDoProjeto)
-    for projeto_id, corte_id, youtube_id, agendado_para, tiktok_em in aprovados:
+    for projeto_id, corte_id, youtube_id, agendado_para, tiktok_em in entregues:
         situacao = por_projeto[projeto_id]
         no_youtube = bool(youtube_id)
         if not (no_youtube or _video_no_disco(pasta, projeto_id, corte_id)):
