@@ -14,6 +14,7 @@ Sem I/O, sem SQLAlchemy, sem cliente externo — só as regras.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from app.domain.compartilhado.erros import PedidoInvalido
@@ -74,6 +75,9 @@ def faixa_de_duracao_valida(minimo_seg: float, maximo_seg: float) -> tuple[float
     >>> faixa_de_duracao_valida(20, 120)
     (20.0, 120.0)
     """
+    # NaN passaria pelas duas comparações abaixo, e o JSON do Pydantic o aceita.
+    if not (math.isfinite(minimo_seg) and math.isfinite(maximo_seg)):
+        raise PedidoInvalido("A duração do short precisa ser um número de segundos.")
     if minimo_seg <= 0:
         raise PedidoInvalido("A duração mínima do short precisa ser maior que zero.")
     if minimo_seg >= maximo_seg:
