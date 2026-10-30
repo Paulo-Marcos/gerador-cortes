@@ -18,6 +18,7 @@ from app.domain.corte.telemetria_cortes import (
     SITUACAO_SEM_PROPOSTA_IA,
     SITUACAO_SEM_SNAPSHOT,
 )
+from app.domain.short.telemetria_shorts import SITUACAO_APAGADO, SITUACAO_VIVO
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 
 # ─── Telemetria proposta × final (D-303) ─────────────────────────────────────
@@ -82,6 +83,44 @@ class TelemetriaApagados(RespostaApi):
     por_motivo: dict[str, int]
 
 
+class TelemetriaShortDiff(RespostaApi):
+    """D-995: a proposta congelada de um short contra o short final (None = apagado)."""
+
+    short_id: str
+    numero: int
+    provedor: str
+    modelo: str
+    score_proposto: float
+    titulo_proposto: str
+    gancho_proposto: str
+    inicio_proposto_seg: float
+    fim_proposto_seg: float
+    duracao_proposta_seg: float
+    situacao: Literal[SITUACAO_VIVO, SITUACAO_APAGADO]
+    status_final: str
+    inicio_final_seg: float | None
+    fim_final_seg: float | None
+    duracao_final_seg: float | None
+    delta_inicio_seg: float | None
+    delta_fim_seg: float | None
+    delta_duracao_seg: float | None
+    gancho_mudou: bool | None
+
+
+class TelemetriaShortsResumo(RespostaApi):
+    total: int
+    apagados: int
+    aceitos: int
+    esticados: int
+    encurtados: int
+    mediana_delta_duracao_aceitos_seg: float | None
+
+
+class TelemetriaShorts(RespostaApi):
+    resumo: TelemetriaShortsResumo
+    shorts: list[TelemetriaShortDiff]
+
+
 class TelemetriaProjetoResponse(RespostaApi):
     projeto_id: str
     titulo_live: str
@@ -90,6 +129,7 @@ class TelemetriaProjetoResponse(RespostaApi):
     sem_snapshot: int
     cortes: list[TelemetriaCorteDiff]
     apagados: TelemetriaApagados
+    shorts: TelemetriaShorts
 
 
 # ─── Estatísticas do YouTube (D-305) ─────────────────────────────────────────

@@ -11851,6 +11851,9 @@
             "title": "Sem Snapshot",
             "type": "integer"
           },
+          "shorts": {
+            "$ref": "#/components/schemas/TelemetriaShorts"
+          },
           "titulo_live": {
             "title": "Titulo Live",
             "type": "string"
@@ -11867,9 +11870,232 @@
           "com_snapshot",
           "sem_snapshot",
           "cortes",
-          "apagados"
+          "apagados",
+          "shorts"
         ],
         "title": "TelemetriaProjetoResponse",
+        "type": "object"
+      },
+      "TelemetriaShortDiff": {
+        "description": "D-995: a proposta congelada de um short contra o short final (None = apagado).",
+        "properties": {
+          "delta_duracao_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Duracao Seg"
+          },
+          "delta_fim_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Fim Seg"
+          },
+          "delta_inicio_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Inicio Seg"
+          },
+          "duracao_final_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duracao Final Seg"
+          },
+          "duracao_proposta_seg": {
+            "title": "Duracao Proposta Seg",
+            "type": "number"
+          },
+          "fim_final_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fim Final Seg"
+          },
+          "fim_proposto_seg": {
+            "title": "Fim Proposto Seg",
+            "type": "number"
+          },
+          "gancho_mudou": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gancho Mudou"
+          },
+          "gancho_proposto": {
+            "title": "Gancho Proposto",
+            "type": "string"
+          },
+          "inicio_final_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inicio Final Seg"
+          },
+          "inicio_proposto_seg": {
+            "title": "Inicio Proposto Seg",
+            "type": "number"
+          },
+          "modelo": {
+            "title": "Modelo",
+            "type": "string"
+          },
+          "numero": {
+            "title": "Numero",
+            "type": "integer"
+          },
+          "provedor": {
+            "title": "Provedor",
+            "type": "string"
+          },
+          "score_proposto": {
+            "title": "Score Proposto",
+            "type": "number"
+          },
+          "short_id": {
+            "title": "Short Id",
+            "type": "string"
+          },
+          "situacao": {
+            "enum": [
+              "vivo",
+              "apagado"
+            ],
+            "title": "Situacao",
+            "type": "string"
+          },
+          "status_final": {
+            "title": "Status Final",
+            "type": "string"
+          },
+          "titulo_proposto": {
+            "title": "Titulo Proposto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "short_id",
+          "numero",
+          "provedor",
+          "modelo",
+          "score_proposto",
+          "titulo_proposto",
+          "gancho_proposto",
+          "inicio_proposto_seg",
+          "fim_proposto_seg",
+          "duracao_proposta_seg",
+          "situacao",
+          "status_final",
+          "inicio_final_seg",
+          "fim_final_seg",
+          "duracao_final_seg",
+          "delta_inicio_seg",
+          "delta_fim_seg",
+          "delta_duracao_seg",
+          "gancho_mudou"
+        ],
+        "title": "TelemetriaShortDiff",
+        "type": "object"
+      },
+      "TelemetriaShorts": {
+        "properties": {
+          "resumo": {
+            "$ref": "#/components/schemas/TelemetriaShortsResumo"
+          },
+          "shorts": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetriaShortDiff"
+            },
+            "title": "Shorts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resumo",
+          "shorts"
+        ],
+        "title": "TelemetriaShorts",
+        "type": "object"
+      },
+      "TelemetriaShortsResumo": {
+        "properties": {
+          "aceitos": {
+            "title": "Aceitos",
+            "type": "integer"
+          },
+          "apagados": {
+            "title": "Apagados",
+            "type": "integer"
+          },
+          "encurtados": {
+            "title": "Encurtados",
+            "type": "integer"
+          },
+          "esticados": {
+            "title": "Esticados",
+            "type": "integer"
+          },
+          "mediana_delta_duracao_aceitos_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mediana Delta Duracao Aceitos Seg"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "apagados",
+          "aceitos",
+          "esticados",
+          "encurtados",
+          "mediana_delta_duracao_aceitos_seg"
+        ],
+        "title": "TelemetriaShortsResumo",
         "type": "object"
       },
       "TelemetriaTitulo": {

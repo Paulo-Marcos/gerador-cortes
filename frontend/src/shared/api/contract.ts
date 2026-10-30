@@ -9702,10 +9702,79 @@ export interface components {
             projeto_id: string;
             /** Sem Snapshot */
             sem_snapshot: number;
+            shorts: components["schemas"]["TelemetriaShorts"];
             /** Titulo Live */
             titulo_live: string;
             /** Total Cortes */
             total_cortes: number;
+        };
+        /**
+         * TelemetriaShortDiff
+         * @description D-995: a proposta congelada de um short contra o short final (None = apagado).
+         */
+        TelemetriaShortDiff: {
+            /** Delta Duracao Seg */
+            delta_duracao_seg: number | null;
+            /** Delta Fim Seg */
+            delta_fim_seg: number | null;
+            /** Delta Inicio Seg */
+            delta_inicio_seg: number | null;
+            /** Duracao Final Seg */
+            duracao_final_seg: number | null;
+            /** Duracao Proposta Seg */
+            duracao_proposta_seg: number;
+            /** Fim Final Seg */
+            fim_final_seg: number | null;
+            /** Fim Proposto Seg */
+            fim_proposto_seg: number;
+            /** Gancho Mudou */
+            gancho_mudou: boolean | null;
+            /** Gancho Proposto */
+            gancho_proposto: string;
+            /** Inicio Final Seg */
+            inicio_final_seg: number | null;
+            /** Inicio Proposto Seg */
+            inicio_proposto_seg: number;
+            /** Modelo */
+            modelo: string;
+            /** Numero */
+            numero: number;
+            /** Provedor */
+            provedor: string;
+            /** Score Proposto */
+            score_proposto: number;
+            /** Short Id */
+            short_id: string;
+            /**
+             * Situacao
+             * @enum {string}
+             */
+            situacao: "vivo" | "apagado";
+            /** Status Final */
+            status_final: string;
+            /** Titulo Proposto */
+            titulo_proposto: string;
+        };
+        /** TelemetriaShorts */
+        TelemetriaShorts: {
+            resumo: components["schemas"]["TelemetriaShortsResumo"];
+            /** Shorts */
+            shorts: components["schemas"]["TelemetriaShortDiff"][];
+        };
+        /** TelemetriaShortsResumo */
+        TelemetriaShortsResumo: {
+            /** Aceitos */
+            aceitos: number;
+            /** Apagados */
+            apagados: number;
+            /** Encurtados */
+            encurtados: number;
+            /** Esticados */
+            esticados: number;
+            /** Mediana Delta Duracao Aceitos Seg */
+            mediana_delta_duracao_aceitos_seg: number | null;
+            /** Total */
+            total: number;
         };
         /** TelemetriaTitulo */
         TelemetriaTitulo: {

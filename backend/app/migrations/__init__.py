@@ -46,6 +46,7 @@ from app.migrations import (
     reconciliacao,
 )
 from app.models import Base
+from app.models_short_snapshot import ShortSnapshot  # noqa: F401 — registra a tabela (D-995)
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
