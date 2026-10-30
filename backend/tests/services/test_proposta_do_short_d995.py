@@ -16,8 +16,8 @@ import pytest
 import pytest_asyncio
 from app import database
 from app.infrastructure import claude_cli_client
+from app.infrastructure.snapshot_do_short import ShortSnapshot
 from app.models import Base, Corte, Projeto, Short
-from app.models_short_snapshot import ShortSnapshot
 from app.services import shorts as shorts_store
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.corte import CorteService

@@ -11,8 +11,8 @@ from datetime import datetime
 
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.short.shorts import SugestaoShort
+from app.infrastructure.snapshot_do_short import ShortSnapshot
 from app.models import Short, StatusShort
-from app.models_short_snapshot import ShortSnapshot
 from app.services.canal import editorial_skills
 from app.services.claude_ia import modelo_usado
 from sqlalchemy import select, update

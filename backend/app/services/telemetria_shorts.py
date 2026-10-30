@@ -7,8 +7,8 @@ telemetria do projeto, ao lado dos cortes (`services/telemetria_cortes.py`).
 
 from app.domain.short import segmentos_short
 from app.domain.short.telemetria_shorts import diff_proposta_vs_final, resumir
+from app.infrastructure.snapshot_do_short import ShortSnapshot
 from app.models import Short
-from app.models_short_snapshot import ShortSnapshot
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

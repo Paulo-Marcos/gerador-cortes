@@ -33,6 +33,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
+from app.infrastructure.snapshot_do_short import ShortSnapshot  # noqa: F401 — registra a tabela (D-995)
 from app.migrations import (
     migration_001_baseline,
     migration_002_paths_relativos,
@@ -46,7 +47,6 @@ from app.migrations import (
     reconciliacao,
 )
 from app.models import Base
-from app.models_short_snapshot import ShortSnapshot  # noqa: F401 — registra a tabela (D-995)
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 

@@ -1,8 +1,9 @@
 """D-995: a proposta original de cada short, congelada no nascimento.
 
-Módulo à parte, e não mais uma classe em `models.py`, porque aquele arquivo está
-no teto da catraca de tamanho (D-771). `app.migrations` o importa, então a
-tabela entra no `create_all` do boot como qualquer outra.
+Na infraestrutura, e não como mais uma classe em `models.py`: aquele arquivo
+está no teto da catraca de tamanho (D-771), e a raiz de `app/` não aceita módulo
+novo (D-698). É o banco, e o banco é mundo externo. `app.migrations` o importa,
+então a tabela entra no `create_all` do boot como qualquer outra.
 """
 
 from datetime import datetime
