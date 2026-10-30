@@ -57,6 +57,7 @@ from app.infrastructure.render.ffmpeg_basic import (
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
 from app.services import abrir_no_sistema
+from app.services.alertas_conferir import dividir_alertas, juntar_alertas_dos_cortes
 from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,
@@ -906,6 +907,7 @@ class CorteService:
             arranjo_dir = serializar(reconciliar(arranjo, ponto, fim))
 
             novo_id = str(uuid.uuid4())
+            alertas_dir = dividir_alertas(corte, ponto)  # D-998: cada metade, os seus
             titulo_base = (corte.titulo_proposto or "").strip() or f"Corte #{corte.numero}"
             novo_corte = Corte(
                 id=novo_id,
@@ -919,6 +921,7 @@ class CorteService:
                 inicio_seg=ponto,
                 fim_seg=fim,
                 desvios=json.dumps(desvios_dir, ensure_ascii=False),
+                alertas_conferir=alertas_dir,
                 arranjo_blocos=json.dumps(arranjo_dir, ensure_ascii=False),
                 status=StatusCorte.PROPOSTO,
                 is_leitura=corte.is_leitura,
@@ -927,10 +930,8 @@ class CorteService:
             )
             db.add(novo_corte)
 
-            # Encolhe o corte original até o ponto, mantendo só os desvios da
-            # esquerda. Um bruto/cenas porventura já gerados ficam desatualizados
-            # (a fronteira mudou) — mesmo contrato de editar o fim: o usuário
-            # regenera quando quiser; não apagamos artefatos sem aviso.
+            # O original encolhe até o ponto, só com os desvios da esquerda. Bruto e cenas
+            # já gerados ficam desatualizados, como ao editar o fim: nada se apaga sem aviso.
             corte.fim_seg = ponto
             corte.fim_hms = seg_to_hms(ponto)
             corte.desvios = json.dumps(desvios_esq, ensure_ascii=False)
@@ -1045,11 +1046,9 @@ class CorteService:
                 ),
                 ensure_ascii=False,
             )
-            # D-576: a ordem escolhida em cada metade sobrevive à junção — a do
-            # primeiro toca inteira, depois a do segundo. Perder isso seria o
-            # mesmo tipo de estrago que a junção existe para evitar nos trechos e
-            # nas cenas: trabalho editorial jogado fora por uma operação de
-            # fronteira. Dois cortes sem arranjo continuam sem arranjo.
+            # D-576: a ordem escolhida em cada metade sobrevive à junção — a do primeiro
+            # toca inteira, depois a do segundo. Perdê-la seria jogar fora trabalho
+            # editorial por uma operação de fronteira. Sem arranjo, segue sem arranjo.
             from app.domain.corte.arranjo_blocos import concatenar, serializar
             from app.domain.corte.arranjo_blocos import parse as parse_arranjo
 
@@ -1068,6 +1067,7 @@ class CorteService:
 
             _juntar_marcacoes_de_bruto(primeiro, segundo, offset)
             _juntar_texto_editorial(primeiro, segundo)
+            juntar_alertas_dos_cortes(primeiro, segundo)  # D-998
             await _adotar_filhos_do_corte(db, primeiro, segundo, offset)
 
             # O corte mesclado volta a ser matéria-prima: os artefatos que

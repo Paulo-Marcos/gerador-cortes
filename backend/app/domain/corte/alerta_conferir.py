@@ -14,7 +14,11 @@ import json
 
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.corte.desvio_categoria import IMPRECISAO, normalizar_categoria
-from app.domain.corte.segment_calculator import normalizar_desvio, somar_desvios_novos
+from app.domain.corte.segment_calculator import (
+    dividir_desvios_no_ponto,
+    normalizar_desvio,
+    somar_desvios_novos,
+)
 
 
 def alertas_gravados(coluna: object) -> list:
@@ -81,6 +85,21 @@ def somar_alertas(gravados: list, novos: list) -> tuple[list, int]:
     somados, adicionados = somar_desvios_novos(gravados, novos)
     somados.sort(key=lambda alerta: alerta.get("inicio_seg", 0))
     return somados, adicionados
+
+
+def dividir_alertas_no_ponto(alertas: list, ponto_seg: float) -> tuple[list, list]:
+    """(alertas da metade esquerda, da direita) ao dividir o corte no ponto.
+
+    Mesma regra dos desvios: o alerta que cruza o ponto vai para as duas
+    metades, cada uma com a sua parte — a afirmação continua a conferir dos dois
+    lados.
+    """
+    return dividir_desvios_no_ponto(alertas, ponto_seg)
+
+
+def juntar_alertas(do_primeiro: list, do_segundo: list) -> list:
+    """Os alertas do corte que sobrevive à junção: os dois lados, sem duplicar."""
+    return somar_alertas(do_primeiro, do_segundo)[0]
 
 
 def marcar_conferido(alertas: list, alerta_id: str) -> list:
