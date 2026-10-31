@@ -42,10 +42,15 @@ from app.domain.publicacao.publicacao import (
     legenda_unica,
     segurar_sem_capa_vertical,
 )
-from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido, marca_da_aba
-from app.services import janela_do_robo
+from app.domain.publicacao.tiktok_studio import (
+    Passo,
+    RoteiroInterrompido,
+    espera_o_operador,
+    marca_da_aba,
+)
+from app.services import abas_do_robo, janela_do_robo
 from app.services.destinos_shorts import DestinoManual
-from app.services.navegador_assistido import sessao_no_chrome
+from app.services.navegador_assistido import PaginaDoPlaywright, sessao_no_chrome
 from app.services.publicacao_destinos import PacotePublicacao
 
 
@@ -149,6 +154,11 @@ class DestinoAssistido(DestinoManual):
         conexao = sessao_no_chrome(self._robo().perfil_do_chrome())
         return await asyncio.to_thread(janela_do_robo.mostrar, conexao)
 
+    @classmethod
+    async def fechar_abas(cls) -> int:
+        """No fim do lote, fecha as abas que o robô deixou (D-1003); diz quantas."""
+        return 0
+
 
 class DestinoTikTokAssistido(DestinoAssistido):
     """O TikTok: sobe, legenda, capa e, pedido, agenda no próprio Studio (D-580)."""
@@ -168,6 +178,19 @@ class DestinoTikTokAssistido(DestinoAssistido):
             marca=marca,
             publicar_sozinho=publicar_sozinho,
             agendamento=self.agendamento,
+        )
+
+    @classmethod
+    async def fechar_abas(cls) -> int:
+        """Sai tudo menos a aba que ainda espera o Publicar do operador (D-1003)."""
+        from app.services import tiktok_studio
+
+        def fica(pagina) -> bool:
+            nome = PaginaDoPlaywright(pagina).nome_da_janela()
+            return espera_o_operador(pagina.url, nome)
+
+        return await asyncio.to_thread(
+            abas_do_robo.fechar_abas_que_sobraram, tiktok_studio.perfil_do_chrome(), fica
         )
 
 

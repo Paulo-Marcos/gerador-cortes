@@ -240,6 +240,23 @@ def marca_da_aba(identificador: str) -> str:
     return f"{PREFIXO_DA_MARCA}{identificador}" if identificador else ""
 
 
+def espera_o_operador(url: str, nome_da_janela: str) -> bool:
+    """Esta aba ainda guarda um upload pronto, esperando o Publicar? (D-1003)
+
+    Só a aba que o roteiro MARCOU e que não saiu do upload. A de lançamento do
+    Chrome não tem marca, e a publicada já saiu: as duas podem fechar no fim do
+    lote. Fechar a que espera jogaria fora um envio pronto.
+
+    >>> espera_o_operador("https://www.tiktok.com/tiktokstudio/upload", "cortadorlive-abc")
+    True
+    >>> espera_o_operador("https://www.tiktok.com/tiktokstudio/content", "cortadorlive-abc")
+    False
+    >>> espera_o_operador("https://www.tiktok.com/tiktokstudio/upload", "")
+    False
+    """
+    return nome_da_janela.startswith(PREFIXO_DA_MARCA) and not publicou(url)
+
+
 def e_a_aba_marcada(nome_da_janela: str, marca: str) -> bool:
     """Esta aba é a que o roteiro marcou?
 
@@ -299,6 +316,19 @@ def porta_de_depuracao(perfil: str) -> int:
         return PORTA_MINIMA_DE_DEPURACAO
     digest = hashlib.sha1(perfil.casefold().encode("utf-8")).digest()
     return PORTA_MINIMA_DE_DEPURACAO + int.from_bytes(digest[:4], "big") % PORTAS_DE_DEPURACAO
+
+
+def portas_do_perfil(perfil: str, quantas: int) -> list[int]:
+    """Onde o Chrome deste perfil pode estar: a preferida e as seguintes (D-761).
+
+    >>> portas_do_perfil("", 3)
+    [9222, 9223, 9224]
+    """
+    preferida = porta_de_depuracao(perfil) - PORTA_MINIMA_DE_DEPURACAO
+    return [
+        PORTA_MINIMA_DE_DEPURACAO + (preferida + salto) % PORTAS_DE_DEPURACAO
+        for salto in range(quantas)
+    ]
 
 
 ARGUMENTO_DO_PERFIL = "--user-data-dir="
