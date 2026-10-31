@@ -11375,7 +11375,7 @@
         "type": "object"
       },
       "TelemetriaApagados": {
-        "description": "D-993: propostas apagadas; `por_motivo` traz todo slug, mais `sem_motivo`.",
+        "description": "Propostas apagadas (D-993). `total` conta apagados; `por_motivo` conta cada motivo\nmarcado (D-1005: um apagado pode ter vários), com todo slug mais `sem_motivo`.",
         "properties": {
           "por_motivo": {
             "additionalProperties": {

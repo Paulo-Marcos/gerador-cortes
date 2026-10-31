@@ -128,9 +128,9 @@ function useTriagemPeloTeclado({
     else if (acao === 'excluir') {
       linhaQuePediu.current = linha;
       const pedido = confirmacaoExcluirCorte(status.numero, status.titulo ?? '', corte?.origem_analise);
-      confirmacao.executarOuPedir(pedido, (motivo) => {
+      confirmacao.executarOuPedir(pedido, (motivos) => {
         const vizinha = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
-        deletar.mutate(motivo, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });
+        deletar.mutate(motivos, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });
       });
     } else {
       e.stopPropagation();

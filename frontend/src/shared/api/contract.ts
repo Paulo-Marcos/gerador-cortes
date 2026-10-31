@@ -9485,7 +9485,8 @@ export interface components {
         };
         /**
          * TelemetriaApagados
-         * @description D-993: propostas apagadas; `por_motivo` traz todo slug, mais `sem_motivo`.
+         * @description Propostas apagadas (D-993). `total` conta apagados; `por_motivo` conta cada motivo
+         *     marcado (D-1005: um apagado pode ter vários), com todo slug mais `sem_motivo`.
          */
         TelemetriaApagados: {
             /** Por Motivo */
