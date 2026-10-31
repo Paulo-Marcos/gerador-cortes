@@ -2,20 +2,24 @@
 
 O corte some; o `CorteSnapshot` (D-303) fica, com o projeto, a hora e o motivo
 que o operador escolheu (ou nenhum). É o que a telemetria conta por motivo.
+D-995: os shorts do corte saem no mesmo cascade, e o snapshot de cada um fica datado.
 """
 
 from datetime import datetime
 
 from app.domain.corte.motivo_apagado import normalizar_motivo_apagado
 from app.models import Corte
+from app.services import proposta_do_short
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def registrar(corte: Corte, motivo: str | None) -> None:
-    """Marca o snapshot do corte como apagado; chamar antes do `delete`.
+async def registrar(db: AsyncSession, corte: Corte, motivo: str | None) -> None:
+    """Marca os snapshots do corte e dos shorts dele como apagados; chamar antes do `delete`.
 
     Corte sem snapshot foi criado na mão: não há proposta a medir, e o motivo
     se perde sem prejuízo.
     """
+    await proposta_do_short.marcar_apagados(db, corte.id)
     snapshot = corte.snapshot
     if snapshot is None:
         return

@@ -673,7 +673,7 @@ class CorteService:
             if not corte:
                 raise NaoEncontrado("Corte não encontrado")
             projeto_id = corte.projeto_id
-            proposta_apagada.registrar(corte, motivo)
+            await proposta_apagada.registrar(db, corte, motivo)
             await db.delete(corte)
 
         corte_dir = projetos_dir() / projeto_id / "cortes" / corte_id

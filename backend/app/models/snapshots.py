@@ -1,4 +1,4 @@
-"""Fotos congeladas do que a IA propôs (hoje: o corte)."""
+"""Fotos congeladas do que a IA propôs: o corte (D-303) e o short (D-995)."""
 
 from datetime import datetime
 
@@ -42,4 +42,37 @@ class CorteSnapshot(Base):
     score_json: Mapped[str] = mapped_column(Text, default="{}")
     # Quem propôs o corte: o provider da análise ("claude", "gemini") ou "manual".
     origem_analise: Mapped[str] = mapped_column(String(30), default="claude")
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ShortSnapshot(Base):
+    """O que a IA propôs para UM short, antes da mão do operador, e que não muda.
+
+    É o `CorteSnapshot` (D-303) do short. Na D-989, as bordas e o score do
+    shorts-expert só saíram do `llm_calls`, casando título — foi assim que se viu
+    o operador esticar 43 de 65 shorts aceitos. Agora a régua proposta×final é
+    esta linha (`domain/short/telemetria_shorts.py`).
+
+    Sobrevive ao short, na forma que a D-993 deu ao snapshot do corte: `short_id`
+    e `corte_id` não são FK, e apagar o corte (que leva os shorts no cascade)
+    grava `apagado_em`. `corte_id` é o corte em que o short NASCEU: juntar cortes
+    move o short, não a origem da proposta.
+    """
+
+    __tablename__ = "short_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    short_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    corte_id: Mapped[str] = mapped_column(String(36), index=True)
+    projeto_id: Mapped[str] = mapped_column(String(36), index=True)
+    apagado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+    numero: Mapped[int] = mapped_column(Integer, default=0)
+    titulo_sugerido: Mapped[str] = mapped_column(String(500), default="")
+    gancho: Mapped[str] = mapped_column(Text, default="")
+    inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    score: Mapped[float] = mapped_column(Float, default=0.0)
+    # Quem propôs: o provider ("claude", "gemini") e o modelo que ATENDEU a chamada.
+    provedor: Mapped[str] = mapped_column(String(30), default="")
+    modelo: Mapped[str] = mapped_column(String(100), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

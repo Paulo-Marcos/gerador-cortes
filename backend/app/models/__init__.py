@@ -19,7 +19,7 @@ from app.models.canal import (
 )
 from app.models.projeto import Corte, MetadadoCorte, Projeto
 from app.models.shorts import MetadadoShort, PublicacaoShort, Short
-from app.models.snapshots import CorteSnapshot
+from app.models.snapshots import CorteSnapshot, ShortSnapshot
 
 __all__ = [
     "AvaliacaoBruto",
@@ -34,6 +34,7 @@ __all__ = [
     "Projeto",
     "PublicacaoShort",
     "Short",
+    "ShortSnapshot",
     "StatusCorte",
     "StatusLiveCandidata",
     "StatusProjeto",

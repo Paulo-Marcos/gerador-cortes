@@ -35,10 +35,10 @@ from app.domain.short.cenas_short import normalizar_lista as normalizar_lista_de
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.domain.short.formato_video import foco_de_regiao
 from app.domain.short.moldura_short import Moldura
-from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort, sem_repetir_existentes
+from app.domain.short.shorts import ResultadoSugestoes, sem_repetir_existentes
 from app.domain.short.shorts_prontos import redes_do_corte
 from app.models import Corte, MetadadoShort, Projeto, Short, StatusShort
-from app.services import resumo_dos_fires
+from app.services import proposta_do_short, resumo_dos_fires
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
 from sqlalchemy import func, or_, select
@@ -113,13 +113,16 @@ def montar_texto_transcricao(transcricao_final: list[dict]) -> str:
 
 
 async def registrar_sugestoes(
-    contexto: ContextoShorts, resultado: ResultadoSugestoes
+    contexto: ContextoShorts,
+    resultado: ResultadoSugestoes,
+    origem: proposta_do_short.OrigemDaProposta = proposta_do_short.SEM_ORIGEM,
 ) -> list[dict]:
     """Soma os recém-propostos aos candidatos do corte, sem apagar nenhum (RN-26).
 
     Até a D-803 a rodada nova trocava os palpites pendentes da IA; o operador
     pediu que gerar de novo nunca desfaça o que já está na fila. O trecho que
-    repete um candidato existente cai, com o motivo em `descartes`.
+    repete um candidato existente cai, com o motivo em `descartes`. Cada um nasce
+    com a proposta congelada ao lado (D-995).
     """
     async with AsyncSessionLocal() as db:
         proximo_numero = await _proximo_numero_livre(db, contexto.corte_id)
@@ -131,10 +134,10 @@ async def registrar_sugestoes(
         resultado = sem_repetir_existentes(resultado, [(i, f) for i, f in existentes])
 
         novos = [
-            _para_modelo(contexto.corte_id, proximo_numero + posicao, sugestao)
+            proposta_do_short.para_modelo(contexto.corte_id, proximo_numero + posicao, sugestao)
             for posicao, sugestao in enumerate(resultado.sugestoes)
         ]
-        db.add_all(novos)
+        db.add_all(novos + proposta_do_short.congelar(novos, contexto.projeto_id, origem))
         await db.commit()
         serializados = [_serializar(short) for short in novos]
 
@@ -976,7 +979,8 @@ async def sugerir_shorts(corte_id: str, provider: ProviderIA = "claude") -> dict
         corte_id=corte_id,
     )
     resultado = normalizar_sugestoes(resposta, duracao_bruto_seg=contexto.duracao_seg, faixa=faixa)
-    shorts = await registrar_sugestoes(contexto, resultado)
+    origem = proposta_do_short.origem_da(skill, provider)
+    shorts = await registrar_sugestoes(contexto, resultado, origem)
     return {"shorts": shorts, "descartes": resultado.descartes}
 
 
@@ -1288,21 +1292,6 @@ def _duracao_do_bruto(corte: Corte, transcricao: list[dict]) -> float:
         return gravada
     ultimo = transcricao[-1]
     return float(ultimo.get("end", ultimo.get("start", 0.0)) or 0.0)
-
-
-def _para_modelo(corte_id: str, numero: int, sugestao: SugestaoShort) -> Short:
-    return Short(
-        id=str(uuid.uuid4()),
-        corte_id=corte_id,
-        numero=numero,
-        titulo_sugerido=sugestao.titulo,
-        gancho=sugestao.gancho,
-        inicio_seg=sugestao.inicio_seg,
-        fim_seg=sugestao.fim_seg,
-        score=sugestao.score,
-        justificativa=sugestao.justificativa,
-        status=StatusShort.SUGERIDO,
-    )
 
 
 def foco_efetivo(short: Short, corte: Corte | None) -> float:
