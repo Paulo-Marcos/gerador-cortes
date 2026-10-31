@@ -41,7 +41,7 @@ from app.domain.publicacao.studio_youtube import (
     url_da_lista,
 )
 from app.infrastructure import studio_youtube_store
-from app.services import janela_do_robo, navegador_assistido, navegador_do_robo
+from app.services import abas_do_robo, janela_do_robo, navegador_assistido, navegador_do_robo
 from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
@@ -222,16 +222,24 @@ def agendar(video_id: str, *, relacionado: str = "", short: bool = False) -> Non
 
 async def _esvaziar() -> None:
     global _trabalhando
+    falhou = False
     try:
         await asyncio.sleep(RESPIRO_ANTES_DE_COMECAR)
         while _pendentes:
             tarefas = juntar(_pendentes[:])
             _pendentes.clear()
             falhas = await asyncio.to_thread(_no_navegador, tarefas)
+            falhou = falhou or bool(falhas)
             for falha in falhas:
                 logger.warning("[Studio] %s", falha)
     finally:
         _trabalhando = False
+    if not falhou:
+        # D-1003: o lote acabou bem; sai também a aba com que o Chrome nasceu.
+        # Com falha, as abas ficam: é nelas que o operador lê o motivo. Depois de
+        # soltar a fila: o que chegar agora abre outro trabalhador, que respira antes.
+        perfil = navegador_do_robo.perfil_da_plataforma(PLATAFORMA)
+        await asyncio.to_thread(abas_do_robo.fechar_abas_que_sobraram, perfil)
 
 
 # --------------------------------------------------------------------------- #

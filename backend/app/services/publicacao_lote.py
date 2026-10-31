@@ -44,6 +44,7 @@ from app.domain.publicacao.ritmo_publicacao import (
 )
 from app.models import PublicacaoShort
 from app.services import (
+    abas_do_robo,
     destinos_assistidos,
     destinos_shorts,  # noqa: F401 — registra os destinos
     publicacao_destinos,
@@ -169,8 +170,9 @@ async def criar(
     _lote_atual = lote
 
     for plataforma in lote.plataformas:
+        robo = _robo_do_lote(plataforma, lote.opcoes)  # D-1003: no fim, as abas dele saem
         fire_and_forget(
-            _rodar_raia(lote, plataforma),
+            abas_do_robo.no_lote(robo and robo.fechar_abas, _rodar_raia(lote, plataforma)),
             name=f"publicar-{plataforma.value}-{lote.id[:8]}",
         )
     return lote
@@ -321,7 +323,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
         _conferindo.add((item.alvo_id, item.plataforma))  # antes: CONFERIR já termina o lote
         await _mudar(item, EstadoItem.CONFERIR, detalhe=str(exc))
         vigilia = _vigiar(item, exc.destino, exc.marca, EstadoItem.CONFERIR, NAO_DEU_PARA_CONFERIR)
-        fire_and_forget(vigilia, name="conferir-aba")
+        fire_and_forget(abas_do_robo.no_lote(exc.destino.fechar_abas, vigilia), name="conferir-aba")
         return EstadoItem.CONFERIR
     except Exception as exc:  # noqa: BLE001 — a raia reporta e decide se segue
         logger.warning("[Lote] %s em %s falhou: %s", item.alvo_id[:8], item.plataforma.value, exc)
@@ -347,7 +349,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
             # Já está em SUA_VEZ (`ao_ficar_pronta`); a raia segue, a vigília fica.
             recado = com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos)
             vigilia = _vigiar(item, destino, resultado["marca"], EstadoItem.SUA_VEZ, recado)
-            fire_and_forget(vigilia, name="vigiar-aba")
+            fire_and_forget(abas_do_robo.no_lote(destino.fechar_abas, vigilia), name="vigiar-aba")
             return EstadoItem.SUA_VEZ
         if resultado.get("publicado"):
             await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
