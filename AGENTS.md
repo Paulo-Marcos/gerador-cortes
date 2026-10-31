@@ -70,7 +70,7 @@ Antes de cada commit: `pytest -m "not integration" -n 6`. Catracas de tamanho de
 ## Armadilhas
 
 - **Rode pelo `backend/.venv`**, nunca pelo Python global; sincronize com `bin\bootstrap.ps1 -Dev` antes de medir linha de base de catraca.
-- **Código de saída de pipe mente** (`cmd | tail; echo $?` é o do `tail`): grave em arquivo e leia — em `.guia/tmp/<D-NNN>/` (fora do git), nunca na pasta pai do worktree, que é a `C:\DEV` e deixa log órfão.
+- **Código de saída de pipe mente** (`cmd | tail; echo $?` é o do `tail`): grave em arquivo e leia — em `.guia/tmp/<D-NNN>/` (fora do git), nunca fora do worktree: o log fica órfão quando ele some (já sobraram 5 em `C:\DEV`).
 - **Barra invertida** de caminho do Windows numa string Python vira escape (`\b` é backspace): escreva com a ferramenta de edição ou string crua `r"..."`. O teste de encoding acusa.
 - `.ps1` com acento precisa de BOM (o PowerShell 5.1 lê sem BOM como ANSI).
 - `npm run format` reescreve tudo; o npm global antigo quebra `npm audit fix` — use o npm do Node 24.

@@ -18,7 +18,7 @@ npm run lint && npx tsc --noEmit && npx vitest run && npm run build
 ```
 
 - **Não rode `npm run format`** (prettier `--write`): o CI não usa prettier e o comando reescreve o repositório inteiro.
-- **Nunca declare verde pelo código de saída de um pipe** (`cmd | tail; echo $?` mostra o código do `tail`). Grave a saída num arquivo e leia, em `.guia/tmp/<D-NNN>/` (fora do git), nunca na pasta pai do worktree: ela é a `C:\DEV` e o log fica órfão quando o worktree some.
+- **Nunca declare verde pelo código de saída de um pipe** (`cmd | tail; echo $?` mostra o código do `tail`). Grave a saída num arquivo e leia, em `.guia/tmp/<D-NNN>/` (fora do git), nunca fora do worktree: o log fica órfão quando ele some (já sobraram 5 em `C:\DEV`).
 - No Windows, `lint-imports > NUL` sai com 1 mesmo com todos os contratos KEPT (a impressão do `rich` em cp1252). Rode com `PYTHONUTF8=1` ou grave a saída em arquivo (em `.guia/tmp/<D-NNN>/`).
 - **Confira o encoding depois de uma edição feita por agente**: tsc, eslint e vitest não pegam mojibake. O teste `tests/test_sem_mojibake_d668.py` pega — e, por ser pesado, fica fora do ciclo rápido: rode-o explicitamente (`pytest tests/test_sem_mojibake_d668.py`).
 
