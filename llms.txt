@@ -26,7 +26,7 @@
 - Camadas verificadas pelo import-linter (backend/pyproject.toml): routers → services → domain (puro) / infrastructure
 - Routers: backend/app/routers/ · serviços: backend/app/services/ · regras puras: backend/app/domain/
 - Clientes externos (Claude CLI, Antigravity CLI, API do Gemini, ffmpeg, fila do worker): backend/app/infrastructure/
-- Modelos: backend/app/models.py · contrato HTTP versionado: backend/openapi.json
+- Modelos: backend/app/models/ (pacote) · contrato HTTP versionado: backend/openapi.json
 
 ## Frontend (React + Vite)
 - Páginas por feature: frontend/src/features/ · rotas em frontend/src/routes.tsx

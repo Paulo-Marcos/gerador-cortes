@@ -41,7 +41,6 @@ EXCECOES = {
     "backend/app/infrastructure/render/ffmpeg_commands.py": 512,
     "backend/app/infrastructure/render/ffmpeg_grade.py": 668,
     "backend/app/infrastructure/settings_store.py": 893,
-    "backend/app/models.py": 904,
     "backend/app/routers/cortes.py": 698,
     "backend/app/routers/projetos.py": 768,
     "backend/app/routers/shorts.py": 1192,
