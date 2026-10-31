@@ -2,7 +2,8 @@
 
 Lê cortes + snapshots do banco, delega o diff ao domain puro
 (`app.domain.corte.telemetria_cortes`) e devolve payloads prontos para os endpoints
-de projeto e cross-projeto (JSON/CSV).
+de projeto e cross-projeto (JSON/CSV). D-995: o payload do projeto leva também
+os shorts (`services/telemetria_shorts.py`).
 """
 
 import json
@@ -15,6 +16,7 @@ from app.domain.corte.telemetria_cortes import (
     telemetria_csv,
 )
 from app.models import Corte, CorteSnapshot, Projeto
+from app.services import telemetria_shorts
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,6 +46,8 @@ class TelemetriaCortesService:
             "apagados": contar_apagados_por_motivo(motivo for _, motivo in apagados),
             # D-999: o que o editor mudou, somado por quem propôs.
             "mudancas_por_origem": mudancas_por_origem(diffs, apagados),
+            # D-995: a proposta de cada short contra o short final.
+            "shorts": await telemetria_shorts.do_projeto(db, projeto_id),
         }
 
     @staticmethod

@@ -60,7 +60,7 @@ EXCECOES = {
     "backend/app/services/ranking_lives.py": 547,
     "backend/app/services/render/pipeline_render.py": 1633,
     "backend/app/services/render/render_short.py": 683,
-    "backend/app/services/shorts.py": 1436,
+    "backend/app/services/shorts.py": 1425,
     "backend/app/services/tiktok_studio.py": 761,
     "backend/app/services/youtube.py": 610,
     "frontend/src/features/editor/fase1/RightTabsPanel.tsx": 662,
