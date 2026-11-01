@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 _SEGUNDOS_PARA_FECHAR = 15.0
 
 _EM_USO: Counter[str] = Counter()
+# D-1003: os perfis com que este processo já falou — só neles o robô deixou aba.
+_JA_USADOS: set[str] = set()
 _TRAVA_DO_USO = threading.Lock()
 
 
@@ -57,6 +59,7 @@ def em_uso(perfil: Path) -> Iterator[None]:
     chave = str(perfil).casefold()
     with _TRAVA_DO_USO:
         _EM_USO[chave] += 1
+        _JA_USADOS.add(chave)
     try:
         yield
     finally:
@@ -67,6 +70,13 @@ def em_uso(perfil: Path) -> Iterator[None]:
 def _alguem_usando(perfil: Path) -> bool:
     with _TRAVA_DO_USO:
         return _EM_USO[str(perfil).casefold()] > 0
+
+
+def livre_depois_de_usado(perfil: Path) -> bool:
+    """O robô já falou com o Chrome deste perfil, e ninguém fala agora? (D-1003)"""
+    chave = str(perfil).casefold()
+    with _TRAVA_DO_USO:
+        return chave in _JA_USADOS and _EM_USO[chave] == 0
 
 
 def abrir_escondido(
