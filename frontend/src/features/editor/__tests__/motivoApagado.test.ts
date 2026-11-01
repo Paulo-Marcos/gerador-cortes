@@ -39,7 +39,7 @@ describe('cortesApi.deletarCorte · motivo (D-993)', () => {
     vi.unstubAllGlobals();
   });
 
-  async function urlDoDelete(motivo?: string): Promise<string> {
+  async function urlDoDelete(motivos?: readonly string[]): Promise<string> {
     const chamadas: Request[] = [];
     vi.resetModules();
     vi.stubEnv('VITE_API_URL', 'http://api.test/api');
@@ -51,13 +51,13 @@ describe('cortesApi.deletarCorte · motivo (D-993)', () => {
       }),
     );
     const { cortesApi } = await import('../api/cortes');
-    await cortesApi.deletarCorte('c1', motivo);
+    await cortesApi.deletarCorte('c1', motivos);
     expect(chamadas[0].method).toBe('DELETE');
     return chamadas[0].url;
   }
 
   it('leva o motivo escolhido na query', async () => {
-    expect(await urlDoDelete('repetido')).toBe('http://api.test/api/cortes/c1?motivo=repetido');
+    expect(await urlDoDelete(['repetido'])).toBe('http://api.test/api/cortes/c1?motivo=repetido');
   });
 
   it('sem motivo, a URL fica a de sempre', async () => {
