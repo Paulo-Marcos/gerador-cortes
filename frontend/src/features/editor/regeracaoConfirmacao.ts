@@ -100,7 +100,7 @@ export function confirmacaoExcluirCorte(
     tone: 'danger',
     // D-993: só a proposta da IA tem motivo a medir; o corte feito na mão não.
     ...(origemAnalise
-      ? { escolha: { pergunta: 'Por que sai? (opcional)', opcoes: MOTIVOS_APAGADO } }
+      ? { escolha: { pergunta: 'Por que sai? (marque quantos quiser, opcional)', opcoes: MOTIVOS_APAGADO } }
       : {}),
   };
 }

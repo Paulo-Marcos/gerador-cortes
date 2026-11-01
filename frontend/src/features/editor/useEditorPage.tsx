@@ -592,8 +592,8 @@ export function useEditorPage() {
     );
   }
 
-  function excluirConfirmado(motivo?: string) {
-    deletarCorte.mutate(motivo, {
+  function excluirConfirmado(motivos?: readonly string[]) {
+    deletarCorte.mutate(motivos, {
       onSuccess: () => {
         // D-883: o ajuste morre com o corte — a saída o salvaria no excluído (404).
         editHistory.reset({});

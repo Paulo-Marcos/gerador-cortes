@@ -23,7 +23,8 @@ class CorteSnapshot(Base):
     corte_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
     projeto_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     apagado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
-    motivo_apagado: Mapped[str] = mapped_column(String(30), default="")
+    # D-1005: um ou mais slugs separados por "|" (cabem os seis do vocabulário).
+    motivo_apagado: Mapped[str] = mapped_column(String(100), default="")
     numero: Mapped[int] = mapped_column(Integer, default=0)
     titulo_proposto: Mapped[str] = mapped_column(String(500), default="")
     tema_central: Mapped[str] = mapped_column(String(500), default="")

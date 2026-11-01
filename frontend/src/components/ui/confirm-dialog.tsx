@@ -23,8 +23,9 @@ export interface PedidoConfirmacao {
   /** `danger` quando a acao descarta trabalho ja feito. */
   tone?: 'danger' | 'default';
   /**
-   * D-993: escolha OPCIONAL que segue com a confirmacao (ex.: o motivo de
-   * apagar). Confirmar sem escolher continua valendo: o gesto segue rapido.
+   * D-993: escolha OPCIONAL que segue com a confirmacao (ex.: os motivos de
+   * apagar). D-1005: marca-se mais de uma. Confirmar sem marcar nada continua
+   * valendo: o gesto segue rapido.
    */
   escolha?: { pergunta: string; opcoes: readonly OpcaoConfirmacao[] };
 }
@@ -34,17 +35,17 @@ export interface OpcaoConfirmacao {
   rotulo: string;
 }
 
-/** Chips de uma escolha so': clicar de novo na marcada desmarca. */
+/** Chips de multipla escolha: cada clique marca ou desmarca aquela opcao. */
 function EscolhaOpcional({
   pergunta,
   opcoes,
-  escolhida,
-  onEscolher,
+  escolhidas,
+  onAlternar,
 }: {
   pergunta: string;
   opcoes: readonly OpcaoConfirmacao[];
-  escolhida: string | undefined;
-  onEscolher: (slug: string | undefined) => void;
+  escolhidas: readonly string[];
+  onAlternar: (slug: string) => void;
 }) {
   return (
     <div className="mt-3 flex flex-col gap-1.5">
@@ -53,13 +54,13 @@ function EscolhaOpcional({
       </span>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={pergunta}>
         {opcoes.map((opcao) => {
-          const ativa = opcao.slug === escolhida;
+          const ativa = escolhidas.includes(opcao.slug);
           return (
             <button
               key={opcao.slug}
               type="button"
               aria-pressed={ativa}
-              onClick={() => onEscolher(ativa ? undefined : opcao.slug)}
+              onClick={() => onAlternar(opcao.slug)}
               className={cn(
                 'rounded-[7px] border px-2 py-[3px] text-[11px] font-bold transition-colors',
                 ativa
@@ -83,12 +84,23 @@ export function ConfirmDialog({
 }: {
   pedido: PedidoConfirmacao | null;
   onCancel: () => void;
-  onConfirm: (escolha?: string) => void;
+  onConfirm: (escolhas?: readonly string[]) => void;
 }) {
   const perigoso = pedido?.tone === 'danger';
   // A escolha e' de UM pedido: outro pedido (ou o mesmo reaberto) comeca vazio.
-  const [escolha, setEscolha] = useState<{ de: PedidoConfirmacao; slug?: string } | null>(null);
-  const escolhida = escolha?.de === pedido ? escolha?.slug : undefined;
+  const [escolha, setEscolha] = useState<{ de: PedidoConfirmacao; slugs: string[] } | null>(null);
+  const escolhidas = escolha?.de === pedido ? escolha.slugs : [];
+  // Na ordem das opcoes, e nao na dos cliques: o mesmo conjunto chega igual.
+  const alternar = (slug: string) => {
+    if (!pedido?.escolha) return;
+    const marcadas = escolhidas.includes(slug)
+      ? escolhidas.filter((s) => s !== slug)
+      : [...escolhidas, slug];
+    setEscolha({
+      de: pedido,
+      slugs: pedido.escolha.opcoes.map((o) => o.slug).filter((s) => marcadas.includes(s)),
+    });
+  };
   return (
     <Modal
       open={pedido !== null}
@@ -107,8 +119,8 @@ export function ConfirmDialog({
         <EscolhaOpcional
           pergunta={pedido.escolha.pergunta}
           opcoes={pedido.escolha.opcoes}
-          escolhida={escolhida}
-          onEscolher={(slug) => setEscolha({ de: pedido, slug })}
+          escolhidas={escolhidas}
+          onAlternar={alternar}
         />
       )}
       <div className="mt-4 flex items-center justify-end gap-2">
@@ -119,7 +131,7 @@ export function ConfirmDialog({
           type="button"
           variant="default"
           size="sm"
-          onClick={() => (escolhida === undefined ? onConfirm() : onConfirm(escolhida))}
+          onClick={() => (escolhidas.length === 0 ? onConfirm() : onConfirm(escolhidas))}
           className={perigoso ? 'bg-[var(--wb-warn)] hover:opacity-90' : ''}
         >
           {pedido?.confirmLabel ?? 'Confirmar'}
@@ -136,7 +148,7 @@ export function ConfirmDialog({
 export function useConfirmacao() {
   const [pendente, setPendente] = useState<{
     pedido: PedidoConfirmacao;
-    acao: (escolha?: string) => void;
+    acao: (escolhas?: readonly string[]) => void;
   } | null>(null);
 
   const cancelar = useCallback(() => setPendente(null), []);
@@ -144,18 +156,18 @@ export function useConfirmacao() {
   // A acao roda FORA do updater: em StrictMode o updater e' invocado duas
   // vezes, o que dispararia a regeracao em dobro.
   const confirmar = useCallback(
-    (escolha?: string) => {
+    (escolhas?: readonly string[]) => {
       if (!pendente) return;
       const { acao } = pendente;
       setPendente(null);
-      acao(escolha);
+      acao(escolhas);
     },
     [pendente],
   );
 
   /** `pedido` null (primeira execucao) dispara direto; senao abre o dialogo. */
   const executarOuPedir = useCallback(
-    (pedido: PedidoConfirmacao | null, acao: (escolha?: string) => void) => {
+    (pedido: PedidoConfirmacao | null, acao: (escolhas?: readonly string[]) => void) => {
       if (pedido === null) acao();
       else setPendente({ pedido, acao });
     },

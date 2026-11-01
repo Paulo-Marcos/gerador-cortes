@@ -47,9 +47,9 @@ function encenar(passos: Passo[], pedido: PedidoConfirmacao = PEDIDO) {
   return { onConfirm, html };
 }
 
-const escolher = (slug: string | undefined) => (arvore: No[]) => {
-  const escolha = arvore.find((no) => 'onEscolher' in no.props)!;
-  (escolha.props.onEscolher as (s: string | undefined) => void)(slug);
+const escolher = (slug: string) => (arvore: No[]) => {
+  const escolha = arvore.find((no) => 'onAlternar' in no.props)!;
+  (escolha.props.onAlternar as (s: string) => void)(slug);
 };
 
 const confirmar = (arvore: No[]) => {
@@ -75,11 +75,11 @@ describe('ConfirmDialog · escolha opcional (D-993)', () => {
   it('a opção marcada segue com a confirmação', () => {
     const { onConfirm, html } = encenar([escolher('repetido'), confirmar]);
     expect(html).toMatch(/aria-pressed="true"[^>]*>Repete outro corte/);
-    expect(onConfirm).toHaveBeenCalledWith('repetido');
+    expect(onConfirm).toHaveBeenCalledWith(['repetido']);
   });
 
   it('desmarcar volta a confirmar sem escolha', () => {
-    const { onConfirm } = encenar([escolher('repetido'), escolher(undefined), confirmar]);
+    const { onConfirm } = encenar([escolher('repetido'), escolher('repetido'), confirmar]);
     expect(onConfirm.mock.calls[0]).toEqual([]);
   });
 

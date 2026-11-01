@@ -76,7 +76,8 @@ class TelemetriaCorteDiff(RespostaApi):
 
 
 class TelemetriaApagados(RespostaApi):
-    """D-993: propostas apagadas; `por_motivo` traz todo slug, mais `sem_motivo`."""
+    """Propostas apagadas (D-993). `total` conta apagados; `por_motivo` conta cada motivo
+    marcado (D-1005: um apagado pode ter vários), com todo slug mais `sem_motivo`."""
 
     total: int
     por_motivo: dict[str, int]
