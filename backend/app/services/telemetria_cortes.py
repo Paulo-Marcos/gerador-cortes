@@ -9,6 +9,7 @@ os shorts (`services/telemetria_shorts.py`).
 import json
 
 from app.domain.corte.motivo_apagado import contar_apagados_por_motivo
+from app.domain.corte.motivos_do_canal import slugs_de_todos
 from app.domain.corte.mudancas_do_corte import mudancas_por_origem
 from app.domain.corte.telemetria_cortes import (
     SITUACAO_COM_SNAPSHOT,
@@ -17,6 +18,7 @@ from app.domain.corte.telemetria_cortes import (
 )
 from app.models import Corte, CorteSnapshot, Projeto
 from app.services import telemetria_shorts
+from app.services.canal import motivos_de_exclusao
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,6 +37,9 @@ class TelemetriaCortesService:
         com_snapshot = sum(1 for d in diffs if d["situacao"] == SITUACAO_COM_SNAPSHOT)
 
         apagados = await _apagados(db, projeto_id)
+        # D-1006: os motivos são do canal; o escondido segue contado e nomeado.
+        motivos = motivos_de_exclusao.motivos()
+        slugs = slugs_de_todos(motivos)
         return {
             "projeto_id": projeto_id,
             "titulo_live": projeto.titulo_live or "",
@@ -43,9 +48,10 @@ class TelemetriaCortesService:
             "sem_snapshot": len(diffs) - com_snapshot,
             "cortes": diffs,
             # D-993: as propostas que o operador apagou, por motivo.
-            "apagados": contar_apagados_por_motivo(motivo for _, motivo in apagados),
+            "apagados": contar_apagados_por_motivo((motivo for _, motivo in apagados), slugs),
+            "motivos_apagado": motivos,
             # D-999: o que o editor mudou, somado por quem propôs.
-            "mudancas_por_origem": mudancas_por_origem(diffs, apagados),
+            "mudancas_por_origem": mudancas_por_origem(diffs, apagados, slugs),
             # D-995: a proposta de cada short contra o short final.
             "shorts": await telemetria_shorts.do_projeto(db, projeto_id),
         }
@@ -74,7 +80,9 @@ class TelemetriaCortesService:
         return {
             "total_cortes": len(linhas),
             "cortes": linhas,
-            "mudancas_por_origem": mudancas_por_origem(linhas, await _apagados(db)),
+            "mudancas_por_origem": mudancas_por_origem(
+                linhas, await _apagados(db), slugs_de_todos(motivos_de_exclusao.motivos())
+            ),
         }
 
     @staticmethod

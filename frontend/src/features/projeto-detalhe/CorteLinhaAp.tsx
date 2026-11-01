@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAprovar, useAtualizarCorte, useDeletarCorte } from '@/features/editor/useCortes';
 import { confirmacaoExcluirCorte } from '@/features/editor/regeracaoConfirmacao';
+import { useMotivosVisiveis } from '@/features/channels/useMotivosDeExclusao';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
@@ -101,6 +102,7 @@ function useTriagemPeloTeclado({
   explicar,
 }: TriagemPeloTeclado) {
   const deletar = useDeletarCorte(status.corte_id, projetoId);
+  const motivosDoCanal = useMotivosVisiveis(); // D-1006: os chips do excluir
   const confirmacao = useConfirmacao();
   const linhaQuePediu = useRef<HTMLElement | null>(null);
   const cancelar = () => {
@@ -127,7 +129,7 @@ function useTriagemPeloTeclado({
     else if (acao === 'explicar') explicar();
     else if (acao === 'excluir') {
       linhaQuePediu.current = linha;
-      const pedido = confirmacaoExcluirCorte(status.numero, status.titulo ?? '', corte?.origem_analise);
+      const pedido = confirmacaoExcluirCorte(status.numero, status.titulo ?? '', corte?.origem_analise, motivosDoCanal);
       confirmacao.executarOuPedir(pedido, (motivos) => {
         const vizinha = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
         deletar.mutate(motivos, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });

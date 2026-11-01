@@ -3,6 +3,7 @@ import { useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useContextoCorte, useVelocidadePlayerPadrao } from '@/features/settings';
+import { useMotivosVisiveis } from '@/features/channels/useMotivosDeExclusao';
 import { corteKey, useAdicionarDesvio, useAtualizarCorte, useCorte, useCortesProjeto, useDeletarCorte, useDividirCorte, useJuntarCortes, useRemoverDesvio, useSincronizarTranscricao, useToggleFire, useToggleLeitura } from '@/features/editor/useCortes';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaude, useTrechosClaudeEmAndamento } from '@/features/editor/useGeracoesDaIa';
@@ -29,7 +30,6 @@ import {
   postProductionPath,
   resolveCorteStagePath,
 } from '@/features/post-production/postProductionNavigation';
-
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
 // barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
@@ -579,7 +579,7 @@ export function useEditorPage() {
   }
 
   const deletarCorte = useDeletarCorte(corteId, projetoId);
-
+  const motivosDoCanal = useMotivosVisiveis(); // D-1006: os chips do excluir
   // D-842: R exclui, e o A alterna aprovado ↔ proposto. Na D-746 o R só
   // devolvia a proposto — o mesmo que o A já fazia. Excluir é irreversível,
   // então a tecla sozinha nunca basta: o diálogo do shell (não o confirm do
@@ -587,7 +587,7 @@ export function useEditorPage() {
   function excluirCorte() {
     if (!corteUI) return;
     confirmacao.executarOuPedir(
-      confirmacaoExcluirCorte(corteUI.numero, corteUI.titulo_proposto, corteUI.origem_analise),
+      confirmacaoExcluirCorte(corteUI.numero, corteUI.titulo_proposto, corteUI.origem_analise, motivosDoCanal),
       excluirConfirmado,
     );
   }

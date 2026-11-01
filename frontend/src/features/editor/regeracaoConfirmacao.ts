@@ -1,4 +1,4 @@
-import type { PedidoConfirmacao } from '@/components/ui/confirm-dialog';
+import type { OpcaoConfirmacao, PedidoConfirmacao } from '@/components/ui/confirm-dialog';
 import type { RegerarBrutoOpcoes } from './regerarBrutoPlan';
 import { MOTIVOS_APAGADO } from './motivoApagado';
 
@@ -90,6 +90,8 @@ export function confirmacaoExcluirCorte(
   titulo: string,
   /** D-988: quem propôs o corte; null/vazio = criado na mão. */
   origemAnalise?: string | null,
+  /** D-1006: os motivos visíveis do canal; sem eles, o padrão. */
+  motivos: readonly OpcaoConfirmacao[] = MOTIVOS_APAGADO,
 ): PedidoConfirmacao {
   return {
     titulo: 'Excluir o corte de vez',
@@ -99,8 +101,9 @@ export function confirmacaoExcluirCorte(
     confirmLabel: 'Excluir de vez',
     tone: 'danger',
     // D-993: só a proposta da IA tem motivo a medir; o corte feito na mão não.
-    ...(origemAnalise
-      ? { escolha: { pergunta: 'Por que sai? (marque quantos quiser, opcional)', opcoes: MOTIVOS_APAGADO } }
+    // D-1006: canal que escondeu todos os motivos não pergunta.
+    ...(origemAnalise && motivos.length > 0
+      ? { escolha: { pergunta: 'Por que sai? (marque quantos quiser, opcional)', opcoes: motivos } }
       : {}),
   };
 }

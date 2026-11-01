@@ -8,8 +8,10 @@ D-995: os shorts do corte saem no mesmo cascade, e o snapshot de cada um fica da
 from datetime import datetime
 
 from app.domain.corte.motivo_apagado import normalizar_motivo_apagado
+from app.domain.corte.motivos_do_canal import slugs_visiveis
 from app.models import Corte
 from app.services import proposta_do_short
+from app.services.canal import motivos_de_exclusao
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -17,7 +19,7 @@ async def registrar(db: AsyncSession, corte: Corte, motivo: str | None) -> None:
     """Marca os snapshots do corte e dos shorts dele como apagados; chamar antes do `delete`.
 
     Corte sem snapshot foi criado na mão: não há proposta a medir, e o motivo
-    se perde sem prejuízo.
+    se perde sem prejuízo. D-1006: vale só motivo que o canal mostra hoje.
     """
     await proposta_do_short.marcar_apagados(db, corte.id)
     snapshot = corte.snapshot
@@ -25,4 +27,5 @@ async def registrar(db: AsyncSession, corte: Corte, motivo: str | None) -> None:
         return
     snapshot.projeto_id = corte.projeto_id
     snapshot.apagado_em = datetime.utcnow()
-    snapshot.motivo_apagado = normalizar_motivo_apagado(motivo)
+    visiveis = slugs_visiveis(motivos_de_exclusao.motivos())
+    snapshot.motivo_apagado = normalizar_motivo_apagado(motivo, visiveis)

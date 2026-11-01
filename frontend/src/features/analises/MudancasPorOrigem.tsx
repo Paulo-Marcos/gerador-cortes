@@ -28,7 +28,14 @@ const COLUNAS: { rotulo: string; valor: (g: GrupoDaOrigem) => string }[] = [
   { rotulo: 'Apagados', valor: (g) => String(g.apagados.total) },
 ];
 
-export function MudancasPorOrigem({ grupos }: { grupos: GrupoDaOrigem[] }) {
+export function MudancasPorOrigem({
+  grupos,
+  motivos = MOTIVOS_APAGADO,
+}: {
+  grupos: GrupoDaOrigem[];
+  /** D-1006: os motivos do canal, inclusive os escondidos, para nomear a contagem. */
+  motivos?: readonly { slug: string; rotulo: string }[];
+}) {
   if (grupos.length === 0) return null;
   return (
     <section className="grid gap-2">
@@ -59,7 +66,7 @@ export function MudancasPorOrigem({ grupos }: { grupos: GrupoDaOrigem[] }) {
                   </td>
                 ))}
                 <td className="px-3 py-2 text-[var(--wb-text-mute)]">
-                  {resumirApagados(g.apagados.por_motivo, MOTIVOS_APAGADO)}
+                  {resumirApagados(g.apagados.por_motivo, motivos)}
                 </td>
               </tr>
             ))}

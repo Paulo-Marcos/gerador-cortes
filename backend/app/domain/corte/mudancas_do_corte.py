@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from app.domain.corte.motivo_apagado import contar_apagados_por_motivo
+from app.domain.corte.motivo_apagado import SLUGS_MOTIVOS_APAGADO, contar_apagados_por_motivo
 
 # Mexer menos de 1 s numa borda é acerto fino de respiração, não discordância
 # da proposta: abaixo disso a borda conta como mantida.
@@ -67,12 +67,15 @@ def mudancas_do_corte(diff: dict) -> list[dict]:
 
 
 def mudancas_por_origem(
-    diffs: Iterable[dict], apagados: Iterable[tuple[str | None, str | None]]
+    diffs: Iterable[dict],
+    apagados: Iterable[tuple[str | None, str | None]],
+    slugs: Iterable[str] = SLUGS_MOTIVOS_APAGADO,
 ) -> list[dict]:
     """Soma, por origem da proposta, quantos cortes tiveram cada mudança.
 
     `diffs` já trazem `mudancas`; só os com proposta da IA entram. `apagados`
-    são pares (origem, motivo) das propostas que o operador apagou. Todo tipo
+    são pares (origem, motivo) das propostas que o operador apagou; `slugs`, os
+    motivos do canal (D-1006). Todo tipo
     aparece, mesmo com zero, para comparar provedores sem chave ausente.
     """
     grupos: dict[str, dict] = {}
@@ -92,7 +95,7 @@ def mudancas_por_origem(
         _grupo(grupos, origem)
         motivos_por_origem.setdefault(_nome_da_origem(origem), []).append(motivo)
     for origem, grupo in grupos.items():
-        grupo["apagados"] = contar_apagados_por_motivo(motivos_por_origem.get(origem, []))
+        grupo["apagados"] = contar_apagados_por_motivo(motivos_por_origem.get(origem, []), slugs)
     return [grupos[origem] for origem in sorted(grupos)]
 
 
