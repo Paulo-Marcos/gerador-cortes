@@ -123,6 +123,10 @@ class PaginaDoPlaywrightNoStudio(navegador_assistido.PaginaDoPlaywright):
 
         Pelo link da linha (`/video/<id>/edit`). O clique vai no componente e não
         no `#checkbox`: medido, o contêiner por cima intercepta o clique nele.
+
+        `segundos` é só para ACHAR a linha. Achada, a caixa tem o prazo de um
+        campo (D-1004): o Studio mostra a linha antes de montar o componente, e
+        5 s estouravam no meio do lote.
         """
         linha = self._page.locator(f'{self._css(alvo)}:has(a[href*="/video/{video_id}/"])').first
         try:
@@ -130,8 +134,9 @@ class PaginaDoPlaywrightNoStudio(navegador_assistido.PaginaDoPlaywright):
         except Exception:  # noqa: BLE001 — fora da primeira página: resposta, não erro
             return False
         caixa = linha.locator("ytcp-checkbox-lit").first
-        if caixa.locator("#checkbox").get_attribute("aria-checked") != "true":
-            caixa.click(timeout=segundos * 1000)
+        prazo = PRAZO_PARA_O_CAMPO * 1000
+        if caixa.locator("#checkbox").get_attribute("aria-checked", timeout=prazo) != "true":
+            caixa.click(timeout=prazo)
         return True
 
     def ids_no_topo(self, alvo: str, quantos: int, *, segundos: float) -> list[str]:
@@ -262,22 +267,31 @@ def executar_roteiro(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> l
 
 
 def _monetizar_tudo(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> list[str]:
-    """Uma edição em massa por aba: Vídeos (os cortes) e Shorts."""
+    """Uma edição em massa por aba: Vídeos (os cortes) e Shorts.
+
+    Uma aba que falha não leva a outra junto (D-1004); a sessão caída, sim.
+    """
     if not any(t.monetizar for t in tarefas):
         return []
     try:
         canal = _canal(pagina)
-        falhas: list[str] = []
-        for shorts in (False, True):
-            ids = a_monetizar(tarefas, shorts=shorts)
-            if ids:
-                falhas += monetizar_em_massa(pagina, canal, ids, shorts=shorts)
-        return falhas
     except ServicoExternoFalhou as exc:
         return [f"monetização: {exc}"]
-    except Exception as exc:  # noqa: BLE001 — tela mudou: dizer onde parou
-        motivo = (str(exc).splitlines() or [type(exc).__name__])[0]
-        return [f"monetização: o robô parou na lista do Studio ({motivo})"]
+    falhas: list[str] = []
+    for shorts in (False, True):
+        ids = a_monetizar(tarefas, shorts=shorts)
+        if not ids:
+            continue
+        aba = "Shorts" if shorts else "Vídeos"
+        try:
+            falhas += monetizar_em_massa(pagina, canal, ids, shorts=shorts)
+        except ServicoExternoFalhou as exc:
+            falhas.append(f"monetização na aba {aba}: {exc}")
+            if _pediu_login(pagina):
+                break
+        except Exception as exc:  # noqa: BLE001 — tela mudou: dizer onde parou
+            falhas.append(f"monetização na aba {aba}: o robô parou na lista ({_motivo(exc)})")
+    return falhas
 
 
 def _relacionar_todos(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> list[str]:
@@ -329,26 +343,51 @@ def monetizar_em_massa(
     if not pagina.existe("linha_do_video", segundos=PRAZO_PARA_ABRIR):
         raise ServicoExternoFalhou(f"a aba {aba} da lista de Conteúdo não carregou")
     ids = com_os_recentes(ids, _ids_no_topo(pagina, aba))
-    marcados = [
-        v for v in ids if pagina.marcar_video("linha_do_video", v, segundos=PRAZO_POR_LINHA)
-    ]
-    faltando = [f"{v}: não está na primeira página da aba {aba}" for v in ids if v not in marcados]
+    marcados, faltando = _marcar(pagina, ids, aba)
     if not marcados:
         return faltando
-    pagina.clicar("editar_em_massa", segundos=PRAZO_PARA_O_CAMPO)
-    pagina.clicar("item_monetizacao", segundos=PRAZO_PARA_O_CAMPO)
+    _clicar_na_etapa(pagina, "editar_em_massa", "abrir o Editar")
+    _clicar_na_etapa(pagina, "item_monetizacao", "escolher Monetização")
     if not esta_monetizado(pagina.texto_de("opcao_em_massa")):
         raise ServicoExternoFalhou(
             "a edição em massa não ofereceu Monetização: On — o canal está no Programa de Parcerias?"
         )
-    pagina.clicar("atualizar_videos", segundos=PRAZO_PARA_O_CAMPO)
-    pagina.clicar("entendo", segundos=PRAZO_PARA_O_CAMPO)
+    _clicar_na_etapa(pagina, "atualizar_videos", "Update videos")
+    _clicar_na_etapa(pagina, "entendo", "I understand")
     _esperar_habilitado(pagina, "confirmar")
-    pagina.clicar("confirmar", segundos=PRAZO_PARA_O_CAMPO)
+    _clicar_na_etapa(pagina, "confirmar", "confirmar")
     atualizados, total = _esperar_aviso(pagina)
     if atualizados < total:
         faltando.append(f"o Studio atualizou {atualizados} de {total} na aba {aba}")
     return faltando
+
+
+def _marcar(pagina: PaginaDoStudio, ids: list[str], aba: str) -> tuple[list[str], list[str]]:
+    """`(marcados, falhas)`: a linha que não responde fica de fora, e o resto segue (D-1004)."""
+    marcados: list[str] = []
+    falhas: list[str] = []
+    for v in ids:
+        try:
+            if pagina.marcar_video("linha_do_video", v, segundos=PRAZO_POR_LINHA):
+                marcados.append(v)
+            else:
+                falhas.append(f"{v}: não está na primeira página da aba {aba}")
+        except Exception as exc:  # noqa: BLE001 — uma linha não derruba o lote
+            falhas.append(f"{v}: a etapa 'marcar a linha' não respondeu ({_motivo(exc)})")
+    return marcados, falhas
+
+
+def _clicar_na_etapa(pagina: PaginaDoStudio, alvo: str, etapa: str) -> None:
+    """O clique de uma etapa da edição em massa; o estouro diz QUAL etapa (D-1004)."""
+    try:
+        pagina.clicar(alvo, segundos=PRAZO_PARA_O_CAMPO)
+    except Exception as exc:  # noqa: BLE001 — o do Playwright não é o TimeoutError do Python
+        raise ServicoExternoFalhou(f"a etapa '{etapa}' não respondeu ({_motivo(exc)})") from exc
+
+
+def _motivo(exc: Exception) -> str:
+    """A primeira linha do erro: a do Playwright traz o prazo e o verbo que estourou."""
+    return (str(exc).splitlines() or [type(exc).__name__])[0]
 
 
 def _ids_no_topo(pagina: PaginaDoStudio, aba: str) -> list[str]:
@@ -371,12 +410,17 @@ def _esperar_habilitado(pagina: PaginaDoStudio, alvo: str) -> None:
 
 
 def _esperar_aviso(pagina: PaginaDoStudio) -> tuple[int, int]:
-    """Até o aviso "N of M video(s) successfully updated" — o Studio dizendo que terminou."""
+    """Até o aviso "N of M video(s) successfully updated" — o Studio dizendo que terminou.
+
+    Só lê o texto depois de o aviso existir (D-1004): ler um aviso ausente espera
+    o padrão de 30 s do Playwright e levanta, e o prazo de 300 s virava 30.
+    """
     limite = time.monotonic() + PRAZO_DA_ATUALIZACAO
     while time.monotonic() < limite:
-        contagem = atualizados_do_aviso(pagina.texto_de("aviso"))
-        if contagem:
-            return contagem
+        if pagina.existe("aviso", segundos=INTERVALO_DE_CONFERENCIA, visivel=False):
+            contagem = atualizados_do_aviso(pagina.texto_de("aviso"))
+            if contagem:
+                return contagem
         pagina.aguardar(INTERVALO_DE_CONFERENCIA)
     raise ServicoExternoFalhou(
         "o Studio não confirmou a monetização em massa — confira na janela do robô"
