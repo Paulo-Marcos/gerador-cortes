@@ -22,6 +22,7 @@ from pathlib import Path
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain.corte.metadado_corte import titulo_de_publicacao
 from app.domain.publicacao.publicacao import (
     LIMITES,
     MetadadosBase,
@@ -295,7 +296,7 @@ async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
             vertical=False,
             capa=await _capa_do_corte(db, corte),
             base=MetadadosBase(
-                titulo=corte.titulo_proposto or "",
+                titulo=await _titulo_do_corte(db, corte),
                 descricao=corte.resumo or "",
                 hashtags=await _hashtags_do_corte(db, corte),
                 # O corte E o video longo: repetir o proprio link como CTA seria
@@ -303,6 +304,21 @@ async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
                 url_video_longo="",
             ),
         )
+
+
+async def _titulo_do_corte(db, corte: Corte) -> str:
+    """O título gerado do corte, e nunca o rótulo provisório (D-1021, RN-33).
+
+    Recusa em vez de publicar: um "Corte manual #3" no ar é visto por todo mundo,
+    e o operador resolve a recusa gerando os metadados.
+    """
+    from sqlalchemy import select
+
+    meta = await db.scalar(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte.id))
+    titulo = titulo_de_publicacao(meta.titulo_youtube if meta else "", corte.titulo_proposto)
+    if not titulo:
+        raise ValueError("Este corte ainda nao tem titulo: gere os metadados antes de publicar.")
+    return titulo
 
 
 async def _capa_do_corte(db, corte: Corte) -> Path | None:
