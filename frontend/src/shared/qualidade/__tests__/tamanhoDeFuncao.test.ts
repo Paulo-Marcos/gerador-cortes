@@ -117,7 +117,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/shorts/PresetDoGanchoModal.tsx::EditorDoPresetDeGancho": 276,
   "src/features/shorts/PresetDoPalcoModal.tsx::EditorDoPresetDePalco": 101,
   "src/features/shorts/PresetsDoPalco.tsx::PresetsDoPalco": 138,
-  "src/features/shorts/PublicarEmLoteModal.tsx::PublicarEmLoteModal": 246,
+  "src/features/shorts/PublicarEmLoteModal.tsx::PublicarEmLoteModal": 244,
   "src/features/shorts/ReguaDeOnda.tsx::ReguaDeOnda": 367,
   "src/features/shorts/ReguaDeOnda.tsx::ReguaDeOnda.useEffect": 136,
   "src/features/shorts/ShortsPage.tsx::ShortsPage": 137,
