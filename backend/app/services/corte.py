@@ -18,7 +18,7 @@ from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
-from app.domain.corte import alerta_conferir, ciclo_corte
+from app.domain.corte import alerta_conferir, ciclo_corte, metadado_corte
 from app.domain.corte.ancora_match import ancorar_desvio
 from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
@@ -1133,7 +1133,7 @@ class CorteService:
         posteriores = [c for c in existentes if float(c.inicio_seg or 0) > inicio_seg]
         posicao = len(existentes) - len(posteriores) + 1
 
-        titulo = (titulo_proposto or "").strip() or f"Corte manual #{posicao}"
+        titulo = (titulo_proposto or "").strip() or metadado_corte.rotulo_de_corte_manual(posicao)
 
         novo_corte = Corte(
             id=str(uuid.uuid4()),
