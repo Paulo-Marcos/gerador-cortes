@@ -168,7 +168,7 @@ def agendamento_do_item(
 
 
 def escalona(plataforma: Plataforma) -> bool:
-    """Se a plataforma entra no escalonamento (o Instagram publica no ato)."""
+    """Se a plataforma entra no escalonamento."""
     return destino_de(plataforma.value) is not None
 
 

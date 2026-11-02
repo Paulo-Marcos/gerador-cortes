@@ -37,7 +37,12 @@ def test_get_devolve_o_padrao_e_diz_que_e_o_padrao(client):
     assert corpo["publico_personalizado"] is False
     assert corpo["dias_da_semana"][0] == "segunda"
     assert len(corpo["faixas"]) == len(corpo["faixas_padrao"]) == 28
-    assert [d["destino"] for d in corpo["destinos"]] == ["youtube", "youtube_shorts", "tiktok"]
+    assert [d["destino"] for d in corpo["destinos"]] == [
+        "youtube",
+        "youtube_shorts",
+        "tiktok",
+        "instagram_reels",
+    ]
     assert corpo["destinos"][0]["parametros"]["blocos"] == ["12:00", "18:00"]
 
 

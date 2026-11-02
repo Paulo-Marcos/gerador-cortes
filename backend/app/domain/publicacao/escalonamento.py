@@ -48,11 +48,9 @@ TODOS_OS_DIAS: frozenset[int] = frozenset(range(len(DIAS_DA_SEMANA)))
 PRIMEIRO_DIA_DO_FIM_DE_SEMANA = 5
 HORAS_DO_DIA = 24
 
-# Os destinos que o escalonamento conhece, na ordem da tela. O Instagram fica de
-# fora por MEDIÇÃO (12/09/2026 no desktop, 13/10/2026 emulando celular): o
-# compositor do instagram.com não agenda, e no layout de celular nem vídeo
-# aceita. Ele publica no ato, e a tela diz isso.
-DESTINOS_ESCALONADOS = ("youtube", "youtube_shorts", "tiktok")
+# Os destinos que o escalonamento conhece, na ordem da tela. O Instagram entrou
+# na D-1010: quem agenda é o criador de Reels do Meta Business Suite.
+DESTINOS_ESCALONADOS = ("youtube", "youtube_shorts", "tiktok", "instagram_reels")
 
 # Sem referência nenhuma, a janela "tarde/noite" da pesquisa (D-903).
 JANELA_SEM_REFERENCIA = (16, 24)
@@ -138,6 +136,8 @@ PADRAO_POR_DESTINO: dict[str, ParametrosDoDestino] = {
     "youtube_shorts": ParametrosDoDestino(("16:00", "19:00", "22:00"), 1, 3, 180),
     # Mesmo desenho; constância é o que o TikTok premia.
     "tiktok": ParametrosDoDestino(("16:00", "19:00", "22:00"), 1, 3, 180),
+    # Mesmo desenho: o objetivo é não soltar cinco Reels de uma vez (D-1010).
+    "instagram_reels": ParametrosDoDestino(("16:00", "19:00", "22:00"), 1, 3, 180),
 }
 
 
@@ -146,7 +146,9 @@ def destino_de(plataforma: str) -> str | None:
 
     >>> destino_de("tiktok_horizontal")
     'tiktok'
-    >>> destino_de("instagram_reels") is None
+    >>> destino_de("instagram_reels")
+    'instagram_reels'
+    >>> destino_de("outra_rede") is None
     True
     """
     if plataforma.startswith("tiktok"):

@@ -63,11 +63,20 @@ export function notasDeAgendamento(
   }
 
   if (plataformas.includes('instagram_reels')) {
-    notas.push({
-      plataforma: 'Instagram Reels',
-      como: 'a_mao',
-      texto: 'não agenda: o compositor do Instagram não tem essa opção — publique na hora',
-    });
+    // D-1010: quem agenda é o criador de Reels do Meta Business Suite, pelo robô.
+    notas.push(
+      opcoes.instagramAssistido
+        ? {
+            plataforma: 'Instagram Reels',
+            como: 'sozinho',
+            texto: 'o robô marca dia e hora no Meta Business Suite',
+          }
+        : {
+            plataforma: 'Instagram Reels',
+            como: 'a_mao',
+            texto: 'sem o robô não há aba para marcar: ligue o assistido acima',
+          },
+    );
   }
 
   return notas;

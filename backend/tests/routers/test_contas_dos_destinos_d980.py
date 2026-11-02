@@ -28,7 +28,13 @@ def test_lista_a_conta_aprendida_de_cada_destino(cliente):
 
     linhas = cliente.get(ROTA).json()
 
-    assert [c["destino"] for c in linhas] == ["youtube", "tiktok", "instagram", "instagram_web"]
+    assert [c["destino"] for c in linhas] == [
+        "youtube",
+        "tiktok",
+        "instagram",
+        "instagram_web",
+        "instagram_business",
+    ]
     tiktok = linhas[1]
     assert (tiktok["rotulo"], tiktok["conta_id"], tiktok["nome"]) == (
         "TikTok",

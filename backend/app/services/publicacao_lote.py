@@ -87,8 +87,8 @@ NAO_DEU_PARA_CONFIRMAR = (
     "marque aqui se voce publicou"
 )
 NAO_DEU_PARA_CONFERIR = (
-    "o robo clicou em Publicar e nao consegui confirmar se o post saiu; "
-    "confira no perfil e marque aqui se ele esta no ar"
+    "o robo clicou no botao final e nao consegui confirmar; confira no perfil ou, "
+    "se tinha data, na lista de agendados, e marque aqui antes de subir de novo"
 )
 CONFERINDO_O_ANTERIOR = "conferindo a aba do envio anterior — o post pode ter saido"
 
@@ -124,7 +124,7 @@ async def criar(
     escalona e ficou sem data na agenda (não coube no horizonte, e o operador
     não ajustou) também entra como `PULADO`: subi-lo "agora" desfaria o
     espaçamento que a agenda existe para garantir. Destino que publica no ato
-    (Instagram) não precisa de data e segue normal.
+    não precisa de data e segue normal.
     """
     global _lote_atual
 
@@ -162,7 +162,7 @@ async def criar(
                 registro_id=str(uuid.uuid4()),
                 estado=EstadoItem.PULADO if pulado else EstadoItem.AGUARDANDO,
                 detalhe=pulado,
-                agendamento=agendamento,
+                agendamento=agendamento or lote.opcoes.agendamento,
             )
             lote.itens.append(item)
 
@@ -244,8 +244,8 @@ async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
 
 
 async def _mostrar_se_for_a_vez(itens: list[ItemDoLote], destino: Destino | None) -> None:
-    """D-799: com as abas prontas, a janela do robô volta à tela, sem pular na frente."""
-    esperando = any(i.estado in ESTADOS_DO_OPERADOR for i in itens)
+    """D-799: abas prontas ou erro (o login é na janela, D-1010): ela volta à tela, sem pular."""
+    esperando = any(i.estado in ESTADOS_DO_OPERADOR or i.estado is EstadoItem.ERRO for i in itens)
     if esperando and isinstance(destino, destinos_assistidos.DestinoAssistido):
         await destino.mostrar_janela()
 
@@ -352,7 +352,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
             fire_and_forget(abas_do_robo.no_lote(destino.fechar_abas, vigilia), name="vigiar-aba")
             return EstadoItem.SUA_VEZ
         if resultado.get("publicado"):
-            await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
+            await _mudar(item, EstadoItem.PUBLICADO, detalhe=com_avisos("", avisos), publicado=True)
             return EstadoItem.PUBLICADO
         if item.estado is EstadoItem.PUBLICADO:
             # D-591: o operador clicou "publiquei" DURANTE a vigília, e foi isso

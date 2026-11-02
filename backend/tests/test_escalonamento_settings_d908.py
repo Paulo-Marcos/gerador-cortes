@@ -47,7 +47,12 @@ def test_sem_linha_vale_o_padrao(tmp_path: Path):
 
     descrito = svc.descrever(**kw)
     assert descrito.publico_personalizado is False
-    assert [d.destino for d in descrito.destinos] == ["youtube", "youtube_shorts", "tiktok"]
+    assert [d.destino for d in descrito.destinos] == [
+        "youtube",
+        "youtube_shorts",
+        "tiktok",
+        "instagram_reels",
+    ]
     assert all(d.personalizado is False for d in descrito.destinos)
     assert all(d.parametros == d.padrao for d in descrito.destinos)
 
@@ -113,7 +118,7 @@ def test_faixa_ilegivel_e_recusada_com_mensagem(tmp_path: Path):
 
 def test_destino_desconhecido_e_recusado(tmp_path: Path):
     with pytest.raises(EscalonamentoInvalido, match="desconhecido"):
-        svc.resolver_parametros("instagram_reels", **_kw(tmp_path))
+        svc.resolver_parametros("outra_rede", **_kw(tmp_path))
 
 
 # ─── Reset: apaga a linha; o padrão volta a valer ───────────────────────────
@@ -135,7 +140,7 @@ def test_resetar_apaga_a_linha_e_volta_ao_padrao(tmp_path: Path):
 
 def test_resetar_chave_desconhecida(tmp_path: Path):
     with pytest.raises(EscalonamentoInvalido, match="resetar"):
-        svc.resetar("instagram_reels", **_kw(tmp_path))
+        svc.resetar("outra_rede", **_kw(tmp_path))
 
 
 # ─── Sugestão: os mesmos N blocos, alinhados à janela forte do canal ────────

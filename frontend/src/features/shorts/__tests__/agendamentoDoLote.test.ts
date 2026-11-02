@@ -25,16 +25,21 @@ describe('notas de agendamento', () => {
     expect(com.como).toBe('sozinho');
   });
 
-  it('o Instagram diz que simplesmente não agenda', () => {
+  it('o Instagram agenda com o robô, no Meta Business Suite', () => {
     const [nota] = notasDeAgendamento(['instagram_reels'], {
       ...semRobo,
       instagramAssistido: true,
     });
 
+    expect(nota.como).toBe('sozinho');
+    expect(nota.texto).toContain('Meta Business Suite');
+  });
+
+  it('sem o robô, o Instagram pede para ligar o assistido', () => {
+    const [nota] = notasDeAgendamento(['instagram_reels'], semRobo);
+
     expect(nota.como).toBe('a_mao');
-    // Ligar o robô não muda nada aqui, e é isso que a nota precisa dizer: não
-    // é o robô que falta, é a opção que não existe naquela tela.
-    expect(nota.texto).toContain('não tem essa opção');
+    expect(nota.texto).toContain('ligue o assistido');
   });
 
   it('só fala das plataformas escolhidas', () => {

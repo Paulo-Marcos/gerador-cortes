@@ -205,7 +205,7 @@ class TestValidacaoDosParametros:
 
     def test_destino_desconhecido(self):
         with pytest.raises(EscalonamentoInvalido, match="desconhecido"):
-            validar_parametros(PADRAO_POR_DESTINO["tiktok"], "instagram_reels")
+            validar_parametros(PADRAO_POR_DESTINO["tiktok"], "outra_rede")
 
 
 class TestReferenciaDoPublico:
@@ -244,5 +244,5 @@ class TestDestinoDaPlataforma:
         assert destino_de("tiktok_horizontal") == "tiktok"
         assert destino_de("tiktok") == "tiktok"
 
-    def test_o_instagram_nao_escalona(self):
-        assert destino_de("instagram_reels") is None
+    def test_o_instagram_escalona(self):
+        assert destino_de("instagram_reels") == "instagram_reels"

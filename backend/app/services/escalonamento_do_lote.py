@@ -30,7 +30,7 @@ from app.domain.publicacao.publicacao import Plataforma
 from app.services import agenda_youtube_em_voo, registro_do_lote
 from app.services.canal import escalonamento_settings
 
-PUBLICA_NO_ATO = "publica no ato: o Instagram não agenda pelo compositor da web"
+PUBLICA_NO_ATO = "publica no ato: esta rede não tem agenda"
 
 # O formato que o `<input type="datetime-local">` da tela fala, no fuso local.
 FORMATO_DA_TELA = "%Y-%m-%dT%H:%M"

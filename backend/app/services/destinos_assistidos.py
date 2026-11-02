@@ -36,6 +36,13 @@ from types import ModuleType
 from uuid import uuid4
 
 from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.business_suite_reels import (
+    RoteiroInterrompido as RoteiroDoBusinessSuite,
+)
+from app.domain.publicacao.business_suite_reels import agendou
+from app.domain.publicacao.instagram_reels import (
+    RoteiroInterrompido as RoteiroDoInstagram,
+)
 from app.domain.publicacao.publicacao import (
     ModoPublicacao,
     Plataforma,
@@ -123,7 +130,7 @@ class DestinoAssistido(DestinoManual):
         )
         try:
             relatorio = await self._subir(pronto, marca, sozinho)
-        except RoteiroInterrompido as exc:
+        except (RoteiroInterrompido, RoteiroDoBusinessSuite, RoteiroDoInstagram) as exc:
             if exc.passo == Passo.PUBLICAR:
                 raise ConferirNaAba(self, marca, str(exc)) from exc
             raise
@@ -195,9 +202,9 @@ class DestinoTikTokAssistido(DestinoAssistido):
 
 
 class DestinoInstagramReelsAssistido(DestinoAssistido):
-    """O Reels, no compositor do instagram.com.
+    """O Reels: no compositor do instagram.com, ou no Business Suite quando tem data.
 
-    Mesmo contrato do TikTok assistido, e as diferenças estão todas debaixo:
+    Mesmo contrato do TikTok assistido, e as diferenças do instagram.com são estas:
 
       - o compositor é um MODAL, então não há navegação para provar que saiu.
         A vigília espera o modal fechar e procura o aviso de sucesso, porque
@@ -206,38 +213,41 @@ class DestinoInstagramReelsAssistido(DestinoAssistido):
         é o único passo que reporta em vez de interromper.
     """
 
-    # D-580: `False`, e por um motivo MEDIDO e nao suposto. Em 12/09/2026, no
-    # Chrome do robo ja logado, o compositor de Reels do instagram.com foi
-    # varrido controle a controle: nao existe agendamento naquela tela, e nao e
-    # falta de conta profissional. Agendar Reels mora no Meta Business Suite.
-    agenda_sozinho = False
+    # D-1010: o compositor do instagram.com nao agenda (medido em 12/09/2026), e
+    # o criador de Reels do Meta Business Suite agenda. Com data, vai por la.
+    agenda_sozinho = True
 
     def __init__(self, plataforma: Plataforma = Plataforma.INSTAGRAM_REELS, **opcoes) -> None:
         super().__init__(plataforma, **opcoes)
 
     def _robo(self) -> ModuleType:
+        if self.agendamento:
+            from app.services import business_suite_reels
+
+            return business_suite_reels
+
         from app.services import instagram_reels
 
         return instagram_reels
 
     async def _subir(self, pronto: dict, marca: str, publicar_sozinho: bool) -> dict:
-        relatorio = await self._robo().subir_assistido(
+        opcoes = {"agendamento": self.agendamento} if self.agendamento else {}
+        return await self._robo().subir_assistido(
             video=Path(pronto["video"]),
             legenda=self._legenda(pronto),
             capa=self._capa(pronto),
             marca=marca,
             publicar_sozinho=publicar_sozinho,
+            **opcoes,
         )
-        if not self.agendamento:
-            return relatorio
-        # Dito em voz alta, e no relatorio que a tela mostra: engolir a data
-        # aqui seria o mesmo erro do video que sobe `unlisted` e some.
-        return {
-            **relatorio,
-            "avisos": [
-                *relatorio.get("avisos", []),
-                f"Este Reel NAO fica agendado para {self.agendamento.legivel()}: o "
-                "compositor do instagram.com nao tem agendamento (so o Meta "
-                "Business Suite tem). Compartilhe na hora que quiser publicar.",
-            ],
-        }
+
+    @classmethod
+    async def fechar_abas(cls) -> int:
+        """Sai a aba de quem já foi agendado; o resto ainda pode esperar o operador."""
+        from app.services import instagram_reels
+
+        return await asyncio.to_thread(
+            abas_do_robo.fechar_abas_que_sobraram,
+            instagram_reels.perfil_do_chrome(),
+            lambda pagina: not agendou(pagina.url),
+        )
