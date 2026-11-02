@@ -353,7 +353,7 @@ def test_monetiza_sem_a_opcao_on_explica_e_nao_confirma():
     assert "Monetização: On" in falhas[0]
     assert "Programa de Parcerias" in falhas[0]
     assert ("clicar", "atualizar_videos") not in pagina.passos
-    assert not pagina.fechada, "a aba fica: é nela que o operador vê o motivo"
+    assert pagina.fechada, "D-1007: o motivo está no log; só o login deixa a aba"
 
 
 def test_monetiza_que_o_studio_nao_confirmou_e_falha():

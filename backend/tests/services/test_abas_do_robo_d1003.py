@@ -261,11 +261,29 @@ async def test_lote_do_studio_do_youtube_nao_deixa_aba(studio, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_lote_do_studio_que_falhou_deixa_a_aba_para_o_operador(studio, monkeypatch):
-    """Com falha a aba fica: é nela que o operador lê o motivo."""
+async def test_lote_que_falhou_nao_deixa_aba(studio, monkeypatch):
+    """D-1007: o motivo da falha está no log; a aba que sobrava era de outra tela."""
     chrome, rodar = studio
     monkeypatch.setattr(studio_youtube, "_monetizar_tudo", lambda _p, _t: ["nao monetizou"])
 
     await rodar("v1", "v2")
 
-    assert chrome.abas
+    assert [aba.url for aba in chrome.abas] == []
+
+
+@pytest.mark.asyncio
+async def test_lote_que_pediu_login_deixa_so_a_aba_do_login(studio, monkeypatch):
+    """D-1007: o login é a única falha que pede o operador NA aba."""
+    chrome, rodar = studio
+    login = "https://accounts.google.com/x"
+
+    def _cai_no_login(pagina, _tarefas):
+        pagina._page.goto(login)
+        return ["pediu login"]
+
+    monkeypatch.setattr(studio_youtube, "_monetizar_tudo", _cai_no_login)
+    monkeypatch.setattr(studio_youtube, "_pediu_login", lambda p: "accounts" in p.url_atual())
+
+    await rodar("v1", "v2")
+
+    assert [aba.url for aba in chrome.abas] == [login]
