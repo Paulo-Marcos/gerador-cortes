@@ -3,6 +3,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import type { Corte, StatusBrutoResponse } from '@/types/models';
 import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
 import { TimelinePanel } from './TimelinePanel';
+import { seloDoPlayer } from '../useBruto';
 import { RightTabsPanel } from './RightTabsPanel';
 import { Icon } from '@/upgrade/Icon';
 
@@ -177,7 +178,7 @@ export function EditorFase1({
             <Panel defaultSize={65} minSize={30} order={1}>
               <PlayerPanel
                 ref={playerRef}
-                selo={brutoPronto ? 'BRUTO · pronto' : 'VÍDEO ORIGINAL'}
+                selo={seloDoPlayer(brutoPronto, brutoStatus?.status)}
                 src={videoSrc}
                 inicioSeg={corte.inicio_seg}
                 fimSeg={corte.fim_seg}

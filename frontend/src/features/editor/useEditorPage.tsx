@@ -5,7 +5,7 @@ import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-d
 import { useContextoCorte, useVelocidadePlayerPadrao } from '@/features/settings';
 import { useMotivosVisiveis } from '@/features/channels/useMotivosDeExclusao';
 import { corteKey, useAdicionarDesvio, useAtualizarCorte, useCorte, useCortesProjeto, useDeletarCorte, useDividirCorte, useJuntarCortes, useRemoverDesvio, useSincronizarTranscricao, useToggleFire, useToggleLeitura } from '@/features/editor/useCortes';
-import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
+import { avisarSeBrutoOcupado, useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaude, useTrechosClaudeEmAndamento } from '@/features/editor/useGeracoesDaIa';
 import { cortesApi } from '@/features/editor/api/cortes';
 import { useToast } from '@/components/ui/toaster';
@@ -266,7 +266,7 @@ export function useEditorPage() {
   const confirmacao = useConfirmacao();
 
   const brutoOcupado = () =>
-    !corteId || brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual;
+    !corteId || avisarSeBrutoOcupado(brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, notifyToast);
 
   const dispararBruto = (opts?: Parameters<typeof gerarBruto.mutate>[0]) => {
     const corteIdSolicitado = corteId;
