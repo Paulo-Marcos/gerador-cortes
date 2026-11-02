@@ -117,6 +117,7 @@ export function PublicarEmLoteModal({
   const seguraInstagram = seguraPublicacaoDoInstagram(
     temInstagram && instagramAssistido,
     selecionados.length,
+    modo,
   );
   const notas = notasDeAgendamento(plataformas, { tiktokAssistido, instagramAssistido });
   const [agora, acertarRelogio] = useAgora(open && modo !== 'agora');

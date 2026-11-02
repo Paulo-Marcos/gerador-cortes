@@ -8,7 +8,7 @@ interface Props {
   tiktokAssistido: boolean;
   instagramAssistido: boolean;
   publicarSozinho: boolean;
-  /** D-1011: o robô vai parar no botão final por causa de vários Reels no ato. */
+  /** D-1010: vários Reels fora de "distribuir": o robô para no botão final. */
   seguraInstagram: boolean;
   onTiktok: (v: boolean) => void;
   onInstagram: (v: boolean) => void;
@@ -35,7 +35,7 @@ export function RoboDoLote(p: Props) {
           ligado={p.instagramAssistido}
           onChange={p.onInstagram}
           titulo="Instagram: o robô sobe pelo navegador"
-          nota="abre o compositor, envia o vídeo e escreve a legenda — e para no Compartilhar"
+          nota="envia o vídeo, a legenda e a capa, marca a data no Meta Business Suite e para no botão final"
         />
       )}
       {temRobo && (
@@ -49,8 +49,8 @@ export function RoboDoLote(p: Props) {
       )}
       {temRobo && p.publicarSozinho && p.seguraInstagram && (
         <p className="text-[11.5px] text-[var(--wb-text-dim)]">
-          Com vários Reels o Instagram ainda publica no ato, sem agenda: neste lote o robô sobe
-          tudo e para no botão final, para os Reels não irem ao ar de uma vez.
+          Só "distribuir" espaça os Reels: neste lote o robô sobe tudo e para no botão final,
+          para eles não irem ao ar de uma vez.
         </p>
       )}
     </div>

@@ -9,7 +9,7 @@ import { PADROES_DO_LOTE, seguraPublicacaoDoInstagram } from '../padroesDoLote';
 /**
  * D-1011. O Paulo só publica pelos robôs, nos horários do canal e sem conferir
  * o botão final; o lote tem de abrir assim. O freio do Instagram existe porque
- * ele ainda publica no ato (sem a D-1010): vários Reels sairiam todos juntos.
+ * fora de "distribuir" vários Reels sairiam todos juntos (D-1010).
  */
 const SHORTS = [1, 2].map((n) => ({
   id: `s${n}`,
@@ -77,23 +77,24 @@ describe('RoboDoLote: cada item segue desligável', () => {
 
   it('o aviso do freio só aparece quando o robô vai parar no botão final', () => {
     const ligado = { ...base, tiktokAssistido: true, instagramAssistido: true };
-    expect(renderToStaticMarkup(<RoboDoLote {...ligado} />)).not.toContain('publica no ato');
+    expect(renderToStaticMarkup(<RoboDoLote {...ligado} />)).not.toContain('para no botão final,');
     expect(renderToStaticMarkup(<RoboDoLote {...ligado} seguraInstagram />)).toContain(
-      'publica no ato',
+      'para no botão final,',
     );
   });
 });
 
-describe('freio do Instagram até a D-1010', () => {
-  it('vários Reels com o robô ligado seguram o botão final', () => {
-    expect(seguraPublicacaoDoInstagram(true, 5, false)).toBe(true);
+describe('freio do Instagram fora da agenda distribuída', () => {
+  it('vários Reels em "agora" ou "uma data" seguram o botão final', () => {
+    expect(seguraPublicacaoDoInstagram(true, 5, 'agora')).toBe(true);
+    expect(seguraPublicacaoDoInstagram(true, 5, 'uma_data')).toBe(true);
   });
   it('um Reel só, ou robô desligado, não segura', () => {
-    expect(seguraPublicacaoDoInstagram(true, 1, false)).toBe(false);
-    expect(seguraPublicacaoDoInstagram(false, 5, false)).toBe(false);
+    expect(seguraPublicacaoDoInstagram(true, 1, 'agora')).toBe(false);
+    expect(seguraPublicacaoDoInstagram(false, 5, 'agora')).toBe(false);
   });
-  it('com o Instagram na agenda, o freio sai', () => {
-    expect(seguraPublicacaoDoInstagram(true, 5, true)).toBe(false);
+  it('na agenda distribuída, o robô agenda sozinho', () => {
+    expect(seguraPublicacaoDoInstagram(true, 5, 'distribuir')).toBe(false);
   });
 });
 
