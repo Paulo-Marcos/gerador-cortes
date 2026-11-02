@@ -6,7 +6,7 @@ Três passos, e a ordem entre eles não é arbitrária:
      9:16 e aplica o filtro cinematográfico numa passada só;
   2. o Remotion desenha a camada de cenas e legenda (ProRes 4444 com alpha);
   3. **composição** — a camada entra por cima do vídeo e o áudio é normalizado
-     (loudnorm, -14 LUFS; só aqui — RN-26).
+     (loudnorm, -14 LUFS; só aqui — RN-32).
 
 Por que a grade vem ANTES do overlay: o filtro mexe em curva, saturação e
 vinheta. Aplicado depois, ele mexeria também no texto da legenda — que foi
@@ -390,7 +390,7 @@ def build_composicao_short_cmd(
         str(crf),
         "-pix_fmt",
         "yuv420p",
-        # D-1014: o ÚNICO ponto que normaliza o áudio do short (RN-26). É o único
+        # D-1014: o ÚNICO ponto que normaliza o áudio do short (RN-32). É o único
         # estágio que vê o short inteiro: no recorte, a colagem de N fatias
         # (D-604) seria normalizada fatia a fatia e o volume pularia nas emendas.
         # Os mesmos argumentos do corte horizontal (AAC 192k, loudnorm -14 LUFS).

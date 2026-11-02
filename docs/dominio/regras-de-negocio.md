@@ -72,7 +72,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN-23 | Thumbnail codificada em 4:4:4 (`subsampling=0`), **sem** reduzir para 1280×720 — reduzir antes piora a nota. | `domain/thumbnail_encode.py` (`_codificar`, `preparar_para_youtube`) | — |
 | RN-24 | Detecção de silêncio com parâmetros fixos: 0,6 s no proxy, 0,3 s no vídeo. Decisão de 04/09/2026: **não mexer**. | `infrastructure/render/ffmpeg_basic.py` (`_SILENCIO_DUR_PROXY`, `_SILENCIO_DUR_VIDEO`) | — |
 | RN-25 | O filtro de render é **global** (Ajustes), não por projeto nem por corte. | `services/app_settings.py` (`filtro_global_padrao`) | I-023 |
-| RN-26 | O áudio do **short** sai normalizado em -14 LUFS (pico até -1 dBTP), como o do corte horizontal, e a normalização acontece **uma vez só**, na composição final — nunca por fatia do recorte. | `infrastructure/render/ffmpeg_short.py` (`build_composicao_short_cmd`), filtro de `ffmpeg_overlay._LOUDNORM_YOUTUBE` | D-1014 |
+| RN-32 | O áudio do **short** sai normalizado em -14 LUFS (pico até -1 dBTP), como o do corte horizontal, e a normalização acontece **uma vez só**, na composição final — nunca por fatia do recorte. | `infrastructure/render/ffmpeg_short.py` (`build_composicao_short_cmd`), filtro de `ffmpeg_overlay._LOUDNORM_YOUTUBE` | D-1014 |
 
 ## Divergências encontradas na conferência
 
