@@ -23,6 +23,7 @@ import {
 } from '@/features/post-production/postProductionNavigation';
 import { settingsApi } from '@/features/settings/api';
 import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
+import { BoletimTecnicoPainel } from './BoletimTecnicoCard';
 
 // Atalhos Ctrl+J/K (F-041): mesmos limites usados na tela Bruta.
 const SPEED_MIN = 0.25;
@@ -316,6 +317,8 @@ export function FinalReviewPage() {
         }}
       >
         <ChecklistCard items={checklistItems} />
+        {/* D-1015: saúde técnica do vídeo, medida em segundo plano; só avisa. */}
+        {videoPronto && <BoletimTecnicoPainel key={corte.id} corteId={corte.id} />}
         <CapaCard
           titulo={corte.titulo_proposto ?? projeto.data?.titulo_live ?? 'Corte'}
           pronta={Boolean(exportStatusAtual?.thumbnail_pronta)}
@@ -405,9 +408,7 @@ export function FinalReviewPage() {
         }}
       />
 
-      <div
-        className="flex h-full min-h-0 flex-col overflow-hidden"
-      >
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
 
         {conteudoFinal}
       </div>
@@ -640,6 +641,5 @@ function CapaCard({
     </section>
   );
 }
-
 // Type wrapper para evitar warning "ReactNode imported but unused".
 export type _FinalChecklistItem = ReactNode;
