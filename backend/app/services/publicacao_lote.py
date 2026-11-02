@@ -62,7 +62,7 @@ from app.services.itens_do_lote import (  # noqa: F401
     OpcoesDoLote,
     agendamento_do_item,
     com_avisos,
-    escalona,
+    escolher_recado_da_aba,
     recado_do_pacote,
 )
 from app.services.publicacao_destinos import Destino
@@ -79,9 +79,8 @@ from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
 
-# Frases prontas, num lugar só: o texto do estado é a única coisa que o
+# Frases prontas (a da aba, em `itens_do_lote`): o texto do estado é a única coisa que o
 # operador tem para saber o que fazer a seguir.
-RECADO_DA_ABA = "a aba esta pronta no Chrome — confira e clique em Publicar"
 NAO_DEU_PARA_CONFIRMAR = (
     "nao consegui confirmar a publicacao (a aba pode ter sido fechada); "
     "marque aqui se voce publicou"
@@ -120,11 +119,10 @@ async def criar(
     O que já subiu entra como `PULADO`, e não some da lista: ver "já está no
     TikTok" é resposta; um item que desaparece é dúvida.
 
-    D-908: com `agenda`, cada item leva a própria data. Item de destino que
-    escalona e ficou sem data na agenda (não coube no horizonte, e o operador
-    não ajustou) também entra como `PULADO`: subi-lo "agora" desfaria o
-    espaçamento que a agenda existe para garantir. Destino que publica no ato
-    não precisa de data e segue normal.
+    D-908: com `agenda`, cada item leva a própria data. Item que ficou sem
+    data na agenda (não coube no horizonte, e o operador não ajustou) também
+    entra como `PULADO`: subi-lo "agora" desfaria o
+    espaçamento que a agenda existe para garantir.
     """
     global _lote_atual
 
@@ -144,7 +142,7 @@ async def criar(
             ja_foi = plataforma.value in publicados.get(alvo_id, set())
             conferindo = (alvo_id, plataforma) in _conferindo
             agendamento = agendamento_do_item(agenda, alvo_id, plataforma)
-            sem_data = agenda is not None and agendamento is None and escalona(plataforma)
+            sem_data = agenda is not None and agendamento is None
             pulado = (
                 CONFERINDO_O_ANTERIOR
                 if conferindo
@@ -268,7 +266,8 @@ def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
         # D-588: os avisos entram JUNTO do "sua vez", e não depois. É durante a
         # espera que o operador pode agir — pôr a capa que o robô não pôs, por
         # exemplo; no fim da vigília o post já saiu sem ela.
-        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=com_avisos(RECADO_DA_ABA, avisos))
+        recado = escolher_recado_da_aba(agendamento)
+        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=com_avisos(recado, avisos))
 
     return robo(
         item.plataforma,

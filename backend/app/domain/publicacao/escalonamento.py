@@ -141,19 +141,15 @@ PADRAO_POR_DESTINO: dict[str, ParametrosDoDestino] = {
 }
 
 
-def destino_de(plataforma: str) -> str | None:
-    """O destino escalonado desta plataforma, ou `None` quando ela publica no ato.
+def destino_de(plataforma: str) -> str:
+    """Os parâmetros que esta plataforma segue: o TikTok horizontal usa os do vertical.
 
     >>> destino_de("tiktok_horizontal")
     'tiktok'
     >>> destino_de("instagram_reels")
     'instagram_reels'
-    >>> destino_de("outra_rede") is None
-    True
     """
-    if plataforma.startswith("tiktok"):
-        return "tiktok"
-    return plataforma if plataforma in DESTINOS_ESCALONADOS else None
+    return "tiktok" if plataforma.startswith("tiktok") else plataforma
 
 
 # --------------------------------------------------------------------------- #

@@ -1,8 +1,8 @@
 """D-908: a agenda do lote antes do clique — o service que junta canal, banco e relógio.
 
 O domínio já provou a aritmética; aqui o que se guarda é a JUNÇÃO: a
-configuração do canal entra, o último agendado da rede puxa a partida, o
-Instagram sai com "publica no ato", e a saída fala o formato que a tela lê.
+configuração do canal entra, o último agendado da rede puxa a partida, e a
+saída fala o formato que a tela lê.
 """
 
 from __future__ import annotations

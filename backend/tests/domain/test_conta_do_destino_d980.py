@@ -45,5 +45,5 @@ def test_destino_desconhecido_e_pedido_invalido():
         conferir("orkut", None, Conta("1"))
 
 
-def test_os_quatro_destinos_na_ordem_da_tela():
+def test_os_cinco_destinos_na_ordem_da_tela():
     assert DESTINOS == ("youtube", "tiktok", "instagram", "instagram_web", "instagram_business")

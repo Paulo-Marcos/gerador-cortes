@@ -11,7 +11,6 @@ import { Icon } from '@/upgrade/Icon';
 import {
   chaveDaLinha,
   dataLegivel,
-  escalona,
   ROTULO_DA_INTENSIDADE,
   resumoDaAgenda,
   type ModoDeQuando,
@@ -146,7 +145,6 @@ function AgendaDistribuida({
           <span>
             {resumo.comData} com data
             {resumo.semData > 0 && <> · {resumo.semData} sem data</>}
-            {resumo.noAto > 0 && <> · {resumo.noAto} no ato</>}
             {' · '}
             <span className="text-[var(--wb-text-mute)]">
               a partir do último já marcado em cada rede
@@ -194,7 +192,6 @@ function LinhaDoItem({
   problema: string | null;
   onAjustar: (valor: string) => void;
 }) {
-  const editavel = escalona(linha.plataforma);
   return (
     <li
       className={cn(
@@ -208,18 +205,14 @@ function LinhaDoItem({
           → {rotuloCurto(linha.plataforma)}
         </span>
       </span>
-      {editavel ? (
-        <Input
-          type="datetime-local"
-          step={PASSO_EM_SEGUNDOS}
-          aria-label={`Data de ${rotulo} no ${rotuloCurto(linha.plataforma)}`}
-          value={linha.agendar_para}
-          onChange={(e) => onAjustar(e.target.value)}
-          className="h-7 w-[200px] text-[11.5px]"
-        />
-      ) : (
-        <span className="text-[11px] text-[var(--wb-text-mute)]">no ato</span>
-      )}
+      <Input
+        type="datetime-local"
+        step={PASSO_EM_SEGUNDOS}
+        aria-label={`Data de ${rotulo} no ${rotuloCurto(linha.plataforma)}`}
+        value={linha.agendar_para}
+        onChange={(e) => onAjustar(e.target.value)}
+        className="h-7 w-[200px] text-[11.5px]"
+      />
       <span className="text-[11px] text-[var(--wb-text-dim)]">
         {linha.agendar_para ? (
           <>
@@ -237,10 +230,8 @@ function LinhaDoItem({
               </span>
             )}
           </>
-        ) : editavel ? (
-          <span className="text-[var(--wb-warn-ink,var(--wb-text-dim))]">sem data: {linha.motivo}</span>
         ) : (
-          linha.motivo
+          <span className="text-[var(--wb-warn-ink,var(--wb-text-dim))]">sem data: {linha.motivo}</span>
         )}
       </span>
       {problema && (

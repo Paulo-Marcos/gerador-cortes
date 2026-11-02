@@ -3,7 +3,6 @@ import {
   ajustarLinha,
   chaveDaLinha,
   dataLegivel,
-  escalona,
   paraEnvio,
   problemasDasLinhas,
   resumoDaAgenda,
@@ -31,7 +30,6 @@ const AGENDA = [
   linha('s1', 'tiktok', '2030-01-07T16:00'),
   linha('s2', 'tiktok', '2030-01-07T19:00'),
   linha('s3', 'tiktok', ''),
-  linha('s1', 'outra_rede', '', { motivo: 'publica no ato: esta rede não tem agenda' }),
 ];
 
 describe('ajustar uma linha', () => {
@@ -56,12 +54,12 @@ describe('ajustar uma linha', () => {
   });
 
   it('a chave distingue o mesmo short em redes diferentes', () => {
-    expect(chaveDaLinha(AGENDA[0])).not.toBe(chaveDaLinha(AGENDA[3]));
+    expect(chaveDaLinha(AGENDA[0])).not.toBe(chaveDaLinha(linha('s1', 'youtube_shorts', '')));
   });
 });
 
 describe('o que vai no pedido', () => {
-  it('só as redes que escalonam, com a data (ou vazio) que a lista mostra', () => {
+  it('leva a data (ou vazio) que a lista mostra', () => {
     expect(paraEnvio(AGENDA)).toEqual([
       { alvo: 'short:s1', plataforma: 'tiktok', agendar_para: '2030-01-07T16:00' },
       { alvo: 'short:s2', plataforma: 'tiktok', agendar_para: '2030-01-07T19:00' },
@@ -69,17 +67,19 @@ describe('o que vai no pedido', () => {
     ]);
   });
 
-  it('o Instagram escalona; só rede sem agenda publica no ato', () => {
-    expect(escalona('instagram_reels')).toBe(true);
-    expect(escalona('outra_rede')).toBe(false);
-    expect(escalona('youtube_shorts')).toBe(true);
-    expect(escalona('tiktok_horizontal')).toBe(true);
-  });
+  it.each(['instagram_reels', 'youtube_shorts', 'tiktok_horizontal'])(
+    '%s vai no pedido com a data',
+    (plataforma) => {
+      expect(paraEnvio([linha('s1', plataforma, '2030-01-07T16:00')])).toEqual([
+        { alvo: 'short:s1', plataforma, agendar_para: '2030-01-07T16:00' },
+      ]);
+    },
+  );
 });
 
 describe('resumo e problemas', () => {
-  it('conta com data, sem data e no ato', () => {
-    expect(resumoDaAgenda(AGENDA)).toEqual({ comData: 2, semData: 1, noAto: 1 });
+  it('conta com data e sem data', () => {
+    expect(resumoDaAgenda(AGENDA)).toEqual({ comData: 2, semData: 1 });
   });
 
   it('aponta a linha cujo horário não passa, pela regra da rede dela', () => {

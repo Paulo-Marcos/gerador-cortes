@@ -30,8 +30,6 @@ from app.domain.publicacao.publicacao import Plataforma
 from app.services import agenda_youtube_em_voo, registro_do_lote
 from app.services.canal import escalonamento_settings
 
-PUBLICA_NO_ATO = "publica no ato: esta rede não tem agenda"
-
 # O formato que o `<input type="datetime-local">` da tela fala, no fuso local.
 FORMATO_DA_TELA = "%Y-%m-%dT%H:%M"
 
@@ -52,7 +50,7 @@ class LinhaDaAgenda:
     intensidade: str
     """Força do público na hora proposta (forte/medio/fraco), ou vazio."""
     motivo: str
-    """Por que não há data: fora do horizonte, ou destino que publica no ato."""
+    """Por que não há data: não coube no horizonte da plataforma."""
 
     def como_dict(self) -> dict:
         return {
@@ -89,13 +87,6 @@ async def prever(
 
     for plataforma in plataformas:
         destino = destino_de(plataforma.value)
-        if destino is None:
-            linhas.extend(
-                LinhaDaAgenda(tipo, alvo, plataforma.value, "", "", PUBLICA_NO_ATO)
-                for tipo, alvo in alvos
-            )
-            continue
-
         ultimo = await registro_do_lote.ultimo_agendado(_mesma_conta(plataforma))
         linhas.extend(_distribuir(alvos, plataforma.value, destino, ultimo, agora, faixas))
     return linhas

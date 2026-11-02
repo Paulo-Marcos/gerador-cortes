@@ -65,7 +65,7 @@ class LinhaDaAgenda(RespostaApi):
     agendar_para: str
     # Força do público na hora proposta: forte, medio ou fraco; vazio sem data.
     intensidade: str
-    # Por que ficou sem data: fora do horizonte, ou destino que publica no ato.
+    # Por que ficou sem data: não coube no horizonte da plataforma.
     motivo: str
 
 

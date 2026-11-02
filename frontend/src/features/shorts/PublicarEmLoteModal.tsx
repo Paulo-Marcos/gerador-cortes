@@ -133,10 +133,10 @@ export function PublicarEmLoteModal({
     [agenda.linhas, agora],
   );
   const resumo = resumoDaAgenda(agenda.linhas);
-  // Sem linha com data (ou no ato) não há o que publicar; com linha com problema, não ainda.
+  // Sem linha com data não há o que publicar; com linha com problema, não ainda.
   const agendaPronta =
     modo !== 'distribuir' ||
-    (!agenda.carregando && problemasDaAgenda.size === 0 && resumo.comData + resumo.noAto > 0);
+    (!agenda.carregando && problemasDaAgenda.size === 0 && resumo.comData > 0);
   const trocarModo = (novo: ModoDeQuando) => {
     acertarRelogio();
     setModo(novo);
