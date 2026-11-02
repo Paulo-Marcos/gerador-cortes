@@ -63,10 +63,6 @@ ORIENTACOES: dict[Passo, str] = {
         "Este navegador nao entrou no Business Suite. Na janela que abriu, clique em Continuar "
         "com o Instagram — uma vez so, a sessao fica guardada — e rode de novo."
     ),
-    Passo.CONTA: (
-        "O criador de Reels esta em outra conta. Nao enviei nada: troque a conta na janela "
-        "que abriu e rode de novo."
-    ),
     Passo.ARQUIVO: (
         "O criador de Reels nao aceitou o video. A tela pode ter mudado: agende este Reel a "
         "mao no Business Suite e me avise para eu ajustar."
@@ -101,7 +97,7 @@ class RoteiroInterrompido(RuntimeError):
 def orientacao_da_falha(passo: Passo, detalhe: str = "") -> str:
     """O que o operador faz agora, em uma frase.
 
-    >>> orientacao_da_falha(Passo.CONTA).startswith("O criador de Reels esta em outra conta")
+    >>> orientacao_da_falha(Passo.SESSAO).startswith("Este navegador nao entrou")
     True
     >>> orientacao_da_falha(Passo.LEGENDA, "timeout").endswith("(timeout)")
     True

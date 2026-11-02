@@ -238,7 +238,10 @@ def executar_roteiro(
             logger.warning("[BusinessSuite] nao consegui marcar a aba: %s", exc)
 
     publicado = False
-    if publicar_sozinho and pode_publicar_sozinho(capa is not None, Passo.CAPA in feitos, avisos):
+    # A legenda não confirmada também segura o clique: depois dele, a faxina fecha a aba.
+    legenda_ok = Passo.LEGENDA in feitos
+    capa_ok = pode_publicar_sozinho(capa is not None, Passo.CAPA in feitos, avisos)
+    if publicar_sozinho and legenda_ok and capa_ok:
         _confirmar_agendamento(pagina)
         feitos.append(Passo.PUBLICAR)
         publicado = True
@@ -256,11 +259,11 @@ def executar_roteiro(
 def _conferir_conta(pagina: PaginaDoBusinessSuite) -> None:
     """O Reel só sobe na conta do canal (RN-31), lida no seletor "Share to".
 
-    A primeira vista é aprendida, como nos outros destinos; conta que não se lê barra.
+    A primeira vista é aprendida, como nos outros destinos; conta que não se lê barra,
+    com a mensagem da própria regra.
     """
-    if not pagina.existe("conta_do_compositor", segundos=SEGUNDOS_PARA_ELEMENTO):
-        raise RoteiroInterrompido(Passo.CONTA, "nao achei o seletor de conta")
-    nome = nome_da_conta(pagina.texto_de("conta_do_compositor"))
+    achou = pagina.existe("conta_do_compositor", segundos=SEGUNDOS_PARA_ELEMENTO)
+    nome = nome_da_conta(pagina.texto_de("conta_do_compositor")) if achou else ""
     conta_do_destino.conferir_conta(DESTINO_DA_CONTA, Conta(id=nome, nome=f"@{nome}"))
 
 

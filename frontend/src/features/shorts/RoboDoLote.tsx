@@ -35,7 +35,7 @@ export function RoboDoLote(p: Props) {
           ligado={p.instagramAssistido}
           onChange={p.onInstagram}
           titulo="Instagram: o robô sobe pelo navegador"
-          nota="envia o vídeo, a legenda e a capa, marca a data no Meta Business Suite e para no botão final"
+          nota="envia o vídeo, a legenda e a capa; com data, marca no Meta Business Suite"
         />
       )}
       {temRobo && (

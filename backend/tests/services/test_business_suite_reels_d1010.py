@@ -11,6 +11,8 @@ from types import SimpleNamespace
 import pytest
 from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.business_suite_reels import Passo, RoteiroInterrompido
+from app.domain.publicacao.instagram_reels import Passo as PassoDoInstagram
+from app.domain.publicacao.instagram_reels import RoteiroInterrompido as RoteiroDoInstagram
 from app.services import business_suite_reels as robo
 from app.services import destinos_assistidos, instagram_reels, publicacao_lote
 
@@ -285,3 +287,40 @@ async def test_erro_do_robo_traz_a_janela_para_a_tela():
     )
 
     assert Destino.mostradas == 1
+
+
+def test_legenda_nao_confirmada_segura_o_clique(contas, arquivos):
+    class LegendaQueNaoFica(PaginaFalsa):
+        def texto_de(self, alvo):
+            return self.conta if alvo == "conta_do_compositor" else "outro texto"
+
+    pagina = LegendaQueNaoFica()
+
+    relatorio = _rodar(pagina, arquivos, publicar_sozinho=True)
+
+    assert ("clicar", "botao_agendar") not in pagina.gestos
+    assert relatorio["publicado"] is False
+
+
+def test_conta_que_nao_se_le_chega_vazia_na_regra(contas, arquivos):
+    """RN-31: é a regra de sempre que recusa, com a mensagem de conta ilegível."""
+    _rodar(PaginaFalsa(ausentes={"conta_do_compositor"}), arquivos)
+
+    assert contas == [("instagram_business", "")]
+
+
+@pytest.mark.asyncio
+async def test_clique_sem_confirmacao_no_instagram_com_tambem_vira_conferir(monkeypatch):
+    """O post pode ter saído; ERRO convidaria a subir de novo e duplicar (D-894)."""
+
+    async def pacote_pronto(self, pacote):
+        return {"plataforma": "instagram_reels", "video": "reel.mp4", "capa": "capa.jpg"}
+
+    async def subir(self, pronto, marca, publicar_sozinho):
+        raise RoteiroDoInstagram(PassoDoInstagram.PUBLICAR, "sem confirmacao")
+
+    monkeypatch.setattr(destinos_assistidos.DestinoManual, "publicar", pacote_pronto)
+    monkeypatch.setattr(destinos_assistidos.DestinoInstagramReelsAssistido, "_subir", subir)
+
+    with pytest.raises(destinos_assistidos.ConferirNaAba):
+        await destinos_assistidos.DestinoInstagramReelsAssistido().publicar(None)

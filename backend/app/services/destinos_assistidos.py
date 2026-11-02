@@ -40,6 +40,9 @@ from app.domain.publicacao.business_suite_reels import (
     RoteiroInterrompido as RoteiroDoBusinessSuite,
 )
 from app.domain.publicacao.business_suite_reels import agendou
+from app.domain.publicacao.instagram_reels import (
+    RoteiroInterrompido as RoteiroDoInstagram,
+)
 from app.domain.publicacao.publicacao import (
     ModoPublicacao,
     Plataforma,
@@ -127,7 +130,7 @@ class DestinoAssistido(DestinoManual):
         )
         try:
             relatorio = await self._subir(pronto, marca, sozinho)
-        except (RoteiroInterrompido, RoteiroDoBusinessSuite) as exc:
+        except (RoteiroInterrompido, RoteiroDoBusinessSuite, RoteiroDoInstagram) as exc:
             if exc.passo == Passo.PUBLICAR:
                 raise ConferirNaAba(self, marca, str(exc)) from exc
             raise
@@ -199,9 +202,9 @@ class DestinoTikTokAssistido(DestinoAssistido):
 
 
 class DestinoInstagramReelsAssistido(DestinoAssistido):
-    """O Reels, no compositor do instagram.com.
+    """O Reels: no compositor do instagram.com, ou no Business Suite quando tem data.
 
-    Mesmo contrato do TikTok assistido, e as diferenças estão todas debaixo:
+    Mesmo contrato do TikTok assistido, e as diferenças do instagram.com são estas:
 
       - o compositor é um MODAL, então não há navegação para provar que saiu.
         A vigília espera o modal fechar e procura o aviso de sucesso, porque

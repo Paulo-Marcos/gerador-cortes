@@ -87,8 +87,8 @@ NAO_DEU_PARA_CONFIRMAR = (
     "marque aqui se voce publicou"
 )
 NAO_DEU_PARA_CONFERIR = (
-    "o robo clicou em Publicar e nao consegui confirmar se o post saiu; "
-    "confira no perfil e marque aqui se ele esta no ar"
+    "o robo clicou no botao final e nao consegui confirmar; confira no perfil ou, "
+    "se tinha data, na lista de agendados, e marque aqui antes de subir de novo"
 )
 CONFERINDO_O_ANTERIOR = "conferindo a aba do envio anterior — o post pode ter saido"
 
@@ -162,7 +162,7 @@ async def criar(
                 registro_id=str(uuid.uuid4()),
                 estado=EstadoItem.PULADO if pulado else EstadoItem.AGUARDANDO,
                 detalhe=pulado,
-                agendamento=agendamento,
+                agendamento=agendamento or lote.opcoes.agendamento,
             )
             lote.itens.append(item)
 
@@ -352,7 +352,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
             fire_and_forget(abas_do_robo.no_lote(destino.fechar_abas, vigilia), name="vigiar-aba")
             return EstadoItem.SUA_VEZ
         if resultado.get("publicado"):
-            await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
+            await _mudar(item, EstadoItem.PUBLICADO, detalhe=com_avisos("", avisos), publicado=True)
             return EstadoItem.PUBLICADO
         if item.estado is EstadoItem.PUBLICADO:
             # D-591: o operador clicou "publiquei" DURANTE a vigília, e foi isso

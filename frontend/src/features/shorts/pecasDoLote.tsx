@@ -10,7 +10,7 @@ import { Icon } from '@/upgrade/Icon';
 export const PLATAFORMAS = [
   { id: 'youtube_shorts', rotulo: 'YouTube Shorts', nota: 'sobe sozinho, como unlisted' },
   { id: 'tiktok', rotulo: 'TikTok', nota: 'pacote pronto; o upload é seu' },
-  { id: 'instagram_reels', rotulo: 'Instagram Reels', nota: 'pacote pronto; sobe do celular' },
+  { id: 'instagram_reels', rotulo: 'Instagram Reels', nota: 'com o robô, sobe e agenda sozinho' },
 ] as const;
 
 // D-934: os destinos do vídeo horizontal, cuja agenda usa as mesmas peças.

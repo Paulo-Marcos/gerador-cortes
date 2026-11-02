@@ -1086,6 +1086,22 @@ class TestAgendaPorItem:
         assert not reels.preparados
 
     @pytest.mark.asyncio
+    async def test_a_data_unica_fica_gravada_para_o_proximo_lote_nao_pisar(self, ambiente):
+        """D-1010: sem gravar, o lote seguinte oferecia o mesmo horário."""
+        from app.domain.publicacao.agendamento import Agendamento
+
+        _, raias = ambiente
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1")],
+            plataformas=[Plataforma.YOUTUBE_SHORTS],
+            opcoes=lote_svc.OpcoesDoLote(agendamento=Agendamento.de_texto("2030-01-07T12:00")),
+        )
+        await _rodar(raias)
+
+        assert lote.itens[0].como_dict()["agendado_para"] == "07/01/2030 as 12:00"
+        assert lote.itens[0].agendado_para_utc() is not None
+
+    @pytest.mark.asyncio
     async def test_sem_agenda_vale_a_data_unica_do_lote(self, ambiente, destino_que_anota_a_data):
         from app.domain.publicacao.agendamento import Agendamento
 
