@@ -55,7 +55,7 @@ INTERVALO_DO_STATUS = 3.0
 
 SEM_AGENDAMENTO = (
     "O Instagram nao agenda pela API: publicar agora adiantaria um Reel marcado para "
-    "{quando}. Tire a data para publicar na hora, ou ligue o robo do Instagram."
+    "{quando}. Use o modo Agora para publicar na hora, ou ligue o robo do Instagram."
 )
 SEM_TOKEN = (
     "Falta o token do Instagram: ponha INSTAGRAM_ACCESS_TOKEN no .env do backend "

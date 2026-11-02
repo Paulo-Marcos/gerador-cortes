@@ -68,7 +68,7 @@ def test_esquecer_deixa_o_proximo_envio_aprender_outra(canal):
     assert _gravada("instagram")["conta_id"] == "2000"
 
 
-def test_a_tela_recebe_os_quatro_destinos_mesmo_sem_nada_gravado(canal):
+def test_a_tela_recebe_os_cinco_destinos_mesmo_sem_nada_gravado(canal):
     linhas = conta_do_destino.contas_do_canal()
 
     assert [c["destino"] for c in linhas] == [

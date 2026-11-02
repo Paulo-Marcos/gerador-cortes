@@ -13,6 +13,12 @@ MEDIDA agendando de verdade em 02/11/2026: em cerca de 2 s, a aba sai do
 `reels_composer` e vai para `posts/scheduled_posts`, e a lista mostra o Reel com
 a data pedida. É um sinal positivo, como a confirmação do instagram.com: fechar
 ou descartar o compositor nunca leva para essa página.
+
+A linha da lista NÃO entra na prova (D-1012). Ela é legível, medida em 02/11/2026:
+`tr[role=row]` com o título e "Mon Nov 9, 7:35pm". Mas falta medir quando ela nasce
+depois do clique e se ela está no DOM quando a lista tem muitos itens; sem isso, a
+conferência acusaria falha em Reel agendado. E, na vigília, o operador pode ter
+acertado a data na aba: a lista nem teria com o que comparar.
 """
 
 from __future__ import annotations

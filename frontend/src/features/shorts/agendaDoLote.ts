@@ -11,20 +11,6 @@ import type { AgendaParaEnvio, LinhaDaAgenda } from './loteApi';
 /** Como o operador escolhe o "quando" do lote. */
 export type ModoDeQuando = 'agora' | 'uma_data' | 'distribuir';
 
-// Espelha `destino_de` em `backend/app/domain/publicacao/escalonamento.py`. O
-// `youtube` é o vídeo horizontal do corte, no lote do YouTube longo (D-934).
-const PLATAFORMAS_QUE_ESCALONAM = new Set([
-  'youtube',
-  'youtube_shorts',
-  'tiktok',
-  'tiktok_horizontal',
-  'instagram_reels',
-]);
-
-export function escalona(plataforma: string): boolean {
-  return PLATAFORMAS_QUE_ESCALONAM.has(plataforma);
-}
-
 export function chaveDaLinha(linha: Pick<LinhaDaAgenda, 'alvo_tipo' | 'alvo_id' | 'plataforma'>) {
   return `${linha.alvo_tipo}:${linha.alvo_id}|${linha.plataforma}`;
 }
@@ -64,29 +50,21 @@ export function problemasDasLinhas(
 export interface ResumoDaAgenda {
   comData: number;
   semData: number;
-  noAto: number;
 }
 
-/** Quantos vão com data, quantos ficaram sem, quantos publicam no ato. */
+/** Quantos vão com data e quantos ficaram sem. */
 export function resumoDaAgenda(linhas: LinhaDaAgenda[]): ResumoDaAgenda {
-  const resumo: ResumoDaAgenda = { comData: 0, semData: 0, noAto: 0 };
-  for (const linha of linhas) {
-    if (!escalona(linha.plataforma)) resumo.noAto += 1;
-    else if (linha.agendar_para) resumo.comData += 1;
-    else resumo.semData += 1;
-  }
-  return resumo;
+  const comData = linhas.filter((linha) => linha.agendar_para).length;
+  return { comData, semData: linhas.length - comData };
 }
 
-/** O que vai no pedido: só as redes que escalonam; vazio é "ficou sem data". */
+/** O que vai no pedido; vazio é "ficou sem data". */
 export function paraEnvio(linhas: LinhaDaAgenda[]): AgendaParaEnvio {
-  return linhas
-    .filter((linha) => escalona(linha.plataforma))
-    .map((linha) => ({
-      alvo: `${linha.alvo_tipo}:${linha.alvo_id}`,
-      plataforma: linha.plataforma,
-      agendar_para: linha.agendar_para,
-    }));
+  return linhas.map((linha) => ({
+    alvo: `${linha.alvo_tipo}:${linha.alvo_id}`,
+    plataforma: linha.plataforma,
+    agendar_para: linha.agendar_para,
+  }));
 }
 
 const DIAS_CURTOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];

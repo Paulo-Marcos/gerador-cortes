@@ -26,14 +26,6 @@ const LINHAS: LinhaDaAgenda[] = [
     intensidade: '',
     motivo: 'não cabe nos 10 dias que a plataforma deixa agendar',
   },
-  {
-    alvo_tipo: 'short',
-    alvo_id: 's1',
-    plataforma: 'outra_rede',
-    agendar_para: '',
-    intensidade: '',
-    motivo: 'publica no ato: esta rede não tem agenda',
-  },
 ];
 
 function desenhar(modo: ModoDeQuando, extra: Partial<Parameters<typeof QuandoDoLote>[0]> = {}) {
@@ -93,21 +85,18 @@ describe('a agenda distribuída', () => {
     expect(html).toContain('aria-label="Data de O erro da igreja no YouTube Shorts"');
   });
 
-  it('diz quem ficou sem data e por quê, e quem publica no ato', () => {
+  it('diz quem ficou sem data e por quê', () => {
     const html = desenhar('distribuir');
 
     expect(html).toContain('sem data: não cabe nos 10 dias');
-    expect(html).toContain('no ato');
-    // O Instagram não ganha caixa de data: não há o que ajustar.
-    expect(html).not.toContain('Data de O erro da igreja no Instagram Reels');
+    expect(html).not.toContain('no ato');
   });
 
-  it('resume quantos vão com data, sem data e no ato', () => {
+  it('resume quantos vão com data e sem data', () => {
     const html = desenhar('distribuir');
 
     expect(html).toContain('1 com data');
     expect(html).toContain('1 sem data');
-    expect(html).toContain('1 no ato');
   });
 
   it('aponta o problema da linha ao lado dela', () => {

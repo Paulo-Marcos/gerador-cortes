@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from app.domain.publicacao.agendamento import Agendamento
-from app.domain.publicacao.escalonamento import destino_de
 from app.domain.publicacao.publicacao import LIMITES, Plataforma
 from app.domain.publicacao.ritmo_publicacao import (
     ESTADOS_FORA_DA_RAIA,
@@ -167,9 +166,16 @@ def agendamento_do_item(
     return agenda.get((alvo_id, plataforma.value))
 
 
-def escalona(plataforma: Plataforma) -> bool:
-    """Se a plataforma entra no escalonamento."""
-    return destino_de(plataforma.value) is not None
+RECADO_DA_ABA = "a aba esta pronta no Chrome — confira e clique em Publicar"
+RECADO_DA_ABA_COM_DATA = "a aba esta pronta no Chrome — confira a data e clique no botao final"
+
+
+def escolher_recado_da_aba(agendamento: Agendamento | None) -> str:
+    """O que o operador faz com a aba pronta: com data, o botão final muda de nome.
+
+    É "Schedule" no Business Suite; nas outras redes o nome não foi medido.
+    """
+    return RECADO_DA_ABA_COM_DATA if agendamento else RECADO_DA_ABA
 
 
 def recado_do_pacote(resultado: dict, ritmo: Cadencia) -> str:

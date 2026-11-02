@@ -179,19 +179,57 @@ def executar_roteiro(
     feitos: list[Passo] = []
     avisos: list[str] = []
 
-    _passo(pagina.abrir, Passo.ABRIR, URL_DO_COMPOSITOR, segundos=SEGUNDOS_PARA_ABRIR)
-    feitos.append(Passo.ABRIR)
+    _abrir_o_compositor(pagina)
+    feitos += [Passo.ABRIR, Passo.SESSAO]
 
+    _conferir_conta(pagina)
+    feitos.append(Passo.CONTA)
+
+    _enviar_o_video(pagina, video)
+    feitos.append(Passo.ARQUIVO)
+
+    _escrever_a_legenda(pagina, legenda, feitos, avisos)
+    _aplicar_capa(pagina, capa, feitos, avisos)
+
+    _avancar_ate_o_agendamento(pagina)
+    feitos.append(Passo.AVANCAR)
+
+    _marcar_data_e_hora(pagina, agendamento)
+    feitos.append(Passo.AGENDAMENTO)
+
+    _esperar_o_botao_final(pagina)
+    feitos.append(Passo.REVISAO)
+
+    _marcar_a_aba(pagina, marca)
+
+    # Avaliado sempre, e não só com `publicar_sozinho`: a negativa da capa deixa o aviso.
+    liberado = _pode_clicar_sozinho(capa, feitos, avisos)
+    publicado = publicar_sozinho and liberado
+    if publicado:
+        _confirmar_agendamento(pagina)
+        feitos.append(Passo.PUBLICAR)
+
+    return {
+        "passos": [p.value for p in feitos],
+        "resumo": descricao_do_progresso(feitos),
+        "capa_aplicada": Passo.CAPA in feitos,
+        "agendado_para": agendamento.legivel(),
+        "avisos": avisos,
+        "publicado": publicado,
+    }
+
+
+def _abrir_o_compositor(pagina: PaginaDoBusinessSuite) -> None:
+    """Abre o criador e separa "falta entrar" de "a tela não carregou"."""
+    _passo(pagina.abrir, Passo.ABRIR, URL_DO_COMPOSITOR, segundos=SEGUNDOS_PARA_ABRIR)
     # O redirecionamento para o login chega depois do `goto`: a decisão é esperada.
     if not pagina.existe("botao_do_video", segundos=SEGUNDOS_PARA_SESSAO):
         if pede_login(pagina.url_atual()):
             raise RoteiroInterrompido(Passo.SESSAO)
         raise RoteiroInterrompido(Passo.ARQUIVO, "o criador de Reels nao carregou")
-    feitos.append(Passo.SESSAO)
 
-    _conferir_conta(pagina)
-    feitos.append(Passo.CONTA)
 
+def _enviar_o_video(pagina: PaginaDoBusinessSuite, video: Path) -> None:
     _passo(
         pagina.enviar_pelo_seletor,
         Passo.ARQUIVO,
@@ -201,8 +239,12 @@ def executar_roteiro(
     )
     if not pagina.existe("envio_completo", segundos=SEGUNDOS_PARA_ENVIO):
         raise RoteiroInterrompido(Passo.ARQUIVO, "o envio nao chegou a 100%")
-    feitos.append(Passo.ARQUIVO)
 
+
+def _escrever_a_legenda(
+    pagina: PaginaDoBusinessSuite, legenda: str, feitos: list[Passo], avisos: list[str]
+) -> None:
+    """Escreve e lê de volta: legenda que não se confirma vira aviso, não interrupção."""
     _passo(
         pagina.escrever,
         Passo.LEGENDA,
@@ -218,42 +260,26 @@ def executar_roteiro(
             "antes de agendar."
         )
 
-    _aplicar_capa(pagina, capa, feitos, avisos)
 
-    _avancar_ate_o_agendamento(pagina)
-    feitos.append(Passo.AVANCAR)
-
-    _marcar_data_e_hora(pagina, agendamento)
-    feitos.append(Passo.AGENDAMENTO)
-
+def _esperar_o_botao_final(pagina: PaginaDoBusinessSuite) -> None:
     _passo(
         pagina.esperar_habilitado, Passo.REVISAO, "botao_agendar", segundos=SEGUNDOS_PARA_ELEMENTO
     )
-    feitos.append(Passo.REVISAO)
 
-    if marca:
-        try:
-            pagina.marcar(marca)
-        except Exception as exc:  # noqa: BLE001 — etiqueta é conveniência, não requisito
-            logger.warning("[BusinessSuite] nao consegui marcar a aba: %s", exc)
 
-    publicado = False
-    # A legenda não confirmada também segura o clique: depois dele, a faxina fecha a aba.
-    legenda_ok = Passo.LEGENDA in feitos
+def _marcar_a_aba(pagina: PaginaDoBusinessSuite, marca: str) -> None:
+    if not marca:
+        return
+    try:
+        pagina.marcar(marca)
+    except Exception as exc:  # noqa: BLE001 — etiqueta é conveniência, não requisito
+        logger.warning("[BusinessSuite] nao consegui marcar a aba: %s", exc)
+
+
+def _pode_clicar_sozinho(capa: Path | None, feitos: list[Passo], avisos: list[str]) -> bool:
+    """A legenda não confirmada também segura o clique: depois dele, a faxina fecha a aba."""
     capa_ok = pode_publicar_sozinho(capa is not None, Passo.CAPA in feitos, avisos)
-    if publicar_sozinho and legenda_ok and capa_ok:
-        _confirmar_agendamento(pagina)
-        feitos.append(Passo.PUBLICAR)
-        publicado = True
-
-    return {
-        "passos": [p.value for p in feitos],
-        "resumo": descricao_do_progresso(feitos),
-        "capa_aplicada": Passo.CAPA in feitos,
-        "agendado_para": agendamento.legivel(),
-        "avisos": avisos,
-        "publicado": publicado,
-    }
+    return capa_ok and Passo.LEGENDA in feitos
 
 
 def _conferir_conta(pagina: PaginaDoBusinessSuite) -> None:
