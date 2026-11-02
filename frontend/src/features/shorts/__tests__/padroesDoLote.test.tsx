@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
@@ -93,5 +94,12 @@ describe('freio do Instagram até a D-1010', () => {
   });
   it('com o Instagram na agenda, o freio sai', () => {
     expect(seguraPublicacaoDoInstagram(true, 5, true)).toBe(false);
+  });
+});
+
+describe('o freio chega ao envio do lote', () => {
+  it('o modal só manda publicarSozinho quando o freio não está puxado', () => {
+    const fonte = readFileSync('src/features/shorts/PublicarEmLoteModal.tsx', 'utf-8');
+    expect(fonte).toMatch(/publicarSozinho: temRobo && publicarSozinho && !seguraInstagram/);
   });
 });
