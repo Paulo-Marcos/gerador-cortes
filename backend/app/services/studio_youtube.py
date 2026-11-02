@@ -323,7 +323,7 @@ def _canal(pagina: PaginaDoStudio) -> str:
             break
         pagina.aguardar(INTERVALO_DE_CONFERENCIA)
     raise ServicoExternoFalhou(
-        "o Studio não abriu o canal — faça login na conta do canal na janela do robô"
+        "o Studio não abriu o canal a tempo — confira a conta logada no robô"
     )
 
 
@@ -425,7 +425,7 @@ def _esperar_aviso(pagina: PaginaDoStudio) -> tuple[int, int]:
                 return contagem
         pagina.aguardar(INTERVALO_DE_CONFERENCIA)
     raise ServicoExternoFalhou(
-        "o Studio não confirmou a monetização em massa — confira na janela do robô"
+        "o Studio não confirmou a monetização em massa — confira a lista de Conteúdo"
     )
 
 
@@ -468,7 +468,7 @@ def _salvar(pagina: PaginaDoStudio) -> None:
         if not pagina.habilitado("salvar"):
             return
         pagina.aguardar(INTERVALO_DE_CONFERENCIA)
-    raise ServicoExternoFalhou("o Studio não confirmou o Salvar — confira na janela do robô")
+    raise ServicoExternoFalhou("o Studio não confirmou o Salvar — confira o short no Studio")
 
 
 def _no_navegador(tarefas: list[TarefaNoStudio]) -> list[str]:
