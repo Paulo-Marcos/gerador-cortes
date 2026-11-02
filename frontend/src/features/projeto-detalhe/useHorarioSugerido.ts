@@ -62,9 +62,18 @@ export function useHorarioSugerido(corte: { corte_id: string } | null) {
   return [valor, setValor] as const;
 }
 
-/** A data dos envios avulsos do TikTok: ligar o "Marcar dia e hora" traz a vaga. */
-export function useDataDoAvulso(plataforma: string) {
-  const [valor, setValor] = useState('');
+/**
+ * A data dos envios avulsos do TikTok (D-1022): o modal ABRE com a vaga da
+ * janela do canal já marcada — o operador só desliga se não quiser. Fechado,
+ * a data some, e a próxima abertura pede uma vaga nova.
+ */
+export function useDataDoAvulso(plataforma: string, open: boolean) {
+  const [valor, setValor] = useState(() => (open ? sugestaoDeHorario() : ''));
+
+  useEffect(() => {
+    if (open) marcarComVaga(plataforma, setValor);
+    else setValor('');
+  }, [open, plataforma]);
 
   function marcar(ligar: boolean) {
     if (!ligar) return setValor('');
