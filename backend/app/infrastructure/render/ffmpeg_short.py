@@ -5,7 +5,8 @@ Três passos, e a ordem entre eles não é arbitrária:
   1. **recorte + reenquadramento + grade** — extrai o trecho do bruto, corta o
      9:16 e aplica o filtro cinematográfico numa passada só;
   2. o Remotion desenha a camada de cenas e legenda (ProRes 4444 com alpha);
-  3. **composição** — a camada entra por cima do vídeo.
+  3. **composição** — a camada entra por cima do vídeo e o áudio é normalizado
+     (loudnorm, -14 LUFS; só aqui — RN-32).
 
 Por que a grade vem ANTES do overlay: o filtro mexe em curva, saturação e
 vinheta. Aplicado depois, ele mexeria também no texto da legenda — que foi
@@ -34,6 +35,7 @@ from app.domain.short.fundo_short import para_ffmpeg as fundo_ffmpeg
 from app.domain.short.moldura_short import Faixa
 from app.domain.short.palco_short import PlanoPalco, Recorte
 from app.infrastructure.render.cinema_filters import get_filtro_vf
+from app.infrastructure.render.ffmpeg_overlay import _build_audio_args
 
 # ProRes 4444 é o único codec com alpha que o overlay do Remotion entrega de
 # forma confiável neste projeto — VP9/.webm foi testado e não funciona.
@@ -388,8 +390,11 @@ def build_composicao_short_cmd(
         str(crf),
         "-pix_fmt",
         "yuv420p",
-        "-c:a",
-        "copy",
+        # D-1014: o ÚNICO ponto que normaliza o áudio do short (RN-32). É o único
+        # estágio que vê o short inteiro: no recorte, a colagem de N fatias
+        # (D-604) seria normalizada fatia a fatia e o volume pularia nas emendas.
+        # Os mesmos argumentos do corte horizontal (AAC 192k, loudnorm -14 LUFS).
+        *_build_audio_args(normalize=True),
         "-shortest",
         "-movflags",
         "+faststart",
