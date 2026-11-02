@@ -186,8 +186,9 @@ def julgar_emenda(
     """A emenda é suspeita quando há som dos dois lados E o degrau passa do p99.
 
     `degrau` e `p99_da_fala` são fração da escala cheia (0 a 1). O p99 é o
-    degrau entre amostras vizinhas que 99% da fala do próprio corte não passa:
-    emenda acima disso é salto que a fala normal não faz.
+    maior salto, numa janela de um quadro para cada lado, que 99% das janelas
+    de fala do próprio corte não passam: emenda acima disso é salto que a fala
+    normal não faz.
     """
     com_som = nivel_antes_dbfs > SOM_MINIMO_DBFS and nivel_depois_dbfs > SOM_MINIMO_DBFS
     if not com_som:
