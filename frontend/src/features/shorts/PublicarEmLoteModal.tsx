@@ -27,7 +27,9 @@ import type { PublicacaoRegistrada } from './shortsApi';
 import { PainelDoLote } from './PainelDoLote';
 import { paraEnvio, problemasDasLinhas, resumoDaAgenda, type ModoDeQuando } from './agendaDoLote';
 import { Caixa, Interruptor, PLATAFORMAS, rotuloCurto, Secao } from './pecasDoLote';
+import { PADROES_DO_LOTE, seguraPublicacaoDoInstagram } from './padroesDoLote';
 import { QuandoDoLote } from './QuandoDoLote';
+import { RoboDoLote } from './RoboDoLote';
 import { useAgendaDoLote } from './useAgendaDoLote';
 import {
   alternar,
@@ -75,15 +77,14 @@ export function PublicarEmLoteModal({
   const [plataformas, setPlataformas] = useState<string[]>(
     plataformasIniciais ?? ['youtube_shorts'],
   );
-  // D-564 onda 2: como o TikTok sobe. Os dois nascem desligados — o caminho
-  // seguro é o padrão, e ligar é uma decisão consciente por lote.
-  const [tiktokAssistido, setTiktokAssistido] = useState(false);
-  const [instagramAssistido, setInstagramAssistido] = useState(false);
-  const [publicarSozinho, setPublicarSozinho] = useState(false);
-  // D-580/D-908: "agora" continua sendo o padrão. A data única só nasce quando
-  // o operador a escolhe — já na grade de 5 minutos do TikTok —, e a agenda
-  // distribuída só é calculada quando ele escolhe distribuir.
-  const [modo, setModo] = useState<ModoDeQuando>('agora');
+  // D-564 onda 2 / D-1011: como os robôs sobem. Nascem ligados (PADROES_DO_LOTE),
+  // e o operador desliga por lote.
+  const [tiktokAssistido, setTiktokAssistido] = useState(PADROES_DO_LOTE.tiktokAssistido);
+  const [instagramAssistido, setInstagramAssistido] = useState(PADROES_DO_LOTE.instagramAssistido);
+  const [publicarSozinho, setPublicarSozinho] = useState(PADROES_DO_LOTE.publicarSozinho);
+  // D-580/D-908/D-1011: nasce em "distribuir" (horários do canal). A data única só
+  // nasce quando o operador a escolhe, na grade de 5 minutos do TikTok.
+  const [modo, setModo] = useState<ModoDeQuando>(PADROES_DO_LOTE.modo);
   const [agendarPara, setAgendarPara] = useState('');
   // D-590: nasce desligado pelo mesmo motivo do "publicar sozinho" — subir de
   // novo o que já está no ar cria um segundo vídeo, e isso tem de ser pedido.
@@ -113,6 +114,10 @@ export function PublicarEmLoteModal({
   // O "publicar sozinho" vale para os dois robôs, então basta um deles ligado
   // para a pergunta fazer sentido.
   const temRobo = (temTiktok && tiktokAssistido) || (temInstagram && instagramAssistido);
+  const seguraInstagram = seguraPublicacaoDoInstagram(
+    temInstagram && instagramAssistido,
+    selecionados.length,
+  );
   const notas = notasDeAgendamento(plataformas, { tiktokAssistido, instagramAssistido });
   const [agora, acertarRelogio] = useAgora(open && modo !== 'agora');
   // D-897: disparado, o lote se acompanha na gaveta da fila, que sobrevive à troca de projeto.
@@ -174,7 +179,7 @@ export function PublicarEmLoteModal({
                     instagramAssistido: temInstagram && instagramAssistido,
                     // Apertar o botão sozinho só existe DENTRO do assistido: sem
                     // robô no volante não há botão nenhum para apertar.
-                    publicarSozinho: temRobo && publicarSozinho,
+                    publicarSozinho: temRobo && publicarSozinho && !seguraInstagram,
                     agendarPara: modo === 'uma_data' ? agendarPara : '',
                     republicar: vaiRepublicar,
                     agenda: modo === 'distribuir' ? paraEnvio(agenda.linhas) : undefined,
@@ -213,36 +218,17 @@ export function PublicarEmLoteModal({
                 ))}
               </div>
               {(temTiktok || temInstagram) && (
-                <div className="mt-2 space-y-1.5 rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
-                  {/* Um interruptor por plataforma, e não um só: as duas páginas
-                      não são nossas e quebram em dias diferentes — desligar o
-                      robô de uma não pode desligar o da outra. */}
-                  {temTiktok && (
-                    <Interruptor
-                      ligado={tiktokAssistido}
-                      onChange={setTiktokAssistido}
-                      titulo="TikTok: o robô sobe pelo navegador"
-                      nota="envia o vídeo, escreve a legenda e põe a capa — e para no Publicar"
-                    />
-                  )}
-                  {temInstagram && (
-                    <Interruptor
-                      ligado={instagramAssistido}
-                      onChange={setInstagramAssistido}
-                      titulo="Instagram: o robô sobe pelo navegador"
-                      nota="abre o compositor, envia o vídeo e escreve a legenda — e para no Compartilhar"
-                    />
-                  )}
-                  {temRobo && (
-                    <Interruptor
-                      ligado={publicarSozinho}
-                      onChange={setPublicarSozinho}
-                      titulo="…e também aperta o botão final"
-                      nota="sem conferência sua: uma legenda errada vira post público no canal"
-                      alerta
-                    />
-                  )}
-                </div>
+                <RoboDoLote
+                  temTiktok={temTiktok}
+                  temInstagram={temInstagram}
+                  tiktokAssistido={tiktokAssistido}
+                  instagramAssistido={instagramAssistido}
+                  publicarSozinho={publicarSozinho}
+                  seguraInstagram={seguraInstagram}
+                  onTiktok={setTiktokAssistido}
+                  onInstagram={setInstagramAssistido}
+                  onSozinho={setPublicarSozinho}
+                />
               )}
             </Secao>
 
