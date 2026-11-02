@@ -114,11 +114,8 @@ export function PublicarEmLoteModal({
   // O "publicar sozinho" vale para os dois robôs, então basta um deles ligado
   // para a pergunta fazer sentido.
   const temRobo = (temTiktok && tiktokAssistido) || (temInstagram && instagramAssistido);
-  const seguraInstagram = seguraPublicacaoDoInstagram(
-    temInstagram && instagramAssistido,
-    selecionados.length,
-    modo,
-  );
+  const roboNoInstagram = temInstagram && instagramAssistido;
+  const seguraInstagram = seguraPublicacaoDoInstagram(roboNoInstagram, selecionados.length, modo);
   const notas = notasDeAgendamento(plataformas, { tiktokAssistido, instagramAssistido });
   const [agora, acertarRelogio] = useAgora(open && modo !== 'agora');
   // D-897: disparado, o lote se acompanha na gaveta da fila, que sobrevive à troca de projeto.
