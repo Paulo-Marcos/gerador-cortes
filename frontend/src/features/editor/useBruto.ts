@@ -11,6 +11,23 @@ export const statusBrutoKey = (id: string) => ['corte', id, 'status-bruto'] as c
 
 const emAndamento = (status?: string) => status === 'processando' || status === 'cortando';
 
+/** D-1008: a geração leva minutos e o toast dura segundos; quem fica dizendo
+ * que o bruto está sendo processado é o selo do player. */
+export function seloDoPlayer(brutoPronto: boolean, status?: string) {
+  if (emAndamento(status)) return 'BRUTO · processando…';
+  return brutoPronto ? 'BRUTO · pronto' : 'VÍDEO ORIGINAL';
+}
+
+/** D-1008: o gesto ignorado por já haver geração em andamento também responde;
+ * calado, parecia que o atalho não tinha funcionado. */
+export function avisarSeBrutoOcupado(
+  ocupado: boolean,
+  notify: (mensagem: string, opcoes: { tone: 'info' }) => unknown,
+) {
+  if (ocupado) notify('O bruto deste corte já está sendo processado.', { tone: 'info' });
+  return ocupado;
+}
+
 /** D-973: o bruto só fica pronto depois de ressincronizar a transcrição do
  * corte; quando a geração termina, a legenda guardada do short ficou velha. */
 export async function buscarStatusBruto(qc: QueryClient, corteId: string) {
@@ -65,6 +82,8 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
     // do usuário disparam uma nova confirmação de 2 cliques (4 cliques no
     // total para 1 geração).
     onMutate: async () => {
+      // D-1008: avisa no gesto, sem esperar a resposta da API.
+      notify('Processando o bruto do corte…', { tone: 'info' });
       await qc.cancelQueries({ queryKey: statusBrutoKey(corteId) });
       const previous = qc.getQueryData<StatusBrutoResponse>(statusBrutoKey(corteId));
       qc.setQueryData<StatusBrutoResponse>(statusBrutoKey(corteId), {
@@ -76,7 +95,6 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
       return { previous };
     },
     onSuccess: () => {
-      notify('Recorte bruto enfileirado.', { tone: 'success' });
       // Refetcha pra confirmar com a verdade do backend (caso o status
       // tenha avançado pra "pronto" ou "erro" muito rápido).
       qc.invalidateQueries({ queryKey: statusBrutoKey(corteId) });
