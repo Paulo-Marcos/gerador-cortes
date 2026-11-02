@@ -1836,6 +1836,81 @@
         "title": "Body_upload_thumbnail_manual_api_metadados_corte__corte_id__thumbnail_manual_post",
         "type": "object"
       },
+      "BoletimResponse": {
+        "properties": {
+          "emendas": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmendasResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro"
+          },
+          "estado": {
+            "enum": [
+              "pronto",
+              "medindo",
+              "falhou",
+              "arquivo_ausente"
+            ],
+            "title": "Estado",
+            "type": "string"
+          },
+          "medido_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medido Em"
+          },
+          "paradas": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ParadaResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paradas"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VolumeResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "estado"
+        ],
+        "title": "BoletimResponse",
+        "type": "object"
+      },
       "BrutoDescartadoResponse": {
         "properties": {
           "erros": {
@@ -3810,6 +3885,76 @@
           "contribuicao"
         ],
         "title": "EmbasamentoCriterio",
+        "type": "object"
+      },
+      "EmendaResponse": {
+        "properties": {
+          "acima_do_p99": {
+            "title": "Acima Do P99",
+            "type": "boolean"
+          },
+          "com_som_dos_dois_lados": {
+            "title": "Com Som Dos Dois Lados",
+            "type": "boolean"
+          },
+          "degrau": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degrau"
+          },
+          "tempo_seg": {
+            "title": "Tempo Seg",
+            "type": "number"
+          }
+        },
+        "required": [
+          "tempo_seg",
+          "com_som_dos_dois_lados",
+          "acima_do_p99"
+        ],
+        "title": "EmendaResponse",
+        "type": "object"
+      },
+      "EmendasResponse": {
+        "properties": {
+          "acima_do_p99": {
+            "title": "Acima Do P99",
+            "type": "integer"
+          },
+          "com_som_dos_dois_lados": {
+            "title": "Com Som Dos Dois Lados",
+            "type": "integer"
+          },
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/EmendaResponse"
+            },
+            "title": "Itens",
+            "type": "array"
+          },
+          "p99_da_fala": {
+            "title": "P99 Da Fala",
+            "type": "number"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "com_som_dos_dois_lados",
+          "acima_do_p99",
+          "p99_da_fala",
+          "itens"
+        ],
+        "title": "EmendasResponse",
         "type": "object"
       },
       "EnfileirarDownloadsResponse": {
@@ -8093,6 +8238,34 @@
           "padrao"
         ],
         "title": "PapelModeloResponse",
+        "type": "object"
+      },
+      "ParadaResponse": {
+        "properties": {
+          "duracao_seg": {
+            "title": "Duracao Seg",
+            "type": "number"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          },
+          "origem": {
+            "enum": [
+              "live",
+              "render",
+              "nao_verificada"
+            ],
+            "title": "Origem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inicio_seg",
+          "duracao_seg",
+          "origem"
+        ],
+        "title": "ParadaResponse",
         "type": "object"
       },
       "ParametrosDoDestinoModel": {
@@ -12892,6 +13065,37 @@
         "title": "VersoesResponse",
         "type": "object"
       },
+      "VolumeResponse": {
+        "properties": {
+          "avisos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avisos",
+            "type": "array"
+          },
+          "integrado_lufs": {
+            "title": "Integrado Lufs",
+            "type": "number"
+          },
+          "lra_lu": {
+            "title": "Lra Lu",
+            "type": "number"
+          },
+          "pico_dbtp": {
+            "title": "Pico Dbtp",
+            "type": "number"
+          }
+        },
+        "required": [
+          "integrado_lufs",
+          "pico_dbtp",
+          "lra_lu",
+          "avisos"
+        ],
+        "title": "VolumeResponse",
+        "type": "object"
+      },
       "YouTubeUploadRequest": {
         "properties": {
           "scheduled_at": {
@@ -13798,6 +14002,174 @@
         "summary": "Analisar Padroes",
         "tags": [
           "Avaliações Thumbnail"
+        ]
+      }
+    },
+    "/api/boletim-tecnico/corte/{corte_id}": {
+      "get": {
+        "operationId": "boletim_do_corte_api_boletim_tecnico_corte__corte_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoletimResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Boletim Do Corte",
+        "tags": [
+          "Boletim Técnico"
+        ]
+      }
+    },
+    "/api/boletim-tecnico/corte/{corte_id}/remedir": {
+      "post": {
+        "operationId": "remedir_corte_api_boletim_tecnico_corte__corte_id__remedir_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoletimResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remedir Corte",
+        "tags": [
+          "Boletim Técnico"
+        ]
+      }
+    },
+    "/api/boletim-tecnico/short/{short_id}": {
+      "get": {
+        "operationId": "boletim_do_short_api_boletim_tecnico_short__short_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "short_id",
+            "required": true,
+            "schema": {
+              "title": "Short Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoletimResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Boletim Do Short",
+        "tags": [
+          "Boletim Técnico"
+        ]
+      }
+    },
+    "/api/boletim-tecnico/short/{short_id}/remedir": {
+      "post": {
+        "operationId": "remedir_short_api_boletim_tecnico_short__short_id__remedir_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "short_id",
+            "required": true,
+            "schema": {
+              "title": "Short Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoletimResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remedir Short",
+        "tags": [
+          "Boletim Técnico"
         ]
       }
     },

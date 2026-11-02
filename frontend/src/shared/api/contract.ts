@@ -183,6 +183,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/boletim-tecnico/corte/{corte_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Boletim Do Corte */
+        get: operations["boletim_do_corte_api_boletim_tecnico_corte__corte_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/boletim-tecnico/corte/{corte_id}/remedir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remedir Corte */
+        post: operations["remedir_corte_api_boletim_tecnico_corte__corte_id__remedir_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/boletim-tecnico/short/{short_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Boletim Do Short */
+        get: operations["boletim_do_short_api_boletim_tecnico_short__short_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/boletim-tecnico/short/{short_id}/remedir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remedir Short */
+        post: operations["remedir_short_api_boletim_tecnico_short__short_id__remedir_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/capa-chatgpt/apresentador": {
         parameters: {
             query?: never;
@@ -5648,6 +5716,22 @@ export interface components {
             /** File */
             file: string;
         };
+        /** BoletimResponse */
+        BoletimResponse: {
+            emendas?: components["schemas"]["EmendasResponse"] | null;
+            /** Erro */
+            erro?: string | null;
+            /**
+             * Estado
+             * @enum {string}
+             */
+            estado: "pronto" | "medindo" | "falhou" | "arquivo_ausente";
+            /** Medido Em */
+            medido_em?: string | null;
+            /** Paradas */
+            paradas?: components["schemas"]["ParadaResponse"][] | null;
+            volume?: components["schemas"]["VolumeResponse"] | null;
+        };
         /** BrutoDescartadoResponse */
         BrutoDescartadoResponse: {
             /** Erros */
@@ -6459,6 +6543,30 @@ export interface components {
             valor_bruto: number;
             /** Valor Normalizado */
             valor_normalizado: number;
+        };
+        /** EmendaResponse */
+        EmendaResponse: {
+            /** Acima Do P99 */
+            acima_do_p99: boolean;
+            /** Com Som Dos Dois Lados */
+            com_som_dos_dois_lados: boolean;
+            /** Degrau */
+            degrau?: number | null;
+            /** Tempo Seg */
+            tempo_seg: number;
+        };
+        /** EmendasResponse */
+        EmendasResponse: {
+            /** Acima Do P99 */
+            acima_do_p99: number;
+            /** Com Som Dos Dois Lados */
+            com_som_dos_dois_lados: number;
+            /** Itens */
+            itens: components["schemas"]["EmendaResponse"][];
+            /** P99 Da Fala */
+            p99_da_fala: number;
+            /** Total */
+            total: number;
         };
         /** EnfileirarDownloadsResponse */
         EnfileirarDownloadsResponse: {
@@ -8168,6 +8276,18 @@ export interface components {
             rotulo: string;
             /** Valor */
             valor: string;
+        };
+        /** ParadaResponse */
+        ParadaResponse: {
+            /** Duracao Seg */
+            duracao_seg: number;
+            /** Inicio Seg */
+            inicio_seg: number;
+            /**
+             * Origem
+             * @enum {string}
+             */
+            origem: "live" | "render" | "nao_verificada";
         };
         /**
          * ParametrosDoDestinoModel
@@ -10049,6 +10169,17 @@ export interface components {
             /** Versoes */
             versoes: components["schemas"]["VersaoExport"][];
         };
+        /** VolumeResponse */
+        VolumeResponse: {
+            /** Avisos */
+            avisos: string[];
+            /** Integrado Lufs */
+            integrado_lufs: number;
+            /** Lra Lu */
+            lra_lu: number;
+            /** Pico Dbtp */
+            pico_dbtp: number;
+        };
         /** YouTubeUploadRequest */
         YouTubeUploadRequest: {
             /** Scheduled At */
@@ -10505,6 +10636,130 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PadroesThumbnailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    boletim_do_corte_api_boletim_tecnico_corte__corte_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoletimResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remedir_corte_api_boletim_tecnico_corte__corte_id__remedir_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoletimResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    boletim_do_short_api_boletim_tecnico_short__short_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                short_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoletimResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remedir_short_api_boletim_tecnico_short__short_id__remedir_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                short_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoletimResponse"];
                 };
             };
             /** @description Validation Error */

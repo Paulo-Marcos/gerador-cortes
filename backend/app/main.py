@@ -20,6 +20,7 @@ from app.routers import (
     alertas_conferir,
     avaliacao_bruto,
     avaliacoes_thumbnail,
+    boletim_tecnico,
     capa_no_chatgpt,
     capa_tiktok_estilo,
     channels,
@@ -156,6 +157,8 @@ app.include_router(
 app.include_router(
     avaliacao_bruto.router, prefix="/api/avaliacao-bruto", tags=["Avaliação do Bruto"]
 )
+# D-1015: boletim técnico do vídeo final (volume, imagem parada, emendas), sem IA.
+app.include_router(boletim_tecnico.router, prefix="/api/boletim-tecnico", tags=["Boletim Técnico"])
 app.include_router(shorts.router, prefix="/api/shorts", tags=["Shorts"])
 # D-804: a capa gerada no ChatGPT do operador, pelo navegador dele.
 app.include_router(capa_no_chatgpt.router, prefix="/api/capa-chatgpt", tags=["Capa no ChatGPT"])
