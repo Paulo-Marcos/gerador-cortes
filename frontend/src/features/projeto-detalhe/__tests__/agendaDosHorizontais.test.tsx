@@ -206,6 +206,6 @@ describe('um corte sozinho', () => {
     const fonte = (caminho: string) => readFileSync(resolve(__dirname, '..', caminho), 'utf8');
 
     expect(fonte('useWorkspaceProjeto.tsx')).toMatch(/= useHorarioSugerido\(publicarDe\);/);
-    expect(fonte('PublicarTiktokModal.tsx')).toMatch(/useDataDoAvulso\('tiktok_horizontal'\)/);
+    expect(fonte('PublicarTiktokModal.tsx')).toMatch(/useDataDoAvulso\('tiktok_horizontal', open\)/);
   });
 });

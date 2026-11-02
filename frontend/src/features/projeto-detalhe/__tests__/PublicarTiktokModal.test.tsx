@@ -96,6 +96,8 @@ describe('PublicarTiktokModal', () => {
     );
 
     expect(html.match(/Publicar sozinho — o robô aperta Publicar/g)).toHaveLength(1);
+    // D-1022: abre com "Marcar dia e hora" e "Publicar sozinho" ligados.
+    expect(html.match(/type="checkbox"[^>]*checked=""/g)).toHaveLength(2);
     expect(html).toContain('Vale para o lote e para o botão Assistido de cada corte');
   });
 });
@@ -114,12 +116,12 @@ const textoDe = (no: ReactNode): string =>
   typeof no === 'string' ? no : Array.isArray(no) ? no.map(textoDe).join('') : isValidElement(no) ? textoDe((no as Elemento).props.children as ReactNode) : '';
 
 describe('publicar sozinho com segurança (D-893)', () => {
-  it('o interruptor volta desligado quando o modal fecha e reabre', () => {
+  it('o interruptor volta ao padrão (ligado) quando o modal fecha e reabre', () => {
     const visto: Record<string, boolean> = {};
     function Sonda() {
       const [passo, setPasso] = useState(0);
       const [ligado, setLigado] = useInterruptorDaAbertura(passo !== 1);
-      if (passo === 0 && !ligado) setLigado(true);
+      if (passo === 0 && ligado) setLigado(false);
       else if (passo === 0) {
         visto.aberto = ligado;
         setPasso(1);
@@ -130,7 +132,8 @@ describe('publicar sozinho com segurança (D-893)', () => {
       return null;
     }
     renderToStaticMarkup(<Sonda />);
-    expect(visto).toEqual({ aberto: true, fechado: false, reaberto: false });
+    // D-1022: nasce ligado; o que o operador desligou não vaza para a próxima abertura.
+    expect(visto).toEqual({ aberto: false, fechado: false, reaberto: true });
   });
 
   it.each([
@@ -163,10 +166,10 @@ describe('publicar sozinho com segurança (D-893)', () => {
     function Sonda() {
       const arvore = PublicarTiktokModal({ open: true, onClose: () => {}, projetoId: 'p1', cortes: [corte] });
       const [ligou, setLigou] = useState(false);
-      if (ligar && !ligou) {
+      if (!ligou) {
         const rotulo = elementos(arvore).find((e) => e.type === 'label' && textoDe(e).includes('Publicar sozinho'))!;
         const caixa = elementos(rotulo.props.children as ReactNode).find((e) => e.type === 'input')!;
-        (caixa.props.onChange as (e: unknown) => void)({ target: { checked: true } });
+        (caixa.props.onChange as (e: unknown) => void)({ target: { checked: ligar } });
         setLigou(true);
       }
       return arvore;
@@ -201,7 +204,7 @@ describe('publicar sozinho com segurança (D-893)', () => {
 
   // 2ª pr-audit: o hook era testado sozinho; o modal podia voltar ao useState
   // de antes e nada falhava. Aqui é o PRÓPRIO modal que fecha e reabre.
-  it('o próprio modal: ligado, fechado e reaberto, o botão volta a ser o Assistido', () => {
+  it('o próprio modal: desligado, fechado e reaberto, o robô volta ligado (D-1022)', () => {
     const vistos: string[] = [];
     function Sonda() {
       const [passo, setPasso] = useState(0);
@@ -210,10 +213,11 @@ describe('publicar sozinho com segurança (D-893)', () => {
       if (passo === 0) {
         const rotulo = elementos(arvore).find((e) => e.type === 'label' && textoDe(e).includes('Publicar sozinho'))!;
         const caixa = elementos(rotulo.props.children as ReactNode).find((e) => e.type === 'input')!;
-        (caixa.props.onChange as (e: unknown) => void)({ target: { checked: true } });
+        (caixa.props.onChange as (e: unknown) => void)({ target: { checked: false } });
         setPasso(1);
       } else if (passo === 1) {
-        vistos.push(String(elementos(arvore).find((e) => e.type === 'input' && e.props.checked === true) !== undefined));
+        const rotulo = elementos(arvore).find((e) => e.type === 'label' && textoDe(e).includes('Publicar sozinho'))!;
+        vistos.push(String(elementos(rotulo.props.children as ReactNode).find((e) => e.type === 'input')!.props.checked));
         setPasso(2);
       } else if (passo === 2) setPasso(3);
       return passo === 3 ? arvore : null;
@@ -223,9 +227,9 @@ describe('publicar sozinho com segurança (D-893)', () => {
         <Sonda />
       </QueryClientProvider>,
     );
-    expect(vistos).toEqual(['true']);
-    expect(html).toContain('>Assistido<');
-    expect(html).not.toContain('Publicar com o robô');
+    expect(vistos).toEqual(['false']);
+    expect(html).toContain('>Publicar com o robô<');
+    expect(html).not.toContain('>Assistido<');
   });
 
   it('a mensagem do erro é a orientação, não o JSON', () => {

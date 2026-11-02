@@ -51,18 +51,19 @@ import { ErroDaApi } from '@/shared/api';
 
 /**
  * D-893: o "publicar sozinho" vale pela ABERTURA do modal. Ele fica montado (o
- * Workspace só o esconde), e o interruptor sobrevivia a fechar e reabrir — o
- * botão de cada corte, que sempre parou antes de publicar, publicava sem que
- * nada na linha dissesse isso. Fechou, volta desligado.
+ * Workspace só o esconde), e o interruptor sobrevivia a fechar e reabrir — a
+ * escolha de um dia vazava para o seguinte sem ninguém ver. Fechou, volta ao
+ * padrão. D-1022: o padrão é LIGADO — o robô é o único caminho do operador, e
+ * o interruptor segue à vista, com o que ele faz escrito ao lado.
  */
 export function useInterruptorDaAbertura(open: boolean) {
-  const [ligado, setLigado] = useState(false);
+  const [ligado, setLigado] = useState(true);
   const [aberto, setAberto] = useState(open);
   if (aberto !== open) {
     setAberto(open);
-    if (!open) setLigado(false);
+    if (!open) setLigado(true);
   }
-  // Fechado é sempre desligado, já no render que fecha (o reset só vale no próximo).
+  // Fechado nunca vale ligado, já no render que fecha (o reset só vale no próximo).
   return [open && ligado, setLigado] as const;
 }
 
@@ -128,9 +129,9 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
   // "pacote montado" não precisa sobreviver — refazer é barato.
   const [preparados, setPreparados] = useState<Record<string, boolean>>({});
   // D-580: uma data para os envios avulsos, e não uma por linha: um campo por
-  // linha seria a mesma data digitada N vezes. D-934: nasce na próxima vaga da
-  // janela do canal; o lote tem o próprio "Quando".
-  const [agendarPara, setAgendarPara, marcarDiaEHora] = useDataDoAvulso('tiktok_horizontal');
+  // linha seria a mesma data digitada N vezes. D-934/D-1022: abre na próxima vaga
+  // da janela do canal; o lote tem o próprio "Quando".
+  const [agendarPara, setAgendarPara, marcarDiaEHora] = useDataDoAvulso('tiktok_horizontal', open);
   // D-834: o "publicar sozinho" era só do lote; agora vale para cada corte também.
   const [publicarSozinho, setPublicarSozinho] = useInterruptorDaAbertura(open);
   const envio = { agendarPara, publicarSozinho };
