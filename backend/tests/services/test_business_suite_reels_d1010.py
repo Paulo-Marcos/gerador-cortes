@@ -6,13 +6,15 @@ Cada dublê responde como a página real respondeu na medição de 02/11/2026.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.business_suite_reels import Passo, RoteiroInterrompido
 from app.services import business_suite_reels as robo
-from app.services import destinos_assistidos
+from app.services import destinos_assistidos, instagram_reels, publicacao_lote
 
+EstadoItem = publicacao_lote.EstadoItem
 QUANDO = Agendamento.de_texto("2026-11-09T19:35")
 
 
@@ -227,3 +229,59 @@ def test_sem_data_o_destino_continua_no_instagram_com():
     destino = destinos_assistidos.DestinoInstagramReelsAssistido()
 
     assert destino._robo().__name__.endswith("instagram_reels")
+
+
+@pytest.mark.asyncio
+async def test_clique_sem_confirmacao_vira_conferir_na_aba(monkeypatch):
+    """O Reel pode ter sido agendado: a raia vigia a aba, em vez de declarar erro."""
+
+    async def pacote_pronto(self, pacote):
+        return {"plataforma": "instagram_reels", "video": "reel.mp4", "capa": "capa.jpg"}
+
+    async def subir(self, pronto, marca, publicar_sozinho):
+        raise RoteiroInterrompido(Passo.PUBLICAR, "sem lista")
+
+    monkeypatch.setattr(destinos_assistidos.DestinoManual, "publicar", pacote_pronto)
+    monkeypatch.setattr(destinos_assistidos.DestinoInstagramReelsAssistido, "_subir", subir)
+    destino = destinos_assistidos.DestinoInstagramReelsAssistido(agendamento=QUANDO)
+
+    with pytest.raises(destinos_assistidos.ConferirNaAba):
+        await destino.publicar(None)
+
+
+@pytest.mark.asyncio
+async def test_a_faxina_so_fecha_a_aba_do_que_ja_foi_agendado(monkeypatch):
+    perguntas = {}
+
+    def fechar(perfil, fica):
+        perguntas["agendado"] = fica(
+            SimpleNamespace(url="https://business.facebook.com/latest/posts/scheduled_posts")
+        )
+        perguntas["compositor"] = fica(
+            SimpleNamespace(url="https://business.facebook.com/latest/reels_composer")
+        )
+        return 1
+
+    monkeypatch.setattr(destinos_assistidos.abas_do_robo, "fechar_abas_que_sobraram", fechar)
+    monkeypatch.setattr(instagram_reels, "perfil_do_chrome", lambda: Path("perfil"))
+
+    assert await destinos_assistidos.DestinoInstagramReelsAssistido.fechar_abas() == 1
+    assert perguntas == {"agendado": False, "compositor": True}
+
+
+@pytest.mark.asyncio
+async def test_erro_do_robo_traz_a_janela_para_a_tela():
+    """A orientação de login manda agir numa janela que nasce fora da tela."""
+
+    class Destino(destinos_assistidos.DestinoInstagramReelsAssistido):
+        mostradas = 0
+
+        async def mostrar_janela(self):
+            type(self).mostradas += 1
+            return True
+
+    await publicacao_lote._mostrar_se_for_a_vez(
+        [SimpleNamespace(estado=EstadoItem.ERRO)], Destino()
+    )
+
+    assert Destino.mostradas == 1

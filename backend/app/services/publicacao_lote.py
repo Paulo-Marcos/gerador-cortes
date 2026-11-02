@@ -244,8 +244,8 @@ async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
 
 
 async def _mostrar_se_for_a_vez(itens: list[ItemDoLote], destino: Destino | None) -> None:
-    """D-799: com as abas prontas, a janela do robô volta à tela, sem pular na frente."""
-    esperando = any(i.estado in ESTADOS_DO_OPERADOR for i in itens)
+    """D-799: abas prontas ou erro (o login é na janela, D-1010): ela volta à tela, sem pular."""
+    esperando = any(i.estado in ESTADOS_DO_OPERADOR or i.estado is EstadoItem.ERRO for i in itens)
     if esperando and isinstance(destino, destinos_assistidos.DestinoAssistido):
         await destino.mostrar_janela()
 
