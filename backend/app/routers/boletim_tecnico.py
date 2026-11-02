@@ -57,6 +57,7 @@ class BoletimResponse(RespostaComCamposOpcionais):
     volume: VolumeResponse | None = None
     paradas: list[ParadaResponse] | None = None
     emendas: EmendasResponse | None = None
+    emendas_aviso: str | None = None
 
 
 @router.get("/corte/{corte_id}", response_model=BoletimResponse, response_model_exclude_unset=True)

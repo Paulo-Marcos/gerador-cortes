@@ -89,6 +89,9 @@ def _rodar(cmd: list[str], timeout: float, consumir, *, stderr: int):
         processos_em_voo.esquecer(dono, processo)
     if vigia.estourou:
         raise ErroDeMedicao(f"A medição passou de {timeout:.0f}s e foi interrompida.")
+    if processo.returncode != 0:
+        # FFmpeg que morre no meio deixa uma saída parcial que parece medida.
+        raise ErroDeMedicao(f"O FFmpeg terminou com o código {processo.returncode}.")
     return resultado
 
 

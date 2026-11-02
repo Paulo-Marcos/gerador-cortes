@@ -32,6 +32,7 @@ from app.domain.corte.segment_calculator import (
     mesclar_desvios_sobrepostos,
     normalizar_desvio,
 )
+from app.infrastructure import trechos_do_bruto
 from app.infrastructure.render.bruto_pipeline import build_bruto_pipeline
 from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto, StatusCorte
@@ -162,7 +163,7 @@ class ExportService(
             if erro:
                 return erro
 
-            _gravar_bruto_no_corte(corte, out_path, duracao_real)
+            _gravar_bruto_no_corte(corte, out_path, duracao_real, segmentos)
             await db.commit()
             BrutoProgress.marcar(corte_id, "render", "concluido")
 
@@ -446,18 +447,17 @@ def _recusar_duracao_divergente(duracao_esperada: float, duracao_real: float | N
     return None
 
 
-def _gravar_bruto_no_corte(corte: Corte, out_path: Path, duracao_real: float | None) -> None:
-    # Atualiza banco e sincroniza transcrição (path relativo ao projeto)
+def _gravar_bruto_no_corte(
+    corte: Corte, out_path: Path, duracao_real: float | None, segmentos: list[tuple[float, float]]
+) -> None:
     corte.arquivo_clip_path = para_relativo_ao_projeto(str(out_path), corte.projeto_id)
-    # Persiste a duração REAL do arquivo (medida via ffprobe) para o
-    # frontend exibir o valor exato em vez de estimar.  Evita o
-    # problema de mostrar "11:48" quando o arquivo tem 11:49.343.
+    trechos_do_bruto.gravar(out_path, segmentos)  # D-1024: o boletim mede as emendas com isto
+    # Persiste a duração REAL do arquivo (ffprobe): o frontend mostra o valor
+    # exato, não "11:48" para um arquivo de 11:49.343.
     if duracao_real is not None:
         corte.duracao_clip_seg = float(duracao_real)
         if _log_detalhado():
-            logger.info(
-                f"[ExportService] duracao_clip_seg salvo: {duracao_real:.3f}s",
-            )
+            logger.info(f"[ExportService] duracao_clip_seg salvo: {duracao_real:.3f}s")
     # Se estava aprovado, avança para processado
     if corte.status == "aprovado":
         marcar_corte(corte, StatusCorte.PROCESSADO, origem="export")

@@ -10,7 +10,10 @@ import pytest
 from app.domain.corte import boletim_tecnico as regra
 from app.infrastructure import boletim_midia as m
 
-pytestmark = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="precisa do ffmpeg")
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="precisa do ffmpeg"),
+]
 
 
 def _ffmpeg(*args: str) -> None:

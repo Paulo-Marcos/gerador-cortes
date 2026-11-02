@@ -5719,6 +5719,8 @@ export interface components {
         /** BoletimResponse */
         BoletimResponse: {
             emendas?: components["schemas"]["EmendasResponse"] | null;
+            /** Emendas Aviso */
+            emendas_aviso?: string | null;
             /** Erro */
             erro?: string | null;
             /**

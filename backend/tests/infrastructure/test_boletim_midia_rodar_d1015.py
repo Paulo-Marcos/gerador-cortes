@@ -8,7 +8,10 @@ import subprocess
 import pytest
 from app.infrastructure import boletim_midia as m
 
-pytestmark = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="precisa do ffmpeg")
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="precisa do ffmpeg"),
+]
 
 
 def test_leitura_que_falha_mata_o_ffmpeg_e_o_erro_sobe():
