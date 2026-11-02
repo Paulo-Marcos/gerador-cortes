@@ -227,24 +227,23 @@ def agendar(video_id: str, *, relacionado: str = "", short: bool = False) -> Non
 
 async def _esvaziar() -> None:
     global _trabalhando
-    falhou = False
     try:
         await asyncio.sleep(RESPIRO_ANTES_DE_COMECAR)
         while _pendentes:
             tarefas = juntar(_pendentes[:])
             _pendentes.clear()
-            falhas = await asyncio.to_thread(_no_navegador, tarefas)
-            falhou = falhou or bool(falhas)
-            for falha in falhas:
+            for falha in await asyncio.to_thread(_no_navegador, tarefas):
                 logger.warning("[Studio] %s", falha)
     finally:
         _trabalhando = False
-    if not falhou:
-        # D-1003: o lote acabou bem; sai também a aba com que o Chrome nasceu.
-        # Com falha, as abas ficam: é nelas que o operador lê o motivo. Depois de
-        # soltar a fila: o que chegar agora abre outro trabalhador, que respira antes.
-        perfil = navegador_do_robo.perfil_da_plataforma(PLATAFORMA)
-        await asyncio.to_thread(abas_do_robo.fechar_abas_que_sobraram, perfil)
+    # D-1003/D-1007: lote acabou, com falha ou não: só a aba do login fica. Depois de
+    # soltar a fila: o que chegar agora abre outro trabalhador, que respira antes.
+    perfil = navegador_do_robo.perfil_da_plataforma(PLATAFORMA)
+    await asyncio.to_thread(abas_do_robo.fechar_abas_que_sobraram, perfil, _aba_de_login)
+
+
+def _aba_de_login(aba) -> bool:
+    return TRECHO_DO_LOGIN in aba.url
 
 
 # --------------------------------------------------------------------------- #
@@ -255,13 +254,13 @@ async def _esvaziar() -> None:
 def executar_roteiro(pagina: PaginaDoStudio, tarefas: list[TarefaNoStudio]) -> list[str]:
     """Monetiza o lote em massa e depois liga o relacionado de cada short.
 
-    Devolve o que não deu. A aba só fecha quando tudo deu certo: é nela que o
-    operador lê o motivo.
+    Devolve o que não deu, que vai para o log. A aba só fica se pediu login (D-1007):
+    com um "0 de 3" na monetização, sobrava a edição de um short, sem motivo nenhum.
     """
     falhas = _monetizar_tudo(pagina, tarefas)
     if not _pediu_login(pagina):
         falhas += _relacionar_todos(pagina, tarefas)
-    if not falhas:
+    if not _pediu_login(pagina):
         pagina.fechar()
     return falhas
 
@@ -324,7 +323,7 @@ def _canal(pagina: PaginaDoStudio) -> str:
             break
         pagina.aguardar(INTERVALO_DE_CONFERENCIA)
     raise ServicoExternoFalhou(
-        "o Studio não abriu o canal — faça login na conta do canal na janela do robô"
+        "o Studio não abriu o canal a tempo — confira a conta logada no robô"
     )
 
 
@@ -418,12 +417,15 @@ def _esperar_aviso(pagina: PaginaDoStudio) -> tuple[int, int]:
     limite = time.monotonic() + PRAZO_DA_ATUALIZACAO
     while time.monotonic() < limite:
         if pagina.existe("aviso", segundos=INTERVALO_DE_CONFERENCIA, visivel=False):
-            contagem = atualizados_do_aviso(pagina.texto_de("aviso"))
+            texto = pagina.texto_de("aviso")
+            contagem = atualizados_do_aviso(texto)
             if contagem:
+                if contagem[0] < contagem[1]:
+                    logger.warning("[Studio] aviso da edição em massa: %s", texto)
                 return contagem
         pagina.aguardar(INTERVALO_DE_CONFERENCIA)
     raise ServicoExternoFalhou(
-        "o Studio não confirmou a monetização em massa — confira na janela do robô"
+        "o Studio não confirmou a monetização em massa — confira a lista de Conteúdo"
     )
 
 
@@ -466,12 +468,13 @@ def _salvar(pagina: PaginaDoStudio) -> None:
         if not pagina.habilitado("salvar"):
             return
         pagina.aguardar(INTERVALO_DE_CONFERENCIA)
-    raise ServicoExternoFalhou("o Studio não confirmou o Salvar — confira na janela do robô")
+    raise ServicoExternoFalhou("o Studio não confirmou o Salvar — confira o short no Studio")
 
 
 def _no_navegador(tarefas: list[TarefaNoStudio]) -> list[str]:
     """A parte síncrona: Playwright sync numa thread (o async quebra no uvicorn/Windows, D-369)."""
     perfil = navegador_do_robo.perfil_da_plataforma(PLATAFORMA)
+    mostrar_janela = True
     try:
         with navegador_assistido.sessao_no_chrome(
             perfil, abrir_em=URL_DO_STUDIO, executavel=navegador_do_robo.executavel_escolhido()
@@ -482,6 +485,7 @@ def _no_navegador(tarefas: list[TarefaNoStudio]) -> list[str]:
                 contexto.new_page(), SELETORES, escapar_apos_escrever=False
             )
             falhas = executar_roteiro(pagina, tarefas)
+            mostrar_janela = _pediu_login(pagina)
     except (
         navegador_assistido.NavegadorIndisponivel,
         navegador_assistido.PlaywrightAusente,
@@ -490,7 +494,7 @@ def _no_navegador(tarefas: list[TarefaNoStudio]) -> list[str]:
     except Exception as exc:  # noqa: BLE001 — conexão caída no meio: o lote já saiu da fila
         motivo = (str(exc).splitlines() or [type(exc).__name__])[0]
         falhas = [f"o robô parou no Studio antes de terminar o lote: {motivo}"]
-    if falhas:
-        # A janela nasce fora da tela; o que deu errado se lê NELA (D-799).
+    if falhas and mostrar_janela:
+        # A janela nasce fora da tela; o login e a conexão caída se resolvem NELA (D-799).
         janela_do_robo.mostrar(navegador_assistido.sessao_no_chrome(perfil))
     return falhas
