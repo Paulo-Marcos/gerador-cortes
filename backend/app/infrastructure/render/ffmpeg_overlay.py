@@ -54,7 +54,10 @@ def build_overlay_filter_string(
     return "; ".join(parts)
 
 
-_LOUDNORM_YOUTUBE = "loudnorm=I=-14:TP=-1.0:LRA=11"
+# RN-34: o AAC passa do que o loudnorm entrega. O alvo fica abaixo do teto de
+# -1 dBTP do boletim para sobrar margem, e os 256k contêm o estouro do codificador.
+_LOUDNORM_YOUTUBE = "loudnorm=I=-14:TP=-1.5:LRA=11"
+_BITRATE_DO_AUDIO_FINAL = "256k"
 
 
 def build_compose_and_encode_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg: cada argumento é uma dimensão do comando, todos por nome
@@ -193,8 +196,8 @@ def _build_youtube_encode_args(
 
 
 def _build_audio_args(*, normalize: bool) -> list[str]:
-    """AAC-LC 192k 48k + loudnorm opcional para YouTube/podcast."""
-    args = ["-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
+    """AAC-LC 256k 48k + loudnorm opcional para YouTube/podcast (RN-34)."""
+    args = ["-c:a", "aac", "-b:a", _BITRATE_DO_AUDIO_FINAL, "-ar", "48000"]
     if normalize:
         args += ["-af", _LOUDNORM_YOUTUBE]
     return args

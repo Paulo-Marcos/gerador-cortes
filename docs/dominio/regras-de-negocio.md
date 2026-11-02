@@ -74,6 +74,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN-24 | Detecção de silêncio com parâmetros fixos: 0,6 s no proxy, 0,3 s no vídeo. Decisão de 04/09/2026: **não mexer**. | `infrastructure/render/ffmpeg_basic.py` (`_SILENCIO_DUR_PROXY`, `_SILENCIO_DUR_VIDEO`) | — |
 | RN-25 | O filtro de render é **global** (Ajustes), não por projeto nem por corte. | `services/app_settings.py` (`filtro_global_padrao`) | I-023 |
 | RN-32 | O áudio do **short** sai normalizado em -14 LUFS (pico até -1 dBTP), como o do corte horizontal, e a normalização acontece **uma vez só**, na composição final — nunca por fatia do recorte. | `infrastructure/render/ffmpeg_short.py` (`build_composicao_short_cmd`), filtro de `ffmpeg_overlay._LOUDNORM_YOUTUBE` | D-1014 |
+| RN-34 | O áudio final, do corte horizontal e do short, mira **-1,5 dBTP** e sai em **AAC 256k**, porque o AAC passa do que o `loudnorm` entrega. **Filtro de voz só entra com A/B às cegas aprovado**: em 02/11/2026, 12 de 12 pares deram "não ouço diferença", então `highpass`, `deesser` e compressor ficaram de fora. | `infrastructure/render/ffmpeg_overlay.py` (`_LOUDNORM_YOUTUBE`, `_build_audio_args`) | D-1016 |
 
 ## Divergências encontradas na conferência
 
