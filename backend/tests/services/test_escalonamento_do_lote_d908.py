@@ -28,6 +28,7 @@ def canal(monkeypatch):
     parametros = {
         "youtube_shorts": ParametrosDoDestino(("16:00", "19:00", "22:00"), 1, 3, 180),
         "tiktok": ParametrosDoDestino(("12:00",), 2, 2, 30),
+        "instagram_reels": ParametrosDoDestino(("16:00", "19:00", "22:00"), 1, 3, 180),
     }
 
     async def _ultimo(plataformas):
@@ -86,13 +87,14 @@ async def test_o_tiktok_horizontal_parte_da_mesma_fila_do_tiktok(canal):
 
 
 @pytest.mark.asyncio
-async def test_o_instagram_publica_no_ato(canal):
+async def test_o_instagram_entra_na_agenda_e_nao_sai_tudo_de_uma_vez(canal):
+    """D-1010: era "publica no ato"; agora o robô agenda no Business Suite."""
     linhas = await svc.prever(ALVOS[:2], [Plataforma.INSTAGRAM_REELS], agora=SEGUNDA_10H)
 
-    assert [linha.agendar_para for linha in linhas] == ["", ""]
-    assert all("publica no ato" in linha.motivo for linha in linhas)
-    # Nenhuma pergunta ao banco: não há fila de que partir.
-    assert "perguntadas" not in canal
+    datas = [linha.agendar_para for linha in linhas]
+    assert all(datas)
+    assert len(set(datas)) == 2
+    assert canal["perguntadas"] == [["instagram_reels"]]
 
 
 @pytest.mark.asyncio

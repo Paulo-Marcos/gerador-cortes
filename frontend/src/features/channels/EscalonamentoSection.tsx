@@ -110,11 +110,6 @@ export function EscalonamentoSection() {
                 onSugerir={async () => (await escalonamentoApi.sugerirBlocos(destino.destino)).blocos}
               />
             ))}
-            <p className="text-[11px] text-[var(--wb-text-mute)]">
-              O Instagram Reels fica fora: o compositor do instagram.com não agenda — nem emulando
-              celular, que nem vídeo aceita (medido em 13/10/2026). Ele publica no ato, e o lote
-              avisa.
-            </p>
           </div>
         </>
       )}

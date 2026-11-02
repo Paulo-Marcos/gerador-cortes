@@ -124,7 +124,7 @@ async def criar(
     escalona e ficou sem data na agenda (não coube no horizonte, e o operador
     não ajustou) também entra como `PULADO`: subi-lo "agora" desfaria o
     espaçamento que a agenda existe para garantir. Destino que publica no ato
-    (Instagram) não precisa de data e segue normal.
+    não precisa de data e segue normal.
     """
     global _lote_atual
 

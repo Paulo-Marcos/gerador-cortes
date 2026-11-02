@@ -38,6 +38,7 @@ ROTULO_DO_DESTINO = {
     "youtube": "YouTube (vídeos)",
     "youtube_shorts": "YouTube Shorts",
     "tiktok": "TikTok",
+    "instagram_reels": "Instagram Reels",
 }
 
 

@@ -46,4 +46,4 @@ def test_destino_desconhecido_e_pedido_invalido():
 
 
 def test_os_quatro_destinos_na_ordem_da_tela():
-    assert DESTINOS == ("youtube", "tiktok", "instagram", "instagram_web")
+    assert DESTINOS == ("youtube", "tiktok", "instagram", "instagram_web", "instagram_business")

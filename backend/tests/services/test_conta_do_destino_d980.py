@@ -71,7 +71,13 @@ def test_esquecer_deixa_o_proximo_envio_aprender_outra(canal):
 def test_a_tela_recebe_os_quatro_destinos_mesmo_sem_nada_gravado(canal):
     linhas = conta_do_destino.contas_do_canal()
 
-    assert [c["destino"] for c in linhas] == ["youtube", "tiktok", "instagram", "instagram_web"]
+    assert [c["destino"] for c in linhas] == [
+        "youtube",
+        "tiktok",
+        "instagram",
+        "instagram_web",
+        "instagram_business",
+    ]
     assert all(c["conta_id"] == "" for c in linhas)
     assert linhas[0]["rotulo"] == "YouTube"
 

@@ -31,7 +31,7 @@ const AGENDA = [
   linha('s1', 'tiktok', '2030-01-07T16:00'),
   linha('s2', 'tiktok', '2030-01-07T19:00'),
   linha('s3', 'tiktok', ''),
-  linha('s1', 'instagram_reels', '', { motivo: 'publica no ato: o Instagram não agenda' }),
+  linha('s1', 'outra_rede', '', { motivo: 'publica no ato: esta rede não tem agenda' }),
 ];
 
 describe('ajustar uma linha', () => {
@@ -69,8 +69,9 @@ describe('o que vai no pedido', () => {
     ]);
   });
 
-  it('o Instagram publica no ato e não escalona', () => {
-    expect(escalona('instagram_reels')).toBe(false);
+  it('o Instagram escalona; só rede sem agenda publica no ato', () => {
+    expect(escalona('instagram_reels')).toBe(true);
+    expect(escalona('outra_rede')).toBe(false);
     expect(escalona('youtube_shorts')).toBe(true);
     expect(escalona('tiktok_horizontal')).toBe(true);
   });

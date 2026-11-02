@@ -29,10 +29,10 @@ const LINHAS: LinhaDaAgenda[] = [
   {
     alvo_tipo: 'short',
     alvo_id: 's1',
-    plataforma: 'instagram_reels',
+    plataforma: 'outra_rede',
     agendar_para: '',
     intensidade: '',
-    motivo: 'publica no ato: o Instagram não agenda pelo compositor da web',
+    motivo: 'publica no ato: esta rede não tem agenda',
   },
 ];
 

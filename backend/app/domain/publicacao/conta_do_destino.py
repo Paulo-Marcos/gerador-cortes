@@ -25,14 +25,16 @@ from dataclasses import dataclass
 
 from app.domain.compartilhado.erros import PedidoInvalido, ServicoExternoFalhou
 
-# A ordem é a da tela. O Instagram aparece duas vezes porque a API e o navegador
-# enxergam a conta por números diferentes: o id da Graph API não é o da sessão
-# do instagram.com, e comparar um com o outro barraria a conta certa.
+# A ordem é a da tela. O Instagram aparece mais de uma vez porque a API e o
+# navegador enxergam a conta por números diferentes: o id da Graph API não é o da
+# sessão do instagram.com, e comparar um com o outro barraria a conta certa. O
+# Business Suite só mostra o nome de usuário no seletor "Share to" (D-1010).
 ROTULOS: dict[str, str] = {
     "youtube": "YouTube",
     "tiktok": "TikTok",
     "instagram": "Instagram (API)",
     "instagram_web": "Instagram (navegador)",
+    "instagram_business": "Instagram (Business Suite)",
 }
 DESTINOS: tuple[str, ...] = tuple(ROTULOS)
 

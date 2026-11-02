@@ -1069,8 +1069,8 @@ class TestAgendaPorItem:
         assert destino_que_anota_a_data.datas == ["07/01/2030 as 16:00"]
 
     @pytest.mark.asyncio
-    async def test_destino_que_publica_no_ato_segue_sem_data(self, ambiente):
-        """O Instagram não escalona: com agenda e tudo, ele sobe na hora."""
+    async def test_instagram_sem_data_na_agenda_nao_sobe_na_hora(self, ambiente):
+        """D-1010: o Instagram escalona; sem data ele fica de fora, como os outros."""
         _, raias = ambiente
         reels = _DestinoDePacote(Plataforma.INSTAGRAM_REELS)
         destinos.registrar(reels)
@@ -1082,8 +1082,8 @@ class TestAgendaPorItem:
         )
         await _rodar(raias)
 
-        assert lote.itens[0].estado is EstadoItem.SUA_VEZ
-        assert reels.preparados
+        assert lote.itens[0].estado is EstadoItem.PULADO
+        assert not reels.preparados
 
     @pytest.mark.asyncio
     async def test_sem_agenda_vale_a_data_unica_do_lote(self, ambiente, destino_que_anota_a_data):
