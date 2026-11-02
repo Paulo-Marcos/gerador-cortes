@@ -393,7 +393,7 @@ def build_composicao_short_cmd(
         # D-1014: o ÚNICO ponto que normaliza o áudio do short (RN-32). É o único
         # estágio que vê o short inteiro: no recorte, a colagem de N fatias
         # (D-604) seria normalizada fatia a fatia e o volume pularia nas emendas.
-        # Os mesmos argumentos do corte horizontal (AAC 192k, loudnorm -14 LUFS).
+        # Os mesmos argumentos do corte horizontal (AAC 256k, loudnorm -14 LUFS; RN-34).
         *_build_audio_args(normalize=True),
         "-shortest",
         "-movflags",
