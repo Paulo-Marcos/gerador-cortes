@@ -18,13 +18,21 @@ export function seloDoPlayer(brutoPronto: boolean, status?: string) {
   return brutoPronto ? 'BRUTO · pronto' : 'VÍDEO ORIGINAL';
 }
 
+// O tempo que o toast fica na tela (toaster.tsx).
+const DURACAO_DO_AVISO_MS = 3200;
+let ultimoAvisoDeOcupado = -Infinity;
+
 /** D-1008: o gesto ignorado por já haver geração em andamento também responde;
- * calado, parecia que o atalho não tinha funcionado. */
+ * calado, parecia que o atalho não tinha funcionado. Com a tecla segurada o
+ * atalho dispara a cada repetição, e o aviso na tela já diz tudo. */
 export function avisarSeBrutoOcupado(
   ocupado: boolean,
   notify: (mensagem: string, opcoes: { tone: 'info' }) => unknown,
 ) {
-  if (ocupado) notify('O bruto deste corte já está sendo processado.', { tone: 'info' });
+  if (ocupado && Date.now() - ultimoAvisoDeOcupado >= DURACAO_DO_AVISO_MS) {
+    ultimoAvisoDeOcupado = Date.now();
+    notify('O bruto deste corte já está sendo processado.', { tone: 'info' });
+  }
   return ocupado;
 }
 
