@@ -228,7 +228,7 @@ export function PropostaFinalTab() {
       {projetoId && telemetria.data && (
         <>
           <ResumoDoProjeto telemetria={telemetria.data} />
-          <MudancasPorOrigem grupos={telemetria.data.mudancas_por_origem} />
+          <MudancasPorOrigem grupos={telemetria.data.mudancas_por_origem} motivos={telemetria.data.motivos_apagado} />
 
           {telemetria.data.cortes.length === 0 ? (
             <div className="rounded-[var(--radius)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center text-[15px] text-[var(--wb-text-mute)]">

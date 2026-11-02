@@ -7114,6 +7114,64 @@
         "title": "MolduraAplicadaResponse",
         "type": "object"
       },
+      "MotivoDeExclusao": {
+        "description": "Um motivo de excluir corte do canal (D-1006). `ativo` falso = escondido dos chips.",
+        "properties": {
+          "ativo": {
+            "title": "Ativo",
+            "type": "boolean"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "rotulo",
+          "ativo"
+        ],
+        "title": "MotivoDeExclusao",
+        "type": "object"
+      },
+      "MotivoVisivelRequest": {
+        "properties": {
+          "ativo": {
+            "title": "Ativo",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ativo"
+        ],
+        "title": "MotivoVisivelRequest",
+        "type": "object"
+      },
+      "MotivosDeExclusao": {
+        "properties": {
+          "motivos": {
+            "items": {
+              "$ref": "#/components/schemas/MotivoDeExclusao"
+            },
+            "title": "Motivos",
+            "type": "array"
+          },
+          "personalizado": {
+            "title": "Personalizado",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "motivos",
+          "personalizado"
+        ],
+        "title": "MotivosDeExclusao",
+        "type": "object"
+      },
       "MoverBlocoRequest": {
         "properties": {
           "de_indice": {
@@ -7221,6 +7279,19 @@
           "nova"
         ],
         "title": "NovidadeResponse",
+        "type": "object"
+      },
+      "NovoMotivoRequest": {
+        "properties": {
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rotulo"
+        ],
+        "title": "NovoMotivoRequest",
         "type": "object"
       },
       "OcorrenciaDoEixo": {
@@ -11771,6 +11842,13 @@
             "title": "Cortes",
             "type": "array"
           },
+          "motivos_apagado": {
+            "items": {
+              "$ref": "#/components/schemas/MotivoDeExclusao"
+            },
+            "title": "Motivos Apagado",
+            "type": "array"
+          },
           "mudancas_por_origem": {
             "items": {
               "$ref": "#/components/schemas/TelemetriaMudancasPorOrigem"
@@ -11806,6 +11884,7 @@
           "sem_snapshot",
           "cortes",
           "apagados",
+          "motivos_apagado",
           "mudancas_por_origem",
           "shorts"
         ],
@@ -14604,6 +14683,120 @@
           }
         },
         "summary": "Gravar Faixa Do Short",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/ativo/motivos-de-exclusao": {
+      "get": {
+        "operationId": "obter_motivos_de_exclusao_api_channels_ativo_motivos_de_exclusao_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivosDeExclusao"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Obter Motivos De Exclusao",
+        "tags": [
+          "Canais"
+        ]
+      },
+      "post": {
+        "description": "Motivo novo no fim da lista, com o slug tirado do nome; nome repetido dá 400.",
+        "operationId": "acrescentar_motivo_de_exclusao_api_channels_ativo_motivos_de_exclusao_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoMotivoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivosDeExclusao"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acrescentar Motivo De Exclusao",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/ativo/motivos-de-exclusao/{slug}": {
+      "put": {
+        "description": "Esconde ou devolve aos chips; o histórico do motivo não muda.",
+        "operationId": "mostrar_motivo_de_exclusao_api_channels_ativo_motivos_de_exclusao__slug__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoVisivelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivosDeExclusao"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mostrar Motivo De Exclusao",
         "tags": [
           "Canais"
         ]

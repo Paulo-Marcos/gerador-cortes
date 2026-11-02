@@ -17,6 +17,7 @@ from app.domain.canal import palco_componentes as palco_dominio
 from app.domain.canal import theme_library
 from app.domain.canal.cards_do_canal import TIPOS_DE_CENA
 from app.domain.canal.identidade import Canal, IdCanalInvalido
+from app.routers.analises_schemas import MotivoDeExclusao
 from app.routers.channels_palco_schemas import (
     CabecalhoResponse,
     CardsResponse,
@@ -37,7 +38,7 @@ from app.services import (
     palco_por_escopo,
     studio_youtube,
 )
-from app.services.canal import faixa_do_short
+from app.services.canal import faixa_do_short, motivos_de_exclusao
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -329,6 +330,42 @@ async def obter_faixa_do_short():
 async def gravar_faixa_do_short(body: FaixaDoShortRequest):
     """Grava a faixa; mínimo maior ou igual ao máximo é recusado com 400."""
     return FaixaDoShort(**faixa_do_short.gravar_faixa(body.duracao_min_seg, body.duracao_max_seg))
+
+
+# --------------------------------------------------------------------------- #
+# Motivos de excluir um corte, no canal ativo (D-1006)
+# --------------------------------------------------------------------------- #
+
+
+class MotivosDeExclusao(BaseModel):
+    motivos: list[MotivoDeExclusao]
+    # False = o canal nunca editou a lista e usa o padrão.
+    personalizado: bool
+
+
+class NovoMotivoRequest(BaseModel):
+    rotulo: str
+
+
+class MotivoVisivelRequest(BaseModel):
+    ativo: bool
+
+
+@router.get("/ativo/motivos-de-exclusao", response_model=MotivosDeExclusao)
+async def obter_motivos_de_exclusao():
+    return MotivosDeExclusao(**motivos_de_exclusao.descrever())
+
+
+@router.post("/ativo/motivos-de-exclusao", response_model=MotivosDeExclusao)
+async def acrescentar_motivo_de_exclusao(body: NovoMotivoRequest):
+    """Motivo novo no fim da lista, com o slug tirado do nome; nome repetido dá 400."""
+    return MotivosDeExclusao(**motivos_de_exclusao.acrescentar(body.rotulo))
+
+
+@router.put("/ativo/motivos-de-exclusao/{slug}", response_model=MotivosDeExclusao)
+async def mostrar_motivo_de_exclusao(slug: str, body: MotivoVisivelRequest):
+    """Esconde ou devolve aos chips; o histórico do motivo não muda."""
+    return MotivosDeExclusao(**motivos_de_exclusao.mostrar(slug, ativo=body.ativo))
 
 
 # --------------------------------------------------------------------------- #

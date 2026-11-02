@@ -4,6 +4,10 @@
 // porque os projetos não compartilham módulo. `motivoApagado.test.ts` LÊ aquele
 // arquivo e compara: se um lado mudar sozinho, o teste cai em vez de a tela
 // oferecer um motivo que o backend descarta.
+//
+// D-1006: a lista passou a ser de cada canal (`useMotivosVisiveis`, tela de
+// Canais); esta é o padrão de quem nunca a editou, e o que o diálogo mostra
+// enquanto a do canal não chega.
 
 import type { OpcaoConfirmacao } from '@/components/ui/confirm-dialog';
 

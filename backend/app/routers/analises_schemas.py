@@ -83,6 +83,14 @@ class TelemetriaApagados(RespostaApi):
     por_motivo: dict[str, int]
 
 
+class MotivoDeExclusao(RespostaApi):
+    """Um motivo de excluir corte do canal (D-1006). `ativo` falso = escondido dos chips."""
+
+    slug: str
+    rotulo: str
+    ativo: bool
+
+
 class TelemetriaMudancasPorOrigem(RespostaApi):
     """D-999: quantos cortes de cada origem tiveram cada mudança, e os apagados."""
 
@@ -140,6 +148,8 @@ class TelemetriaProjetoResponse(RespostaApi):
     sem_snapshot: int
     cortes: list[TelemetriaCorteDiff]
     apagados: TelemetriaApagados
+    # D-1006: os motivos do canal, inclusive os escondidos, para nomear a contagem.
+    motivos_apagado: list[MotivoDeExclusao]
     mudancas_por_origem: list[TelemetriaMudancasPorOrigem]
     shorts: TelemetriaShorts
 

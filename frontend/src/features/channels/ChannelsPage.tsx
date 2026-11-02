@@ -20,6 +20,7 @@ import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
 import { EscalonamentoSection } from './EscalonamentoSection';
 import { FaixaDoShortSection } from './FaixaDoShortSection';
+import { MotivosDeExclusaoSection } from './MotivosDeExclusaoSection';
 import { PreRequisitosSection } from './PreRequisitosSection';
 import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
@@ -387,6 +388,7 @@ function AparenciaECapasDoCanal() {
       <CapaChatgptSection />
       <EstiloDaCapaSection />
       <FaixaDoShortSection />
+      <MotivosDeExclusaoSection />
     </>
   );
 }

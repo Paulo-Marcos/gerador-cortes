@@ -516,6 +516,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/channels/ativo/motivos-de-exclusao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obter Motivos De Exclusao */
+        get: operations["obter_motivos_de_exclusao_api_channels_ativo_motivos_de_exclusao_get"];
+        put?: never;
+        /**
+         * Acrescentar Motivo De Exclusao
+         * @description Motivo novo no fim da lista, com o slug tirado do nome; nome repetido dá 400.
+         */
+        post: operations["acrescentar_motivo_de_exclusao_api_channels_ativo_motivos_de_exclusao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/channels/ativo/motivos-de-exclusao/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mostrar Motivo De Exclusao
+         * @description Esconde ou devolve aos chips; o histórico do motivo não muda.
+         */
+        put: operations["mostrar_motivo_de_exclusao_api_channels_ativo_motivos_de_exclusao__slug__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels/ativo/navegador-do-robo": {
         parameters: {
             query?: never;
@@ -7774,6 +7815,30 @@ export interface components {
             /** Moldura */
             moldura: string;
         };
+        /**
+         * MotivoDeExclusao
+         * @description Um motivo de excluir corte do canal (D-1006). `ativo` falso = escondido dos chips.
+         */
+        MotivoDeExclusao: {
+            /** Ativo */
+            ativo: boolean;
+            /** Rotulo */
+            rotulo: string;
+            /** Slug */
+            slug: string;
+        };
+        /** MotivoVisivelRequest */
+        MotivoVisivelRequest: {
+            /** Ativo */
+            ativo: boolean;
+        };
+        /** MotivosDeExclusao */
+        MotivosDeExclusao: {
+            /** Motivos */
+            motivos: components["schemas"]["MotivoDeExclusao"][];
+            /** Personalizado */
+            personalizado: boolean;
+        };
         /** MoverBlocoRequest */
         MoverBlocoRequest: {
             /** De Indice */
@@ -7814,6 +7879,11 @@ export interface components {
             /** Titulo Original */
             titulo_original: string;
             traducao: components["schemas"]["TraducaoDaNovidade"] | null;
+        };
+        /** NovoMotivoRequest */
+        NovoMotivoRequest: {
+            /** Rotulo */
+            rotulo: string;
         };
         /** OcorrenciaDoEixo */
         OcorrenciaDoEixo: {
@@ -9625,6 +9695,8 @@ export interface components {
             com_snapshot: number;
             /** Cortes */
             cortes: components["schemas"]["TelemetriaCorteDiff"][];
+            /** Motivos Apagado */
+            motivos_apagado: components["schemas"]["MotivoDeExclusao"][];
             /** Mudancas Por Origem */
             mudancas_por_origem: components["schemas"]["TelemetriaMudancasPorOrigem"][];
             /** Projeto Id */
@@ -11130,6 +11202,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FaixaDoShort"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_motivos_de_exclusao_api_channels_ativo_motivos_de_exclusao_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MotivosDeExclusao"];
+                };
+            };
+        };
+    };
+    acrescentar_motivo_de_exclusao_api_channels_ativo_motivos_de_exclusao_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NovoMotivoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MotivosDeExclusao"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mostrar_motivo_de_exclusao_api_channels_ativo_motivos_de_exclusao__slug__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MotivoVisivelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MotivosDeExclusao"];
                 };
             };
             /** @description Validation Error */
