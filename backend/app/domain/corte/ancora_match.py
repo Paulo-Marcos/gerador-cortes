@@ -111,7 +111,10 @@ def ancorar_borda(
             if not candidato:
                 continue
             ratio = SequenceMatcher(None, ancora_str, candidato).ratio()
-            dist = abs(janela[i]["inicio_seg"] - tempo_aprox_seg)
+            # D-1017: a borda de fim é o fim da citação; medir do começo dela puxava a
+            # marca para a ocorrência seguinte quando a frase se repete.
+            na_borda = i if is_inicio else fim - 1
+            dist = abs(janela[na_borda]["inicio_seg"] - tempo_aprox_seg)
             # Melhor ratio vence; empate → ocorrência mais próxima do timestamp.
             if ratio > melhor_ratio or (ratio == melhor_ratio and dist < melhor_dist):
                 melhor_ratio = ratio
@@ -185,7 +188,7 @@ def recusa_da_citacao(desvio: dict, palavras: list[dict]) -> str | None:
         ((desvio.get("fim_texto") or "").strip(), desvio.get("fim_seg"), False),
     )
     for texto, tempo, is_inicio in lados:
-        if texto and None is ancorar_borda(
+        if _tokenizar(texto) and None is ancorar_borda(
             texto,
             to_seg_estrito(tempo or 0),
             palavras,

@@ -1,9 +1,10 @@
+import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ToastProvider } from '@/components/ui/toaster';
-import { TrechosList } from '../TrechosList';
+import { TrechosList, type TrechosListProps } from '../TrechosList';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
 
 const noop = vi.fn();
@@ -43,6 +44,44 @@ function render(props: Partial<Parameters<typeof TrechosList>[0]> = {}) {
     </QueryClientProvider>,
   );
 }
+
+type Elemento = ReactElement<Record<string, unknown>>;
+
+function elementos(no: ReactNode): Elemento[] {
+  if (Array.isArray(no)) return no.flatMap(elementos);
+  if (!isValidElement(no)) return [];
+  const e = no as Elemento;
+  return [e, ...elementos(e.props.children as ReactNode)];
+}
+
+function arvoreDaLista(props: Partial<TrechosListProps>): Elemento[] {
+  let arvore: Elemento[] = [];
+  const Lista = TrechosList as unknown as { type: (p: unknown) => ReactNode };
+  function Sonda() {
+    arvore = elementos(
+      Lista.type({ desvios: [], selectedDesvioIdx: null, pending: {}, onSeek: noop, onAdicionarDesvio: noop, onRemoverDesvio: noop, onGerarManual: noop, onGerarTrechosIA: noop, ...props }),
+    );
+    return null;
+  }
+  renderToStaticMarkup(<Sonda />);
+  return arvore;
+}
+
+describe('TrechosList: os botões agem na marca certa (D-1017)', () => {
+  it('riscar usa o índice da lista gravada, não a posição na tela', () => {
+    const riscar = vi.fn();
+    const depois: Desvio = { inicio_hms: '00:00:50.000', fim_hms: '00:00:55.000', motivo: 'depois' };
+    const antes: Desvio = { inicio_hms: '00:00:10.000', fim_hms: '00:00:15.000', motivo: 'antes' };
+
+    const linhas = arvoreDaLista({ desvios: [depois, antes], onRemoverDesvio: riscar }).filter(
+      (e) => e.props.onRiscar,
+    );
+    (linhas[0].props.onRiscar as () => void)();
+
+    expect(linhas[0].props.desvio).toBe(antes);
+    expect(riscar).toHaveBeenCalledWith(1);
+  });
+});
 
 describe('TrechosList (D-1017)', () => {
   it('mostra a fala que sai e como a emenda fica, para decidir lendo', () => {

@@ -47,15 +47,24 @@ function palavrasDasLinhas(linhas: TranscricaoLinha[], de: number, ate: number):
   return palavras;
 }
 
-/** Índice da ocorrência da citação mais próxima de `tempo`, ou -1. */
-function ondeEstaACitacao(palavras: Palavra[], citacao: string | null | undefined, tempo: number): number {
+/**
+ * Índice da ocorrência da citação mais próxima de `tempo`, ou -1. A do fim mede a partir
+ * da última palavra: é ela que encosta na borda, e a frase pode se repetir logo depois.
+ */
+function ondeEstaACitacao(
+  palavras: Palavra[],
+  citacao: string | null | undefined,
+  tempo: number,
+  lado: 'inicio' | 'fim',
+): number {
   const alvo = (citacao ?? '').split(/\s+/).map(normalizar).filter(Boolean);
   if (alvo.length === 0) return -1;
   let melhor = -1;
   let menorDistancia = Infinity;
   for (let i = 0; i + alvo.length <= palavras.length; i++) {
     if (!alvo.every((norma, j) => palavras[i + j].norma === norma)) continue;
-    const distancia = Math.abs(palavras[i].tempo - tempo);
+    const naBorda = lado === 'inicio' ? i : i + alvo.length - 1;
+    const distancia = Math.abs(palavras[naBorda].tempo - tempo);
     if (distancia < menorDistancia) {
       melhor = i;
       menorDistancia = distancia;
@@ -76,10 +85,10 @@ export function falaDoTrecho(desvio: Desvio, linhas: TranscricaoLinha[]): FalaDo
   const fim = hmsParaSeg(desvio.fim_hms);
   const palavras = palavrasDasLinhas(linhas, inicio - FOLGA_SEG, fim + FOLGA_SEG);
 
-  const noInicio = ondeEstaACitacao(palavras, desvio.inicio_texto, inicio);
+  const noInicio = ondeEstaACitacao(palavras, desvio.inicio_texto, inicio, 'inicio');
   const primeira = noInicio >= 0 ? noInicio : palavras.findIndex((p) => p.tempo >= inicio);
   const citacaoDoFim = (desvio.fim_texto ?? '').split(/\s+/).filter((p) => normalizar(p));
-  const noFim = ondeEstaACitacao(palavras, desvio.fim_texto, fim);
+  const noFim = ondeEstaACitacao(palavras, desvio.fim_texto, fim, 'fim');
   const depoisDoFim = noFim >= 0 ? noFim + citacaoDoFim.length : palavras.findIndex((p) => p.tempo >= fim);
   const fronteira = depoisDoFim === -1 ? palavras.length : depoisDoFim;
 

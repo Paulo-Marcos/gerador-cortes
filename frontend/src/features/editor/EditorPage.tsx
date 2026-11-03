@@ -239,7 +239,7 @@ export function EditorPage() {
               bruto: brutoMutationPendenteNoCorteAtual,
               transcricao: sincTrans.isPending,
               adicionando: adicionarDesvio.isPending,
-              removendo: riscados.pendente,
+              removendo: riscados.ocupado,
               claude: trechosClaudePendente,
             }}
           />

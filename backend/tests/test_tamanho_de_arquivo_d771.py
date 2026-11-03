@@ -50,7 +50,7 @@ EXCECOES = {
     "backend/app/services/capa_tiktok.py": 520,
     "backend/app/services/cenas_remotion.py": 928,
     "backend/app/services/claude_ia.py": 519,
-    "backend/app/services/corte.py": 1630,
+    "backend/app/services/corte.py": 1632,
     "backend/app/services/export.py": 555,
     "backend/app/services/ingestao.py": 719,
     "backend/app/services/instagram_reels.py": 679,

@@ -1,39 +1,96 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { comDesviosSalvos } from '../useTrechosRiscados';
+import { applyDesvioChange } from '../editorEditState';
+import { comDesviosSalvos, umaDeCadaVez } from '../useTrechosRiscados';
 import { mensagemDosTrechosGerados } from '../useGeracoesDaIa';
 import type { Corte, Desvio } from '@/types/models';
 
-const MARCA: Desvio = { inicio_hms: '00:00:10.000', fim_hms: '00:00:12.000', motivo: 'm' };
+const MARCA = { inicio_hms: '00:00:10.000', fim_hms: '00:00:12.000', motivo: 'm', categoria: 'repeticao' } as const;
+
+function historico(pendente: Partial<Corte>) {
+  return { getPresent: () => pendente, reset: vi.fn() };
+}
 
 describe('comDesviosSalvos', () => {
   it('sem borda pendente, só executa a ação', async () => {
+    const h = historico({});
     const salvar = vi.fn();
-    const limpar = vi.fn();
     const acao = vi.fn(async () => undefined);
 
-    await comDesviosSalvos({}, salvar, limpar, acao);
+    await comDesviosSalvos(h, salvar, acao);
 
     expect(salvar).not.toHaveBeenCalled();
-    expect(limpar).not.toHaveBeenCalled();
+    expect(h.reset).not.toHaveBeenCalled();
     expect(acao).toHaveBeenCalledOnce();
   });
 
   it('com borda pendente, grava antes: senão salvar depois ressuscitaria a marca riscada', async () => {
     const ordem: string[] = [];
-    const pendente = { desvios: [MARCA], fim_seg: 30 } as Partial<Corte>;
+    const h = historico({ desvios: [MARCA], fim_seg: 30 } as Partial<Corte>);
+    h.reset.mockImplementation((resto: Partial<Corte>) => {
+      ordem.push(`reset:${Object.keys(resto).join()}`);
+    });
     const salvar = vi.fn(async (d: Desvio[]) => {
       ordem.push(`salvar:${d.length}`);
-    });
-    const limpar = vi.fn((resto: Partial<Corte>) => {
-      ordem.push(`limpar:${Object.keys(resto).join()}`);
     });
     const acao = vi.fn(async () => {
       ordem.push('acao');
     });
 
-    await comDesviosSalvos(pendente, salvar, limpar, acao);
+    await comDesviosSalvos(h, salvar, acao);
 
-    expect(ordem).toEqual(['salvar:1', 'limpar:fim_seg', 'acao']);
+    expect(ordem).toEqual(['salvar:1', 'reset:fim_seg', 'acao']);
+  });
+
+  it('o Ctrl+Z não traz a lista velha de volta: o histórico recomeça, em vez de empilhar', async () => {
+    const h = { ...historico({ desvios: [MARCA] } as Partial<Corte>), set: vi.fn() };
+
+    await comDesviosSalvos(h, vi.fn(async () => undefined), vi.fn(async () => undefined));
+
+    expect(h.reset).toHaveBeenCalledOnce();
+    expect(h.set).not.toHaveBeenCalled();
+  });
+});
+
+describe('umaDeCadaVez', () => {
+  it('ignora o clique que chega com outra ação em voo', async () => {
+    let soltar: () => void = () => undefined;
+    const primeira = vi.fn(() => new Promise<void>((r) => { soltar = r; }));
+    const segunda = vi.fn(async () => undefined);
+    const estados: boolean[] = [];
+    const fila = umaDeCadaVez((o) => estados.push(o));
+
+    const voando = fila(primeira);
+    await fila(segunda);
+    soltar();
+    await voando;
+
+    expect(primeira).toHaveBeenCalledOnce();
+    expect(segunda).not.toHaveBeenCalled();
+    expect(estados).toEqual([true, false]);
+  });
+
+  it('libera a fila quando a ação falha', async () => {
+    const fila = umaDeCadaVez(() => undefined);
+    await expect(fila(async () => { throw new Error('x'); })).rejects.toThrow('x');
+    const depois = vi.fn(async () => undefined);
+
+    await fila(depois);
+
+    expect(depois).toHaveBeenCalledOnce();
+  });
+});
+
+describe('applyDesvioChange (D-1017)', () => {
+  const CITADA = { ...MARCA, inicio_texto: 'começo', fim_texto: 'final' };
+
+  it('a borda ajustada perde a citação daquele lado, e só dele', () => {
+    const fim = applyDesvioChange([CITADA], {}, 0, CITADA.inicio_hms, '00:00:15.000')!.desvios![0];
+    expect(fim.inicio_texto).toBe('começo');
+    expect(fim.fim_texto).toBeUndefined();
+
+    const inicio = applyDesvioChange([CITADA], {}, 0, '00:00:09.000', CITADA.fim_hms)!.desvios![0];
+    expect(inicio.inicio_texto).toBeUndefined();
+    expect(inicio.fim_texto).toBe('final');
   });
 });
 

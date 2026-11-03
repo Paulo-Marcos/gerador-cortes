@@ -242,7 +242,10 @@ export function useRemoverDesvio(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (desvioIndex: number) => cortesApi.removerDesvio(corteId, desvioIndex),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
   });
 }
 
@@ -251,7 +254,10 @@ export function useRestaurarDesvio(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (indice: number) => cortesApi.restaurarDesvio(corteId, indice),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
   });
 }
 
@@ -259,7 +265,10 @@ export function useDesfazerRodada(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => cortesApi.desfazerRodada(corteId),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
   });
 }
 

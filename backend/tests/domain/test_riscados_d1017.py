@@ -10,6 +10,7 @@ from app.domain.corte.riscados import (
     carimbar_rodada,
     desfazer_rodada,
     novos_sem_os_riscados,
+    proxima_rodada,
     restaurar,
     riscados_pelo_operador,
     riscar,
@@ -126,3 +127,34 @@ def test_o_que_o_operador_riscou_nao_volta_na_proxima_rodada():
         nova,
         corrigida,
     ]
+
+
+def test_riscada_nao_volta_nem_com_bordas_um_pouco_diferentes():
+    riscada = _marca(100.9, 110.9)
+    assert novos_sem_os_riscados([_marca(101.1, 110.9)], [riscada]) == []
+    assert novos_sem_os_riscados([_marca(100.9, 112.5)], [riscada]) == []
+    longe = _marca(111.0, 120.0)
+    assert novos_sem_os_riscados([longe], [riscada]) == [longe]
+
+
+def test_restaurada_sai_da_rodada_e_desfazer_nao_a_leva_de_novo():
+    a = carimbar_rodada(_marca(10, 12), 1)
+    b = carimbar_rodada(_marca(20, 22), 1)
+    desvios, riscados, _ = desfazer_rodada([a, b], [])
+
+    desvios, riscados = restaurar(desvios, riscados, 1)
+
+    assert trechos_da_ultima_rodada(desvios) == 0
+    with pytest.raises(PedidoInvalido):
+        desfazer_rodada(desvios, riscados)
+
+
+def test_a_proxima_rodada_nao_repete_numero_herdado():
+    assert proxima_rodada(None, []) == 1
+    assert proxima_rodada(2, [{"rodada": 1}]) == 3
+    assert proxima_rodada(0, [{"rodada": 3}, {"motivo": "sem rodada"}]) == 4
+
+
+def test_marca_sem_uma_das_bordas_cai_na_separacao():
+    so_inicio = {"inicio_seg": 10.0, "motivo": "sem fim"}
+    assert separar_por_citacao([so_inicio], [{"texto": "ola", "inicio_seg": 10.0}]) == ([], [])

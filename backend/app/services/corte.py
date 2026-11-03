@@ -61,10 +61,11 @@ from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,
 )
-from app.services.riscados import (
+from app.services.riscados_do_corte import (
     dividir_riscados,
     juntar_riscados,
     marcas_que_a_ia_nao_repete,
+    palavras_para_conferir,
     registrar_rodada,
 )
 from app.services.thumbnail import ThumbnailService
@@ -814,7 +815,7 @@ class CorteService:
         desvios_ia, alertas_novos = alerta_conferir.alertas_da_resposta(resultado, provider)
         aceitas, recusadas = separar_por_citacao(
             [classificar_desvio(normalizar_desvio({**d, "origem": provider})) for d in desvios_ia],
-            palavras_corte,
+            palavras_para_conferir(transcricao_raw_projeto),
         )
         normalizados_novos = [
             snap_desvio_a_palavras(ancorar_desvio(d, palavras_corte), palavras_corte)
@@ -1394,6 +1395,7 @@ class CorteService:
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
         corte.desvios_riscados = json.dumps(riscados, ensure_ascii=False)
         await db.commit()
+        await CorteService.sincronizar_transcricao_corte(corte_id)
         await db.refresh(corte)
         return corte
 

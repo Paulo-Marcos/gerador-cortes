@@ -252,7 +252,7 @@ export function useEditorPage() {
   const gerarTrechosClaude = useGerarTrechosClaude(corteId, projetoId);
   const sincTrans = useSincronizarTranscricao(corteId);
   const adicionarDesvio = useAdicionarDesvio(corteId);
-  const riscados = useTrechosRiscados(corteId, editHistory, (desvios) => atualizarCorte.mutateAsync({ desvios }));
+  const riscados = useTrechosRiscados(corteId, editHistory, (desvios) => atualizarCorte.mutateAsync({ desvios }), () => setSelectedDesvioIdx(null));
   const dividirCorte = useDividirCorte(corteId, projetoId);
   const juntarCortes = useJuntarCortes(corteId, projetoId);
   const abrirPasta = useAbrirPasta();

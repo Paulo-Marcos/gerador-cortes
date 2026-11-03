@@ -103,7 +103,7 @@ export function RightTabsPanel({
   const aoGerarTrechosIA = useFuncaoEstavel(onGerarTrechosIA);
   const aoRestaurarDesvio = useFuncaoEstavel((indice: number) => riscados?.restaurar(indice));
   const aoDesfazerRodada = useFuncaoEstavel(() => riscados?.desfazerRodada());
-  const pendenteDosTrechos = usePendenciasDosTrechos(pendingTrechos, riscados?.restaurando);
+  const pendenteDosTrechos = usePendenciasDosTrechos(pendingTrechos, riscados?.ocupado);
   const corteAtual = useCorte(corteId).data;
   const projetoId = corteAtual?.projeto_id;
   const falantes = useFalantes(projetoId, tab === 'transcricao').data?.falantes;

@@ -38,6 +38,22 @@ describe('falaDoTrecho', () => {
     expect(fala?.antes).toBe('classe média e aí, Veja bem,');
   });
 
+  it('frase repetida no fim: a emenda fica na ocorrência que acaba perto da borda', () => {
+    const repetida: TranscricaoLinha[] = [
+      { start: 30, end: 32, texto: 'o imposto sobe todo ano' },
+      { start: 32, end: 34, texto: 'o imposto sobe todo ano' },
+      { start: 34, end: 36, texto: 'e acabou' },
+    ];
+
+    const fala = falaDoTrecho(
+      trecho({ inicio_hms: '00:00:30.000', fim_hms: '00:00:32.000', inicio_texto: 'o imposto', fim_texto: 'o imposto sobe todo ano' }),
+      repetida,
+    );
+
+    expect(fala?.sai).toBe('o imposto sobe todo ano');
+    expect(fala?.depois).toBe('o imposto sobe todo ano e');
+  });
+
   it('sem citação, estima pelo tempo dentro da linha', () => {
     const fala = falaDoTrecho(trecho({ inicio_hms: '00:00:18.000', fim_hms: '00:00:22.000' }), LINHAS);
 

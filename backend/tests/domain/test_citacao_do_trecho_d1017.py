@@ -6,7 +6,11 @@ ninguém fica sabendo. Em 12 cortes reais, 3,6% das bordas citadas estavam assim
 
 from __future__ import annotations
 
-from app.domain.corte.ancora_match import RECUSA_CITACAO_NAO_CONFERE, recusa_da_citacao
+from app.domain.corte.ancora_match import (
+    RECUSA_CITACAO_NAO_CONFERE,
+    ancorar_borda,
+    recusa_da_citacao,
+)
 
 _FALA = "a gloriosa classe media de varios paises nao tem como pagar essa conta agora".split()
 PALAVRAS = [{"texto": p, "inicio_seg": 100.0 + i * 0.5} for i, p in enumerate(_FALA)]
@@ -58,3 +62,20 @@ def test_sem_palavras_nao_ha_o_que_conferir():
     # Transcrição legada, sem tempo por palavra: recusar aqui jogaria tudo fora.
     assert recusa_da_citacao(_marca(), []) is None
     assert recusa_da_citacao(_marca(inicio_texto="ninguem disse isso"), []) is None
+
+
+def test_citacao_so_de_pontuacao_conta_como_sem_citacao():
+    assert recusa_da_citacao(_marca(inicio_texto="..."), PALAVRAS) is None
+
+
+def test_frase_repetida_o_fim_fica_na_ocorrencia_certa():
+    # "sobe todo ano" duas vezes: a marca acaba na primeira, e a âncora não pode puxá-la.
+    fala = "o imposto sobe todo ano o imposto sobe todo ano e acabou".split()
+    palavras = [{"texto": p, "inicio_seg": 30.0 + i * 0.4} for i, p in enumerate(fala)]
+    fim_da_primeira = palavras[5]["inicio_seg"]
+
+    fim = ancorar_borda(
+        "o imposto sobe todo ano", fim_da_primeira, palavras, janela_seg=5.0, is_inicio=False
+    )
+
+    assert fim == fim_da_primeira

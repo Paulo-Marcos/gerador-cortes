@@ -25,8 +25,17 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 _FALA = "um dois tres quatro cinco seis sete oito nove dez onze doze treze".split()
-_PALAVRAS = [{"texto": p, "inicio_seg": 10.0 + i} for i, p in enumerate(_FALA)]
-_TRANSCRICAO = [{"start": 10.0, "end": 23.0, "texto": " ".join(_FALA), "palavras": _PALAVRAS}]
+_TRANSCRICAO = [
+    {
+        "start": 10.0 + i,
+        "end": 13.0 + i,
+        "texto": " ".join(_FALA[i : i + 3]),
+        "palavras": [
+            {"texto": p, "inicio_seg": 10.0 + i + j} for j, p in enumerate(_FALA[i : i + 3])
+        ],
+    }
+    for i in range(0, len(_FALA), 3)
+]
 _MANUAL = {
     "inicio_hms": "00:00:30.000",
     "fim_hms": "00:00:31.000",
@@ -114,7 +123,7 @@ async def _corte(fabrica) -> Corte:
         return await db.get(Corte, "c1")
 
 
-async def _duas_marcas_uma_recusada(monkeypatch, sem_resync=None):
+async def _duas_marcas_uma_recusada(monkeypatch):
     _ia_responde(
         monkeypatch,
         [
@@ -202,7 +211,7 @@ async def test_a_ia_recebe_o_que_o_operador_riscou_para_nao_propor_de_novo(
 
     await CorteService.gerar_trechos_via_claude("c1", "claude")
 
-    assert [d["motivo"] for d in vistos] == ["marcada à mão"]
+    assert [d["motivo"] for d in vistos] == ["o operador manteve no corte: marcada à mão"]
 
 
 @pytest.mark.asyncio
@@ -261,3 +270,93 @@ async def test_juntar_os_cortes_mantem_os_riscados_dos_dois(fabrica, sem_resync,
 
     corte = await _corte(fabrica)
     assert [r["inicio_seg"] for r in json.loads(corte.desvios_riscados)] == [18.0, 70.0]
+
+
+@pytest.mark.asyncio
+async def test_desfazer_a_rodada_devolve_a_fala_a_transcricao_final(fabrica, monkeypatch, cliente):
+    _ia_responde(monkeypatch, [_proposta("00:00:12", "00:00:15", "tres quatro", "cinco seis")])
+    await CorteService.gerar_trechos_via_claude("c1", "claude")
+    antes = (await _corte(fabrica)).transcricao_final_texto
+    assert "quatro" not in antes
+
+    corpo = cliente.post("/api/cortes/c1/desfazer-rodada").json()
+
+    assert "quatro" in corpo["transcricao_final_texto"]
+    assert "quatro" in (await _corte(fabrica)).transcricao_final_texto
+
+
+@pytest.mark.asyncio
+async def test_a_lixeira_e_restaurar_tambem_ressincronizam(fabrica, monkeypatch, cliente):
+    _ia_responde(monkeypatch, [_proposta("00:00:12", "00:00:15", "tres quatro", "cinco seis")])
+    await CorteService.gerar_trechos_via_claude("c1", "claude")
+    desvios = cliente.get("/api/cortes/c1").json()["desvios"]
+    indice = next(i for i, d in enumerate(desvios) if d["origem"] == "claude")
+
+    riscou = cliente.post("/api/cortes/c1/remover-desvio", json={"desvio_index": indice}).json()
+    assert "quatro" in riscou["transcricao_final_texto"]
+
+    voltou = cliente.post("/api/cortes/c1/restaurar-desvio", json={"riscado_index": 0}).json()
+    assert "quatro" not in voltou["transcricao_final_texto"]
+
+
+@pytest.mark.asyncio
+async def test_citacao_certa_fora_do_corte_nao_e_recusada(fabrica, sem_resync, monkeypatch):
+    # O corte acaba em 16 s, mas a IA lê a fala além dele: a citação existe e é verdadeira.
+    async with fabrica() as db:
+        corte = await db.get(Corte, "c1")
+        corte.fim_seg = 16.0
+        corte.fim_hms = "00:00:16"
+        await db.commit()
+    _ia_responde(monkeypatch, [_proposta("00:00:14", "00:00:22", "cinco seis", "doze treze")])
+
+    resultado = await CorteService.gerar_trechos_via_claude("c1", "claude")
+
+    assert "recusados" not in resultado
+    assert resultado["novos"] == 1
+
+
+@pytest.mark.asyncio
+async def test_marca_sem_fim_nao_derruba_a_rodada(fabrica, sem_resync, monkeypatch):
+    _ia_responde(
+        monkeypatch,
+        [
+            _proposta("00:00:12", "00:00:15", "tres quatro", "cinco seis"),
+            {"inicio_hms": "00:00:18", "categoria": "repeticao", "motivo": "sem fim"},
+        ],
+    )
+
+    resultado = await CorteService.gerar_trechos_via_claude("c1", "claude")
+
+    assert resultado["novos"] == 1
+
+
+@pytest.mark.asyncio
+async def test_recusada_igual_a_marca_ativa_nao_fica_nas_duas_listas(
+    fabrica, sem_resync, monkeypatch
+):
+    _ia_responde(
+        monkeypatch, [_proposta("00:00:30", "00:00:31", "ninguem falou isso", "nem isso aqui")]
+    )
+
+    await CorteService.gerar_trechos_via_claude("c1", "claude")
+
+    assert json.loads((await _corte(fabrica)).desvios_riscados) == []
+
+
+@pytest.mark.asyncio
+async def test_a_rodada_nova_vence_as_herdadas_de_uma_divisao(fabrica, sem_resync, monkeypatch):
+    herdada = {**_MANUAL, "origem": "claude", "rodada": 3, "borda_da_rodada": [30.0, 31.0]}
+    async with fabrica() as db:
+        corte = await db.get(Corte, "c1")
+        corte.desvios = json.dumps([herdada])
+        corte.trechos_geracoes = 0
+        await db.commit()
+    _ia_responde(monkeypatch, [_proposta("00:00:12", "00:00:15", "tres quatro", "cinco seis")])
+
+    await CorteService.gerar_trechos_via_claude("c1", "claude")
+
+    corte = await _corte(fabrica)
+    marcas = {d["inicio_seg"]: d.get("rodada") for d in json.loads(corte.desvios)}
+    assert marcas[30.0] == 3
+    assert next(r for t, r in marcas.items() if t != 30.0) == 4
+    assert corte.trechos_geracoes == 1
