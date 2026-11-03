@@ -110,6 +110,24 @@ export function linhaPassaNoFiltro(
   );
 }
 
+/**
+ * D-1032: consulta em erro e sem lista em cache NÃO é "live sem cortes" — essa
+ * leitura oferecia "Analisar com a IA", que soma cortes aos existentes. Com a
+ * lista já em cache, o refetch falho não derruba a tela.
+ */
+export function falhaDaConsulta(q: {
+  isError: boolean;
+  data?: unknown;
+  error: unknown;
+  refetch: () => unknown;
+}) {
+  if (!q.isError || q.data) return null;
+  return {
+    mensagem: q.error instanceof Error ? q.error.message : 'Não consegui carregar os cortes.',
+    tentarDeNovo: () => void q.refetch(),
+  };
+}
+
 /** Lista vazia: diz por quê, e só oferece analisar quando a live não tem
  *  corte nenhum — não quando a busca ou o filtro "No ar" esconderam todos. */
 export function listaVaziaDoWorkspace(busca: string, soNoAr: boolean) {

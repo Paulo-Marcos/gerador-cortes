@@ -15,6 +15,8 @@ const h = vi.hoisted(() => ({
   id: 'p1',
   projeto: undefined as unknown,
   cortes: undefined as unknown,
+  cortesErro: undefined as Error | undefined,
+  refetchCortes: vi.fn(),
   exportados: [] as unknown[],
   analiseEmVoo: false,
   navegar: vi.fn(),
@@ -52,7 +54,12 @@ vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', () => ({
 }));
 vi.mock('@/features/editor/useCortes', async (original) => ({
   ...(await original<typeof import('@/features/editor/useCortes')>()),
-  useCortesProjeto: () => ({ data: h.cortes, refetch: vi.fn() }),
+  useCortesProjeto: () => ({
+    data: h.cortes,
+    isError: Boolean(h.cortesErro),
+    error: h.cortesErro ?? null,
+    refetch: h.refetchCortes,
+  }),
   useReordenarCortes: mutacao,
 }));
 vi.mock('@/features/diarizacao/useDiarizacao', () => ({
@@ -80,6 +87,7 @@ afterEach(() => {
   h.id = 'p1';
   h.projeto = { id: 'p1', status: 'analisado', arquivos_limpos: false, titulo_live: 'Live' };
   h.cortes = undefined;
+  h.cortesErro = undefined;
   h.exportados = [];
   h.analiseEmVoo = false;
   h.chrome = undefined;
@@ -224,5 +232,29 @@ describe('useWorkspaceProjeto · o rodapé e a live certa (2ª passada da pr-aud
     );
     expect(abertaNaPrimeira).toBe('Aprovar o proposto');
     expect(depoisDaTroca).toBeNull();
+  });
+});
+
+// D-1032 · a API de cortes falhar não é "a live não tem cortes": a tela dizia
+// isso e oferecia "Analisar com a IA", que soma cortes aos existentes e gasta IA.
+describe('useWorkspaceProjeto · a consulta de cortes em erro', () => {
+  it('expõe a falha e o "tentar de novo", e o rodapé não oferece analisar', () => {
+    h.cortesErro = new Error('Erro interno do servidor');
+    const estado = usar();
+    expect(estado.falhaDosCortes?.mensagem).toBe('Erro interno do servidor');
+    estado.falhaDosCortes!.tentarDeNovo();
+    expect(h.refetchCortes).toHaveBeenCalledTimes(1);
+    expect((h.chrome as Chrome).barra).toBeUndefined();
+  });
+
+  it('sem erro, não há falha a mostrar', () => {
+    h.cortes = [];
+    expect(usar().falhaDosCortes).toBeNull();
+  });
+
+  it('refetch falho com a lista já em cache mantém os cortes, sem tela de falha', () => {
+    h.cortes = [corte('a', 1, 'aprovado')];
+    h.cortesErro = new Error('x');
+    expect(usar().falhaDosCortes).toBeNull();
   });
 });

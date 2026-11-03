@@ -15,6 +15,7 @@ import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { ModalFields, ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
 import { CorteLinhaAp } from './CorteLinhaAp';
+import { FalhaDosCortes, ListaVazia } from './FalhaDosCortes';
 import { listaVaziaDoWorkspace, podeReordenar } from './cortesDoWorkspace';
 import { SeloNoAr } from './SeloNoAr';
 import { useWorkspaceProjeto } from './useWorkspaceProjeto';
@@ -68,7 +69,7 @@ function Utilitario({
 }
 
 export default function WorkspaceProjetoPage() {
-  const { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
+  const { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, falhaDosCortes, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
   const listaVazia = listaVaziaDoWorkspace(busca, soNoAr);
 
 
@@ -292,28 +293,9 @@ export default function WorkspaceProjetoPage() {
             onAlternarSelecao={() => alternarSelecao(status.corte_id)}
           />
         ))}
-        {linhas.length === 0 ? (
-          <div
-            className="card"
-            style={{
-              display: 'grid',
-              placeItems: 'center',
-              gap: 7,
-              padding: 22,
-              textAlign: 'center',
-            }}
-          >
-            <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
-            <span style={{ fontSize: 12.5, fontWeight: 700 }}>
-              {listaVazia.texto}
-            </span>
-            {!listaVazia.ofereceAnalise ? null : (
-              <button type="button" className="btn btn-pri" onClick={() => setAnaliseAberta(true)}>
-                <Icon name="brain" />
-                Analisar com a IA
-              </button>
-            )}
-          </div>
+        {linhas.length === 0 && falhaDosCortes ? <FalhaDosCortes {...falhaDosCortes} /> : null}
+        {linhas.length === 0 && !falhaDosCortes ? (
+          <ListaVazia {...listaVazia} analisar={() => setAnaliseAberta(true)} />
         ) : null}
       </div>
 

@@ -4,6 +4,7 @@ import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import {
   alvosDoLote,
+  falhaDaConsulta,
   linhaPassaNoFiltro,
   mesclarCortesComExport,
   selecionadosVisiveis,
@@ -124,7 +125,6 @@ export function useWorkspaceProjeto() {
   const [parametros, setParametros] = useSearchParams();
   const soNoAr = filtroNoArLigado(parametros.toString());
   const tirarFiltroNoAr = () => setParametros(semFiltroNoAr);
-
   const cortes = useMemo(() => cortesQuery.data ?? [], [cortesQuery.data]);
   // A lista sai dos CORTES e recebe o export por cima (ver `cortesDoWorkspace`):
   // corte proposto ainda não tem linha em export/status, e partir do export
@@ -366,6 +366,7 @@ export function useWorkspaceProjeto() {
       acoes: acoesDoWorkspace({
         youtubeUrl: dados?.youtube_url,
         temCortes: cortes.length > 0,
+        listaIndisponivel: cortesQuery.isError && !cortesQuery.data,
         abrindoPasta: pasta.abrindo,
         refazendoTranscricao: refazerTranscricao.isPending,
         novoCorte: () => setNovoCorteAberto(true),
@@ -392,12 +393,12 @@ export function useWorkspaceProjeto() {
       publicados,
       agendados,
       prontidao, cortes,
-      pasta.abrindo, refazerTranscricao.isPending,
+      pasta.abrindo, refazerTranscricao.isPending, cortesQuery.isError,
       // O passo é recriado a cada render: a chave estável evita republicar
       // a casca sem fim (efeito → casca → render → passo novo → efeito).
       JSON.stringify(proxima),
     ],
   );
 
-  return { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
+  return { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, falhaDosCortes: falhaDaConsulta(cortesQuery), fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
 }
