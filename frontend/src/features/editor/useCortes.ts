@@ -242,7 +242,33 @@ export function useRemoverDesvio(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (desvioIndex: number) => cortesApi.removerDesvio(corteId, desvioIndex),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
+  });
+}
+
+// D-1017 (RN-36): os trechos riscados voltam um a um, ou a rodada da IA sai inteira.
+export function useRestaurarDesvio(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (indice: number) => cortesApi.restaurarDesvio(corteId, indice),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
+  });
+}
+
+export function useDesfazerRodada(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => cortesApi.desfazerRodada(corteId),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
   });
 }
 

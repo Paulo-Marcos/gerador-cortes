@@ -60,6 +60,7 @@ class GeracaoDoCorteResponse(RespostaApi):
 class TrechosGeradosResponse(GeracaoDoCorteResponse):
     total_desvios: int
     novos: int
+    recusados: int = 0
 
 
 class CenasGeradasResponse(GeracaoDoCorteResponse):

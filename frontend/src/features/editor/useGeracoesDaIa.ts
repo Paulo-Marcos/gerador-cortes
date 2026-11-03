@@ -46,6 +46,21 @@ export function useTrechosClaudeEmAndamento(corteId: string) {
 // F-038 — regera os trechos a remover (desvios) do corte via Claude e
 // ressincroniza a transcrição final. O endpoint não devolve o Corte, então
 // invalidamos a query para refetch do corte atualizado.
+/** D-1017: o toast da geração. A marca recusada não pode parecer que sumiu (RN-35). */
+export function mensagemDosTrechosGerados(data: {
+  novos: number;
+  total_desvios: number;
+  recusados?: number;
+}): string {
+  const base =
+    data.novos > 0
+      ? `+${data.novos} novo(s) trecho(s) via IA (total: ${data.total_desvios}).`
+      : `Nenhum trecho novo a remover (total: ${data.total_desvios}).`;
+  return data.recusados
+    ? `${base} ${data.recusados} recusado(s): a citação não confere. Estão em Riscados.`
+    : base;
+}
+
 export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
@@ -53,11 +68,7 @@ export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
     mutationKey: trechosClaudeKey(corteId),
     mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarTrechosClaude(corteId, provider),
     onSuccess: (data) => {
-      const msg =
-        data.novos > 0
-          ? `+${data.novos} novo(s) trecho(s) via IA (total: ${data.total_desvios}).`
-          : `Nenhum trecho novo a remover (total: ${data.total_desvios}).`;
-      notify(msg, { tone: 'success' });
+      notify(mensagemDosTrechosGerados(data), { tone: 'success' });
       invalidaCorte(qc, corteId, projetoId);
       void atualizarLegendasDoCorte(qc, corteId);
     },

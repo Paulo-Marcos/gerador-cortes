@@ -79,7 +79,10 @@ marcado, só acrescenta.
 3. **Motivo claro** por desvio, em poucas palavras (ex.: "interação com chat",
    "repetição da tese", "tangente sobre áudio").
 4. **`categoria` sempre presente**, do vocabulário fechado acima.
-5. Lista vazia é uma resposta válida e correta: sem nada a remover, retorne
+5. **Citação sempre presente**: `inicio_texto` são as primeiras palavras que saem e
+   `fim_texto` as últimas, copiadas literalmente da transcrição. O app confere e
+   recusa a marca cuja citação não existir nesse ponto da fala.
+6. Lista vazia é uma resposta válida e correta: sem nada a remover, retorne
    `"desvios": []`; sem nada a conferir, `"conferir": []`.
 
 ## Formato de saída (JSON puro, sem markdown, sem texto fora do JSON)
@@ -91,7 +94,9 @@ marcado, só acrescenta.
       "inicio_hms": "HH:MM:SS",
       "fim_hms": "HH:MM:SS",
       "categoria": "repeticao | disfluencia | tangente | chat | enrolacao | tom",
-      "motivo": "descrição breve do trecho removido"
+      "motivo": "descrição breve do trecho removido",
+      "inicio_texto": "primeiras palavras que saem, copiadas da transcrição",
+      "fim_texto": "últimas palavras que saem, copiadas da transcrição"
     }
   ],
   "conferir": [
