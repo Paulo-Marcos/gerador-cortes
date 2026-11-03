@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { corteKey, cortesProjetoKey, exportStatusKey } from '@/shared/chavesDeCache';
-import type { CenasRemotionPayload } from '@/types/models';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { conferenciaDaOrigemKey, corteKey, cortesProjetoKey, exportStatusKey } from '@/shared/chavesDeCache';
+import type { CenaRemotion, CenasRemotionPayload } from '@/types/models';
 import { cenasApi } from './api/cenas';
 import { retratosApi, type RetratoDoBanco } from './api/retratos';
+import { useCorte } from './useCortes';
 
 // As cenas Remotion do corte e os retratos das fichas. D-723: saiu do useEditor,
 // e os dois fetch diretos (retratos) passaram ao cliente gerado.
@@ -10,6 +11,30 @@ import { retratosApi, type RetratoDoBanco } from './api/retratos';
 /** Guarda a imagem de uma URL no banco de retratos, para `nome`. */
 export const salvarRetratoDeUrl = (nome: string, url: string): Promise<RetratoDoBanco> =>
   retratosApi.salvarDeUrl(nome, url);
+
+/** Os avisos de uma cena: o aviso a identifica por tipo + início, como ela está gravada. */
+export function avisosDaCena(
+  avisos: { tipo: string | null; inicio: number; mensagem: string }[],
+  cena: Pick<CenaRemotion, 'tipo' | 'inicio'>,
+): string[] {
+  return avisos
+    .filter((aviso) => aviso.tipo === cena.tipo && Math.abs(aviso.inicio - cena.inicio) < 0.01)
+    .map((aviso) => aviso.mensagem);
+}
+
+/**
+ * Os avisos de origem da cena (D-1018). A conferência é do que está gravado, então
+ * acompanha a versão do corte no cache: salvou ou regerou, ela confere de novo.
+ */
+export function useAvisosDaCena(corteId: string, cena: CenaRemotion): string[] {
+  const { dataUpdatedAt } = useCorte(corteId);
+  const { data } = useQuery({
+    queryKey: conferenciaDaOrigemKey(corteId, dataUpdatedAt),
+    queryFn: () => cenasApi.conferirOrigem(corteId),
+    placeholderData: keepPreviousData,
+  });
+  return avisosDaCena(data?.avisos ?? [], cena);
+}
 
 export function useGerarCenasRemotion(corteId: string) {
   const qc = useQueryClient();

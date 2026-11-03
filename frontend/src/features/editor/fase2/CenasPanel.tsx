@@ -12,7 +12,7 @@ import { useGerarCenasClaude } from '@/features/editor/useGeracoesDaIa';
 import { usePreencherRetratosCenas, useValidarCenasRemotion } from '@/features/editor/useCenas';
 import type { CenaRemotion, CenasRemotionPayload } from '@/types/models';
 import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
-import { CenaItem } from './CenaItem';
+import { CenaComOrigem } from './CenaComOrigem';
 import { CenasManualModal } from './CenasManualModal';
 import { RendererConfigControls } from './RendererConfigControls';
 import { TIPOS_CENA } from './sceneTypes';
@@ -367,7 +367,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <ul role="list" className="flex flex-col gap-1.5">
             {cenasOrdenadas.map((cena, idx) => (
               <li key={`${cena.tipo}-${idx}-${cena.inicio}`}>
-                <CenaItem
+                <CenaComOrigem corteId={corteId}
                   cena={cena}
                   ativa={idx === cenaAtivaIdx}
                   sobreposta={validation.overlappingIndices.has(idx)}

@@ -6,6 +6,7 @@ import { inicialDoAutor } from "../cenas-v2/CenaPerguntaChat";
 import { COR_DO_ACENTO, COR_DO_FUNDO } from "../youtube-bg/palco-limpo";
 import { Bloco, GIZ_55, GIZ_85, Kicker, TIPO, linhasDoBloco } from "./Bloco";
 import { progressoDoSublinhado, valorDaContagem } from "./movimento";
+import { rotuloDoNumero } from "./rotulo-do-numero";
 import { useTempoDaCena } from "./tempo-da-cena";
 import { Enquadramento, estaNaZona } from "./Enquadramento";
 
@@ -132,7 +133,7 @@ const NumeroContando: FC<{ bruto: string | number }> = ({ bruto }) => {
 export const CenaNumeroLimpo: FC<Cena> = ({ cena }) => (
   <Enquadramento cena={cena}>
     <Bloco
-      kicker={cena.subtexto || "Dado"}
+      kicker={rotuloDoNumero(cena)}
       titulo={
         <span style={{ fontSize: 120, fontWeight: 800, lineHeight: 0.9, letterSpacing: "-0.05em" }}>
           <NumeroContando bruto={cena.numero ?? cena.texto ?? ""} />

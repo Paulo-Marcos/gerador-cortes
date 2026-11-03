@@ -1671,6 +1671,41 @@
         "title": "AvaliacoesThumbnailResponse",
         "type": "object"
       },
+      "AvisoDeOrigemResponse": {
+        "properties": {
+          "codigo": {
+            "title": "Codigo",
+            "type": "string"
+          },
+          "inicio": {
+            "title": "Inicio",
+            "type": "number"
+          },
+          "mensagem": {
+            "title": "Mensagem",
+            "type": "string"
+          },
+          "tipo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo"
+          }
+        },
+        "required": [
+          "tipo",
+          "inicio",
+          "codigo",
+          "mensagem"
+        ],
+        "title": "AvisoDeOrigemResponse",
+        "type": "object"
+      },
       "BlocoArranjoSchema": {
         "description": "Um bloco na fila de exibição do corte (D-576).",
         "properties": {
@@ -2870,6 +2905,22 @@
           "claridade"
         ],
         "title": "ClaridadeDaCapaResponse",
+        "type": "object"
+      },
+      "ConferenciaDasCenasResponse": {
+        "properties": {
+          "avisos": {
+            "items": {
+              "$ref": "#/components/schemas/AvisoDeOrigemResponse"
+            },
+            "title": "Avisos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "avisos"
+        ],
+        "title": "ConferenciaDasCenasResponse",
         "type": "object"
       },
       "ConfiguracaoCapaChatgptResponse": {
@@ -17301,6 +17352,49 @@
           }
         },
         "summary": "Obter Caminho Pasta",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/cenas-remotion/conferencia": {
+      "get": {
+        "description": "Os avisos de origem das cenas gravadas do corte, identificadas por tipo + início.",
+        "operationId": "conferir_origem_das_cenas_api_cortes__corte_id__cenas_remotion_conferencia_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConferenciaDasCenasResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Conferir Origem Das Cenas",
         "tags": [
           "Cortes"
         ]

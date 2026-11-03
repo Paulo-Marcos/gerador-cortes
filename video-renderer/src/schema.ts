@@ -159,6 +159,12 @@ const cenaBaseSchema = z.object({
   ano: z.string().optional(),         // citacao_autor: "1883"
   fonte: z.string().optional(),       // fonte_referencia: "Stanford Encyclopedia"
 
+  // A origem (D-1018): vão à tela de aprovação, não ao vídeo.
+  frase_da_fala: z.string().optional(),  // a frase literal que justifica a cena
+  quem_disse: z.string().optional(),     // "apresentador", "video_reagido" ou o nome
+  frase_ancora: z.string().optional(),   // guardada quando a frase sai do corte
+  ancora_perdida: z.boolean().optional(),
+
   // Retrato (ficha_biografica): URL absoluta ou relativa (/api/retratos/slug)
   // para a foto do personagem. Quando ausente, a cena renderiza placeholder.
   retrato_url: z.string().optional(),

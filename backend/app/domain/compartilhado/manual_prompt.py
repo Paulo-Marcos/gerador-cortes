@@ -1,13 +1,14 @@
+# D-1018: dizia "Esta instrucao substitui qualquer pedido anterior", e o modelo lia isso
+# como injeção de prompt: 5 falhas em 10 gerações reais, contra 0 em 5 com este texto.
+# O espelho em frontend/src/lib/manualPrompt.ts precisa ficar igual.
 JSON_CODE_BLOCK_INSTRUCTION = """\
-INSTRUCAO PARA CHAT EXTERNO:
-Esta instrucao substitui qualquer pedido anterior de responder sem markdown ou JSON puro.
-Responda em um bloco de codigo JSON, usando exatamente este formato:
+FORMATO DA RESPOSTA:
+Responda com um bloco de codigo JSON, neste formato:
 ```json
 { ... }
 ```
-Dentro do bloco, inclua somente JSON valido, sem comentarios.
+Dentro do bloco, somente JSON valido, sem comentarios.
 Nao escreva explicacoes antes ou depois do bloco.
-Ao clicar em copiar no bloco de codigo, o conteudo copiado deve ser diretamente importavel pela aplicacao.
 """
 
 

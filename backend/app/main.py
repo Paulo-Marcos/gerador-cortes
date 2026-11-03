@@ -33,6 +33,7 @@ from app.routers import (
     metadados,
     novidades,
     ordem_cortes,
+    origem_das_cenas,
     presets,
     projetos,
     ranking_lives,
@@ -137,6 +138,7 @@ app.add_middleware(GuardaDeOrigemLocal)
 
 app.include_router(projetos.router, prefix="/api/projetos", tags=["Projetos"])
 app.include_router(cortes.router, prefix="/api/cortes", tags=["Cortes"])
+app.include_router(origem_das_cenas.router, prefix="/api/cortes", tags=["Cortes"])
 app.include_router(
     alertas_conferir.router, prefix="/api/alertas-conferir", tags=["Alertas para conferir"]
 )

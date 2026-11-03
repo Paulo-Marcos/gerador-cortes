@@ -3,6 +3,8 @@
 // importar um ao outro só para saber o nome de uma query (D-723).
 
 export const corteKey = (id: string) => ['corte', id] as const;
+export const conferenciaDaOrigemKey = (id: string, versaoDoCorte: number) =>
+  ['conferencia-da-origem', id, versaoDoCorte] as const;
 export const cortesProjetoKey = (id: string) => ['cortes', 'projeto', id] as const;
 export const projetoKey = (id: string) => ['projeto', id] as const;
 export const exportStatusKey = (id: string) => ['projeto', id, 'export-status'] as const;

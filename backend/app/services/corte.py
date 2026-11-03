@@ -56,7 +56,7 @@ from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_video_cmd,
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
-from app.services import abrir_no_sistema, proposta_apagada
+from app.services import abrir_no_sistema, origem_das_cenas, proposta_apagada
 from app.services.alertas_conferir import dividir_alertas, juntar_alertas_dos_cortes
 from app.services.claude_ia import (
     ClaudeIaService,
@@ -618,10 +618,11 @@ async def _gravar_sincronia(
     # Retry para "database is locked" em picos de escrita. D-652: sem o
     # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
     # seguintes morrem em PendingRollbackError — o retry era inócuo e
-    # mascarava o erro real. D-716: o `rollback` também descarta o que
-    # foi atribuído ao corte, então cada tentativa atribui de novo —
-    # antes a segunda gravava nada e a sincronia se perdia em silêncio.
+    # mascarava o erro real. D-716: o `rollback` descarta o que foi atribuído; relê e refaz.
     for attempt in range(_TENTATIVAS_DE_GRAVACAO):
+        cenas = origem_das_cenas.cenas_depois_do_recorte(corte, nova_trans)
+        if cenas is not None:
+            corte.cenas_remotion = cenas
         corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
         corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
         corte.transcricao_final_texto = texto_final
@@ -632,6 +633,7 @@ async def _gravar_sincronia(
             if "locked" in str(e).lower() and attempt < _TENTATIVAS_DE_GRAVACAO - 1:
                 await db.rollback()
                 await asyncio.sleep(0.5 * (attempt + 1))
+                await db.refresh(corte)
                 continue
             raise e
 
@@ -1610,12 +1612,10 @@ class CorteService:
             segmentos_mantidos = _segmentos_na_ordem_do_corte(corte, c_inicio, c_fim, desvios)
             nova_trans = TimelineMath.recalcular_transcricao(trans_bruta, segmentos_mantidos)
 
-            # ── 3. Texto puro limpo para IA ──
             texto_final = " ".join(
                 [str(item.get("texto", "")).strip() for item in nova_trans if item.get("texto")]
             )
 
-            # Log de debug para verificar sincronia
             if nova_trans:
                 operational_debug(
                     "CorteService",

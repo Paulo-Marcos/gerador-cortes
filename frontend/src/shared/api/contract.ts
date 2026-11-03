@@ -1338,6 +1338,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cortes/{corte_id}/cenas-remotion/conferencia": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Conferir Origem Das Cenas
+         * @description Os avisos de origem das cenas gravadas do corte, identificadas por tipo + início.
+         */
+        get: operations["conferir_origem_das_cenas_api_cortes__corte_id__cenas_remotion_conferencia_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cortes/{corte_id}/cenas-remotion/importar": {
         parameters: {
             query?: never;
@@ -5651,6 +5671,17 @@ export interface components {
             avaliacoes: components["schemas"]["AvaliacaoThumbnailResponse"][];
             resumo: components["schemas"]["ResumoAvaliacoesThumbnail"];
         };
+        /** AvisoDeOrigemResponse */
+        AvisoDeOrigemResponse: {
+            /** Codigo */
+            codigo: string;
+            /** Inicio */
+            inicio: number;
+            /** Mensagem */
+            mensagem: string;
+            /** Tipo */
+            tipo: string | null;
+        };
         /**
          * BlocoArranjoSchema
          * @description Um bloco na fila de exibição do corte (D-576).
@@ -6079,6 +6110,11 @@ export interface components {
         /** ClaridadeDaCapaResponse */
         ClaridadeDaCapaResponse: {
             claridade: components["schemas"]["ClaridadeDaCapa"] | null;
+        };
+        /** ConferenciaDasCenasResponse */
+        ConferenciaDasCenasResponse: {
+            /** Avisos */
+            avisos: components["schemas"]["AvisoDeOrigemResponse"][];
         };
         /** ConfiguracaoCapaChatgptResponse */
         ConfiguracaoCapaChatgptResponse: {
@@ -12919,6 +12955,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaminhoDaPastaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    conferir_origem_das_cenas_api_cortes__corte_id__cenas_remotion_conferencia_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConferenciaDasCenasResponse"];
                 };
             };
             /** @description Validation Error */

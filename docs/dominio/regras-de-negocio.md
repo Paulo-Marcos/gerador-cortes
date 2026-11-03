@@ -76,6 +76,13 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN-32 | O áudio do **short** sai normalizado em -14 LUFS (pico até -1 dBTP), como o do corte horizontal, e a normalização acontece **uma vez só**, na composição final — nunca por fatia do recorte. | `infrastructure/render/ffmpeg_short.py` (`build_composicao_short_cmd`), filtro de `ffmpeg_overlay._LOUDNORM_YOUTUBE` | D-1014 |
 | RN-34 | O áudio final, do corte horizontal e do short, mira **-1,5 dBTP** e sai em **AAC 256k**, porque o AAC passa do que o `loudnorm` entrega. **Filtro de voz só entra com A/B às cegas aprovado**: em 02/11/2026, 12 de 12 pares deram "não ouço diferença", então `highpass`, `deesser` e compressor ficaram de fora. | `infrastructure/render/ffmpeg_overlay.py` (`_LOUDNORM_YOUTUBE`, `_build_audio_args`) | D-1016 |
 
+### Origem e tempo das cenas
+
+| RN | Regra | Onde mora | Origem |
+|---|---|---|---|
+| RN-35 | A cena traz a frase literal da fala, quem disse e a fonte, quando houver. A conferência contra a transcrição **só avisa**: nunca reescreve, apaga nem impede a validação, porque quem decide o que a cena afirma é o operador. O número só leva o rótulo "Dado" quando tem fonte. | `domain/corte/origem_da_cena.py`; `cenas-limpo/rotulo-do-numero.ts` | D-1018 |
+| RN-36 | Quando o corte muda, a cena segue as palavras que estavam sob ela, por alinhamento das transcrições. Se elas saíram, a cena fica onde estava, avisa e guarda a frase, para voltar junto com o trecho. A abertura (até 1 s) fica no começo. | `domain/corte/ancora_da_cena.py` | D-1018 |
+
 ## Divergências encontradas na conferência
 
 O que o rascunho de 16/09 dizia e o código não diz mais — ou o contrário:

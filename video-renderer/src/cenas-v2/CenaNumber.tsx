@@ -2,6 +2,7 @@ import { AbsoluteFill, interpolate, useVideoConfig } from "remotion";
 import { CenaRemotion } from "../schema";
 import { shouldUseSharedCardZone } from "../shared-card-zone";
 import { COLORS_V2 as C, FONTS_V2 as F, SHADOWS_V2 as SH } from "../theme-v2";
+import { rotuloDoNumero } from "../cenas-limpo/rotulo-do-numero";
 import { useGlobalFrame } from "../frame-context";
 import { AmbientHud, useFades} from "./_shared";
 import {
@@ -77,7 +78,7 @@ export const CenaNumber: React.FC<Props> = ({ cena }) => {
           zIndex: 1,
         }}
       >
-        {(cena.subtexto ?? "DADO").toUpperCase()}
+        {rotuloDoNumero(cena)?.toUpperCase()}
       </div>
 
       <div
