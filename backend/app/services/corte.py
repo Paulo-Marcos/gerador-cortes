@@ -613,19 +613,19 @@ def _segmentos_na_ordem_do_corte(
 
 
 async def _gravar_sincronia(
-    db: AsyncSession, corte: Corte, trans_bruta: list, nova_trans: list, texto_final: str
+    db: AsyncSession, corte: Corte, trans_bruta: list, nova_trans: list, texto: str, trans_raw: list
 ) -> None:
     # Retry para "database is locked" em picos de escrita. D-652: sem o
     # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
     # seguintes morrem em PendingRollbackError — o retry era inócuo e
     # mascarava o erro real. D-716: o `rollback` descarta o que foi atribuído; relê e refaz.
     for attempt in range(_TENTATIVAS_DE_GRAVACAO):
-        cenas = origem_das_cenas.cenas_depois_do_recorte(corte, nova_trans)
-        if cenas is not None:
-            corte.cenas_remotion = cenas
+        # Cenas e marca de validadas se refazem a cada tentativa, a partir do que está
+        # gravado agora: assim não se apaga a edição de outra sessão (D-1018, D-1030).
+        origem_das_cenas.aplicar_recorte_nas_cenas(corte, nova_trans, trans_raw)
         corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
         corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
-        corte.transcricao_final_texto = texto_final
+        corte.transcricao_final_texto = texto
         try:
             await db.commit()
             break
@@ -1623,7 +1623,7 @@ class CorteService:
                     f"Primeiro timestamp: {nova_trans[0].get('start')}s",
                 )
 
-            await _gravar_sincronia(db, corte, trans_bruta, nova_trans, texto_final)
+            await _gravar_sincronia(db, corte, trans_bruta, nova_trans, texto_final, trans_raw)
         except Exception as e:
             operational_error(
                 "CorteService",
