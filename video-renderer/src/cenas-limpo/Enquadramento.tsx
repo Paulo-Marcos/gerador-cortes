@@ -4,6 +4,7 @@ import type { CenaRemotion } from "../schema";
 import { shouldUseSharedCardZone } from "../shared-card-zone";
 import { useSombraPadrao } from "../cenas-v2/_shared/sombra-context";
 import { resolverNivel, type SombraNivel } from "../cenas-v2/_shared/sombra-tokens";
+import { COR_DO_TEXTO } from "../youtube-bg/palco-limpo";
 import { useEstiloDasCenas } from "./estilo-das-cenas";
 import { LarguraNaCaixaContext, useFonteDoLimpo } from "./Bloco";
 import { assentar, duracaoEmQuadros, opacidadeDeSaida, QUADROS } from "./movimento";
@@ -61,13 +62,17 @@ export const Enquadramento: FC<{ cena: CenaRemotion; children: ReactNode }> = ({
   // A barra inferior para em 4 s mesmo que a cena dure mais (D-918).
   if (quadro < 0 || quadro >= tempo.fim) return null;
   const base: CSSProperties = { position: "absolute", fontFamily: familia };
+  // D-1025: a cor do texto é daqui, e não do Bloco. Ênfase, lista, barra e linha do
+  // tempo não passam pelo Bloco e herdavam o preto do documento (título invisível
+  // no fundo escuro). `contents` não cria caixa, então não mexe na medida do card.
+  const conteudo = <div style={{ display: "contents", color: COR_DO_TEXTO }}>{children}</div>;
 
   if (estaNaZona(cena) && cena.layout_card_zone) {
     return (
       <TempoDaCenaContext.Provider value={tempo}>
         <AbsoluteFill>
           <CardNaZona zona={cena.layout_card_zone} familia={familia}>
-            {children}
+            {conteudo}
           </CardNaZona>
         </AbsoluteFill>
       </TempoDaCenaContext.Provider>
@@ -79,7 +84,7 @@ export const Enquadramento: FC<{ cena: CenaRemotion; children: ReactNode }> = ({
   const comScrim = (
     <>
       <div style={{ ...scrimDoNivel(nivel), position: "absolute", inset: 0, opacity: tempo.daAnterior ? 1 : scrim }} />
-      <div style={{ position: "relative", textShadow: scrimDoNivel(nivel).textShadow }}>{children}</div>
+      <div style={{ position: "relative", textShadow: scrimDoNivel(nivel).textShadow }}>{conteudo}</div>
     </>
   );
 
