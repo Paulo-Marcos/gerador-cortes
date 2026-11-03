@@ -88,17 +88,18 @@ export function resolveWaveformWindow({
 }
 
 /**
- * D-1033: o bruto DESTE corte acabou de ficar pronto? O editor segue trocando de
- * corte sem sair da tela, e comparar o status de um corte com o do outro via
- * "cortando → pronto" onde só houve um K: a tela ia para a Pós do corte seguinte.
+ * D-1033: a tela viu este trabalho rodar desde que abriu? Só então o fim dele é
+ * o gesto que ela acompanhava e vale o salto para a etapa seguinte. O status no
+ * cache é de quando o corte esteve aberto da última vez: voltar com J a um corte
+ * que terminou longe dali leria "rodando → pronto" e trocaria de tela.
  */
-export function brutoAcabouDeFicarPronto(
-  anterior: { corteId: string | undefined; status: string | undefined },
-  atual: { corteId: string | undefined; status: string | undefined },
+export function viuRodarNestaVisita(
+  jaViu: boolean,
+  rodando: boolean,
+  lidoEm: number,
+  visitaDesde: number,
 ): boolean {
-  if (anterior.corteId !== atual.corteId) return false;
-  const eraProcessando = anterior.status === 'cortando' || anterior.status === 'processando';
-  return eraProcessando && atual.status === 'pronto';
+  return jaViu || (rodando && lidoEm >= visitaDesde);
 }
 
 /**

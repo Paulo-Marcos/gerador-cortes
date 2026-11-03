@@ -4,12 +4,13 @@ import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { brutoAcabouDeFicarPronto } from '@/features/editor/editorEditState';
+import { viuRodarNestaVisita } from '@/features/editor/editorEditState';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { UmaTelaPorCorte } from '@/upgrade/UmaTelaPorCorte';
 import { corteDaLive, telaDaRota } from '@/upgrade/upgradeRoutes';
 
 // D-1033: J, K e a lista levavam o corte seguinte à etapa em que ELE estava: K
@@ -107,8 +108,6 @@ function destinosAPartirDe(rota: string, caminho: string, pagina: ReactNode) {
 }
 
 describe('D-1033 · trocar de corte não troca de tela', () => {
-  beforeEach(() => vi.stubGlobal('window', { localStorage: { getItem: () => null } }));
-
   it('na Revisão, qualquer corte abre na Revisão, esteja ele em que etapa estiver', () => {
     const destinos = destinosAPartirDe(
       '/projetos/p1/final-review?corte=com-bruto',
@@ -167,51 +166,79 @@ describe('D-1033 · trocar de corte não troca de tela', () => {
   });
 });
 
-// Ficando no editor, o status do bruto passa de um corte para o outro no mesmo
-// efeito. "cortando" do 5 seguido de "pronto" do 6 não é o bruto terminando.
-describe('D-1033 · só o bruto do próprio corte leva à Pós', () => {
-  it('o salto continua quando o bruto DESTE corte fica pronto', () => {
-    expect(
-      brutoAcabouDeFicarPronto({ corteId: 'a', status: 'cortando' }, { corteId: 'a', status: 'pronto' }),
-    ).toBe(true);
-    expect(
-      brutoAcabouDeFicarPronto({ corteId: 'a', status: 'processando' }, { corteId: 'a', status: 'pronto' }),
-    ).toBe(true);
+// O estado de um corte não pode gravar no outro: a seleção do corte 5 riscava um
+// trecho do 6 no Ctrl+Delete. A instância nova zera tudo de uma vez.
+describe('D-1033 · cada corte abre numa instância nova da tela', () => {
+  function chaveEm(rota: string): string | null {
+    let chave: string | null = null;
+    function Sonda() {
+      chave = UmaTelaPorCorte({ children: null }).key;
+      return null;
+    }
+    renderToStaticMarkup(
+      <MemoryRouter initialEntries={[rota]}>
+        <Sonda />
+      </MemoryRouter>,
+    );
+    return chave;
+  }
+
+  it.each([
+    ['/projetos/p1/cortes/a?fase=1', '/projetos/p1/cortes/b?fase=1'],
+    ['/projetos/p1/post-production?corte=a', '/projetos/p1/post-production?corte=b'],
+    ['/projetos/p1/final-review?corte=a', '/projetos/p1/final-review?corte=b'],
+  ])('%s e %s são instâncias diferentes', (deA, deB) => {
+    expect(chaveEm(deA)).toBe('a');
+    expect(chaveEm(deB)).toBe('b');
   });
 
-  it('trocar para um corte de bruto pronto, com outro gerando, não salta', () => {
-    expect(
-      brutoAcabouDeFicarPronto({ corteId: 'a', status: 'cortando' }, { corteId: 'b', status: 'pronto' }),
-    ).toBe(false);
+  it('o ?fase=2 do mesmo corte não troca a instância', () => {
+    expect(chaveEm('/projetos/p1/post-production?corte=a&fase=2')).toBe('a');
   });
 
-  it('abrir um corte que já estava pronto não salta', () => {
-    expect(
-      brutoAcabouDeFicarPronto({ corteId: 'a', status: 'pronto' }, { corteId: 'a', status: 'pronto' }),
-    ).toBe(false);
-  });
-
-  it('o editor decide pelo par corte e status, e a ida à Pós continua lá', () => {
-    const hook = fonte('../../editor/useEditorPage.tsx');
-    expect(hook).toContain('brutoAcabouDeFicarPronto(anterior, { corteId, status: atual })');
-    expect(hook).toContain('navigate(postProductionPath(projetoId, corteId, true));');
+  it('as três telas do corte passam por ela nas rotas', () => {
+    const rotas = fonte('../../../routes.tsx');
+    expect(rotas).toContain("'projetos/:id/cortes/:corteId', element: <UmaTelaPorCorte><EditorPage /></UmaTelaPorCorte>");
+    expect(rotas).toMatch(/'projetos\/:id\/post-production', element: <UmaTelaPorCorte>.*<ScenesPostProductionPage \/>.*<\/UmaTelaPorCorte>/);
+    expect(rotas).toContain("'projetos/:id/final-review', element: <UmaTelaPorCorte><FinalReviewPage /></UmaTelaPorCorte>");
   });
 });
 
-// Na Pós, a marca "render rodando" é estado e chega um render atrasada na troca
-// de corte. Sem conferir a marca do corte aberto, o render antigo do corte novo
-// contava como concluído, e o aoAcabar levava à Revisão dele. O efeito não roda
-// em renderToStaticMarkup; a ligação se confere na fonte.
-describe('D-1033 · a marca de render é do corte aberto', () => {
-  it('o desfecho só vale para o corte que tem a marca', () => {
-    expect(fonte('../../editor/useRender.ts')).toContain(
-      'if (!corteId || !marcado || !renderFinalMarcado(corteId)) return;',
-    );
+// Bruto pronto vai à Pós e render pronto vai à Revisão quando a tela acompanhava
+// o trabalho. Voltar com J a um corte que terminou longe dali é só trocar de corte.
+describe('D-1033 · só salta quem viu o trabalho rodar', () => {
+  const ABRIU = 1_000;
+
+  it('status rodando lido depois de a tela abrir conta', () => {
+    expect(viuRodarNestaVisita(false, true, ABRIU + 1, ABRIU)).toBe(true);
+    expect(viuRodarNestaVisita(false, true, ABRIU, ABRIU)).toBe(true);
   });
 
-  it('o render concluído continua levando à Revisão', () => {
+  it('status rodando que veio do cache, de antes de abrir, não conta', () => {
+    expect(viuRodarNestaVisita(false, true, ABRIU - 1, ABRIU)).toBe(false);
+  });
+
+  it('status parado não conta', () => {
+    expect(viuRodarNestaVisita(false, false, ABRIU + 1, ABRIU)).toBe(false);
+  });
+
+  it('quem já viu rodar continua tendo visto quando o trabalho acaba', () => {
+    expect(viuRodarNestaVisita(true, false, ABRIU + 5, ABRIU)).toBe(true);
+  });
+
+  // Os efeitos não rodam em renderToStaticMarkup; a ligação se confere na fonte.
+  it('o editor só vai à Pós se viu o bruto rodar, com o status lido na hora', () => {
+    const hook = fonte('../../editor/useEditorPage.tsx');
+    expect(hook).toContain('viuRodarNestaVisita(viuBrutoRodarRef.current, processando, brutoLidoEm, visitaDesde)');
+    expect(hook).toContain('if (viuBrutoRodarRef.current) navigate(postProductionPath(projetoId, corteId, true));');
+  });
+
+  it('a Pós só vai à Revisão se viu o render rodar, e pedir o render conta como ver', () => {
+    const render = fonte('../../editor/useRender.ts');
+    expect(render).toContain('viuRodarNestaVisita(assistiuRef.current, status.running, statusLidoEm, visitaDesde)');
+    expect(render).toMatch(/function iniciar\([^)]*\) \{\s+if \(!corteId\) return;\s+assistiuRef\.current = true;/);
     expect(fonte('../ScenesPostProductionPage.tsx')).toContain(
-      'const renderTarget = resolveRenderCompletionPath({ projetoId, corteId, finished: concluiu });',
+      'resolveRenderCompletionPath({ projetoId, corteId, finished: concluiu && assistiu })',
     );
   });
 });

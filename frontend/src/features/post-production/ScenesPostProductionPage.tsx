@@ -118,7 +118,7 @@ export function ScenesPostProductionPage() {
     iniciar: startRenderFinal,
   } = useRenderFinal(corteId, {
     aoMudarStatus: () => void exportStatusQ.refetch(),
-    aoAcabar: ({ concluiu, falhou, status }) => {
+    aoAcabar: ({ concluiu, falhou, status, assistiu }) => {
       // D-746: a falha só limpava o estado — o operador ficava esperando um
       // render que já tinha morrido.
       if (falhou) {
@@ -129,7 +129,7 @@ export function ScenesPostProductionPage() {
       }
       // Render concluído: jogar o usuário direto na tela final, mesmo com
       // ?fase=2 preservado, porque aqui o vídeo passou a estar pronto.
-      const renderTarget = resolveRenderCompletionPath({ projetoId, corteId, finished: concluiu });
+      const renderTarget = resolveRenderCompletionPath({ projetoId, corteId, finished: concluiu && assistiu });
       if (renderTarget) navigate(renderTarget, { replace: true });
     },
     // A fila global acompanha o render: "renderizar em 2º plano" não bloqueia a aba.

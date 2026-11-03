@@ -26,7 +26,7 @@ import { useEditHistory } from './useEditHistory';
 import { useTrechosRiscados } from './useTrechosRiscados';
 import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { applyDesvioChange, brutoAcabouDeFicarPronto, desfechoDaFalhaAoSalvar, mergeDirtyPatch, type WaveformWindow } from './editorEditState';
+import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
 import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
@@ -359,23 +359,29 @@ export function useEditorPage() {
   // transcricao_final re-sincronizada com os desvios removidos).
   // Quando o status vira erro, mostra toast com a mensagem do backend.
   const brutoStatusRaw = statusBruto.data?.status;
-  const ultimoStatusRef = useRef({ corteId, status: brutoStatusRaw });
+  const ultimoStatusRef = useRef<string | undefined>(brutoStatusRaw);
+  const [visitaDesde] = useState(() => Date.now());
+  const viuBrutoRodarRef = useRef(false);
+  const brutoLidoEm = statusBruto.dataUpdatedAt;
   useEffect(() => {
     const anterior = ultimoStatusRef.current;
     const atual = brutoStatusRaw;
-    ultimoStatusRef.current = { corteId, status: atual };
+    ultimoStatusRef.current = atual;
     if (!corteId) return;
-    if (brutoAcabouDeFicarPronto(anterior, { corteId, status: atual })) {
+    const processando = atual === 'cortando' || atual === 'processando';
+    viuBrutoRodarRef.current = viuRodarNestaVisita(viuBrutoRodarRef.current, processando, brutoLidoEm, visitaDesde);
+    const eraProcessando = anterior === 'cortando' || anterior === 'processando';
+    if (eraProcessando && atual === 'pronto') {
       qc.invalidateQueries({ queryKey: corteKey(corteId) });
       // Geração completa do bruto (vídeo + cenas) → leva para o pós-produção.
-      navigate(postProductionPath(projetoId, corteId, true));
+      if (viuBrutoRodarRef.current) navigate(postProductionPath(projetoId, corteId, true));
     }
     // Transitou para erro (vindo de qualquer outro estado): notificar.
-    if (atual && atual.startsWith('erro:') && anterior.status !== atual) {
+    if (atual && atual.startsWith('erro:') && anterior !== atual) {
       const msg = atual.replace(/^erro:\s*/, '');
       notifyToast(`Geração de bruto falhou: ${msg}`, { tone: 'error' });
     }
-  }, [brutoStatusRaw, corteId, qc, notifyToast, navigate, projetoId]);
+  }, [brutoStatusRaw, brutoLidoEm, visitaDesde, corteId, qc, notifyToast, navigate, projetoId]);
 
   useEffect(() => {
     if (corteId || cortes.length === 0) return;

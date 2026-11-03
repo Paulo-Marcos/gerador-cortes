@@ -2,6 +2,7 @@ import { PalcoDoCortePelaRota } from '@/features/channels/palcoDoEscopo';
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from '@/App';
+import { UmaTelaPorCorte } from '@/upgrade/UmaTelaPorCorte';
 
 const EditorPage = lazy(() =>
   import('@/features/editor/EditorPage').then((m) => ({ default: m.EditorPage })),
@@ -87,10 +88,10 @@ export const router = createBrowserRouter([
         element: <WorkspaceProjetoPage />,
       },
       { path: 'projetos/:id/cortes', element: <EditorPage /> },
-      { path: 'projetos/:id/cortes/:corteId', element: <EditorPage /> },
+      { path: 'projetos/:id/cortes/:corteId', element: <UmaTelaPorCorte><EditorPage /></UmaTelaPorCorte> },
       { path: 'projetos/:id/metadados', element: <MetadataPage /> },
-      { path: 'projetos/:id/post-production', element: <PalcoDoCortePelaRota tipo="horizontal"><ScenesPostProductionPage /></PalcoDoCortePelaRota> },
-      { path: 'projetos/:id/final-review', element: <FinalReviewPage /> },
+      { path: 'projetos/:id/post-production', element: <UmaTelaPorCorte><PalcoDoCortePelaRota tipo="horizontal"><ScenesPostProductionPage /></PalcoDoCortePelaRota></UmaTelaPorCorte> },
+      { path: 'projetos/:id/final-review', element: <UmaTelaPorCorte><FinalReviewPage /></UmaTelaPorCorte> },
       // /export foi aposentada (A6d): redireciona para a tela viva de pos-producao,
       // preservando favoritos antigos em vez de devolver 404. O relative="path" e
       // obrigatorio: sem ele o `..` sobe um nivel de ROTA (as rotas aqui sao filhas
