@@ -39,7 +39,7 @@ _JANELA_DA_FRASE_SEG = 45.0
 _MINIMO_DA_FRASE_NA_FALA = 0.6
 _MINIMO_DA_CITACAO_LITERAL = 0.8
 _QUEM_NAO_ACUSA_AUTOR = "video_reagido"
-_MAIOR_CONECTIVO = 3
+_CONECTIVOS_DE_NOME = {"de", "da", "do", "das", "dos", "e", "del", "von", "van"}
 
 _POR_EXTENSO = {
     "um": "1",
@@ -100,7 +100,7 @@ def _citacao_e_literal(texto: str, frase: str) -> bool:
 
 def _nomes(texto: str) -> set[str]:
     """As palavras que identificam alguém: "de" e "da" não dizem quem é."""
-    return {token for token in _tokenizar(texto) if len(token) > _MAIOR_CONECTIVO}
+    return {token for token in _tokenizar(texto) if token not in _CONECTIVOS_DE_NOME}
 
 
 def _autor_e_quem_disse(autor: str, quem_disse: str) -> bool:
@@ -113,11 +113,11 @@ def _avisos_da_frase(cena: dict, frase: str, palavras: list[dict]) -> list[tuple
     avisos: list[tuple[str, str]] = []
     if palavras and not _frase_esta_na_fala(frase, cena["inicio"], palavras):
         avisos.append(("frase_fora_da_fala", "A frase citada não está na fala perto desta cena."))
-    if cena["tipo"] == "destaque_numerico":
+    if cena.get("tipo") == "destaque_numerico":
         numero = cena.get("numero", cena.get("texto")) or ""
         if not _nucleos_numericos(numero) <= _nucleos_numericos(frase):
             avisos.append(("numero_fora_da_frase", f"O número {numero} não aparece na frase."))
-    if cena["tipo"] == "citacao_autor":
+    if cena.get("tipo") == "citacao_autor":
         if not _citacao_e_literal(str(cena.get("texto") or ""), frase):
             avisos.append(("citacao_nao_literal", "O texto entre aspas não é o que foi dito."))
         autor, quem_disse = cena.get("autor"), cena.get("quem_disse")
@@ -134,18 +134,19 @@ def _avisos_da_frase(cena: dict, frase: str, palavras: list[dict]) -> list[tuple
 def _avisos_da_cena(cena: dict, palavras: list[dict]) -> list[tuple[str, str]]:
     avisos: list[tuple[str, str]] = []
     frase, fonte = cena.get("frase_da_fala"), cena.get("fonte")
+    tipo = cena.get("tipo") if isinstance(cena.get("tipo"), str) else None
     if cena.get("ancora_perdida"):
         avisos.append(
             ("frase_saiu_do_corte", "A frase desta cena saiu do corte; ela ficou onde estava.")
         )
-    if cena.get("tipo") in _VEM_DA_MEMORIA and not fonte:
+    if tipo in _VEM_DA_MEMORIA and not fonte:
         avisos.append(
             (
                 "ficha_da_memoria",
                 "Datas e cargo vêm da memória da IA: confira o que muda com o tempo.",
             )
         )
-    if cena.get("tipo") in _PEDE_A_FRASE and not frase and not fonte:
+    if tipo in _PEDE_A_FRASE and not frase and not fonte:
         avisos.append(("sem_fonte", "Sem frase da fala nem fonte: de onde veio?"))
     # A frase que saiu do corte já tem o seu aviso: "fora da fala" seria repeti-lo.
     if frase and not cena.get("ancora_perdida"):
@@ -163,7 +164,7 @@ def conferir_cenas(cenas: list, transcricao_final: list) -> list[dict]:
         normalizada = normalizar_cena_remotion(cena)
         avisos.extend(
             {
-                "tipo": normalizada.get("tipo"),
+                "tipo": str(normalizada["tipo"]) if normalizada.get("tipo") else None,
                 "inicio": normalizada["inicio"],
                 "codigo": codigo,
                 "mensagem": mensagem,

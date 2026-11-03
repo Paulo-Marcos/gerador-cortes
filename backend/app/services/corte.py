@@ -18,7 +18,7 @@ from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
-from app.domain.corte import alerta_conferir, ancora_da_cena, ciclo_corte, metadado_corte
+from app.domain.corte import alerta_conferir, ciclo_corte, metadado_corte
 from app.domain.corte.ancora_match import ancorar_desvio
 from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
@@ -56,7 +56,7 @@ from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_video_cmd,
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
-from app.services import abrir_no_sistema, proposta_apagada
+from app.services import abrir_no_sistema, origem_das_cenas, proposta_apagada
 from app.services.alertas_conferir import dividir_alertas, juntar_alertas_dos_cortes
 from app.services.claude_ia import (
     ClaudeIaService,
@@ -618,10 +618,9 @@ async def _gravar_sincronia(
     # Retry para "database is locked" em picos de escrita. D-652: sem o
     # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
     # seguintes morrem em PendingRollbackError — o retry era inócuo e
-    # mascarava o erro real. D-716: o `rollback` descarta o atribuído ao corte, então
-    # cada tentativa atribui de novo. Cenas só quando mudam, para não apagar outra edição.
-    cenas = ancora_da_cena.seguir_recorte(corte.cenas_remotion, corte.transcricao_final, nova_trans)
+    # mascarava o erro real. D-716: o `rollback` descarta o que foi atribuído; relê e refaz.
     for attempt in range(_TENTATIVAS_DE_GRAVACAO):
+        cenas = origem_das_cenas.cenas_depois_do_recorte(corte, nova_trans)
         if cenas is not None:
             corte.cenas_remotion = cenas
         corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
@@ -634,6 +633,7 @@ async def _gravar_sincronia(
             if "locked" in str(e).lower() and attempt < _TENTATIVAS_DE_GRAVACAO - 1:
                 await db.rollback()
                 await asyncio.sleep(0.5 * (attempt + 1))
+                await db.refresh(corte)
                 continue
             raise e
 
