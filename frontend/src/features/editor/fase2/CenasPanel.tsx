@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
+import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
@@ -8,9 +8,10 @@ import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { useAtualizarCorte } from '@/features/editor/useCortes';
+import { useGravarCenas } from './useGravarCenas';
 import { useGerarCenasClaude } from '@/features/editor/useGeracoesDaIa';
 import { usePreencherRetratosCenas, useValidarCenasRemotion } from '@/features/editor/useCenas';
-import type { CenaRemotion, CenasRemotionPayload } from '@/types/models';
+import type { CenaRemotion } from '@/types/models';
 import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
 import { CenaComOrigem } from './CenaComOrigem';
 import { CenasManualModal } from './CenasManualModal';
@@ -146,14 +147,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     setDirty(true);
   };
 
-  const handleSalvar = useCallback(() => {
-    const payload: CenasRemotionPayload = {
-      ...(formato ? { formato } : {}),
-      ...(paleta ? { paleta } : {}),
-      cenas: cenasOrdenadas,
-    };
-    atualizar.mutate({ cenas_remotion: payload }, { onSuccess: () => setDirty(false) });
-  }, [atualizar, cenasOrdenadas, formato, paleta]);
+  const handleSalvar = useGravarCenas({ atualizar, formato, paleta, cenas: cenasOrdenadas, dirty, setDirty });
 
   // Ctrl+S na tela Pos delega para handleSalvar via ref. Sem dirty,
   // retorna false (parent fica em silencio).

@@ -1,6 +1,5 @@
 import {
   
-  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -11,6 +10,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { corteKey, useAtualizarCorte } from '@/features/editor/useCortes';
 import { useToast } from '@/components/ui/toaster';
+import { useGravarLayout } from './useGravarLayout';
 import type { AppSettings, Corte, Projeto } from '@/types/models';
 import { projetosApi } from '@/features/projetos/api';
 import {  type PosicionamentoModalResult } from './PosicionamentoModal';
@@ -343,25 +343,7 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
       patch({ ...draft, regioes }, syncQuery);
     };
 
-    const save = useCallback(() => {
-      const valores = normalizeYoutubeLayout(draft) as unknown as Record<string, unknown>;
-      const mudancas = Object.fromEntries(
-        [...mudadasRef.current].map((chave) => [chave, valores[chave] ?? null]),
-      );
-      const body = { layout_youtube: mudancas } as Partial<Corte>;
-      atualizar.mutateAsync(body).then(
-        () => {
-          mudadasRef.current = new Set();
-          setDirty(false);
-          notify('Layout YouTube salvo.', { tone: 'success' });
-        },
-        (error) => {
-          notify(error instanceof Error ? error.message : 'Erro ao salvar layout.', {
-            tone: 'error',
-          });
-        },
-      );
-    }, [draft, atualizar, notify]);
+    const save = useGravarLayout({ draft, dirty, mudadasRef, setDirty, gravarNoCorte: atualizar.mutateAsync });
 
     // Ctrl+S na tela Pos delega para save via ref. Sem dirty, retorna
     // false (parent fica em silencio).
