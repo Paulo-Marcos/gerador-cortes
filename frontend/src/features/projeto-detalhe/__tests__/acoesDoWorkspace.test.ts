@@ -32,6 +32,17 @@ const pagina = readFileSync(resolve(__dirname, '../WorkspaceProjetoPage.tsx'), '
 const hook = readFileSync(resolve(__dirname, '../useWorkspaceProjeto.tsx'), 'utf8');
 
 describe('acoesDoWorkspace', () => {
+  // D-1032: lista de cortes que falhou não vira "0 cortes" para a análise.
+  it('com a lista de cortes indisponível, Reanalisar fica desabilitado', () => {
+    const item = (extra = {}) =>
+      montar(extra).mais!.menu!.find((i) => 'label' in i && i.label === 'Reanalisar') as { disabled?: boolean };
+    expect(item({ listaIndisponivel: true }).disabled).toBe(true);
+    expect(item().disabled).toBeFalsy();
+    // O cabeçalho só se republica quando as dependências mudam: sem o erro nelas,
+    // o Reanalisar ficava habilitado depois da falha (visto no navegador).
+    expect(hook).toContain('refazerTranscricao.isPending, cortesQuery.isError,');
+  });
+
   it('Ver no YouTube abre a live numa aba nova, sem dar acesso à janela do app', () => {
     const abrir = vi.fn();
     vi.stubGlobal('window', { open: abrir });

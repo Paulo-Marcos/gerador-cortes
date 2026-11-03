@@ -15,6 +15,8 @@ import type { ScreenAction } from '@/upgrade/ScreenHeader';
 type Parametros = {
   youtubeUrl?: string | null;
   temCortes: boolean;
+  /** D-1032: a lista de cortes não carregou; "0 cortes" seria mentira. */
+  listaIndisponivel?: boolean;
   abrindoPasta: boolean;
   refazendoTranscricao: boolean;
   novoCorte: () => void;
@@ -40,7 +42,13 @@ export function acoesDoWorkspace(p: Parametros): ScreenAction[] {
       icone: 'more-horizontal',
       texto: 'Mais',
       menu: [
-        { icon: 'brain', label: 'Reanalisar', onClick: p.reanalisar },
+        {
+          icon: 'brain',
+          label: 'Reanalisar',
+          title: p.listaIndisponivel ? 'Os cortes não carregaram: tente de novo antes de analisar.' : undefined,
+          disabled: p.listaIndisponivel,
+          onClick: p.reanalisar,
+        },
         {
           icon: 'rotate-ccw',
           label: 'Refazer transcrição',

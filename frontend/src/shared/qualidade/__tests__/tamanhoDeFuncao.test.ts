@@ -91,7 +91,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/projeto-detalhe/DiarizacaoPanel.tsx::DiarizacaoPanel": 121,
   "src/features/projeto-detalhe/PublicarMassaModal.tsx::PublicarMassaModal": 121,
   "src/features/projeto-detalhe/PublicarTiktokModal.tsx::LinhaDoCorte": 226,
-  "src/features/projeto-detalhe/WorkspaceProjetoPage.tsx::WorkspaceProjetoPage": 438,
+  "src/features/projeto-detalhe/WorkspaceProjetoPage.tsx::WorkspaceProjetoPage": 419,
   "src/features/projeto-detalhe/useWorkspaceProjeto.tsx::useWorkspaceProjeto": 322,
   "src/features/projetos/BibliotecaPage.tsx::BibliotecaPage": 208,
   "src/features/projetos/ProjetoCardAp.tsx::ProjetoCardAp": 243,

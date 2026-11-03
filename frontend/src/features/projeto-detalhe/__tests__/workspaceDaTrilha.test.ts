@@ -133,7 +133,7 @@ describe('filtro "No ar" · o que a auditoria pegou', () => {
   });
 
   it('a tela usa a regra da lista vazia, e o subtítulo recebe os agendados', () => {
-    expect(pagina).toContain('{!listaVazia.ofereceAnalise ? null : (');
+    expect(pagina).toContain('<ListaVazia {...listaVazia} analisar={() => setAnaliseAberta(true)} />');
     expect(hook).toMatch(/subDoWorkspace\(\{[^}]*\bagendados,/);
   });
 
