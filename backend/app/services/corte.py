@@ -68,6 +68,7 @@ from app.services.riscados_do_corte import (
     palavras_para_conferir,
     registrar_rodada,
 )
+from app.services.sincronia_em_lote import sincronizar_todos
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1573,12 +1574,11 @@ class CorteService:
             return 0
 
         trans_raw = json.loads(projeto.transcricao_raw or "[]")
-        cortes = (
-            (await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))).scalars().all()
+        sel = select(Corte.id).where(Corte.projeto_id == projeto_id)
+        ids = list((await db.execute(sel)).scalars())
+        return await sincronizar_todos(
+            ids, lambda i: CorteService._exec_sincronia(i, db, trans_raw=trans_raw), db
         )
-        for corte in cortes:
-            await CorteService._exec_sincronia(corte.id, db, trans_raw=trans_raw)
-        return len(cortes)
 
     @staticmethod
     async def _exec_sincronia(corte_id: str, db: AsyncSession, *, trans_raw: list | None = None):
