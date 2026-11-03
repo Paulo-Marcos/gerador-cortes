@@ -292,6 +292,8 @@ def _emendas(alvo: _Alvo, amostras) -> dict:
     fonte = alvo.fonte
 
     def molde(inicio: float, duracao: float):
+        if fonte is None:  # `_medir` já avisou antes; só chega aqui quem pulou esse passo
+            raise medicao.ErroDeMedicao("Sem o áudio de origem para localizar as emendas.")
         return medicao.ler_trecho(fonte, inicio, duracao, _TIMEOUT_DO_MOLDE_SEG)
 
     achadas = medicao.localizar_emendas(amostras, alvo.trechos, molde)
