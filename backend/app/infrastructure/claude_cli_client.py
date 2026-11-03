@@ -20,7 +20,6 @@ import json
 import logging
 import os
 import random
-import re
 import shutil
 import subprocess
 import tempfile
@@ -31,6 +30,8 @@ from dataclasses import dataclass
 from app.config import settings
 from app.core.por_loop import PorLoop
 from app.infrastructure import fila_ia
+from app.infrastructure.json_da_ia import RespostaSemJson
+from app.infrastructure.json_da_ia import extract_json as _extract_json
 
 # Depois de matar a árvore, quanto esperar o pipe do processo morto fechar.
 _ESPERA_PARA_DRENAR_S = 15
@@ -226,6 +227,10 @@ def _subprocess_env(thinking: int) -> dict[str, str]:
     """
     env = {k: v for k, v in os.environ.items() if k not in _ENV_FORCA_API}
     env["MAX_THINKING_TOKENS"] = str(thinking)
+    # D-1026: o cwd no temp não basta, o CLI ainda lê o ~/.claude/CLAUDE.md do dono
+    # (modo professor) e a IA devolve conversa no lugar do JSON. `--bare` resolveria,
+    # mas exige chave de API; esta env corta só os CLAUDE.md e mantém a assinatura.
+    env["CLAUDE_CODE_DISABLE_CLAUDE_MDS"] = "1"
     return env
 
 
@@ -637,7 +642,10 @@ async def generate_json(
         contexto=contexto,
     )
     try:
-        return _extract_json(texto)
+        try:
+            return _extract_json(texto)
+        except json.JSONDecodeError as exc:
+            raise RespostaSemJson(texto) from exc
     except Exception as exc:
         # A chamada em si deu certo, mas o resultado é inútil para o caller — a
         # fila precisa mostrar isso como falha (a chave é a mesma do início).
@@ -651,43 +659,3 @@ async def generate_json(
             erro=fila_ia.mensagem_de(exc),
         )
         raise
-
-
-def _extract_json(text: str) -> dict:
-    """Extrai JSON de uma resposta que pode conter markdown fences ou texto extra.
-
-    Mesma estratégia do gemini_client._extract_json (consistência de contrato).
-    """
-    json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL)
-    if json_match:
-        return _parse_objeto_json(json_match.group(1).strip())
-
-    inicio = _find_first(text, "{", "[")
-    fim = _find_last(text, "}", "]")
-    if inicio != -1 and fim != -1 and fim > inicio:
-        return _parse_objeto_json(text[inicio : fim + 1])
-
-    return _parse_objeto_json(text)
-
-
-def _parse_objeto_json(bruto: str) -> dict:
-    """Faz o parse e garante que o topo é um objeto JSON (dict).
-
-    A IA às vezes devolve um array válido (ex.: `[{...}]`); sem esta guarda o
-    chamador quebraria adiante com `KeyError`. Falhar aqui, na fronteira, dá um
-    erro claro em vez de um estouro obscuro rio abaixo.
-    """
-    resultado = json.loads(bruto)
-    if not isinstance(resultado, dict):
-        raise ValueError(f"Resposta JSON não é um objeto: recebido {type(resultado).__name__}.")
-    return resultado
-
-
-def _find_first(text: str, *chars: str) -> int:
-    posicoes = [pos for c in chars if (pos := text.find(c)) != -1]
-    return min(posicoes) if posicoes else -1
-
-
-def _find_last(text: str, *chars: str) -> int:
-    posicoes = [pos for c in chars if (pos := text.rfind(c)) != -1]
-    return max(posicoes) if posicoes else -1

@@ -37,7 +37,7 @@ GERADOS = {"frontend/src/shared/api/contract.ts"}
 EXCECOES = {
     "backend/app/domain/corte/youtube_layout.py": 868,
     "backend/app/domain/short/gancho_short.py": 561,
-    "backend/app/infrastructure/claude_cli_client.py": 693,
+    "backend/app/infrastructure/claude_cli_client.py": 661,
     "backend/app/infrastructure/render/ffmpeg_commands.py": 512,
     "backend/app/infrastructure/render/ffmpeg_grade.py": 668,
     "backend/app/infrastructure/settings_store.py": 893,
