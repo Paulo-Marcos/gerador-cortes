@@ -100,7 +100,6 @@ EXCECOES = {
     "app/services/publicacao_destinos.py::reportCallIssue": 1,
     "app/services/publicacao_no_tiktok.py::reportReturnType": 1,
     "app/services/render/pipeline_render.py::reportArgumentType": 1,
-    "app/services/render/pipeline_render.py::reportAttributeAccessIssue": 1,
     "app/services/render/pipeline_render.py::reportGeneralTypeIssues": 1,
     "app/services/render/pipeline_render.py::reportOptionalMemberAccess": 1,
     "app/services/render/render_short.py::reportArgumentType": 6,

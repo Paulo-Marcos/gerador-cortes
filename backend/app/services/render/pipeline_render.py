@@ -1377,8 +1377,8 @@ async def _preparar_overlay_chunks(
     projeto_padrao: str | dict | None = None,
     global_padrao: str | dict | None = None,
 ) -> list[dict]:
-    """Extrai cenas → entries → chunks. Faz fallback via CorteService se o
-    objeto vier sem cenas hidratadas.
+    """Extrai cenas → entries → chunks. O corte do render já vem do banco com
+    `cenas_remotion`: sem cenas, devolve [] e o render segue sem overlays (D-1023).
 
     I-036: `projeto_padrao`/`global_padrao` completam a cascade lazy do layout
     (F-048) — sem eles, um corte intocado resolvia modo `full` e os cards
@@ -1386,17 +1386,7 @@ async def _preparar_overlay_chunks(
     cascade no router de cenas) e tampando as janelas do palco.
     """
     operational_info("Pipeline", "-> Extraindo cenas do banco...")
-    corte_fonte = corte
     cenas = _extrair_cenas(corte)
-    if not cenas:
-        from app.services.corte import CorteService
-
-        operational_info(
-            "Pipeline", "-> Cenas não encontradas no objeto, buscando via CorteService..."
-        )
-        corte_completo = await CorteService.obter_corte(corte.id)
-        corte_fonte = corte_completo
-        cenas = _extrair_cenas(corte_completo)
 
     operational_info("Pipeline", f"-> Cenas encontradas: {len(cenas)}")
     # O layout do corte vai CRU para a cascade: pré-normalizar preencheria
@@ -1404,7 +1394,7 @@ async def _preparar_overlay_chunks(
     # ser reconhecida (o fallback do projeto seria ignorado).
     cenas = aplicar_layout_card_por_contexto(
         cenas,
-        _campo_corte(corte_fonte, "layout_youtube"),
+        _campo_corte(corte, "layout_youtube"),
         layout_card_padrao,
         fallback_layout=projeto_padrao,
         global_padrao=global_padrao,
