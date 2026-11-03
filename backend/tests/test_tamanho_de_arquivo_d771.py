@@ -72,7 +72,6 @@ EXCECOES = {
     "frontend/src/features/editor/useEditorPage.tsx": 671,
     "frontend/src/features/final-review/FinalReviewPage.tsx": 645,
     "frontend/src/features/metadata/MetadataCard.tsx": 928,
-    "frontend/src/features/projeto-detalhe/WorkspaceProjetoPage.tsx": 507,
     "frontend/src/features/shorts/CandidatoCard.tsx": 530,
     "frontend/src/features/shorts/DefinirPalcoModal.tsx": 781,
     "frontend/src/features/shorts/FireDetalhePage.tsx": 538,
