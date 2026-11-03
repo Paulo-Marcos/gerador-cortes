@@ -26,11 +26,8 @@ import { useEditHistory } from './useEditHistory';
 import { useTrechosRiscados } from './useTrechosRiscados';
 import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, type WaveformWindow } from './editorEditState';
-import {
-  postProductionPath,
-  resolveCorteStagePath,
-} from '@/features/post-production/postProductionNavigation';
+import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
+import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
 // barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
@@ -141,7 +138,6 @@ export function useEditorPage() {
   const [pointerMode, setPointerMode] = useState(true);
   const [smartPlay, setSmartPlay] = useState(false);
   const [selectedDesvioIdx, setSelectedDesvioIdx] = useState<number | null>(null);
-  const [gerandoBrutoCorteId, setGerandoBrutoCorteId] = useState<string | null>(null);
   const selectedDesvioIdxRef = useRef<number | null>(null);
   useEffect(() => {
     selectedDesvioIdxRef.current = selectedDesvioIdx;
@@ -150,7 +146,6 @@ export function useEditorPage() {
   // D-361: histórico das edições locais (dirty) com Ctrl+Z / Ctrl+Y.
   const editHistory = useEditHistory<Partial<Corte>>({});
   const dirty = editHistory.present;
-  const { reset: resetEditHistory } = editHistory;
   const waveformWindowRef = useRef<WaveformWindow | null>(null);
   const playerRef = useRef<PlayerHandle>(null);
 
@@ -256,11 +251,10 @@ export function useEditorPage() {
   const dividirCorte = useDividirCorte(corteId, projetoId);
   const juntarCortes = useJuntarCortes(corteId, projetoId);
   const abrirPasta = useAbrirPasta();
-  const brutoMutationPendenteNoCorteAtual = gerarBruto.isPending && gerandoBrutoCorteId === corteId;
-  // D-420 — as gerações via Claude são longas (dezenas de segundos) e o editor
-  // NÃO remonta ao trocar de corte: lidas direto do `isPending` da mutação, elas
-  // desabilitavam o botão do corte novo por causa da execução do anterior. Estes
-  // dois leem o estado no cache, chaveado pelo corte que pediu.
+  const brutoMutationPendenteNoCorteAtual = gerarBruto.isPending;
+  // D-420 — as gerações via Claude são longas (dezenas de segundos) e continuam
+  // depois de trocar de corte: estes dois leem o estado no cache, chaveado pelo
+  // corte que pediu, e a volta ao corte ainda mostra a geração em andamento.
   const metaClaudeStatus = useStatusMetadadosClaude(corteId);
   const trechosClaudePendente = useTrechosClaudeEmAndamento(corteId);
 
@@ -270,13 +264,7 @@ export function useEditorPage() {
     !corteId || avisarSeBrutoOcupado(brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, notifyToast);
 
   const dispararBruto = (opts?: Parameters<typeof gerarBruto.mutate>[0]) => {
-    const corteIdSolicitado = corteId;
-    setGerandoBrutoCorteId(corteIdSolicitado);
-    gerarBruto.mutate(opts, {
-      onSettled: () => {
-        setGerandoBrutoCorteId((atual) => (atual === corteIdSolicitado ? null : atual));
-      },
-    });
+    gerarBruto.mutate(opts);
   };
 
   // F-038 — 1ª geração (corte sem bruto): cadeia completa. Dispara metadados via
@@ -329,18 +317,8 @@ export function useEditorPage() {
     );
   };
 
-  useEffect(() => {
-    resetEditHistory({});
-    setCurrentTime(0);
-    setWaveformRefreshKey(0);
-    waveformWindowRef.current = null;
-    // Reset trecho destravado por default ao trocar de corte (caso o
-    // usuario tenha travado e mudado de corte, comeca o proximo destravado).
-    setTrechoLocked(false);
-  }, [corteId, resetEditHistory]);
-
   // D-450: o player abre na velocidade configurada em Ajustes. Efeito
-  // proprio (e nao o reset por troca de corte acima) porque tambem dispara
+  // proprio porque tambem dispara
   // quando a preferencia chega da API ou muda no painel — sem arrastar
   // junto o reset do historico de edicao.
   useEffect(() => {
@@ -363,23 +341,28 @@ export function useEditorPage() {
   // Quando o status vira erro, mostra toast com a mensagem do backend.
   const brutoStatusRaw = statusBruto.data?.status;
   const ultimoStatusRef = useRef<string | undefined>(brutoStatusRaw);
+  const [visitaDesde] = useState(() => Date.now());
+  const viuBrutoRodarRef = useRef(false);
+  const brutoLidoEm = statusBruto.dataUpdatedAt;
   useEffect(() => {
     const anterior = ultimoStatusRef.current;
     const atual = brutoStatusRaw;
     ultimoStatusRef.current = atual;
     if (!corteId) return;
+    const processando = atual === 'cortando' || atual === 'processando';
+    viuBrutoRodarRef.current = viuRodarNestaVisita(viuBrutoRodarRef.current, processando, brutoLidoEm, visitaDesde);
     const eraProcessando = anterior === 'cortando' || anterior === 'processando';
     if (eraProcessando && atual === 'pronto') {
       qc.invalidateQueries({ queryKey: corteKey(corteId) });
       // Geração completa do bruto (vídeo + cenas) → leva para o pós-produção.
-      navigate(postProductionPath(projetoId, corteId, true));
+      if (viuBrutoRodarRef.current) navigate(postProductionPath(projetoId, corteId, true));
     }
     // Transitou para erro (vindo de qualquer outro estado): notificar.
     if (atual && atual.startsWith('erro:') && anterior !== atual) {
       const msg = atual.replace(/^erro:\s*/, '');
       notifyToast(`Geração de bruto falhou: ${msg}`, { tone: 'error' });
     }
-  }, [brutoStatusRaw, corteId, qc, notifyToast, navigate, projetoId]);
+  }, [brutoStatusRaw, brutoLidoEm, visitaDesde, corteId, qc, notifyToast, navigate, projetoId]);
 
   useEffect(() => {
     if (corteId || cortes.length === 0) return;
@@ -392,14 +375,8 @@ export function useEditorPage() {
     const index = cortes.findIndex((item) => item.id === corte.id);
     if (index < 0) return;
     const next = (index + direcao + cortes.length) % cortes.length;
-    const nextCorte = cortes[next];
-    navigate(
-      resolveCorteStagePath({
-        projetoId,
-        corte: nextCorte,
-        status: exportStatusQ.data?.cortes.find((status) => status.corte_id === nextCorte.id),
-      }),
-    );
+    // D-1033: trocar de corte não troca de tela.
+    navigate(rawEditorPath(projetoId, cortes[next].id));
   }
 
   function patchDirty(patch: Partial<Corte>) {
@@ -598,16 +575,7 @@ export function useEditorPage() {
           const index = cortes.findIndex((item) => item.id === corteId);
           const next = (index + 1) % cortes.length;
           if (cortes[next].id !== corteId) {
-            const nextCorte = cortes[next];
-            navigate(
-              resolveCorteStagePath({
-                projetoId,
-                corte: nextCorte,
-                status: exportStatusQ.data?.cortes.find(
-                  (status) => status.corte_id === nextCorte.id,
-                ),
-              }),
-            );
+            navigate(rawEditorPath(projetoId, cortes[next].id));
             return;
           }
         }

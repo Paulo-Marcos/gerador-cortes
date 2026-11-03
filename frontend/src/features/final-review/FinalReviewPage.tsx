@@ -17,9 +17,9 @@ import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
 import { useVelocidadePlayerPadrao } from '@/features/settings';
 import { filtrosApi } from '@/features/post-production/api/filtros';
 import {
+  finalReviewPath,
   isCorteVideoPronto,
   parseCenasPayload,
-  resolveCorteStagePath,
 } from '@/features/post-production/postProductionNavigation';
 import { settingsApi } from '@/features/settings/api';
 import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
@@ -249,17 +249,14 @@ export function FinalReviewPage() {
       notify('Corte já está aprovado.', { tone: 'info' });
       return;
     }
-    atualizarCorte.mutate(
-      { status: 'aprovado' },
-      {
-        onSuccess: () => notify('Corte aprovado.', { tone: 'success' }),
-        onError: (e) =>
-          notify(e instanceof Error ? e.message : 'Erro ao aprovar.', { tone: 'error' }),
-      },
+    // D-1033: aprovar e já dar K desmonta a tela, e o callback do `mutate` não
+    // roda depois disso. A promessa roda, e a falha não some em silêncio.
+    atualizarCorte.mutateAsync({ status: 'aprovado' }).then(
+      () => notify('Corte aprovado.', { tone: 'success' }),
+      (e) => notify(e instanceof Error ? e.message : 'Erro ao aprovar.', { tone: 'error' }),
     );
   }
 
-  const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
   // D-367: resolve o id do filtro global para o nome amigavel (FiltroExport.nome).
   const filtroGlobalId = settingsQ.data?.filtro_global_padrao;
@@ -359,13 +356,6 @@ export function FinalReviewPage() {
   // ── Shell Workbench (Etapa 5 / DE-PARA §5): painel CORTES retrátil +
   // linha de ações no topo do conteúdo da aba; grid final compartilhado.
 
-  const caminhoDoCorte = (item: (typeof cortes)[number]) =>
-    resolveCorteStagePath({
-      projetoId,
-      corte: item,
-      status: exportStatuses.find((status) => status.corte_id === item.id),
-    });
-
   return (
     <>
       <BancadaChrome
@@ -374,7 +364,7 @@ export function FinalReviewPage() {
         cortes={cortes}
         corte={corte}
         exportStatus={exportStatusQ.data?.cortes ?? []}
-        caminhoDoCorte={caminhoDoCorte}
+        caminhoDoCorte={(item) => finalReviewPath(projetoId, item.id)}
         sub="confira o render, a capa e o título antes de liberar o lote"
         fire={corte.is_fire}
         sujo={false}

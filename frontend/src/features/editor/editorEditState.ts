@@ -88,6 +88,21 @@ export function resolveWaveformWindow({
 }
 
 /**
+ * D-1033: a tela viu este trabalho rodar desde que abriu? Só então o fim dele é
+ * o gesto que ela acompanhava e vale o salto para a etapa seguinte. O status no
+ * cache é de quando o corte esteve aberto da última vez: voltar com J a um corte
+ * que terminou longe dali leria "rodando → pronto" e trocaria de tela.
+ */
+export function viuRodarNestaVisita(
+  jaViu: boolean,
+  rodando: boolean,
+  lidoEm: number,
+  visitaDesde: number,
+): boolean {
+  return jaViu || (rodando && lidoEm >= visitaDesde);
+}
+
+/**
  * D-883: o que fazer quando salvar os ajustes na saída do corte falha. 404 é o
  * corte que não existe mais (excluído aqui ou em outra tela): não há onde
  * salvar, e segurar o editor numa tela sem corte não protege nada — descarta o

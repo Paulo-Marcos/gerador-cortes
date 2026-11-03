@@ -8,7 +8,7 @@ import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
-import type { CenaRemotion, Corte } from '@/types/models';
+import type { CenaRemotion } from '@/types/models';
 import type { PlayerHandle } from '@/features/editor/fase1/PlayerPanel';
 import { EditorFase2 } from '@/features/editor/fase2/EditorFase2';
 import { criarRelogioDoPlayer } from '@/features/editor/fase2/relogioDoPlayer';
@@ -34,7 +34,7 @@ const SPEED_STEP = 0.25;
 const SEEK_STEP_SEG = 3;
 import {
   pickPostProductionEntryCut,
-  resolveCorteStagePath,
+  postProductionPath,
   resolveRenderCompletionPath,
   parseCenasPayload,
   resolverVideoFonte,
@@ -118,7 +118,7 @@ export function ScenesPostProductionPage() {
     iniciar: startRenderFinal,
   } = useRenderFinal(corteId, {
     aoMudarStatus: () => void exportStatusQ.refetch(),
-    aoAcabar: ({ concluiu, falhou, status }) => {
+    aoAcabar: ({ concluiu, falhou, status, assistiu }) => {
       // D-746: a falha só limpava o estado — o operador ficava esperando um
       // render que já tinha morrido.
       if (falhou) {
@@ -129,7 +129,7 @@ export function ScenesPostProductionPage() {
       }
       // Render concluído: jogar o usuário direto na tela final, mesmo com
       // ?fase=2 preservado, porque aqui o vídeo passou a estar pronto.
-      const renderTarget = resolveRenderCompletionPath({ projetoId, corteId, finished: concluiu });
+      const renderTarget = resolveRenderCompletionPath({ projetoId, corteId, finished: concluiu && assistiu });
       if (renderTarget) navigate(renderTarget, { replace: true });
     },
     // A fila global acompanha o render: "renderizar em 2º plano" não bloqueia a aba.
@@ -349,7 +349,6 @@ export function ScenesPostProductionPage() {
   liveSrcRef.current = videoSrc;
   const videoSrcEstavel = pinnedSrc ?? videoSrc;
 
-  const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
   const posModals = (
     <>
@@ -380,14 +379,6 @@ export function ScenesPostProductionPage() {
   // CORTES retrátil e o EditorFase2 (player+timeline+painéis de cenas/
   // layout/filtros com todos os atalhos) re-hospedado intacto no centro.
 
-  const caminhoDoCorte = (item: Corte) =>
-    resolveCorteStagePath({
-      projetoId,
-      corte: item,
-      status: exportStatuses.find((status) => status.corte_id === item.id),
-      forcePhase2,
-    });
-
   return (
     <>
       <BancadaChrome
@@ -396,7 +387,7 @@ export function ScenesPostProductionPage() {
         cortes={cortes}
         corte={corte}
         exportStatus={exportStatusQ.data?.cortes ?? []}
-        caminhoDoCorte={caminhoDoCorte}
+        caminhoDoCorte={(item) => postProductionPath(projetoId, item.id, forcePhase2)}
         sub={[
           `${cenas.length} cenas`,
           payload.formato,

@@ -5,6 +5,7 @@ import type { FaseRender } from '@/features/post-production/renderEtapas';
 import type { PipelineStatusResponse } from '@/types/models';
 import { cortesApi } from './api/cortes';
 import { renderApi } from './api/render';
+import { viuRodarNestaVisita } from './editorEditState';
 import { corteKey, invalidaCorte } from './useCortes';
 
 // O render do corte: disparar, acompanhar, sincronizar a pós e abrir no Studio.
@@ -94,7 +95,13 @@ export interface ReacoesDoRenderFinal {
   /** Releia o status de exportação: é ele que diz à lista que o vídeo ficou pronto. */
   aoMudarStatus: () => void;
   /** O render deste corte acabou — concluído, com falha, ou o backend ficou ocioso. */
-  aoAcabar?: (fim: { concluiu: boolean; falhou: boolean; status: PipelineStatusResponse }) => void;
+  aoAcabar?: (fim: {
+    concluiu: boolean;
+    falhou: boolean;
+    status: PipelineStatusResponse;
+    /** A tela viu este render rodar desde que abriu (D-1033). */
+    assistiu: boolean;
+  }) => void;
   /** O pedido saiu, antes da resposta do backend. */
   aoIniciar?: () => void;
   /** O backend recusou o pedido. */
@@ -127,40 +134,43 @@ export function useRenderFinal(corteId: string, reacoes: ReacoesDoRenderFinal) {
   // As reações mudam a cada render da tela; o efeito lê sempre as últimas.
   const reacoesRef = useRef(reacoes);
   reacoesRef.current = reacoes;
-
-  useEffect(() => {
-    setMarcado(renderFinalMarcado(corteId));
-  }, [corteId]);
+  const [visitaDesde] = useState(() => Date.now());
+  const assistiuRef = useRef(false);
+  const statusLidoEm = pipelineStatus.dataUpdatedAt;
 
   useEffect(() => {
     if (!corteId || !marcado) return;
     const status = pipelineStatus.data;
     if (!status || renderFinal.isPending) return;
+    assistiuRef.current = viuRodarNestaVisita(assistiuRef.current, status.running, statusLidoEm, visitaDesde);
     const { acabou, concluiu, falhou } = desfechoDoRender(status);
     if (!acabou) return;
     window.localStorage.removeItem(chaveDoRenderFinal(corteId));
     setMarcado(false);
     reacoesRef.current.aoMudarStatus();
-    reacoesRef.current.aoAcabar?.({ concluiu, falhou, status });
-  }, [corteId, marcado, pipelineStatus.data, renderFinal.isPending]);
+    reacoesRef.current.aoAcabar?.({ concluiu, falhou, status, assistiu: assistiuRef.current });
+  }, [corteId, marcado, pipelineStatus.data, statusLidoEm, visitaDesde, renderFinal.isPending]);
 
   function iniciar(opcoes: OpcoesDoRenderFinal) {
     if (!corteId) return;
+    assistiuRef.current = true;
     window.localStorage.setItem(chaveDoRenderFinal(corteId), 'running');
     setMarcado(true);
     setModalDeInicioAberto(false);
     reacoesRef.current.aoIniciar?.();
-    renderFinal.mutate(opcoes, {
-      onSuccess: () => {
+    // D-1033: `mutateAsync` porque o K logo depois de pedir desmonta a tela, e o
+    // callback do `mutate` não rodaria: a recusa sumiria e a marca ficaria presa.
+    renderFinal.mutateAsync(opcoes).then(
+      () => {
         void pipelineStatus.refetch();
         reacoesRef.current.aoMudarStatus();
       },
-      onError: (erro) => {
+      (erro) => {
         window.localStorage.removeItem(chaveDoRenderFinal(corteId));
         setMarcado(false);
         reacoesRef.current.aoFalharAoIniciar?.(erro);
       },
-    });
+    );
   }
 
   /** Com etapas já prontas no disco, pergunta antes (continuar ou do zero). */

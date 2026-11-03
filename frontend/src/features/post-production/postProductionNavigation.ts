@@ -37,36 +37,6 @@ export function isCorteVideoPronto(
   return Boolean(status?.video_pronto || corte.is_pos_producao === 1);
 }
 
-function isCorteRawPronto(
-  corte: Pick<Corte, 'arquivo_clip_path'>,
-  status: StatusExportCorte | undefined,
-): boolean {
-  return Boolean(
-    status?.raw_pronto ||
-      status?.grade_pronta ||
-      status?.overlays_prontos ||
-      status?.video_pronto ||
-      corte.arquivo_clip_path,
-  );
-}
-
-export function resolveCorteStagePath(params: {
-  projetoId: string;
-  corte: Pick<Corte, 'id' | 'arquivo_clip_path' | 'is_pos_producao'>;
-  status?: StatusExportCorte;
-  forcePhase2?: boolean;
-}): string {
-  if (isCorteVideoPronto(params.corte, params.status)) {
-    return finalReviewPath(params.projetoId, params.corte.id);
-  }
-
-  if (isCorteRawPronto(params.corte, params.status)) {
-    return postProductionPath(params.projetoId, params.corte.id, params.forcePhase2);
-  }
-
-  return rawEditorPath(params.projetoId, params.corte.id);
-}
-
 export function pickPostProductionEntryCut(
   cortes: Corte[],
   statuses: StatusExportCorte[] | undefined,
