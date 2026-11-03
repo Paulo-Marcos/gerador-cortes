@@ -1345,9 +1345,7 @@ class CorteService:
     ) -> Corte:
         """Adiciona um desvio criado manualmente ao corte, ordenado por início.
 
-        Migrado do router em D-078 — comportamento preservado. Insere o desvio
-        com origem `manual` e reordena a lista por `inicio_seg`.
-
+        Insere o desvio com origem `manual`, reordena por `inicio_seg` e sincroniza.
         Levanta `ValueError("Corte não encontrado")` (→404).
         """
         corte = await db.get(Corte, corte_id)
@@ -1370,6 +1368,8 @@ class CorteService:
 
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
         await db.commit()
+        # D-1031: a cena se move e a marca de validadas se desfaz já (RN-36).
+        await CorteService.sincronizar_transcricao_corte(corte_id)
         await db.refresh(corte)
         return corte
 
