@@ -133,7 +133,9 @@ export function useRenderFinal(corteId: string, reacoes: ReacoesDoRenderFinal) {
   }, [corteId]);
 
   useEffect(() => {
-    if (!corteId || !marcado) return;
+    // D-1033: no render da troca de corte, `marcado` ainda é do corte anterior e
+    // o status já é do novo: um render antigo do novo contava como "concluiu".
+    if (!corteId || !marcado || !renderFinalMarcado(corteId)) return;
     const status = pipelineStatus.data;
     if (!status || renderFinal.isPending) return;
     const { acabou, concluiu, falhou } = desfechoDoRender(status);

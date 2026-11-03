@@ -8,7 +8,7 @@ import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { hmsParaSeg, segParaMmSs } from './timeUtils';
 import { BancadaChrome } from '@/features/editor/BancadaChrome';
 import { resolveWaveformWindow } from './editorEditState';
-import { resolveCorteStagePath } from '@/features/post-production/postProductionNavigation';
+import { rawEditorPath } from '@/features/post-production/postProductionNavigation';
 import { ORIGEM_API } from '@/lib/apiBase';
 import { useEditorPage } from './useEditorPage';
 import { Icon } from '@/upgrade/Icon';
@@ -101,7 +101,6 @@ export function EditorPage() {
     setIntervaloAberto(false);
   }
 
-  const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
   const editorModals = (
     <>
@@ -137,13 +136,7 @@ export function EditorPage() {
         cortes={cortes}
         corte={corteUI}
         exportStatus={exportStatusQ.data?.cortes ?? []}
-        caminhoDoCorte={(item) =>
-          resolveCorteStagePath({
-            projetoId,
-            corte: item,
-            status: exportStatuses.find((status) => status.corte_id === item.id),
-          })
-        }
+        caminhoDoCorte={(item) => rawEditorPath(projetoId, item.id)}
         sub={`bruto ${segParaMmSs(durSeg)} · líquido ${segParaMmSs(liquidoSeg)} · ${(corteUI.desvios ?? []).length} trechos`}
         fire={corteUI.is_fire}
         sujo={isDirty}

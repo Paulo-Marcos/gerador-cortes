@@ -3,7 +3,6 @@ import type { Corte, StatusExportCorte } from '@/types/models';
 import {
   isCorteVideoPronto,
   pickPostProductionEntryCut,
-  resolveCorteStagePath,
   resolveRenderCompletionPath,
   isCenaRemotion,
   parseCenasPayload,
@@ -90,53 +89,6 @@ describe('postProductionNavigation', () => {
       status('raw', { raw_pronto: true, video_pronto: false }),
     ]);
     expect(escolhido?.id).toBe('rendered-out-of-status');
-  });
-
-  describe('resolveCorteStagePath', () => {
-    it('manda corte sem artefatos para Bruto', () => {
-      expect(resolveCorteStagePath({ projetoId, corte: cut('draft') })).toBe(
-        '/projetos/projeto-1/cortes/draft?fase=1',
-      );
-    });
-
-    it('manda corte com bruto pronto para Pos', () => {
-      expect(
-        resolveCorteStagePath({
-          projetoId,
-          corte: cut('raw'),
-          status: status('raw', { raw_pronto: true, video_pronto: false }),
-        }),
-      ).toBe('/projetos/projeto-1/post-production?corte=raw');
-    });
-
-    it('manda corte em grade ou overlays para Pos', () => {
-      expect(
-        resolveCorteStagePath({
-          projetoId,
-          corte: cut('grade'),
-          status: status('grade', { raw_pronto: false, grade_pronta: true, video_pronto: false }),
-        }),
-      ).toBe('/projetos/projeto-1/post-production?corte=grade');
-    });
-
-    it('preserva fase=2 apenas quando o destino e Pos', () => {
-      expect(
-        resolveCorteStagePath({
-          projetoId,
-          corte: cut('raw', 'clip_raw.mkv'),
-          forcePhase2: true,
-        }),
-      ).toBe('/projetos/projeto-1/post-production?corte=raw&fase=2');
-    });
-
-    it('manda corte com render final para Final', () => {
-      expect(
-        resolveCorteStagePath({
-          projetoId,
-          corte: cut('final', '', { is_pos_producao: 1 }),
-        }),
-      ).toBe('/projetos/projeto-1/final-review?corte=final');
-    });
   });
 
   describe('isCenaRemotion', () => {

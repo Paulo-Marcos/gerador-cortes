@@ -88,6 +88,20 @@ export function resolveWaveformWindow({
 }
 
 /**
+ * D-1033: o bruto DESTE corte acabou de ficar pronto? O editor segue trocando de
+ * corte sem sair da tela, e comparar o status de um corte com o do outro via
+ * "cortando → pronto" onde só houve um K: a tela ia para a Pós do corte seguinte.
+ */
+export function brutoAcabouDeFicarPronto(
+  anterior: { corteId: string | undefined; status: string | undefined },
+  atual: { corteId: string | undefined; status: string | undefined },
+): boolean {
+  if (anterior.corteId !== atual.corteId) return false;
+  const eraProcessando = anterior.status === 'cortando' || anterior.status === 'processando';
+  return eraProcessando && atual.status === 'pronto';
+}
+
+/**
  * D-883: o que fazer quando salvar os ajustes na saída do corte falha. 404 é o
  * corte que não existe mais (excluído aqui ou em outra tela): não há onde
  * salvar, e segurar o editor numa tela sem corte não protege nada — descarta o

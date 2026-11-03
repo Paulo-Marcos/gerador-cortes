@@ -26,11 +26,8 @@ import { useEditHistory } from './useEditHistory';
 import { useTrechosRiscados } from './useTrechosRiscados';
 import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, type WaveformWindow } from './editorEditState';
-import {
-  postProductionPath,
-  resolveCorteStagePath,
-} from '@/features/post-production/postProductionNavigation';
+import { applyDesvioChange, brutoAcabouDeFicarPronto, desfechoDaFalhaAoSalvar, mergeDirtyPatch, type WaveformWindow } from './editorEditState';
+import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
 // barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
@@ -362,20 +359,19 @@ export function useEditorPage() {
   // transcricao_final re-sincronizada com os desvios removidos).
   // Quando o status vira erro, mostra toast com a mensagem do backend.
   const brutoStatusRaw = statusBruto.data?.status;
-  const ultimoStatusRef = useRef<string | undefined>(brutoStatusRaw);
+  const ultimoStatusRef = useRef({ corteId, status: brutoStatusRaw });
   useEffect(() => {
     const anterior = ultimoStatusRef.current;
     const atual = brutoStatusRaw;
-    ultimoStatusRef.current = atual;
+    ultimoStatusRef.current = { corteId, status: atual };
     if (!corteId) return;
-    const eraProcessando = anterior === 'cortando' || anterior === 'processando';
-    if (eraProcessando && atual === 'pronto') {
+    if (brutoAcabouDeFicarPronto(anterior, { corteId, status: atual })) {
       qc.invalidateQueries({ queryKey: corteKey(corteId) });
       // Geração completa do bruto (vídeo + cenas) → leva para o pós-produção.
       navigate(postProductionPath(projetoId, corteId, true));
     }
     // Transitou para erro (vindo de qualquer outro estado): notificar.
-    if (atual && atual.startsWith('erro:') && anterior !== atual) {
+    if (atual && atual.startsWith('erro:') && anterior.status !== atual) {
       const msg = atual.replace(/^erro:\s*/, '');
       notifyToast(`Geração de bruto falhou: ${msg}`, { tone: 'error' });
     }
@@ -392,14 +388,8 @@ export function useEditorPage() {
     const index = cortes.findIndex((item) => item.id === corte.id);
     if (index < 0) return;
     const next = (index + direcao + cortes.length) % cortes.length;
-    const nextCorte = cortes[next];
-    navigate(
-      resolveCorteStagePath({
-        projetoId,
-        corte: nextCorte,
-        status: exportStatusQ.data?.cortes.find((status) => status.corte_id === nextCorte.id),
-      }),
-    );
+    // D-1033: trocar de corte não troca de tela.
+    navigate(rawEditorPath(projetoId, cortes[next].id));
   }
 
   function patchDirty(patch: Partial<Corte>) {
@@ -598,16 +588,7 @@ export function useEditorPage() {
           const index = cortes.findIndex((item) => item.id === corteId);
           const next = (index + 1) % cortes.length;
           if (cortes[next].id !== corteId) {
-            const nextCorte = cortes[next];
-            navigate(
-              resolveCorteStagePath({
-                projetoId,
-                corte: nextCorte,
-                status: exportStatusQ.data?.cortes.find(
-                  (status) => status.corte_id === nextCorte.id,
-                ),
-              }),
-            );
+            navigate(rawEditorPath(projetoId, cortes[next].id));
             return;
           }
         }
