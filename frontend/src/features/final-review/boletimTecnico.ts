@@ -59,8 +59,11 @@ export function linhaDeParada(p: ParadaDeImagem): string {
 export function linhaDeEmendas(e: NonNullable<BoletimTecnico['emendas']>): string {
   if (e.total === 0) return 'Sem emendas: o vídeo é um trecho só.';
   const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+  // D-1027: a emenda que não se acha com certeza fica fora da conta, e a linha diz isso.
+  const naoAchadas = e.nao_localizadas ?? 0;
+  const fora = naoAchadas > 0 ? ` · ${naoAchadas} sem posição certa (fora da conta)` : '';
   return (
-    `${plural(e.total, 'emenda', 'emendas')} · ` +
+    `${plural(e.total, 'emenda', 'emendas')}${fora} · ` +
     `${e.com_som_dos_dois_lados} com som dos dois lados · ` +
     `${plural(e.acima_do_p99, 'com degrau acima do normal da fala', 'com degrau acima do normal da fala')}`
   );

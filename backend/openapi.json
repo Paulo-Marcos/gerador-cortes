@@ -4000,6 +4000,17 @@
             "title": "Itens",
             "type": "array"
           },
+          "nao_localizadas": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nao Localizadas"
+          },
           "p99_da_fala": {
             "title": "P99 Da Fala",
             "type": "number"

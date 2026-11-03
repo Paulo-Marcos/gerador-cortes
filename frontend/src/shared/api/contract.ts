@@ -6601,6 +6601,8 @@ export interface components {
             com_som_dos_dois_lados: number;
             /** Itens */
             itens: components["schemas"]["EmendaResponse"][];
+            /** Nao Localizadas */
+            nao_localizadas?: number | null;
             /** P99 Da Fala */
             p99_da_fala: number;
             /** Total */
