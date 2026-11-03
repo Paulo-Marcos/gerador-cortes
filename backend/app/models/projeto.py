@@ -109,6 +109,9 @@ class Corte(Base):
     inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
     fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
     desvios: Mapped[str] = mapped_column(Text, default="[]")
+    # RN-36: o que saiu de `desvios`, para ficar visível e poder voltar. Só a lista
+    # de trechos o lê: líquido, transcrição e render seguem olhando `desvios`.
+    desvios_riscados: Mapped[str] = mapped_column(Text, default="[]")
     # D-998: trechos que FICAM no corte e a IA pede para conferir o fato. Não é
     # desvio: nada que calcula o corte lê esta coluna (domain/corte/alerta_conferir).
     alertas_conferir: Mapped[str] = mapped_column(Text, default="[]")

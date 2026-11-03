@@ -19,7 +19,7 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
 }
 
 export function EditorPage() {
-  const { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onRemoverDesvio, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, removerDesvio, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef } = useEditorPage();
+  const { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef } = useEditorPage();
 
 
   if (!projetoId) return <Navigate to="/projetos" replace />;
@@ -226,7 +226,7 @@ export function EditorPage() {
             onAtualizarTranscricao={() => sincTrans.mutate()}
             onChangeDesvio={onChangeDesvio}
             onAdicionarDesvio={onAdicionarDesvio}
-            onRemoverDesvio={onRemoverDesvio}
+            riscados={riscados}
             onCriarCorteDaSelecao={onCriarCorteDaSelecao}
             onDividirCorteAqui={onDividirCorteAqui}
             dividindoCorte={dividirCorte.isPending}
@@ -239,7 +239,7 @@ export function EditorPage() {
               bruto: brutoMutationPendenteNoCorteAtual,
               transcricao: sincTrans.isPending,
               adicionando: adicionarDesvio.isPending,
-              removendo: removerDesvio.isPending,
+              removendo: riscados.pendente,
               claude: trechosClaudePendente,
             }}
           />

@@ -9,7 +9,6 @@ import shutil
 import traceback
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 from app.core.channel_paths import projetos_dir
@@ -41,11 +40,11 @@ from app.domain.corte.reading_metadata import (
     aplicar_prefixo_leitura_titulo,
     remover_prefixo_leitura_titulo,
 )
+from app.domain.corte.riscados import riscados_gravados, riscar, separar_por_citacao
 from app.domain.corte.segment_calculator import (
     dividir_desvios_no_ponto,
     duracao_liquida,
     normalizar_desvio,
-    somar_aos_desvios_gravados,
 )
 from app.domain.corte.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
 from app.domain.corte.youtube_layout import mesclar_no_layout_do_corte, normalizar_layout_youtube
@@ -61,6 +60,12 @@ from app.services.alertas_conferir import dividir_alertas, juntar_alertas_dos_co
 from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,
+)
+from app.services.riscados import (
+    dividir_riscados,
+    juntar_riscados,
+    marcas_que_a_ia_nao_repete,
+    registrar_rodada,
 )
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import func, select
@@ -772,7 +777,7 @@ class CorteService:
                 "inicio_hms": corte.inicio_hms or "",
                 "fim_hms": corte.fim_hms or "",
             }
-            desvios_existentes = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            desvios_existentes = marcas_que_a_ia_nao_repete(corte)
             corte_inicio_seg = to_seg_estrito(corte.inicio_seg or 0)
             corte_fim_seg = to_seg_estrito(corte.fim_seg or 0)
             # D-286/D-302: a transcricao_corte não guarda `speaker` — o rótulo
@@ -805,55 +810,42 @@ class CorteService:
         # D-355: com citação (inicio_texto/fim_texto) a borda ancora na palavra real
         # antes do snap. D-422: a categoria vira o vocabulário canônico antes de tudo.
         # D-998: a imprecisão e a chave `conferir` viram alerta; o trecho fica no corte.
+        # RN-35: citação que não confere não entra no corte; fica riscada, com o motivo.
         desvios_ia, alertas_novos = alerta_conferir.alertas_da_resposta(resultado, provider)
+        aceitas, recusadas = separar_por_citacao(
+            [classificar_desvio(normalizar_desvio({**d, "origem": provider})) for d in desvios_ia],
+            palavras_corte,
+        )
         normalizados_novos = [
-            snap_desvio_a_palavras(
-                ancorar_desvio(
-                    classificar_desvio(normalizar_desvio({**d, "origem": provider})),
-                    palavras_corte,
-                ),
-                palavras_corte,
-            )
-            for d in desvios_ia
+            snap_desvio_a_palavras(ancorar_desvio(d, palavras_corte), palavras_corte)
+            for d in aceitas
         ]
 
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
                 raise ValueError("Corte não encontrado")
-            mesclados, adicionados = somar_aos_desvios_gravados(corte.desvios, normalizados_novos)
-            corte.desvios = json.dumps(mesclados, ensure_ascii=False)
+            total, adicionados, recusados = registrar_rodada(corte, normalizados_novos, recusadas)
             if alertas_novos:
                 gravados = alerta_conferir.alertas_gravados(corte.alertas_conferir)
                 alertas, _ = alerta_conferir.somar_alertas(gravados, alertas_novos)
                 corte.alertas_conferir = json.dumps(alertas, ensure_ascii=False)
-            # D-334: conta esta invocação da skill trechos-expert — cobre tanto
-            # o botão por-corte quanto o lote (analisar_desvios_todos_impl
-            # chama esta mesma função por corte).
-            corte.trechos_geracoes = (corte.trechos_geracoes or 0) + 1
-            log = json.loads(corte.trechos_geracoes_log or "[]")
-            log.append(
-                {
-                    "em": datetime.utcnow().isoformat(),
-                    "adicionados": adicionados,
-                    "total_apos": len(mesclados),
-                }
-            )
-            corte.trechos_geracoes_log = json.dumps(log, ensure_ascii=False)
             await db.commit()
 
         # Ressincroniza a transcrição final aplicando o conjunto de desvios.
         await CorteService.sincronizar_transcricao_corte(corte_id)
 
         logger.info(
-            "[ClaudeIA] Trechos via Claude p/ corte %s: +%d novos (total %d)",
+            "[ClaudeIA] Trechos via Claude p/ corte %s: +%d novos, %d recusados (total %d)",
             corte_id[:8],
             adicionados,
-            len(mesclados),
+            recusados,
+            total,
         )
         return {
-            "total_desvios": len(mesclados),
+            "total_desvios": total,
             "novos": adicionados,
+            **({"recusados": recusados} if recusados else {}),
         }
 
     @staticmethod
@@ -896,6 +888,7 @@ class CorteService:
                 )
                 desvios = []
             desvios_esq, desvios_dir = dividir_desvios_no_ponto(desvios, ponto)
+            riscados_dir = dividir_riscados(corte, ponto)
 
             # D-576: o arranjo é uma permutação do intervalo, então partir o
             # intervalo parte o arranjo. Cada metade fica com os blocos que lhe
@@ -923,6 +916,7 @@ class CorteService:
                 inicio_seg=ponto,
                 fim_seg=fim,
                 desvios=json.dumps(desvios_dir, ensure_ascii=False),
+                desvios_riscados=riscados_dir,
                 alertas_conferir=alertas_dir,
                 arranjo_blocos=json.dumps(arranjo_dir, ensure_ascii=False),
                 status=StatusCorte.PROPOSTO,
@@ -1048,6 +1042,7 @@ class CorteService:
                 ),
                 ensure_ascii=False,
             )
+            juntar_riscados(primeiro, segundo)
             # D-576: a ordem escolhida em cada metade sobrevive à junção — a do primeiro
             # toca inteira, depois a do segundo. Perdê-la seria jogar fora trabalho
             # editorial por uma operação de fronteira. Sem arranjo, segue sem arranjo.
@@ -1379,9 +1374,10 @@ class CorteService:
 
     @staticmethod
     async def remover_desvio(db: AsyncSession, corte_id: str, desvio_index: int) -> Corte:
-        """Remove um desvio do corte pelo índice, sem criar novo corte.
+        """Tira um desvio do corte pelo índice, sem criar novo corte.
 
-        Migrado do router em D-078 — comportamento preservado.
+        RN-36: tirar é riscar. Ele sai do corte e fica na lista dos riscados, de
+        onde pode voltar.
 
         Levanta `ValueError("Corte não encontrado")` (→404) ou
         `ValueError("Índice de desvio inválido")` (→400).
@@ -1394,8 +1390,9 @@ class CorteService:
         if desvio_index < 0 or desvio_index >= len(desvios):
             raise ValueError("Índice de desvio inválido")
 
-        desvios.pop(desvio_index)
+        desvios, riscados = riscar(desvios, riscados_gravados(corte.desvios_riscados), desvio_index)
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
+        corte.desvios_riscados = json.dumps(riscados, ensure_ascii=False)
         await db.commit()
         await db.refresh(corte)
         return corte

@@ -19,6 +19,7 @@ from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.alerta_conferir import alertas_gravados
 from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, score_do_corte
 from app.domain.corte.desvio_categoria import classificar_desvio
+from app.domain.corte.riscados import riscados_gravados, trechos_da_ultima_rodada
 from app.models import Corte
 from fastapi import HTTPException
 from sqlalchemy import inspect
@@ -68,6 +69,18 @@ def _origem_da_analise(corte: Corte) -> str | None:
     return getattr(snapshot, "origem_analise", None)
 
 
+def _trechos_do_corte(corte) -> dict:
+    """RN-36: o que sai do corte, o que foi riscado e o que desfazer a rodada leva."""
+    desvios = [classificar_desvio(x) for x in json.loads(corte.desvios or "[]")]
+    return {
+        "desvios": desvios,
+        "desvios_riscados": [
+            classificar_desvio(x) for x in riscados_gravados(corte.desvios_riscados)
+        ],
+        "trechos_da_ultima_rodada": trechos_da_ultima_rodada(desvios),
+    }
+
+
 def _corte_to_dict(corte: Corte) -> dict:
     # WHY: itera por __table__.columns — colunas novas (ex.: I-034 `justificativa`)
     # entram automaticamente no payload. Só ajustamos abaixo campos JSON-encoded.
@@ -76,7 +89,7 @@ def _corte_to_dict(corte: Corte) -> dict:
     # analisados antes da categoria existir também chegam badgeados ao editor, sem
     # migrar banco e sem replicar a tabela de inferência no frontend. Este é o
     # único ponto de serialização de corte da API, então cobre todas as rotas.
-    d["desvios"] = [classificar_desvio(x) for x in json.loads(corte.desvios or "[]")]
+    d.update(_trechos_do_corte(corte))
     d["alertas_conferir"] = alertas_gravados(corte.alertas_conferir)
     # D-314: `score_json` (proposta v2, D-302) é ranking relativo entre os cortes
     # da mesma análise — {hook, flow, value, total}. Sai parseado como objeto no

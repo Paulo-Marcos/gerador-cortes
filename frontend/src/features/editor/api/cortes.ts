@@ -117,6 +117,18 @@ export const cortesApi = {
       }),
     ),
 
+  // D-1017: os riscados (RN-36). Riscar é o `removerDesvio` acima.
+  restaurarDesvio: (corteId: string, riscadoIndex: number) =>
+    dados(
+      api.POST('/api/cortes/{corte_id}/restaurar-desvio', {
+        ...doCorte(corteId),
+        body: { riscado_index: riscadoIndex },
+      }),
+    ),
+
+  desfazerRodada: (corteId: string) =>
+    dados(api.POST('/api/cortes/{corte_id}/desfazer-rodada', doCorte(corteId))),
+
   // D-998: o editor conferiu o fato; o trecho segue no corte e o alerta sai da timeline.
   marcarAlertaConferido: (corteId: string, alertaId: string) =>
     dados(

@@ -84,6 +84,8 @@ class DesvioDoCorte(ItemDoCorte):
     origem: str | Ausente = None
     # O rótulo do fluxo manual/Gemini legado (DESVIO, REPETICAO).
     tipo: str | Ausente = None
+    # RN-35: só no riscado, por que o app recusou a marca da IA.
+    recusa: str | Ausente = None
 
 
 class AlertaConferirDoCorte(BaseModel):
@@ -182,6 +184,8 @@ class CorteResponse(BaseModel):
     inicio_seg: float
     fim_seg: float
     desvios: list[DesvioDoCorte]
+    desvios_riscados: list[DesvioDoCorte] = []
+    trechos_da_ultima_rodada: int = 0
     alertas_conferir: list[AlertaConferirDoCorte] = []
     # O vocabulário do ciclo do corte (RN-04): a coluna é texto, mas só a tabela
     # de transições do domínio grava nela.

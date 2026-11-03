@@ -1,15 +1,13 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
 import { Button } from '@/components/ui/button';
-import { AcaoDeIa } from '@/components/ui/acao-de-ia';
-import type { ProviderIA } from '@/lib/providerIa';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
 import { BlocosTab } from './BlocosTab';
-import { resolverBadgeTrecho } from './trechoBadge';
-import { hmsParaSeg } from '../timeUtils';
+import { TrechosList, usePendenciasDosTrechos } from './TrechosList';
+import type { TrechosRiscados } from '../useTrechosRiscados';
 import { useCorte } from '@/features/editor/useCortes';
 import { useDiarizarCorte, useFalantes } from '@/features/diarizacao/useDiarizacao';
 import type { FalantesMap } from '@/features/diarizacao/api';
@@ -44,7 +42,8 @@ interface RightTabsPanelProps {
   selectedDesvioIdx: number | null;
   onSeek: (seg: number) => void;
   onAdicionarDesvio: (d: Desvio) => void;
-  onRemoverDesvio: (idx: number) => void;
+  /** D-1017 (RN-36): riscar, restaurar e desfazer a rodada. */
+  riscados?: TrechosRiscados;
   onGerarManual: () => void;
   onGerarTrechosIA: (provider: 'claude' | 'gemini') => void;
   pendingTrechos: {
@@ -70,17 +69,6 @@ interface RightTabsPanelProps {
 // mover; vizinhas para ele não ter de trocar de tela entre as duas.
 type TabId = 'trechos' | 'ordem' | 'transcricao' | 'avaliacao';
 
-/**
- * "00:22:09.000" → "22:09.0". O protótipo v3 mostra décimos: os
- * milissegundos cheios alargavam a coluna de tempo e empurravam o texto
- * do trecho, sem acrescentar precisão útil na leitura.
- */
-function mmssDecimo(hms: string): string {
-  const semHora = hms.slice(3);
-  const ponto = semHora.indexOf('.');
-  return ponto === -1 ? semHora : semHora.slice(0, ponto + 2);
-}
-
 // D-599: na casca nova o painel e o `.card` de vidro do handoff e as abas seguem
 // a gramatica dele — 30 px, 12.5/600, a ativa em ACENTO com sublinhado. A cor na
 // aba ativa nao e enfeite: numa coluna com quatro abas e um editor de capa em
@@ -92,7 +80,7 @@ export function RightTabsPanel({
   selectedDesvioIdx,
   onSeek,
   onAdicionarDesvio,
-  onRemoverDesvio,
+  riscados,
   onGerarManual,
   onGerarTrechosIA,
   pendingTrechos,
@@ -110,26 +98,14 @@ export function RightTabsPanel({
   // depende do tempo. Com props estáveis o memo dela segura a redesenhada.
   const aoIrPara = useFuncaoEstavel(onSeek);
   const aoAdicionarDesvio = useFuncaoEstavel(onAdicionarDesvio);
-  const aoRemoverDesvio = useFuncaoEstavel(onRemoverDesvio);
+  const aoRemoverDesvio = useFuncaoEstavel((indice: number) => riscados?.riscar(indice));
   const aoGerarManual = useFuncaoEstavel(onGerarManual);
   const aoGerarTrechosIA = useFuncaoEstavel(onGerarTrechosIA);
-  // O objeto de pendências nasce a cada render do pai; reconstruído a partir
-  // dos campos, só muda quando algum deles muda.
-  const { adicionando, removendo } = pendingTrechos;
-  const claudePendente = pendingTrechos.claude?.isPending;
-  const claudeProvider = pendingTrechos.claude?.provider;
-  const pendenteDosTrechos = useMemo(
-    () => ({
-      adicionando,
-      removendo,
-      claude:
-        claudePendente === undefined
-          ? undefined
-          : { isPending: claudePendente, provider: claudeProvider },
-    }),
-    [adicionando, removendo, claudePendente, claudeProvider],
-  );
-  const projetoId = useCorte(corteId).data?.projeto_id;
+  const aoRestaurarDesvio = useFuncaoEstavel((indice: number) => riscados?.restaurar(indice));
+  const aoDesfazerRodada = useFuncaoEstavel(() => riscados?.desfazerRodada());
+  const pendenteDosTrechos = usePendenciasDosTrechos(pendingTrechos, riscados?.restaurando);
+  const corteAtual = useCorte(corteId).data;
+  const projetoId = corteAtual?.projeto_id;
   const falantes = useFalantes(projetoId, tab === 'transcricao').data?.falantes;
   const diarizar = useDiarizarCorte(corteId, projetoId);
 
@@ -228,6 +204,11 @@ export function RightTabsPanel({
           onGerarManual={aoGerarManual}
           onGerarTrechosIA={aoGerarTrechosIA}
           pending={pendenteDosTrechos}
+          linhas={transcricao}
+          riscados={corteAtual?.desvios_riscados}
+          trechosDaUltimaRodada={corteAtual?.trechos_da_ultima_rodada}
+          onRestaurarDesvio={aoRestaurarDesvio}
+          onDesfazerRodada={aoDesfazerRodada}
         />
       ) : (
         <TranscriptList
@@ -291,211 +272,6 @@ function TabButton({
     </button>
   );
 }
-
-// ───── TrechosList — v2_bruto.jsx:484-548 ─────
-
-// D-422: o badge do trecho passou a mostrar o MOTIVO da remoção (repetição,
-// tangente, imprecisão…) em vez de um "IA" único para tudo que a IA propôs. A
-// resolução vive em `trechoBadge.ts` (testável, cobre legados sem `categoria`).
-
-const TrechosList = memo(function TrechosList({
-  desvios,
-  selectedDesvioIdx,
-  onSeek,
-  onAdicionarDesvio,
-  onRemoverDesvio,
-  onGerarManual,
-  onGerarTrechosIA,
-  pending,
-}: {
-  desvios: Desvio[];
-  selectedDesvioIdx: number | null;
-  onSeek: (seg: number) => void;
-  onAdicionarDesvio: (d: Desvio) => void;
-  onRemoverDesvio: (idx: number) => void;
-  onGerarManual: () => void;
-  onGerarTrechosIA: (provider: 'claude' | 'gemini') => void;
-  pending: {
-    adicionando?: boolean;
-    removendo?: boolean;
-    claude?: { isPending: boolean; provider?: string };
-  };
-}) {
-  const sortedWithOriginalIdx = useMemo(
-    () =>
-      desvios
-        .map((d, i) => ({ d, i }))
-        .sort((a, b) => hmsParaSeg(a.d.inicio_hms) - hmsParaSeg(b.d.inicio_hms)),
-    [desvios],
-  );
-
-  const origIdxToSortedPos = useMemo(() => {
-    const map = new Map<number, number>();
-    sortedWithOriginalIdx.forEach(({ i }, sortPos) => map.set(i, sortPos));
-    return map;
-  }, [sortedWithOriginalIdx]);
-
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    if (selectedDesvioIdx == null || selectedDesvioIdx < 0) return;
-    const sortedPos = origIdxToSortedPos.get(selectedDesvioIdx);
-    if (sortedPos == null) return;
-    itemRefs.current[sortedPos]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [selectedDesvioIdx, origIdxToSortedPos]);
-
-  function adicionarAqui() {
-    onAdicionarDesvio({
-      inicio_hms: '00:00:00',
-      fim_hms: '00:00:05',
-      motivo: 'Manual — recortado pelo editor',
-    });
-  }
-
-  return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      {/* D-871: "Gerar | Claude | Gemini", os provedores pelo nome e dividindo
-          a largura. O Manual (colar o JSON de uma IA externa) é raro e virou
-          ícone: com o rótulo, os nomes não cabiam numa coluna de 344 px. */}
-      <div className="flex flex-shrink-0 items-center gap-1.5 px-3 pb-2 pt-2">
-        <AcaoDeIa
-          rotulo="Gerar"
-          descricao="Gerar trechos a remover"
-          emVoo={
-            pending.claude?.isPending
-              ? ((pending.claude.provider as ProviderIA | undefined) ?? 'claude')
-              : null
-          }
-          onGerar={onGerarTrechosIA}
-          comNome
-          className="h-[30px] min-w-0 flex-1"
-        />
-        <Tooltip label="Importar trechos manualmente (cola JSON da IA)" side="bottom">
-          <button
-            type="button"
-            onClick={onGerarManual}
-            aria-label="Importar trechos manualmente"
-            className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[8px] border border-[var(--wb-border)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
-          >
-            <Icon name="wand-sparkles" size={16} />
-          </button>
-        </Tooltip>
-        <Tooltip label="Adicionar trecho" side="bottom">
-          <button
-            type="button"
-            onClick={adicionarAqui}
-            disabled={pending.adicionando}
-            aria-label="Adicionar trecho"
-            className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent)] hover:text-[var(--wb-accent-fg)] disabled:pointer-events-none disabled:opacity-40"
-          >
-            <Icon name="plus" size={16} />
-          </button>
-        </Tooltip>
-      </div>
-
-      {/* Lista — v2_bruto.jsx:507-547 */}
-      <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-2.5 py-2">
-        {sortedWithOriginalIdx.length === 0 && (
-          <div className="m-auto flex flex-col items-center gap-1 py-8 text-center text-[12px] text-[var(--wb-text-dim)]">
-            <Icon name="sparkles" size={20} className="opacity-60" />
-            Nenhum trecho marcado.
-            <span className="text-[11px]">Use IA / Manual / Silencios para gerar.</span>
-          </div>
-        )}
-        {sortedWithOriginalIdx.map(({ d, i }, sortPos) => {
-          const badge = resolverBadgeTrecho(d);
-          const ds = hmsParaSeg(d.inicio_hms);
-          const de = hmsParaSeg(d.fim_hms);
-          const delta = Math.max(0, de - ds);
-          const ativo = selectedDesvioIdx === i;
-          return (
-            <div
-              key={`${d.inicio_hms}-${i}`}
-              ref={(el) => {
-                itemRefs.current[sortPos] = el;
-              }}
-              className="group/trecho relative"
-            >
-              <button
-                type="button"
-                onClick={() => onSeek(ds)}
-                className={cn(
-                  'group flex w-full cursor-pointer items-start gap-2.5 rounded-[var(--radius-sm)] border bg-[var(--wb-bg-card-elev)] px-2.5 py-2 pr-10 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-                  ativo
-                    ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
-                    : 'border-[var(--wb-border-soft)] hover:border-[var(--wb-border)]',
-                )}
-                aria-label={`Pular para ${d.inicio_hms}`}
-              >
-                <div className="flex min-w-[52px] flex-col items-center gap-0.5 rounded text-left transition-opacity group-hover:opacity-80">
-                  <span
-                    className="font-code text-[10.5px] font-bold text-[var(--wb-text)]"
-                    style={{ fontVariantNumeric: 'tabular-nums' }}
-                  >
-                    {mmssDecimo(d.inicio_hms)}
-                  </span>
-                  <Icon name="chevron-down" className="text-[var(--wb-text-dim)]" />
-                  <span
-                    className="font-code text-[10.5px] text-[var(--wb-text-mute)]"
-                    style={{ fontVariantNumeric: 'tabular-nums' }}
-                  >
-                    {mmssDecimo(d.fim_hms)}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center gap-1.5">
-                    <span
-                      className="inline-flex items-center rounded-full px-2 py-0.5 font-code text-[10px] font-semibold uppercase tracking-[0.04em]"
-                      style={{ background: badge.bg, color: badge.fg }}
-                      title={badge.titulo}
-                    >
-                      {badge.label}
-                    </span>
-                    {/* D-871: o tempo que sai é informação, não alarme — em
-                        cinza, como no canvas ("cor fica para estado"). */}
-                    <span
-                      className="font-code text-[11px] font-semibold text-[var(--wb-text-mute)]"
-                      style={{ fontVariantNumeric: 'tabular-nums' }}
-                    >
-                      −{delta.toFixed(1)}s
-                    </span>
-                  </div>
-                  {/* DE-PARA-v3 §3: o motivo é apoio, não o conteúdo principal
-                      da linha — daí o tom mudo.
-
-                      D-511: mas ele deixou de ser CORTADO. Com `line-clamp-2` o
-                      motivo terminava no meio de uma frase, e conferir o corte
-                      exigia sair da tela. Um motivo longo ocupa mais três
-                      linhas; um motivo pela metade custa uma ida e volta. */}
-                  <div className="whitespace-pre-wrap break-words text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
-                    {d.motivo || '—'}
-                  </div>
-                </div>
-              </button>
-              <Tooltip label="Remover" side="left">
-                {/* D-746: a lixeira é a ação MENOS frequente da linha e era o
-                    elemento mais pesado dela. Pequena e apagada; acende quando
-                    a linha é apontada ou o teclado chega nela, e só fica
-                    vermelha no hover do próprio botão. */}
-                <IconButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1.5 top-1.5 h-6 w-6 text-[var(--wb-text-dim)] opacity-40 transition-opacity hover:text-[var(--wb-err-ink)] focus-visible:opacity-100 group-hover/trecho:opacity-100"
-                  onClick={() => onRemoverDesvio(i)}
-                  disabled={pending.removendo}
-                  aria-label="Remover trecho"
-                >
-                  <Icon name="trash-2" />
-                </IconButton>
-              </Tooltip>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-});
 
 // ───── TranscriptList — v2_bruto.jsx:550-624 ─────
 

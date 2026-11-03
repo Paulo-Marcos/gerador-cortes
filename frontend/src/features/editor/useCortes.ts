@@ -246,6 +246,23 @@ export function useRemoverDesvio(corteId: string) {
   });
 }
 
+// D-1017 (RN-36): os trechos riscados voltam um a um, ou a rodada da IA sai inteira.
+export function useRestaurarDesvio(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (indice: number) => cortesApi.restaurarDesvio(corteId, indice),
+    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+  });
+}
+
+export function useDesfazerRodada(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => cortesApi.desfazerRodada(corteId),
+    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+  });
+}
+
 // D-998: dispensa o alerta "conferir". Desvios e líquido não mudam, então as
 // legendas do corte não precisam ser refeitas.
 export function useMarcarAlertaConferido(corteId: string) {

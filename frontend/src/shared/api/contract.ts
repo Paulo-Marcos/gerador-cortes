@@ -1461,6 +1461,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cortes/{corte_id}/desfazer-rodada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desfazer Rodada
+         * @description Risca a última rodada da IA. Marca feita ou ajustada à mão fica no corte.
+         */
+        post: operations["desfazer_rodada_api_cortes__corte_id__desfazer_rodada_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cortes/{corte_id}/desvios/importar": {
         parameters: {
             query?: never;
@@ -1696,6 +1716,26 @@ export interface paths {
          *     Usa composição por camadas (o Remotion renderiza apenas overlays transparentes curtos).
          */
         post: operations["renderizar_pipeline_api_cortes__corte_id__renderizar_pipeline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cortes/{corte_id}/restaurar-desvio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaurar Desvio
+         * @description Devolve ao corte um trecho riscado, inclusive o que o app recusou.
+         */
+        post: operations["restaurar_desvio_api_cortes__corte_id__restaurar_desvio_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6220,6 +6260,11 @@ export interface components {
             /** Desvios */
             desvios: components["schemas"]["DesvioDoCorte"][];
             /**
+             * Desvios Riscados
+             * @default []
+             */
+            desvios_riscados: components["schemas"]["DesvioDoCorte"][];
+            /**
              * Duracao Clip Seg
              * @default 0
              */
@@ -6315,6 +6360,11 @@ export interface components {
              * @default
              */
             transcricao_final_texto: string;
+            /**
+             * Trechos Da Ultima Rodada
+             * @default 0
+             */
+            trechos_da_ultima_rodada: number;
             /**
              * Youtube Scheduled At
              * @default
@@ -6471,6 +6521,8 @@ export interface components {
             motivo: string;
             /** Origem */
             origem?: string;
+            /** Recusa */
+            recusa?: string;
             /** Tipo */
             tipo?: string;
         } & {
@@ -9029,6 +9081,11 @@ export interface components {
             /** Campos */
             campos: string[];
         };
+        /** RestaurarDesvioRequest */
+        RestaurarDesvioRequest: {
+            /** Riscado Index */
+            riscado_index: number;
+        };
         /**
          * ResultadoDaPublicacao
          * @description Varia com o destino: a API do YouTube devolve o vídeo e a URL; o pacote
@@ -10052,6 +10109,11 @@ export interface components {
              * @enum {string}
              */
             provider: "claude" | "gemini";
+            /**
+             * Recusados
+             * @default 0
+             */
+            recusados: number;
             /** Total Desvios */
             total_desvios: number;
         };
@@ -13170,6 +13232,37 @@ export interface operations {
             };
         };
     };
+    desfazer_rodada_api_cortes__corte_id__desfazer_rodada_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     importar_desvios_api_cortes__corte_id__desvios_importar_post: {
         parameters: {
             query?: never;
@@ -13522,6 +13615,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MensagemResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restaurar_desvio_api_cortes__corte_id__restaurar_desvio_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestaurarDesvioRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteResponse"];
                 };
             };
             /** @description Validation Error */
