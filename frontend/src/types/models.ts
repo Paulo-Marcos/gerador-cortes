@@ -90,6 +90,11 @@ export interface Desvio {
   /** Motivo da remoção. Opcional p/ retrocompatibilidade com desvios
    *  persistidos antes do D-422 (o badge infere pelo `motivo`). */
   categoria?: DesvioCategoria;
+  /** D-355: as palavras citadas pela IA nas duas bordas (RN-35). */
+  inicio_texto?: string;
+  fim_texto?: string;
+  /** RN-35: só no riscado, por que o app recusou a marca da IA. */
+  recusa?: string;
 }
 
 /** D-998: trecho que FICA no corte e a IA pede para conferir o fato. Não é desvio. */

@@ -39,10 +39,14 @@ export function applyDesvioChange(
   const nextDesvios = [...baseDesvios];
   if (!nextDesvios[idx]) return null;
 
+  const anterior = nextDesvios[idx];
   nextDesvios[idx] = {
-    ...nextDesvios[idx],
+    ...anterior,
     inicio_hms: novoInicio,
     fim_hms: novoFim,
+    // D-1017: a borda ajustada deixa de ser a que a IA citou, e a tela mostraria a fala antiga.
+    ...(novoInicio !== anterior.inicio_hms ? { inicio_texto: undefined } : {}),
+    ...(novoFim !== anterior.fim_hms ? { fim_texto: undefined } : {}),
   };
 
   return mergeDirtyPatch(currentDirty, { desvios: nextDesvios });

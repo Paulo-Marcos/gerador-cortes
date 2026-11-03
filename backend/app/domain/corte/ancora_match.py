@@ -26,7 +26,13 @@ from difflib import SequenceMatcher
 from app.domain.compartilhado.time_convert import seg_to_hms, to_seg_estrito
 from app.domain.corte.snap_desvios import achatar_palavras  # reexport util p/ o caller
 
-__all__ = ["achatar_palavras", "ancorar_borda", "ancorar_intervalo"]
+__all__ = [
+    "RECUSA_CITACAO_NAO_CONFERE",
+    "achatar_palavras",
+    "ancorar_borda",
+    "ancorar_intervalo",
+    "recusa_da_citacao",
+]
 
 # Similaridade mínima (0..1) entre a citação e a sequência de palavras candidata
 # para aceitar a âncora. Abaixo disso a citação "não bateu" → fallback (None).
@@ -105,7 +111,10 @@ def ancorar_borda(
             if not candidato:
                 continue
             ratio = SequenceMatcher(None, ancora_str, candidato).ratio()
-            dist = abs(janela[i]["inicio_seg"] - tempo_aprox_seg)
+            # D-1017: a borda de fim é o fim da citação; medir do começo dela puxava a
+            # marca para a ocorrência seguinte quando a frase se repete.
+            na_borda = i if is_inicio else fim - 1
+            dist = abs(janela[na_borda]["inicio_seg"] - tempo_aprox_seg)
             # Melhor ratio vence; empate → ocorrência mais próxima do timestamp.
             if ratio > melhor_ratio or (ratio == melhor_ratio and dist < melhor_dist):
                 melhor_ratio = ratio
@@ -159,6 +168,35 @@ def ancorar_intervalo(
 # já é fino (nível de segmento ≤6 palavras), então basta ±5s; o snap (0.8s)
 # completa o ajuste de borda de palavra depois.
 _JANELA_ANCORA_DESVIO_SEG = 5.0
+
+RECUSA_CITACAO_NAO_CONFERE = "A citação não confere com a fala neste tempo"
+
+
+def recusa_da_citacao(desvio: dict, palavras: list[dict]) -> str | None:
+    """RN-35: por que a marca da IA não entra no corte, ou `None` se ela entra.
+
+    Antes, citação que não batia só deixava a borda no tempo proposto, sem aviso.
+    O teste é o da âncora: a citação tem de estar a até 5 s do tempo da marca.
+    Sem palavras (VTT legado) não há com o que conferir, e a marca passa. Sem
+    citação também: o corpo da skill é do canal, e num que não peça citação uma
+    recusa aqui riscaria todas as marcas. A tela avisa que aquela não foi conferida.
+    """
+    if not palavras:
+        return None
+    lados = (
+        ((desvio.get("inicio_texto") or "").strip(), desvio.get("inicio_seg"), True),
+        ((desvio.get("fim_texto") or "").strip(), desvio.get("fim_seg"), False),
+    )
+    for texto, tempo, is_inicio in lados:
+        if _tokenizar(texto) and None is ancorar_borda(
+            texto,
+            to_seg_estrito(tempo or 0),
+            palavras,
+            janela_seg=_JANELA_ANCORA_DESVIO_SEG,
+            is_inicio=is_inicio,
+        ):
+            return RECUSA_CITACAO_NAO_CONFERE
+    return None
 
 
 def ancorar_desvio(desvio: dict, palavras: list[dict]) -> dict:

@@ -5,6 +5,7 @@ import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
 import { TimelinePanel } from './TimelinePanel';
 import { seloDoPlayer } from '../useBruto';
 import { RightTabsPanel } from './RightTabsPanel';
+import type { TrechosRiscados } from '../useTrechosRiscados';
 import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
@@ -85,7 +86,7 @@ interface Props {
   onAtualizarTranscricao: () => void;
   onChangeDesvio: (idx: number, novoInicio: string, novoFim: string) => void;
   onAdicionarDesvio: (d: { inicio_hms: string; fim_hms: string; motivo: string }) => void;
-  onRemoverDesvio: (idx: number) => void;
+  riscados: TrechosRiscados;
   onCriarCorteDaSelecao: (inicioHms: string, fimHms: string, titulo: string) => void;
   onDividirCorteAqui: () => void;
   dividindoCorte: boolean;
@@ -140,7 +141,7 @@ export function EditorFase1({
   onAtualizarTranscricao,
   onChangeDesvio,
   onAdicionarDesvio,
-  onRemoverDesvio,
+  riscados,
   onCriarCorteDaSelecao,
   onDividirCorteAqui,
   dividindoCorte,
@@ -257,7 +258,7 @@ export function EditorFase1({
               selectedDesvioIdx={selectedDesvioIdx}
               onSeek={onSeek}
               onAdicionarDesvio={onAdicionarDesvio}
-              onRemoverDesvio={onRemoverDesvio}
+              riscados={riscados}
               onGerarManual={onGerarManual}
               onGerarTrechosIA={onGerarTrechosIA}
               pendingTrechos={{

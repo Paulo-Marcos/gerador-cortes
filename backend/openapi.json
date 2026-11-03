@@ -3125,6 +3125,14 @@
             "title": "Desvios",
             "type": "array"
           },
+          "desvios_riscados": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DesvioDoCorte"
+            },
+            "title": "Desvios Riscados",
+            "type": "array"
+          },
           "duracao_clip_seg": {
             "default": 0.0,
             "title": "Duracao Clip Seg",
@@ -3281,6 +3289,11 @@
             "default": "",
             "title": "Transcricao Final Texto",
             "type": "string"
+          },
+          "trechos_da_ultima_rodada": {
+            "default": 0,
+            "title": "Trechos Da Ultima Rodada",
+            "type": "integer"
           },
           "youtube_scheduled_at": {
             "default": "",
@@ -3673,6 +3686,10 @@
           },
           "origem": {
             "title": "Origem",
+            "type": "string"
+          },
+          "recusa": {
+            "title": "Recusa",
             "type": "string"
           },
           "tipo": {
@@ -10040,6 +10057,19 @@
         "title": "ResetSkillRequest",
         "type": "object"
       },
+      "RestaurarDesvioRequest": {
+        "properties": {
+          "riscado_index": {
+            "title": "Riscado Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "riscado_index"
+        ],
+        "title": "RestaurarDesvioRequest",
+        "type": "object"
+      },
       "ResultadoDaPublicacao": {
         "additionalProperties": true,
         "description": "Varia com o destino: a API do YouTube devolve o vídeo e a URL; o pacote\nmanual, a pasta e os textos; os robôs assistidos somam o relatório deles.\nOs campos daqui são o vocabulário comum — nenhum é garantido —, e o resto\npassa como veio.",
@@ -12651,6 +12681,11 @@
             "title": "Provider",
             "type": "string"
           },
+          "recusados": {
+            "default": 0,
+            "title": "Recusados",
+            "type": "integer"
+          },
           "total_desvios": {
             "title": "Total Desvios",
             "type": "integer"
@@ -12661,7 +12696,8 @@
           "corte_id",
           "provider",
           "total_desvios",
-          "novos"
+          "novos",
+          "recusados"
         ],
         "title": "TrechosGeradosResponse",
         "type": "object"
@@ -17673,6 +17709,49 @@
         ]
       }
     },
+    "/api/cortes/{corte_id}/desfazer-rodada": {
+      "post": {
+        "description": "Risca a última rodada da IA. Marca feita ou ajustada à mão fica no corte.",
+        "operationId": "desfazer_rodada_api_cortes__corte_id__desfazer_rodada_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Desfazer Rodada",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
     "/api/cortes/{corte_id}/desvios/importar": {
       "post": {
         "description": "Importa trechos identificados por IA externa e adiciona como desvios.",
@@ -18226,6 +18305,59 @@
           }
         },
         "summary": "Renderizar Pipeline",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/restaurar-desvio": {
+      "post": {
+        "description": "Devolve ao corte um trecho riscado, inclusive o que o app recusou.",
+        "operationId": "restaurar_desvio_api_cortes__corte_id__restaurar_desvio_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestaurarDesvioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restaurar Desvio",
         "tags": [
           "Cortes"
         ]
