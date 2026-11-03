@@ -1848,6 +1848,17 @@
               }
             ]
           },
+          "emendas_aviso": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emendas Aviso"
+          },
           "erro": {
             "anyOf": [
               {

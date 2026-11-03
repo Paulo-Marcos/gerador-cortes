@@ -7,7 +7,9 @@ Banco em memória; a medição de verdade (FFmpeg) é trocada por uma resposta f
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -16,6 +18,7 @@ from app import database
 from app.core.channel_paths import projetos_dir
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.infrastructure import boletim_midia as medicao
+from app.infrastructure import trechos_do_bruto
 from app.models import Base, Corte, Projeto, Short, StatusCorte
 from app.services import boletim_tecnico as servico
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -124,12 +127,24 @@ async def test_primeira_consulta_mede_em_segundo_plano_e_depois_entrega(
 
 
 @pytest.mark.asyncio
-async def test_emendas_vem_dos_mesmos_trechos_do_bruto(
+async def test_emendas_vem_dos_trechos_gravados_no_bruto(
     corte_com_desvio, video_final, medicao_falsa
 ):
-    # Pedido: os trechos vêm da mesma fonte do bruto (desvio 30-40 s ⇒ [0-30] e [40-120]).
-    await servico.consultar("corte", "c1")
-    await _esperar_medicao()
+    # Pedido: os trechos vêm da mesma fonte do bruto (desvio 30-40 s => [0-30] e [40-120]).
+    # D-1024: a fonte é o registro que o corte do bruto gravou, não o desvio de hoje no banco.
+    bruto = video_final.parent.parent / "clip_raw_1.mkv"
+    bruto.write_bytes(b"b")
+    trechos_do_bruto.gravar(bruto, [(0.0, 30.0), (40.0, 120.0)])
+    os.utime(video_final, (time.time() + 200, time.time() + 200))
+    async with corte_com_desvio() as db:
+        (await db.get(Corte, "c1")).arquivo_clip_path = "cortes/c1/clip_raw_1.mkv"
+        await db.commit()
+    try:
+        await servico.consultar("corte", "c1")
+        await _esperar_medicao()
+    finally:
+        bruto.unlink(missing_ok=True)
+        trechos_do_bruto.arquivo_do_registro(bruto).unlink(missing_ok=True)
     assert medicao_falsa[0].duracoes_dos_trechos == [30.0, 80.0]
 
 
@@ -153,14 +168,19 @@ async def test_arquivo_novo_invalida_o_boletim(corte_com_desvio, video_final, me
 
 
 @pytest.mark.asyncio
-async def test_desvio_editado_invalida_o_boletim(corte_com_desvio, video_final, medicao_falsa):
+async def test_desvio_editado_sem_novo_render_nao_refaz_o_boletim(
+    corte_com_desvio, video_final, medicao_falsa
+):
+    # D-1024: o vídeo não mudou, então o boletim dele segue valendo; o desvio de hoje no
+    # banco não descreve o vídeo e não entra na assinatura.
     await servico.consultar("corte", "c1")
     await _esperar_medicao()
     async with corte_com_desvio() as db:
         corte = await db.get(Corte, "c1")
         corte.desvios = json.dumps([{"inicio_seg": 50.0, "fim_seg": 60.0, "motivo": "pausa"}])
         await db.commit()
-    assert (await servico.consultar("corte", "c1"))["estado"] == "medindo"
+    assert (await servico.consultar("corte", "c1"))["estado"] == "pronto"
+    assert len(medicao_falsa) == 1
 
 
 @pytest.mark.asyncio

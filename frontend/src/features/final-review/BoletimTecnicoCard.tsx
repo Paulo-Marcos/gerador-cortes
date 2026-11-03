@@ -190,7 +190,15 @@ function Corpo({
           <p>Nenhuma parada de imagem.</p>
         )}
       </Bloco>
-      <Bloco titulo="Emendas">{boletim.emendas && <p>{linhaDeEmendas(boletim.emendas)}</p>}</Bloco>
+      <Bloco titulo="Emendas">
+        {boletim.emendas ? (
+          <p>{linhaDeEmendas(boletim.emendas)}</p>
+        ) : (
+          <p className="text-[var(--wb-text-mute)]">
+            {boletim.emendas_aviso ?? 'As emendas não foram medidas.'}
+          </p>
+        )}
+      </Bloco>
       <p className="text-[11px] text-[var(--wb-text-mute)]">{TEXTO_QUE_NAO_BLOQUEIA}</p>
       <MedirDeNovo onRemedir={onRemedir} remedindo={remedindo} />
     </>

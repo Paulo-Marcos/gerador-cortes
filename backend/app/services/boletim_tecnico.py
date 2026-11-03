@@ -12,9 +12,18 @@ Uma medição por vez na máquina — duas disputariam a CPU entre si e com o re
 
 O resultado é um arquivo ao lado da mídia (`video.mp4.boletim.json`). A
 **assinatura** dele é tamanho + data de modificação do arquivo + durações dos
-trechos: render novo, short regerado ou desvio editado mudam a assinatura e o
-boletim velho é ignorado, sem ninguém precisar apagá-lo. Mídia apagada pela
-limpeza vira o estado `arquivo_ausente`, não erro.
+trechos: render novo ou short regerado mudam a assinatura e o boletim velho é
+ignorado, sem ninguém precisar apagá-lo. Mídia apagada pela limpeza vira o
+estado `arquivo_ausente`, não erro.
+
+## As emendas do corte vêm do que o bruto GUARDOU (D-1024)
+
+O banco diz os desvios de hoje; o `video.mp4` foi cortado com os de quando o
+bruto saiu. Medir um com a régua do outro apontaria emendas em instantes
+errados e mostraria isso como certo. Por isso as durações vêm do registro ao lado
+do bruto (`infrastructure/trechos_do_bruto`). Sem registro, ou com o bruto mais
+novo que o vídeo (regerado depois do render), as emendas não são medidas e o
+boletim diz por quê — volume e imagem parada não dependem dos trechos.
 
 Falha de medição não é gravada em disco: fica na memória até a assinatura mudar
 ou o operador pedir de novo, para a tela não disparar o mesmo FFmpeg a cada
@@ -36,12 +45,11 @@ from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.corte import boletim_tecnico as regra
-from app.domain.corte.segment_calculator import mesclar_desvios_sobrepostos
 from app.domain.short import segmentos_short
 from app.infrastructure import boletim_midia as medicao
+from app.infrastructure import trechos_do_bruto
 from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto, Short
-from app.services.export import _desvios_do_corte, _intervalo_dentro_do_video, _segmentos_do_bruto
 from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
@@ -75,6 +83,8 @@ class _Alvo:
     duracoes_dos_trechos: list[float]
     # Instante do vídeo medido -> instante no bruto (identidade no corte).
     no_bruto: Callable[[float], float]
+    # Preenchido quando as emendas não podem ser medidas com confiança.
+    emendas_aviso: str | None = None
 
 
 async def consultar(tipo: str, alvo_id: str, *, remedir: bool = False) -> dict:
@@ -89,7 +99,10 @@ async def consultar(tipo: str, alvo_id: str, *, remedir: bool = False) -> dict:
     assinatura = _assinatura(alvo)
     arquivo = _sidecar(alvo.midia)
     if remedir:
+        # Sem apagar, o boletim guardado ainda vale pela assinatura e o GET
+        # seguinte devolveria o velho como `pronto`, parando o polling.
         _falhas.pop(alvo.chave, None)
+        arquivo.unlink(missing_ok=True)
     elif (guardado := _ler_valido(arquivo, assinatura)) is not None:
         return {"estado": ESTADO_PRONTO, **guardado}
 
@@ -128,14 +141,23 @@ def _bruto_do_corte(corte: Corte) -> Path | None:
 
 def _alvo_do_corte(corte: Corte, projeto: Projeto | None) -> _Alvo:
     midia = projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
-    duracoes: list[float] = []
-    if projeto is not None:
-        # A MESMA fonte do bruto: são estes trechos que o `bruto_pipeline` cortou.
-        desvios = mesclar_desvios_sobrepostos(_desvios_do_corte(corte, corte.id))
-        inicio, fim = _intervalo_dentro_do_video(corte, projeto)
-        trechos = _segmentos_do_bruto(corte, inicio, fim, desvios)
-        duracoes = [fim_t - inicio_t for inicio_t, fim_t in trechos]
-    return _Alvo(f"corte:{corte.id}", midia, _bruto_do_corte(corte), duracoes, lambda t: t)
+    bruto = _bruto_do_corte(corte)
+    duracoes, aviso = _trechos_do_video(midia, bruto)
+    return _Alvo(f"corte:{corte.id}", midia, bruto, duracoes, lambda t: t, aviso)
+
+
+def _trechos_do_video(midia: Path, bruto: Path | None) -> tuple[list[float], str | None]:
+    """As durações dos trechos com que o vídeo foi feito, ou o motivo de não saber."""
+    if bruto is None or not bruto.is_file():
+        return [], "O bruto não está mais no disco, então não dá para localizar as emendas."
+    if not midia.is_file():
+        return [], None  # sem vídeo o estado é `arquivo_ausente`; nada a avisar
+    if bruto.stat().st_mtime > midia.stat().st_mtime:
+        return [], "O bruto foi gerado de novo depois deste vídeo: renderize para medir as emendas."
+    gravadas = trechos_do_bruto.ler(bruto)
+    if gravadas is None:
+        return [], "Este bruto é de antes do registro dos trechos: gere o bruto de novo."
+    return gravadas, None
 
 
 def _alvo_do_short(short: Short, corte: Corte) -> _Alvo:
@@ -155,7 +177,7 @@ def _alvo_do_short(short: Short, corte: Corte) -> _Alvo:
 def _assinatura(alvo: _Alvo) -> str:
     estado = alvo.midia.stat()
     trechos = ",".join(f"{d:.3f}" for d in alvo.duracoes_dos_trechos)
-    resumo = hashlib.sha1(trechos.encode()).hexdigest()[:12]  # noqa: S324 — identidade, não segurança
+    resumo = hashlib.sha1((trechos + (alvo.emendas_aviso or "")).encode()).hexdigest()[:12]  # noqa: S324 — identidade, não segurança
     return f"v{_VERSAO_DO_FORMATO}-{estado.st_size}-{estado.st_mtime_ns}-{resumo}"
 
 
@@ -208,7 +230,8 @@ def _medir(alvo: _Alvo) -> dict:
     return {
         "volume": {**asdict(volume), "avisos": regra.avisos_de_volume(volume)},
         "paradas": _paradas_com_origem(alvo, paradas),
-        "emendas": _emendas(alvo, amostras, duracao_real),
+        "emendas": None if alvo.emendas_aviso else _emendas(alvo, amostras, duracao_real),
+        "emendas_aviso": alvo.emendas_aviso,
     }
 
 
