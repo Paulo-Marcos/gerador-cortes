@@ -34,7 +34,10 @@ describe('desfechoDoRender', () => {
 
   it('o encode pronto também conclui, mesmo sem o estado dizer', () => {
     const fases = { ...status().fases, encode: true };
-    expect(desfechoDoRender(status({ fases }))).toMatchObject({ acabou: true, concluiu: true });
+    expect(desfechoDoRender(status({ fases, state: 'idle', running: false }))).toMatchObject({
+      acabou: true,
+      concluiu: true,
+    });
   });
 
   it('erro acaba com falha', () => {

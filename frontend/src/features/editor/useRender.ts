@@ -116,7 +116,9 @@ export interface OpcoesDoRenderFinal {
 
 /** O render acabou? Concluído, com falha, ou o backend ficou ocioso sem avisar. */
 export function desfechoDoRender(status: PipelineStatusResponse) {
-  const concluiu = status.state === 'done' || Boolean(status.fases?.encode);
+  // D-1035: o video.mp4 do render anterior continua no disco durante o render
+  // novo, então o arquivo só vale como conclusão com o backend parado (idle).
+  const concluiu = status.state === 'done' || (status.state === 'idle' && Boolean(status.fases?.encode));
   const falhou = status.state === 'error';
   const ocioso = status.running === false && status.state !== 'running';
   return { acabou: concluiu || falhou || ocioso, concluiu, falhou };
