@@ -6,6 +6,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { contarPixelsEscuros } from "./png-pixels.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rendererDir = path.join(repoRoot, "video-renderer");
@@ -632,6 +633,15 @@ async function main() {
     if (left.hash !== right.hash) {
       throw new Error(`Contrato visual falhou: ${reason}`);
     }
+  }
+
+  // D-1025: o texto do limpo é claro sobre o scrim escuro. Ênfase e lista herdavam
+  // o preto do documento (título invisível); o hash de dois stills não pega isso,
+  // então olha-se o pixel: nenhum quase-preto opaco em cena nenhuma do limpo.
+  // A pergunta do chat fica de fora: a inicial do avatar é grafite de propósito.
+  for (const tipo of Object.keys(CENAS_LIMPAS).filter((t) => t !== "pergunta_chat")) {
+    const escuros = contarPixelsEscuros(results.get(`${tipo}-limpo`).outputPath);
+    assert.equal(escuros, 0, `${tipo} no estilo limpo desenhou ${escuros} pixels pretos: o texto herdou a cor do documento`);
   }
 
   console.log(`\nCard contracts OK: ${scenarios.length} stills em ${outDir}`);
