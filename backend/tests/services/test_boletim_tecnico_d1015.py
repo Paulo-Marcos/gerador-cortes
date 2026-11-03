@@ -293,15 +293,19 @@ def test_sem_bruto_no_disco_a_origem_fica_nao_verificada(tmp_path):
     assert itens[0]["origem"] == "nao_verificada"
 
 
-def test_emendas_resume_total_som_e_acima_do_p99():
+def test_emendas_resume_total_som_e_acima_do_p99(monkeypatch):
     import numpy as np
+
+    # D-1027: a posição vem de `localizar_emendas` (testada em tests/infrastructure);
+    # aqui vale o resumo, com as emendas achadas aos 1 s e 2 s do vídeo.
+    monkeypatch.setattr(servico.medicao, "localizar_emendas", lambda *_: [1.0, 2.0])
 
     def seno(fase):
         t = np.arange(48000) / 48000
         return (np.sin(2 * np.pi * 200 * t + fase) * 12000).astype(np.int16)
 
     amostras = np.concatenate([seno(0), seno(np.pi / 2), np.zeros(48000, dtype=np.int16)])
-    resultado = servico._emendas(_alvo([1.0, 1.0, 1.0]), amostras, 3.0)
+    resultado = servico._emendas(_alvo([(0.0, 1.0)] * 3), amostras)
     assert resultado["total"] == 2
     assert resultado["com_som_dos_dois_lados"] == 1  # a 2ª emenda cai no silêncio
     assert resultado["acima_do_p99"] == 1

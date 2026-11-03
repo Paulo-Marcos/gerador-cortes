@@ -46,6 +46,7 @@ class EmendasResponse(RespostaComCamposOpcionais):
     total: int
     com_som_dos_dois_lados: int
     acima_do_p99: int
+    nao_localizadas: int | None = None
     p99_da_fala: float
     itens: list[EmendaResponse]
 

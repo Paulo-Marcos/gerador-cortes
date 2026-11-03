@@ -16,6 +16,16 @@ trechos: render novo ou short regerado mudam a assinatura e o boletim velho é
 ignorado, sem ninguém precisar apagá-lo. Mídia apagada pela limpeza vira o
 estado `arquivo_ausente`, não erro.
 
+## Onde a emenda está: achada no vídeo, não calculada (D-1027)
+
+Somar as durações dos trechos e esticar pela duração do vídeo põe a emenda até
+2 s fora do lugar (a D-1017 mediu 8 cortes: 25,8% das emendas "com som dos dois
+lados" por esse cálculo contra 1,7% na posição real). Por isso cada emenda é
+ACHADA: o último segundo do trecho, tal como soa na fonte (a live no corte, o
+bruto no short), é procurado no vídeo final por correlação. Emenda que não se
+acha com certeza não entra na conta: é contada como "não localizada", nunca
+chutada. Sem a fonte no disco, a linha de emendas diz por quê.
+
 ## As emendas do corte vêm do que o bruto GUARDOU (D-1024)
 
 O banco diz os desvios de hoje; o `video.mp4` foi cortado com os de quando o
@@ -64,8 +74,10 @@ ESTADO_ARQUIVO_AUSENTE = "arquivo_ausente"
 _TIMEOUT_DO_VOLUME_SEG = 600
 _TIMEOUT_DAS_PARADAS_SEG = 900
 _TIMEOUT_DO_AUDIO_SEG = 600
+_TIMEOUT_DO_MOLDE_SEG = 60
+_MIN_TRECHOS_PARA_EMENDA = 2
 
-_VERSAO_DO_FORMATO = 1
+_VERSAO_DO_FORMATO = 2
 
 # Uma medição por vez; as pedidas enquanto outra roda esperam a vez.
 _vez = asyncio.Lock()
@@ -80,11 +92,18 @@ class _Alvo:
     chave: str
     midia: Path
     bruto: Path | None
-    duracoes_dos_trechos: list[float]
+    # Início e fim de cada trecho na `fonte`, na ordem em que entraram no vídeo.
+    trechos: list[tuple[float, float]]
     # Instante do vídeo medido -> instante no bruto (identidade no corte).
     no_bruto: Callable[[float], float]
     # Preenchido quando as emendas não podem ser medidas com confiança.
     emendas_aviso: str | None = None
+    # O áudio de onde os trechos saíram: a live no corte, o bruto no short.
+    fonte: Path | None = None
+
+    @property
+    def duracoes_dos_trechos(self) -> list[float]:
+        return [fim - inicio for inicio, fim in self.trechos]
 
 
 async def consultar(tipo: str, alvo_id: str, *, remedir: bool = False) -> dict:
@@ -142,11 +161,18 @@ def _bruto_do_corte(corte: Corte) -> Path | None:
 def _alvo_do_corte(corte: Corte, projeto: Projeto | None) -> _Alvo:
     midia = projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
     bruto = _bruto_do_corte(corte)
-    duracoes, aviso = _trechos_do_video(midia, bruto)
-    return _Alvo(f"corte:{corte.id}", midia, bruto, duracoes, lambda t: t, aviso)
+    trechos, aviso = _trechos_do_video(midia, bruto)
+    live = (
+        resolver_do_projeto(projeto.arquivo_video_path, projeto.id)
+        if projeto and projeto.arquivo_video_path
+        else None
+    )
+    return _Alvo(f"corte:{corte.id}", midia, bruto, trechos, lambda t: t, aviso, live)
 
 
-def _trechos_do_video(midia: Path, bruto: Path | None) -> tuple[list[float], str | None]:
+def _trechos_do_video(
+    midia: Path, bruto: Path | None
+) -> tuple[list[tuple[float, float]], str | None]:
     """As durações dos trechos com que o vídeo foi feito, ou o motivo de não saber."""
     if bruto is None or not bruto.is_file():
         return [], "O bruto não está mais no disco, então não dá para localizar as emendas."
@@ -154,7 +180,7 @@ def _trechos_do_video(midia: Path, bruto: Path | None) -> tuple[list[float], str
         return [], None  # sem vídeo o estado é `arquivo_ausente`; nada a avisar
     if bruto.stat().st_mtime > midia.stat().st_mtime:
         return [], "O bruto foi gerado de novo depois deste vídeo: renderize para medir as emendas."
-    gravadas = trechos_do_bruto.ler(bruto)
+    gravadas = trechos_do_bruto.ler_trechos(bruto)
     if gravadas is None:
         return [], "Este bruto é de antes do registro dos trechos: gere o bruto de novo."
     return gravadas, None
@@ -170,13 +196,14 @@ def _alvo_do_short(short: Short, corte: Corte) -> _Alvo:
         return segmentos_short.no_bruto(instante, trechos, **janela)
 
     # A emenda do short é a junção entre as fatias que o operador montou.
-    duracoes = [f.duracao_seg for f in fatias] if len(fatias) > 1 else []
-    return _Alvo(f"short:{short.id}", midia, _bruto_do_corte(corte), duracoes, no_bruto)
+    pares = [(f.inicio_seg, f.fim_seg) for f in fatias] if len(fatias) > 1 else []
+    bruto = _bruto_do_corte(corte)
+    return _Alvo(f"short:{short.id}", midia, bruto, pares, no_bruto, fonte=bruto)
 
 
 def _assinatura(alvo: _Alvo) -> str:
     estado = alvo.midia.stat()
-    trechos = ",".join(f"{d:.3f}" for d in alvo.duracoes_dos_trechos)
+    trechos = ",".join(f"{i:.3f}-{f:.3f}" for i, f in alvo.trechos)
     resumo = hashlib.sha1((trechos + (alvo.emendas_aviso or "")).encode()).hexdigest()[:12]  # noqa: S324 — identidade, não segurança
     return f"v{_VERSAO_DO_FORMATO}-{estado.st_size}-{estado.st_mtime_ns}-{resumo}"
 
@@ -226,13 +253,21 @@ def _medir(alvo: _Alvo) -> dict:
     fps, repete = medicao.medir_quadros_parados(alvo.midia, _TIMEOUT_DAS_PARADAS_SEG)
     paradas = regra.paradas_de_quadros(repete, fps)
     amostras = medicao.ler_audio(alvo.midia, _TIMEOUT_DO_AUDIO_SEG)
-    duracao_real = amostras.size / medicao.TAXA_DO_AUDIO
+    aviso = alvo.emendas_aviso or _aviso_sem_fonte(alvo)
     return {
         "volume": {**asdict(volume), "avisos": regra.avisos_de_volume(volume)},
         "paradas": _paradas_com_origem(alvo, paradas),
-        "emendas": None if alvo.emendas_aviso else _emendas(alvo, amostras, duracao_real),
-        "emendas_aviso": alvo.emendas_aviso,
+        "emendas": None if aviso else _emendas(alvo, amostras),
+        "emendas_aviso": aviso,
     }
+
+
+def _aviso_sem_fonte(alvo: _Alvo) -> str | None:
+    """Sem o áudio de onde os trechos saíram não há como achar a emenda no vídeo."""
+    if len(alvo.trechos) < _MIN_TRECHOS_PARA_EMENDA or (alvo.fonte and alvo.fonte.is_file()):
+        return None
+    onde = "O bruto" if alvo.chave.startswith("short:") else "A live"
+    return f"{onde} não está mais no disco, então não dá para localizar as emendas."
 
 
 def _paradas_com_origem(alvo: _Alvo, paradas: list[regra.Parada]) -> list[dict]:
@@ -253,12 +288,24 @@ def _paradas_com_origem(alvo: _Alvo, paradas: list[regra.Parada]) -> list[dict]:
     return itens
 
 
-def _emendas(alvo: _Alvo, amostras, duracao_real: float) -> dict:
-    instantes = regra.instantes_das_emendas(alvo.duracoes_dos_trechos, duracao_real)
+def _emendas(alvo: _Alvo, amostras) -> dict:
+    fonte = alvo.fonte
+
+    def molde(inicio: float, duracao: float):
+        return medicao.ler_trecho(fonte, inicio, duracao, _TIMEOUT_DO_MOLDE_SEG)
+
+    achadas = medicao.localizar_emendas(amostras, alvo.trechos, molde)
+    instantes = [t for t in achadas if t is not None]
     medidas = medicao.medir_emendas(amostras, instantes)
     p99 = medicao.p99_do_degrau_da_fala(amostras)
     julgadas = [
         regra.julgar_emenda(t, antes, depois, degrau, p99) for t, antes, depois, degrau in medidas
     ]
     resumo = regra.resumir_emendas(julgadas)
-    return {**asdict(resumo), "p99_da_fala": round(p99, 5), "itens": [asdict(e) for e in julgadas]}
+    return {
+        **asdict(resumo),
+        "total": len(achadas),
+        "nao_localizadas": achadas.count(None),
+        "p99_da_fala": round(p99, 5),
+        "itens": [asdict(e) for e in julgadas],
+    }

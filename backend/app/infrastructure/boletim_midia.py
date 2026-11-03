@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import subprocess
 import threading
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -35,6 +36,16 @@ TAXA_DO_AUDIO = 48000
 _TIMEOUT_DA_SONDA_SEG = 30
 _BELOW_NORMAL_PRIORITY_CLASS = 0x00004000
 _THREADS = "2"
+
+# Achar a emenda (D-1027): o último segundo de cada trecho, como ele soa na live,
+# é procurado no vídeo final perto de onde a soma das durações o põe. O render
+# alonga o vídeo de 0,01 s a 2 s, e a deriva se acumula emenda a emenda.
+MOLDE_DA_EMENDA_SEG = 1.0
+BUSCA_DA_EMENDA_SEG = 2.0
+# Correlação normalizada mínima para aceitar que o molde foi achado.
+CORRELACAO_MINIMA = 0.7
+# Molde mais fraco que isto é silêncio: qualquer lugar "casa" com ele.
+_MOLDE_MUDO_DBFS = -50.0
 
 
 class ErroDeMedicao(Exception):
@@ -248,3 +259,71 @@ def medir_emendas(
         depois = _dbfs(amostras[i : i + janela])
         medidas.append((instante, antes, depois, degrau))
     return medidas
+
+
+def ler_trecho(caminho: Path, inicio_seg: float, duracao_seg: float, timeout: float) -> np.ndarray:
+    """`duracao_seg` de áudio mono, 48 kHz, a partir de `inicio_seg` (vazio se passar do fim)."""
+    cmd = [
+        "ffmpeg", "-hide_banner", "-nostdin", "-v", "error", "-threads", _THREADS,
+        "-ss", f"{max(0.0, inicio_seg):.3f}", "-i", str(caminho), "-t", f"{duracao_seg:.3f}",
+        "-vn", "-ac", "1", "-ar", str(TAXA_DO_AUDIO), "-f", "s16le", "-",
+    ]  # fmt: skip
+    bruto = _rodar(cmd, timeout, lambda p: p.stdout.read(), stderr=subprocess.DEVNULL)
+    return np.frombuffer(bruto[: len(bruto) // 2 * 2], dtype=np.int16)
+
+
+def _correlacao(molde: np.ndarray, trecho: np.ndarray) -> np.ndarray:
+    """Correlação normalizada de `molde` em cada posição de `trecho` (-1 a 1)."""
+    n = molde.size
+    if trecho.size < n:
+        return np.array([])
+    m = molde.astype(np.float64)
+    m -= m.mean()
+    t = trecho.astype(np.float64)
+    tam = t.size + n
+    numerador = np.fft.irfft(np.fft.rfft(t, tam) * np.conj(np.fft.rfft(m, tam)), tam)
+    numerador = numerador[: t.size - n + 1]
+    c1 = np.concatenate(([0.0], np.cumsum(t)))
+    c2 = np.concatenate(([0.0], np.cumsum(t**2)))
+    soma, soma2 = c1[n:] - c1[:-n], c2[n:] - c2[:-n]
+    denominador = np.sqrt(np.maximum(soma2 - soma**2 / n, 1e-12) * np.sum(m**2))
+    return numerador / denominador
+
+
+def localizar_emendas(
+    final: np.ndarray,
+    trechos: Sequence[tuple[float, float]],
+    ler_molde: Callable[[float, float], np.ndarray],
+) -> list[float | None]:
+    """Onde cada emenda está no vídeo final, ou `None` quando não dá para ter certeza.
+
+    A emenda j é onde o trecho j termina. O molde é o último segundo dele na
+    fonte (`ler_molde(inicio, duração)`); acha-se por correlação perto da soma
+    das durações mais a deriva já vista. Molde mudo ou sem correlação forte não
+    chuta uma posição: vira `None` e quem chama conta como não localizada.
+    """
+    achadas: list[float | None] = []
+    acumulado = 0.0
+    deriva = 0.0
+    for inicio, fim in list(trechos)[:-1]:
+        acumulado += fim - inicio
+        molde = ler_molde(fim - MOLDE_DA_EMENDA_SEG, MOLDE_DA_EMENDA_SEG)
+        posicao = _achar(final, molde, acumulado + deriva)
+        achadas.append(None if posicao is None else round(posicao, 3))
+        if posicao is not None:
+            deriva = posicao - acumulado
+    return achadas
+
+
+def _achar(final: np.ndarray, molde: np.ndarray, esperado_seg: float) -> float | None:
+    if molde.size < TAXA_DO_AUDIO // 2 or _dbfs(molde) < _MOLDE_MUDO_DBFS:
+        return None
+    ini = max(0, int((esperado_seg - MOLDE_DA_EMENDA_SEG - BUSCA_DA_EMENDA_SEG) * TAXA_DO_AUDIO))
+    fim = min(final.size, int((esperado_seg + BUSCA_DA_EMENDA_SEG) * TAXA_DO_AUDIO))
+    correlacao = _correlacao(molde, final[ini:fim])
+    if correlacao.size == 0:
+        return None
+    melhor = int(np.argmax(correlacao))
+    if correlacao[melhor] < CORRELACAO_MINIMA:
+        return None
+    return (ini + melhor + molde.size) / TAXA_DO_AUDIO
