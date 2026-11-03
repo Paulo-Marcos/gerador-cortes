@@ -83,7 +83,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN | Regra | Onde mora | Origem |
 |---|---|---|---|
 | RN-35 | A cena traz a frase literal da fala, quem disse e a fonte, quando houver. A conferência contra a transcrição **só avisa**: nunca reescreve, apaga nem impede a validação, porque quem decide o que a cena afirma é o operador. O número só leva o rótulo "Dado" quando tem fonte. | `domain/corte/origem_da_cena.py`; `cenas-limpo/rotulo-do-numero.ts` | D-1018 |
-| RN-36 | Quando o corte muda, a cena segue as palavras que estavam sob ela, por alinhamento das transcrições. Se elas saíram, a cena fica onde estava, avisa e guarda a frase, para voltar junto com o trecho. A abertura (até 1 s) fica no começo. | `domain/corte/ancora_da_cena.py` | D-1018 |
+| RN-36 | Quando o corte muda, a cena segue as palavras que estavam sob ela, por alinhamento das transcrições. Se elas saíram, a cena fica onde estava, avisa e guarda a frase, para voltar junto com o trecho, e o recorte desfaz a marca de cenas validadas; a marca não volta sozinha. Só mover a cena mantém a marca. Transcrição refeita não é recorte: se as palavras da cena também sumiram da live, cena e marca ficam como estão. A abertura (até 1 s) fica no começo. | `domain/corte/ancora_da_cena.py`; `services/origem_das_cenas.py` | D-1018, D-1030 |
 
 ## Divergências encontradas na conferência
 

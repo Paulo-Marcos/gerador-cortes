@@ -12,7 +12,10 @@ reaparecia 27 s depois), e a busca levava a cena para a repetição em vez de av
 """
 
 import json
+from collections import Counter
+from collections.abc import Callable
 from difflib import SequenceMatcher
+from functools import cache
 
 from app.domain.corte.ancora_match import _tokenizar
 from app.domain.corte.corte_mapper import extrair_cenas_remotion, normalizar_cena_remotion
@@ -30,6 +33,10 @@ _ABERTURA_SEG = 1.0
 _PRIMEIRO_INSTANTE_FORA_DA_ABERTURA = _ABERTURA_SEG + 0.01
 # O início gravado tem 2 casas: sem a folga, a palavra da própria cena ficaria para trás.
 _FOLGA_DO_ARREDONDAMENTO_SEG = 0.01
+# Há emendas a cada poucos segundos: palavras vizinhas no corte podem não ser vizinhas na
+# live, e a fala da cena pode cruzar duas. Por isso 3 seguidas bastam. Errar aqui é pedir
+# nova validação, o lado seguro; olhar mais longe acusaria a cena de um trecho retranscrito.
+_PALAVRAS_SEGUIDAS_NA_LIVE = 3
 
 Tokens = list[tuple[str, float]]
 
@@ -38,7 +45,7 @@ def _tokens(transcricao: list) -> Tokens:
     """(palavra normalizada, tempo) de cada palavra; a pontuação não atrapalha o alinhamento."""
     tokens = []
     for palavra in achatar_palavras(transcricao):
-        for token in _tokenizar(palavra.get("texto", "")):
+        for token in _tokenizar(str(palavra.get("texto") or "")):
             tokens.append((token, float(palavra["inicio_seg"])))
     return tokens
 
@@ -142,7 +149,36 @@ def _mover(cena: dict, novo_inicio: float) -> None:
             cena[campo] = round(normalizada[campo] + delta, 2)
 
 
-def _seguir_cena(cena: dict, antigos: Tokens, novos: Tokens, mapa: dict[int, int]) -> None:
+def _trechos_da_live(transcricao_da_live: list | None) -> set[tuple[str, ...]]:
+    tokens = [token for token, _ in _tokens(transcricao_da_live or [])]
+    return {
+        tuple(tokens[i : i + _PALAVRAS_SEGUIDAS_NA_LIVE])
+        for i in range(len(tokens) - _PALAVRAS_SEGUIDAS_NA_LIVE + 1)
+    }
+
+
+def _foi_recortada(frase: list[str], trechos_da_live: set[tuple[str, ...]]) -> bool:
+    """A fala da cena saiu do corte, mas segue na live? Então foi recorte.
+
+    Recorte nunca tira palavra da live; transcrição refeita tira. Comparar só a
+    transcrição antiga com a nova não separa os dois: um recorte que tira uma parte e
+    devolve outra também deixa pouco em comum. Sem a live, não há como saber: vale recorte.
+    """
+    if not trechos_da_live or len(frase) < _PALAVRAS_SEGUIDAS_NA_LIVE:
+        return True
+    return any(
+        tuple(frase[i : i + _PALAVRAS_SEGUIDAS_NA_LIVE]) in trechos_da_live
+        for i in range(len(frase) - _PALAVRAS_SEGUIDAS_NA_LIVE + 1)
+    )
+
+
+def _seguir_cena(
+    cena: dict,
+    antigos: Tokens,
+    novos: Tokens,
+    mapa: dict[int, int],
+    trechos_da_live: Callable[[], set[tuple[str, ...]]],
+) -> None:
     normalizada = normalizar_cena_remotion(cena)
     if normalizada["inicio"] <= _ABERTURA_SEG:
         return
@@ -155,17 +191,38 @@ def _seguir_cena(cena: dict, antigos: Tokens, novos: Tokens, mapa: dict[int, int
         posicao = _posicao_da_cena(antigos, normalizada["inicio"])
         novo = _novo_inicio(normalizada, posicao, antigos, novos, mapa)
         if novo is None:
-            frase = antigos[posicao : posicao + _PALAVRAS_DA_FRASE]
-            cena["ancora_perdida"] = True
-            cena["frase_ancora"] = " ".join(token for token, _ in frase)
+            frase = [token for token, _ in antigos[posicao : posicao + _PALAVRAS_DA_FRASE]]
+            if _foi_recortada(frase, trechos_da_live()):
+                cena["ancora_perdida"] = True
+                cena["frase_ancora"] = " ".join(frase)
             return
     cena.pop("ancora_perdida", None)
     cena.pop("frase_ancora", None)
     _mover(cena, novo)
 
 
+def _frases_perdidas(cenas_gravadas: str | None) -> Counter:
+    cenas = extrair_cenas_remotion(json.loads(cenas_gravadas or "[]"))
+    return Counter(
+        str(cena.get("frase_ancora"))
+        for cena in cenas
+        if isinstance(cena, dict) and cena.get("ancora_perdida")
+    )
+
+
+def perdeu_frase(cenas_antes: str | None, cenas_depois: str) -> bool:
+    """Este recorte tirou a frase de alguma cena? As que já estavam sem ela não contam.
+
+    Compara quais frases, não quantas: se uma volta e outra sai, a conta empata.
+    """
+    return bool(_frases_perdidas(cenas_depois) - _frases_perdidas(cenas_antes))
+
+
 def seguir_recorte(
-    cenas_gravadas: str | None, transcricao_antiga: str | None, transcricao_nova: list
+    cenas_gravadas: str | None,
+    transcricao_antiga: str | None,
+    transcricao_nova: list,
+    transcricao_da_live: list | None = None,
 ) -> str | None:
     """As cenas gravadas depois do recorte, ou None quando não há o que mudar nelas.
 
@@ -183,8 +240,10 @@ def seguir_recorte(
         return None
 
     mapa = _alinhar(antigos, novos)
+    # Só se monta se alguma cena perdeu a fala: a live pode ter 100 mil palavras.
+    trechos = cache(lambda: _trechos_da_live(transcricao_da_live))
     for cena in cenas:
-        _seguir_cena(cena, antigos, novos, mapa)
+        _seguir_cena(cena, antigos, novos, mapa, trechos)
     extrair_cenas_remotion(payload).sort(
         key=lambda c: normalizar_cena_remotion(c)["inicio"] if isinstance(c, dict) else 0.0
     )
