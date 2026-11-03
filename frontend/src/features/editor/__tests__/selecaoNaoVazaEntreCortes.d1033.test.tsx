@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UmaTelaPorCorte } from '@/upgrade/UmaTelaPorCorte';
 import { useEditorPage } from '../useEditorPage';
+import { assentar, montar } from './domMinimo';
 
 // D-1033: ficar no editor ao trocar de corte manteve viva a seleção de trecho.
 // Medido no navegador: selecionar um trecho no corte 5, dar K e apertar
@@ -78,67 +78,30 @@ function Sonda() {
   return null;
 }
 
-/** O que o React DOM pede do contêiner quando a tela não desenha nada. */
-function conteiner(dono: unknown) {
-  return {
-    nodeType: 1,
-    nodeName: 'DIV',
-    tagName: 'DIV',
-    namespaceURI: 'http://www.w3.org/1999/xhtml',
-    ownerDocument: dono,
-    childNodes: [],
-    firstChild: null,
-    lastChild: null,
-    addEventListener() {},
-    removeEventListener() {},
-  };
-}
-
-/** Deixa rodar as tarefas que o React e o roteador agendaram. */
-const assentar = async () => {
-  for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 0));
-};
-
 const atalho = (descricao: string) => {
   const achado = tela.bindings.find((b) => b.description === descricao);
   expect(achado).toBeDefined();
   return achado!.action;
 };
 
-const global = globalThis as Record<string, unknown>;
-let raiz: Root;
+let limpar: () => Promise<void>;
 
 beforeEach(async () => {
-  const documento = { nodeType: 9, activeElement: null, addEventListener() {}, removeEventListener() {} };
-  global.window = globalThis;
-  global.document = documento;
-  global.HTMLIFrameElement = class {};
-  global.IS_REACT_ACT_ENVIRONMENT = false;
-  global.addEventListener = () => undefined;
-  global.removeEventListener = () => undefined;
-  vi.stubGlobal('localStorage', { getItem: () => null, setItem() {}, removeItem() {} });
   h.riscar.mockClear();
-
   const roteador = createMemoryRouter(
     [{ path: '/projetos/:id/cortes/:corteId', element: <UmaTelaPorCorte><Sonda /></UmaTelaPorCorte> }],
     { initialEntries: ['/projetos/p1/cortes/c5'] },
   );
-  raiz = createRoot(conteiner(documento) as unknown as HTMLElement);
-  raiz.render(
+  ({ limpar } = montar(
     <QueryClientProvider client={new QueryClient()}>
       <RouterProvider router={roteador} />
     </QueryClientProvider>,
-  );
+  ));
   await assentar();
 });
 
 afterEach(async () => {
-  raiz.unmount();
-  await assentar();
-  vi.unstubAllGlobals();
-  for (const nome of ['window', 'document', 'HTMLIFrameElement', 'IS_REACT_ACT_ENVIRONMENT', 'addEventListener', 'removeEventListener']) {
-    delete global[nome];
-  }
+  await limpar();
 });
 
 describe('D-1033 · a seleção de trecho não passa para o corte seguinte', () => {

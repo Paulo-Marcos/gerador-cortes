@@ -249,13 +249,11 @@ export function FinalReviewPage() {
       notify('Corte já está aprovado.', { tone: 'info' });
       return;
     }
-    atualizarCorte.mutate(
-      { status: 'aprovado' },
-      {
-        onSuccess: () => notify('Corte aprovado.', { tone: 'success' }),
-        onError: (e) =>
-          notify(e instanceof Error ? e.message : 'Erro ao aprovar.', { tone: 'error' }),
-      },
+    // D-1033: aprovar e já dar K desmonta a tela, e o callback do `mutate` não
+    // roda depois disso. A promessa roda, e a falha não some em silêncio.
+    atualizarCorte.mutateAsync({ status: 'aprovado' }).then(
+      () => notify('Corte aprovado.', { tone: 'success' }),
+      (e) => notify(e instanceof Error ? e.message : 'Erro ao aprovar.', { tone: 'error' }),
     );
   }
 

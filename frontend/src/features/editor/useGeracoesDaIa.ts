@@ -9,11 +9,10 @@ import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
 
 // D-420 — chaves das gerações via Claude, POR CORTE.
 //
-// A rota `/projetos/:id/cortes/:corteId` renderiza o MESMO elemento para todos
-// os cortes, então trocar de corte não remonta o editor: um `isPending` de
-// componente sobrevivia à troca e desabilitava o botão do corte novo por causa
-// da execução do anterior. Com a mutação chaveada, o estado de execução vive no
-// cache do react-query e é individual por corte — mesmo padrão do D-418.
+// A geração continua depois de trocar de corte, e cada corte abre numa instância
+// nova da tela (D-1033): um `isPending` de componente se perderia na volta. Com a
+// mutação chaveada, o estado de execução vive no cache do react-query e é
+// individual por corte — mesmo padrão do D-418.
 export const metadadosClaudeKey = (corteId: string) => ['claude-metadados', corteId] as const;
 
 export const trechosClaudeKey = (corteId: string) => ['claude-trechos', corteId] as const;

@@ -349,18 +349,18 @@ export function useYoutubeLayoutPanel({ corteId, projetoId, layout, currentTime,
         [...mudadasRef.current].map((chave) => [chave, valores[chave] ?? null]),
       );
       const body = { layout_youtube: mudancas } as Partial<Corte>;
-      atualizar.mutate(body, {
-        onSuccess: () => {
+      atualizar.mutateAsync(body).then(
+        () => {
           mudadasRef.current = new Set();
           setDirty(false);
           notify('Layout YouTube salvo.', { tone: 'success' });
         },
-        onError: (error) => {
+        (error) => {
           notify(error instanceof Error ? error.message : 'Erro ao salvar layout.', {
             tone: 'error',
           });
         },
-      });
+      );
     }, [draft, atualizar, notify]);
 
     // Ctrl+S na tela Pos delega para save via ref. Sem dirty, retorna

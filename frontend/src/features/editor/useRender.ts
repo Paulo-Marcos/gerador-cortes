@@ -139,10 +139,6 @@ export function useRenderFinal(corteId: string, reacoes: ReacoesDoRenderFinal) {
   const statusLidoEm = pipelineStatus.dataUpdatedAt;
 
   useEffect(() => {
-    setMarcado(renderFinalMarcado(corteId));
-  }, [corteId]);
-
-  useEffect(() => {
     if (!corteId || !marcado) return;
     const status = pipelineStatus.data;
     if (!status || renderFinal.isPending) return;
@@ -162,17 +158,19 @@ export function useRenderFinal(corteId: string, reacoes: ReacoesDoRenderFinal) {
     setMarcado(true);
     setModalDeInicioAberto(false);
     reacoesRef.current.aoIniciar?.();
-    renderFinal.mutate(opcoes, {
-      onSuccess: () => {
+    // D-1033: `mutateAsync` porque o K logo depois de pedir desmonta a tela, e o
+    // callback do `mutate` não rodaria: a recusa sumiria e a marca ficaria presa.
+    renderFinal.mutateAsync(opcoes).then(
+      () => {
         void pipelineStatus.refetch();
         reacoesRef.current.aoMudarStatus();
       },
-      onError: (erro) => {
+      (erro) => {
         window.localStorage.removeItem(chaveDoRenderFinal(corteId));
         setMarcado(false);
         reacoesRef.current.aoFalharAoIniciar?.(erro);
       },
-    });
+    );
   }
 
   /** Com etapas já prontas no disco, pergunta antes (continuar ou do zero). */
