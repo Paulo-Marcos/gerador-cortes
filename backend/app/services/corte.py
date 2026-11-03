@@ -18,7 +18,7 @@ from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
-from app.domain.corte import alerta_conferir, ciclo_corte, metadado_corte
+from app.domain.corte import alerta_conferir, ancora_da_cena, ciclo_corte, metadado_corte
 from app.domain.corte.ancora_match import ancorar_desvio
 from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
@@ -618,10 +618,12 @@ async def _gravar_sincronia(
     # Retry para "database is locked" em picos de escrita. D-652: sem o
     # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
     # seguintes morrem em PendingRollbackError — o retry era inócuo e
-    # mascarava o erro real. D-716: o `rollback` também descarta o que
-    # foi atribuído ao corte, então cada tentativa atribui de novo —
-    # antes a segunda gravava nada e a sincronia se perdia em silêncio.
+    # mascarava o erro real. D-716: o `rollback` descarta o atribuído ao corte, então
+    # cada tentativa atribui de novo. Cenas só quando mudam, para não apagar outra edição.
+    cenas = ancora_da_cena.seguir_recorte(corte.cenas_remotion, corte.transcricao_final, nova_trans)
     for attempt in range(_TENTATIVAS_DE_GRAVACAO):
+        if cenas is not None:
+            corte.cenas_remotion = cenas
         corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
         corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
         corte.transcricao_final_texto = texto_final
@@ -1610,12 +1612,10 @@ class CorteService:
             segmentos_mantidos = _segmentos_na_ordem_do_corte(corte, c_inicio, c_fim, desvios)
             nova_trans = TimelineMath.recalcular_transcricao(trans_bruta, segmentos_mantidos)
 
-            # ── 3. Texto puro limpo para IA ──
             texto_final = " ".join(
                 [str(item.get("texto", "")).strip() for item in nova_trans if item.get("texto")]
             )
 
-            # Log de debug para verificar sincronia
             if nova_trans:
                 operational_debug(
                     "CorteService",

@@ -16,6 +16,7 @@ from app.domain.corte.corte_mapper import (
     coalescer_chaves_mascote,
     extrair_cenas_remotion,
 )
+from app.domain.corte.origem_da_cena import CONTRATO_DA_ORIGEM
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo_falante
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
@@ -94,7 +95,7 @@ def _texto_da_parte(
     primeira = i == 0
     if primeira and abertura:
         cabecalho += f"{abertura}\n\n"
-    return cabecalho + editorial_scaffolds.resolver_scaffold("cenas").format(
+    return cabecalho + (editorial_scaffolds.resolver_scaffold("cenas") + CONTRATO_DA_ORIGEM).format(
         titulo=corte.titulo_proposto,
         tema_central=corte.tema_central,
         resumo=corte.resumo,
@@ -273,8 +274,6 @@ class CenasRemotionService:
 
             from app.domain.projeto.chunker import fatiar_transcricao
 
-            # 1. Primeiro garante a granularidade (evita blocos de texto gigantes)
-            # 1. Granulariza a transcrição inteira primeiro e atribui índices globais
             transcricao_granular = CenasRemotionService._get_granular(transcricao_final)
             CenasRemotionService._exigir_transcricao_dentro_do_corte(
                 transcricao_granular, dur_bruta
@@ -335,7 +334,6 @@ class CenasRemotionService:
             },
         }
 
-    @staticmethod
     @staticmethod
     def _exigir_transcricao_dentro_do_corte(transcricao_granular: list, dur_bruta: float) -> None:
         """Barra a geração quando a transcrição não cabe no corte.
@@ -814,6 +812,8 @@ CAMPOS_SIMPLES_DA_CENA = (
     "textura",
     "ancoraLegendas",
     "motivo",
+    "frase_da_fala",
+    "quem_disse",
     "retrato_url",
     "layout_card",
     "modelo_cena",

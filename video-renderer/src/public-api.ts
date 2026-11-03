@@ -92,4 +92,5 @@ export {
 
 // D-918: o movimento das cenas no estilo limpo (funções puras de quadro → valor).
 export * as movimentoDoLimpo from "./cenas-limpo/movimento";
+export { rotuloDoNumero } from "./cenas-limpo/rotulo-do-numero";
 export { analisarNumeroDestaque } from "./cenas-v2/_shared/numeroFit";

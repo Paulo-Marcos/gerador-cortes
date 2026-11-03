@@ -125,6 +125,18 @@
     "fonte": {
       "type": "string"
     },
+    "frase_da_fala": {
+      "type": "string"
+    },
+    "quem_disse": {
+      "type": "string"
+    },
+    "frase_ancora": {
+      "type": "string"
+    },
+    "ancora_perdida": {
+      "type": "boolean"
+    },
     "retrato_url": {
       "type": "string"
     },

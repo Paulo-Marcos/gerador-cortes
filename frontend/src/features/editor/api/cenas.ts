@@ -29,6 +29,10 @@ export const cenasApi = {
   preencherRetratos: (corteId: string) =>
     dados(api.POST('/api/cortes/{corte_id}/cenas-remotion/retratos', doCorte(corteId))),
 
+  /** Os avisos de origem das cenas gravadas (D-1018): só avisam, nada muda. */
+  conferirOrigem: (corteId: string) =>
+    dados(api.GET('/api/cortes/{corte_id}/cenas-remotion/conferencia', doCorte(corteId))),
+
   obterPromptCenasRemotion: (corteId: string) =>
     dados(api.GET('/api/cortes/{corte_id}/cenas-remotion/prompt', doCorte(corteId))),
 };
