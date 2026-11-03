@@ -73,7 +73,7 @@ export function OrigemDaCena({
       )}
       {afirma && (
         <label className="flex items-center gap-1.5 text-[var(--wb-text-dim)]">
-          <span className="font-code text-[10px] font-bold uppercase tracking-[0.08em]">Fonte</span>
+          <span className="font-code text-[11px] font-bold uppercase tracking-[0.08em]">Fonte</span>
           <input
             type="text"
             value={cena.fonte ?? ''}
