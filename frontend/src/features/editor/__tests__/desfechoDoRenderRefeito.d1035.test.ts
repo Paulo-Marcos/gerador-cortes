@@ -45,10 +45,11 @@ describe('desfechoDoRender com o vídeo do render anterior no disco', () => {
     });
   });
 
-  it('parado com o vídeo no disco e sem estado de render segue concluído', () => {
-    expect(desfechoDoRender(statusComVideoAntigo({ state: 'idle', running: false }))).toMatchObject({
+  it('cancelado com o vídeo antigo no disco acaba sem concluir', () => {
+    expect(desfechoDoRender(statusComVideoAntigo({ state: 'cancelled', running: false }))).toEqual({
       acabou: true,
-      concluiu: true,
+      concluiu: false,
+      falhou: false,
     });
   });
 });
