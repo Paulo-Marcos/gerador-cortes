@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain.compartilhado.erros import NaoEncontrado
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.models import Corte, Projeto
 from app.services.corte import CorteService
 from app.services.ingestao import IngestaoService
@@ -29,13 +29,17 @@ async def _ressincronizar_cortes(projeto_id: str) -> int:
 
 class ProjetoService:
     @staticmethod
-    async def atualizar_transcricao(projeto_id: str, transcricao: list) -> int:
+    async def atualizar_transcricao(projeto_id: str, transcricao: object) -> int:
         """Grava a transcrição da live e, só depois, a copia para os cortes (D-1039).
 
         A ordem é o que mantém os dois coerentes: pendente na sessão do lote, a
         transcrição sumia no primeiro `rollback`, e os cortes seguintes gravavam um
         texto que o projeto não tinha. Devolve quantos cortes foram sincronizados.
         """
+        # Gravada antes do lote, uma transcrição sem forma de lista ficaria no projeto.
+        if not isinstance(transcricao, list):
+            raise PedidoInvalido("Campo 'transcricao' precisa ser uma lista")
+
         async with AsyncSessionLocal() as db, db.begin():
             projeto = await _carregar_projeto(db, projeto_id)
             projeto.transcricao_raw = json.dumps(transcricao, ensure_ascii=False)
