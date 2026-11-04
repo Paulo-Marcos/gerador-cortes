@@ -275,6 +275,8 @@ describe('D-1033 · aprovar e salvar o layout não perdem o aviso de erro', () =
     expect(fonte('../../final-review/FinalReviewPage.tsx')).toContain(
       "atualizarCorte.mutateAsync({ status: 'aprovado' }).then(",
     );
-    expect(fonte('../fase2/useYoutubeLayoutPanel.tsx')).toContain('atualizar.mutateAsync(body).then(');
+    expect(fonte('../fase2/useGravarLayout.ts')).toContain(
+      'gravarNoCorte({ layout_youtube: mudancas } as Partial<Corte>).then(',
+    );
   });
 });
