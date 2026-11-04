@@ -69,8 +69,8 @@ function Utilitario({
 }
 
 export default function WorkspaceProjetoPage() {
-  const { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, falhaDosCortes, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
-  const listaVazia = listaVaziaDoWorkspace(busca, soNoAr);
+  const { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, cortesCarregados, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, falhaDosCortes, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
+  const listaVazia = listaVaziaDoWorkspace(busca, soNoAr, cortesCarregados);
 
 
   return (
