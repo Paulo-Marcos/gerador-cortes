@@ -116,7 +116,10 @@ export interface OpcoesDoRenderFinal {
 
 /** O render acabou? Concluído, com falha, ou o backend ficou ocioso sem avisar. */
 export function desfechoDoRender(status: PipelineStatusResponse) {
-  const concluiu = status.state === 'done' || Boolean(status.fases?.encode);
+  // D-1035: o video.mp4 do render anterior fica no disco durante o render novo,
+  // então o arquivo não prova nada. Só o `done` conclui; o backend já responde
+  // `done` quando está ocioso e o vídeo existe (situacao_do_render.py).
+  const concluiu = status.state === 'done';
   const falhou = status.state === 'error';
   const ocioso = status.running === false && status.state !== 'running';
   return { acabou: concluiu || falhou || ocioso, concluiu, falhou };
