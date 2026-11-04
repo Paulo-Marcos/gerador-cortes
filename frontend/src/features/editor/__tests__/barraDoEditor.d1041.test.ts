@@ -97,7 +97,7 @@ describe('D-1041 · a ligação no editor', () => {
     expect(pagina).toContain('onAlternarVeredito: toggleAprovado');
     expect(pagina).toContain('onIrParaPos: irParaPos');
     // Metadados rodando não é o bruto: o principal não pode dizer "Gerando bruto…".
-    expect(pagina).toContain("brutoOcupado: brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual");
+    expect(pagina).toContain("brutoOcupado: brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, salvando");
   });
 
   it('A continua alternando o veredito', () => {

@@ -1,6 +1,6 @@
 import type { OverflowMenuItem } from '@/components/ui/overflow-menu';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { finalReviewPath, postProductionPath } from '@/features/post-production/postProductionNavigation';
+import { finalReviewPath, nuncaGerouBruto, postProductionPath } from '@/features/post-production/postProductionNavigation';
 import { ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import type { Tira } from '@/upgrade/tiraDoCorte';
 
@@ -64,32 +64,31 @@ export function primarioDaLinha(
  * D-1041: o principal do corte aprovado era "Finalizar" e abria sempre a Pós, com
  * o bruto ou só a capa faltando. Ele passa a seguir a tira: diz o que falta e leva
  * à tela onde isso se faz. O clique só leva, então o rótulo diz verbo e destino:
- * nada dispara ao chegar. As etapas do render são um gesto só. Com o vídeo final
- * pronto, o que veio antes dele não é mais o que falta: pedir bruto a esse corte
- * faria um laço, porque o editor o conta como pronto e devolve à Pós.
+ * nada dispara ao chegar. As etapas do render são um gesto só. O bruto segue a mesma
+ * regra da Pós: só quem nunca gerou vai ao editor; com rastro, regerar é na Pós.
  */
 export function montarProximoDaLinha(
   tira: Tira,
   projetoId: string,
   corteId: string,
   ir: (caminho: string) => void,
+  corte?: Corte,
 ): Pick<Primario, 'texto' | 'icone' | 'acao'> {
   const pos = postProductionPath(projetoId, corteId);
   const metadados = `/projetos/${projetoId}/metadados?corte=${corteId}`;
-  const pips = tira.grupos.flatMap((g) => g.pips);
-  const renderizado = pips.some((p) => p.nome === 'Final' && p.estado === 'feito');
-  const antesDoRender = ['Bruto', 'Graded', 'Overlays'].includes(tira.proxima?.nome ?? '') || tira.proxima?.verbo === 'gerar cenas';
-  const proxima = renderizado && antesDoRender ? pips.find((p) => ['Thumb', 'Meta'].includes(p.nome) && p.estado !== 'feito') : tira.proxima;
+  const nuncaGerou = !corte || nuncaGerouBruto(corte, undefined, { brutoAusente: true, arquivosLimpos: false });
   const [texto, icone, caminho]: [string, IconName, string] =
     {
-      Bruto: ['Gerar bruto no editor', 'scissors', `/projetos/${projetoId}/cortes/${corteId}`],
-      Cenas: [proxima?.verbo === 'gerar cenas' ? 'Gerar cenas na Pós' : 'Validar cenas na Pós', 'list-checks', pos],
+      Bruto: nuncaGerou
+        ? ['Gerar bruto no editor', 'scissors', `/projetos/${projetoId}/cortes/${corteId}`]
+        : ['Gerar bruto na Pós', 'scissors', pos],
+      Cenas: [tira.proxima?.verbo === 'gerar cenas' ? 'Gerar cenas na Pós' : 'Validar cenas na Pós', 'list-checks', pos],
       Graded: ['Renderizar na Pós', 'clapperboard', pos],
       Overlays: ['Renderizar na Pós', 'clapperboard', pos],
       Final: ['Renderizar na Pós', 'clapperboard', pos],
       Thumb: ['Gerar capa em Metadados', ICONE_DO_CONCEITO.iaGera, metadados],
       Meta: ['Completar metadados', 'file-text', metadados],
-    }[proxima?.nome ?? ''] as [string, IconName, string] | undefined ??
+    }[tira.proxima?.nome ?? ''] as [string, IconName, string] | undefined ??
     ['Revisar', 'circle-check', finalReviewPath(projetoId, corteId)];
   return { texto, icone, acao: () => ir(caminho) };
 }

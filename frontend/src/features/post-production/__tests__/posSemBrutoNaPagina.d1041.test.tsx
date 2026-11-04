@@ -157,6 +157,12 @@ describe('D-1041 · a Pós sem bruto, na página', () => {
     expect(h.videoSrc).toBe('');
   });
 
+  it('corte devolvido, fora do export, com render: o player pede o vídeo final', () => {
+    const { primario } = abrir({ is_pos_producao: 1 });
+    expect(primario.texto).toBe('Renderizar de novo');
+    expect(h.videoSrc).toContain('c1');
+  });
+
   it('com vídeo final, o player continua pedindo a fonte', () => {
     h.export = [{ corte_id: 'c1', video_pronto: true }];
     abrir();

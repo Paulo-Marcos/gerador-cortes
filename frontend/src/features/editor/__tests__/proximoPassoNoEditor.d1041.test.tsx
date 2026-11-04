@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ErroDaApi } from '@/shared/api';
 import { UmaTelaPorCorte } from '@/upgrade/UmaTelaPorCorte';
 import { useEditorPage } from '../useEditorPage';
 import { assentar, montar } from './domMinimo';
@@ -26,18 +27,16 @@ const h = vi.hoisted(() => ({
   gerarBruto: vi.fn(),
   gerarMetadados: vi.fn(),
   avisar: vi.fn(),
-  tituloNoExport: '' as string,
-  noExport: true,
   metadados: undefined as string | undefined,
+  lerMetadado: vi.fn(),
 }));
 
 vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', () => ({
   useAbrirPasta: h.mutacao,
-  useExportStatus: () => ({
-    data: { cortes: h.noExport ? [{ corte_id: 'c5', titulo_youtube: h.tituloNoExport }] : [] },
-  }),
+  useExportStatus: () => ({ data: { cortes: [] } }),
   useProjeto: () => ({ data: { titulo_live: 'Live' } }),
 }));
+vi.mock('@/features/metadata/api/metadados', () => ({ metadadosApi: { obterMetadado: h.lerMetadado } }));
 vi.mock('@/features/settings', () => ({
   useContextoCorte: () => ({ antesSeg: 0, depoisSeg: 0 }),
   useVelocidadePlayerPadrao: () => 1,
@@ -99,9 +98,9 @@ const abrir = async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   h.salvar.mockReset();
-  h.tituloNoExport = '';
-  h.noExport = true;
   h.metadados = undefined;
+  h.lerMetadado.mockReset();
+  h.lerMetadado.mockResolvedValue({ id: null, corte_id: 'c5' });
 });
 
 afterEach(async () => {
@@ -119,25 +118,28 @@ describe('D-1041 · o principal do editor, com o hook real', () => {
     expect(h.salvar).not.toHaveBeenCalled();
   });
 
-  it('1ª geração sem metadados: gera o bruto e pede os metadados', async () => {
+  it.each<[string, () => void]>([
+    ['sem metadado nenhum', () => undefined],
+    ['com só o título que o Fire grava', () => h.lerMetadado.mockResolvedValue({ titulo_youtube: 'Título proposto', descricao_youtube: '', opcoes_titulo: [] })],
+    ['com o metadado inexistente (404)', () => h.lerMetadado.mockRejectedValue(new ErroDaApi(404, '', 'Not Found'))],
+  ])('1ª geração %s: gera o bruto e pede os metadados', async (_caso, preparar) => {
+    preparar();
     await abrir();
     tela.handleGerarBrutoPrincipal();
+    await assentar();
     expect(h.gerarBruto).toHaveBeenCalledOnce();
     expect(h.gerarMetadados).toHaveBeenCalledWith('claude');
   });
 
-  it('1ª geração com título já escrito: gera o bruto sem reescrever os metadados', async () => {
-    h.tituloNoExport = 'Título que já foi revisado';
+  it.each<[string, () => void]>([
+    ['descrição escrita, mesmo sem título', () => h.lerMetadado.mockResolvedValue({ titulo_youtube: '', descricao_youtube: 'Escrita à mão' })],
+    ['opções de título já geradas', () => h.lerMetadado.mockResolvedValue({ descricao_youtube: '', opcoes_titulo: ['A', 'B'] })],
+    ['leitura que falhou: na dúvida, preserva', () => h.lerMetadado.mockRejectedValue(new ErroDaApi(500, '', 'Erro'))],
+  ])('1ª geração com %s: gera o bruto sem pedir metadados', async (_caso, preparar) => {
+    preparar();
     await abrir();
     tela.handleGerarBrutoPrincipal();
-    expect(h.gerarBruto).toHaveBeenCalledOnce();
-    expect(h.gerarMetadados).not.toHaveBeenCalled();
-  });
-
-  it('corte fora do export, como o devolvido a proposto: na dúvida, não pede metadados', async () => {
-    h.noExport = false;
-    await abrir();
-    tela.handleGerarBrutoPrincipal();
+    await assentar();
     expect(h.gerarBruto).toHaveBeenCalledOnce();
     expect(h.gerarMetadados).not.toHaveBeenCalled();
   });
@@ -146,6 +148,7 @@ describe('D-1041 · o principal do editor, com o hook real', () => {
     h.metadados = 'rodando';
     await abrir();
     tela.handleGerarBrutoPrincipal();
+    await assentar();
     expect(h.gerarBruto).toHaveBeenCalledOnce();
     expect(h.gerarMetadados).not.toHaveBeenCalled();
   });

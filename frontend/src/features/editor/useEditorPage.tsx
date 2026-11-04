@@ -28,11 +28,11 @@ import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, salvarAntesDe, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
 import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
+import { pedirMetadadosSeFaltam } from './pedirMetadadosSeFaltam';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
 // barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
-// Lido uma vez, no modulo, pela mesma razao do router: casca e tela nunca
-// podem ficar em versoes diferentes dentro da mesma sessao.
+// D-1041: a primeira geração só pede metadados se faltam (pedirMetadadosSeFaltam).
 
 export function findPreviousApprovedCorte(cortes: Corte[], corte: Corte): Corte | null {
   return (
@@ -272,7 +272,7 @@ export function useEditorPage() {
   const handleGerarBrutoInicial = () => {
     if (brutoOcupado()) return;
     dispararBruto(undefined);
-    if (exportStatusAtual && !exportStatusAtual.titulo_youtube && metaClaudeStatus !== 'rodando') gerarMetadadosClaude.mutate('claude');
+    if (metaClaudeStatus !== 'rodando') void pedirMetadadosSeFaltam(corteId, () => gerarMetadadosClaude.mutate('claude'));
   };
 
   // D-160 — regeração (bruto já existe): por DEFAULT roda só o bruto. Os opt-ins

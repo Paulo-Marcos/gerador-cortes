@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
-import type { StatusExportCorte } from '@/types/models';
-import { montarTira } from '@/upgrade/tiraDoCorte';
+import type { Corte, StatusExportCorte } from '@/types/models';
+import { montarTira, resumoDaLinha } from '@/upgrade/tiraDoCorte';
 import { montarProximoDaLinha, primarioDaLinha } from '../acoesDaLinha';
 
 // D-1041: "Finalizar" abria a Pós do corte sem bruto, onde o render ficava travado,
@@ -67,10 +67,10 @@ const PASSO_A_PASSO: [string, Partial<StatusExportCorte>, string, string][] = [
   ],
 ];
 
-function proximo(status: Partial<StatusExportCorte>) {
+function proximo(status: Partial<StatusExportCorte>, corte?: Partial<Corte>) {
   const ir = vi.fn();
   const tira = montarTira(statusExportPendente({ corte_id: 'c7', numero: 7, titulo: 'Corte', ...status }), 'aprovado');
-  return { ir, passo: montarProximoDaLinha(tira, 'p1', 'c7', ir) };
+  return { ir, tira, passo: montarProximoDaLinha(tira, 'p1', 'c7', ir, corte as Corte | undefined) };
 }
 
 describe('D-1041 · o principal do corte aprovado', () => {
@@ -95,6 +95,34 @@ describe('D-1041 · o principal do corte aprovado', () => {
     expect(passo.texto).toBe(texto);
     passo.acao();
     expect(ir).toHaveBeenCalledWith(destino);
+  });
+
+  it.each<[string, Partial<StatusExportCorte>]>([
+    ['sem cenas nem bruto', { video_pronto: true }],
+    ['com bruto, sem cenas', { raw_pronto: true, video_pronto: true }],
+    ['com cenas validadas e os intermediários limpos', { raw_pronto: true, cenas_geradas: true, cenas_validadas: true, video_pronto: true }],
+  ])('renderizado %s: o resumo e o botão dizem a mesma coisa, a capa', (_nome, status) => {
+    const { tira, passo } = proximo(status);
+    expect(passo.texto).toBe('Gerar capa em Metadados');
+    expect(resumoDaLinha(tira)).toContain('próximo: gerar capa');
+  });
+
+  it.each<[string, Partial<Corte>]>([
+    ['render no próprio corte, sem o vídeo no disco', { is_pos_producao: 1 }],
+    ['cenas', { cenas_remotion: [{ tipo: 'tela_cheia', inicio: 0, fim: 5 }] } as unknown as Partial<Corte>],
+    ['o ponteiro do arquivo', { arquivo_clip_path: 'clip_raw.mkv' }],
+  ])('sem bruto, com %s: regerar é na Pós, não no editor', (_nome, corte) => {
+    const { ir, passo } = proximo({}, corte);
+    expect(passo.texto).toBe('Gerar bruto na Pós');
+    passo.acao();
+    expect(ir).toHaveBeenCalledWith('/projetos/p1/post-production?corte=c7');
+  });
+
+  it('sem bruto e sem rastro no corte: vai ao editor', () => {
+    const { ir, passo } = proximo({}, { is_pos_producao: 0, arquivo_clip_path: '', cenas_remotion: [] } as unknown as Partial<Corte>);
+    expect(passo.texto).toBe('Gerar bruto no editor');
+    passo.acao();
+    expect(ir).toHaveBeenCalledWith('/projetos/p1/cortes/c7');
   });
 
   it('renderizado com cenas por validar continua pedindo a validação', () => {

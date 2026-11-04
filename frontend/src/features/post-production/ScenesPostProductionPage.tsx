@@ -35,6 +35,7 @@ const SEEK_STEP_SEG = 3;
 import {
   pickPostProductionEntryCut,
   postProductionPath,
+  isCorteVideoPronto,
   montarPrimarioDaPos,
   nuncaGerouBruto,
   rawEditorPath,
@@ -302,7 +303,7 @@ export function ScenesPostProductionPage() {
   // D-430: o usuario pode sobrepor esse padrao pelo seletor de fonte; a escolha
   // so vale enquanto a fonte existir (`resolverVideoFonteEfetiva`).
   const exportEntry = exportStatusQ.data?.cortes.find((c) => c.corte_id === corte.id);
-  const videoPronto = Boolean(exportEntry?.video_pronto);
+  const videoPronto = isCorteVideoPronto(corte, exportEntry);
   const brutoDisponivel = pipelineStatus.data?.fases?.raw !== false;
   const videoFonteAutomatica = resolverVideoFonte({ videoPronto, brutoDisponivel });
   const fontes = fontesDisponiveis({

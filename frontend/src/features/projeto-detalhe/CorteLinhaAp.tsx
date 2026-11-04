@@ -189,7 +189,7 @@ export function CorteLinhaAp({
     aprovar: () => aprovar.mutate(undefined, { onError: avisarFalha('aprovar') }),
     voltar: () => atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('voltar') }),
     enviarYoutube: onEnviarYoutube,
-    proximo: montarProximoDaLinha(tira, projetoId, status.corte_id, navigate),
+    proximo: montarProximoDaLinha(tira, projetoId, status.corte_id, navigate, corte),
     abrirNoYoutube: () =>
       window.open(status.youtube_url_publicado ?? '', '_blank', 'noopener,noreferrer'),
   });
