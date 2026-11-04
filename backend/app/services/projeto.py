@@ -51,13 +51,15 @@ class ProjetoService:
         """
         async with AsyncSessionLocal() as db:
             projeto = await _carregar_projeto(db, projeto_id)
+            # O caminho parte do id que o banco devolveu, nunca do que veio na URL.
+            id_do_banco = projeto.id
             youtube_url, video_path = projeto.youtube_url, projeto.arquivo_video_path
 
-        if not (projetos_dir() / projeto_id).exists():
+        if not (projetos_dir() / id_do_banco).exists():
             raise RuntimeError("Diretório do projeto não encontrado")
 
         transcricao = await IngestaoService._extrair_legenda(
-            projeto_id, youtube_url, video_path, legenda_offset_ms=offset_ms
+            id_do_banco, youtube_url, video_path, legenda_offset_ms=offset_ms
         )
 
         async with AsyncSessionLocal() as db, db.begin():
