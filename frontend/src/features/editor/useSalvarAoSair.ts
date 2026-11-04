@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { useToast } from '@/components/ui/toaster';
 import { corteDaLive } from '@/upgrade/upgradeRoutes';
@@ -20,9 +20,22 @@ interface Opcoes {
  * lista), seguir um link, voltar — perdia o ajuste em silêncio. A saída espera o
  * salvamento; se ele falhar, a tela fica e diz por quê. Fechar a aba não passa
  * pelo roteador: o navegador pergunta.
+ *
+ * Uma tela, um gancho: o roteador consulta só o último bloqueio registrado
+ * ("only supports one blocker at a time"). Hoje a Pós monta um painel por vez
+ * (abas); montar cenas e layout juntos deixaria o primeiro sem proteção.
  */
 export function useSalvarAoSair({ sujo, salvar, aoResolver, avisoDeSucesso }: Opcoes) {
   const { notify } = useToast();
+  // O painel pode sair do ar durante o salvamento (troca de aba); o roteador já
+  // apagou o bloqueio e `proceed`/`reset` lançariam. O ajuste foi gravado.
+  const montado = useRef(true);
+  useEffect(() => {
+    montado.current = true;
+    return () => {
+      montado.current = false;
+    };
+  }, []);
   // Trocar de corte na Pós só muda a busca (`?corte=`); o caminho fica igual.
   const saida = useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -38,11 +51,12 @@ export function useSalvarAoSair({ sujo, salvar, aoResolver, avisoDeSucesso }: Op
       () => {
         aoResolver?.();
         notify(avisoDeSucesso, { tone: 'success' });
-        saida.proceed();
+        if (montado.current) saida.proceed();
       },
       (erro) => {
         const desfecho = desfechoDaFalhaAoSalvar(erro);
         notify(desfecho.mensagem, { tone: desfecho.tom });
+        if (!montado.current) return;
         if (!desfecho.sair) return saida.reset();
         aoResolver?.();
         saida.proceed();
