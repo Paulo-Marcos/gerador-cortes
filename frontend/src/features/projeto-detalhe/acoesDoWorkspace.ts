@@ -45,7 +45,7 @@ export function acoesDoWorkspace(p: Parametros): ScreenAction[] {
         {
           icon: 'brain',
           label: 'Reanalisar',
-          title: p.listaIndisponivel ? 'Os cortes não carregaram: tente de novo antes de analisar.' : undefined,
+          title: p.listaIndisponivel ? 'A lista de cortes ainda não carregou: espere ou tente de novo antes de analisar.' : undefined,
           disabled: p.listaIndisponivel,
           onClick: p.reanalisar,
         },
