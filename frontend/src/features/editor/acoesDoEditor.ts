@@ -45,7 +45,7 @@ export function acoesDoEditor(p: {
  * bruto ou seguir para a Pós. Gerar é trabalho pesado, então o Enter não dispara.
  * Corte ainda não aprovado fica com o "Aprovar corte" padrão da bancada.
  */
-export function barraDoEditor(p: {
+export function montarBarraDoEditor(p: {
   aprovado: boolean;
   brutoPronto: boolean;
   brutoOcupado: boolean;

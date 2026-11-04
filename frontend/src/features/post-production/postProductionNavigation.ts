@@ -38,22 +38,54 @@ export function isCorteVideoPronto(
 }
 
 /**
- * D-1041: o principal da Pós sem bruto dizia "a limpeza apagou" até em corte que
- * nunca teve bruto. Sem limpeza, o caminho é o editor: o bruto sai dos cortes de
- * lá e a primeira geração também pede os metadados. `arquivos_limpos` só distingue
- * a limpeza completa; a que deixou resíduo cai no caminho do editor, que também
- * resolve. Render é GPU: o Enter não dispara, como já era (D-746).
+ * D-1041: só o corte que nunca gerou nada vai ao editor, onde a primeira geração
+ * nasce dos cortes feitos lá. Com rastro de geração anterior (render, cenas, ponteiro
+ * do arquivo), o caminho segue sendo regerar na Pós, que preserva o que já foi feito.
+ * Mandar esse corte ao editor faria um laço: o editor conta o render como bruto
+ * pronto e devolveria à Pós.
  */
-export function primarioDaPos(p: {
+export function nuncaGerouBruto(p: {
+  brutoAusente: boolean;
+  arquivosLimpos: boolean;
+  videoPronto: boolean;
+  cenasGeradas: boolean;
+  temPonteiroDoBruto: boolean;
+}): boolean {
+  return (
+    p.brutoAusente &&
+    !p.arquivosLimpos &&
+    !p.videoPronto &&
+    !p.cenasGeradas &&
+    !p.temPonteiroDoBruto
+  );
+}
+
+/**
+ * D-1041: o principal da Pós sem bruto dizia "a limpeza apagou" até em corte que
+ * nunca teve bruto. `arquivos_limpos` só distingue a limpeza completa: fora dela, o
+ * texto não culpa a limpeza. Render é GPU: o Enter não dispara, como já era (D-746).
+ */
+export function montarPrimarioDaPos(p: {
   rodando: boolean;
   progresso: number;
   videoPronto: boolean;
   brutoAusente: boolean;
   arquivosLimpos: boolean;
+  nuncaGerou: boolean;
+  gerandoBruto: boolean;
   onRenderizar: () => void;
   onIrAoEditor: () => void;
 }) {
-  if (p.brutoAusente && !p.arquivosLimpos && !p.rodando) {
+  if (p.brutoAusente && p.gerandoBruto && !p.rodando) {
+    return {
+      texto: 'Gerando bruto…',
+      icone: 'loader' as const,
+      onClick: p.onRenderizar,
+      desabilitado: true,
+      semEnter: true,
+    };
+  }
+  if (p.nuncaGerou && !p.rodando) {
     return {
       texto: 'Gerar bruto no editor',
       icone: 'scissors' as const,
@@ -71,7 +103,9 @@ export function primarioDaPos(p: {
     onClick: p.onRenderizar,
     desabilitado: p.rodando || p.brutoAusente,
     motivo: p.brutoAusente
-      ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
+      ? p.arquivosLimpos
+        ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
+        : 'Sem o vídeo bruto: regere o bruto antes de renderizar.'
       : undefined,
     semEnter: true,
   };

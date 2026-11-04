@@ -66,7 +66,7 @@ export function primarioDaLinha(
  * à tela onde isso se faz. O clique só leva, então o rótulo diz verbo e destino:
  * nada dispara ao chegar. As etapas do render são um gesto só.
  */
-export function proximoDaLinha(
+export function montarProximoDaLinha(
   tira: Tira,
   projetoId: string,
   corteId: string,

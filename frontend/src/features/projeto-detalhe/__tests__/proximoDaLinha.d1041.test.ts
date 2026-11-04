@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { StatusExportCorte } from '@/types/models';
 import { montarTira } from '@/upgrade/tiraDoCorte';
-import { primarioDaLinha, proximoDaLinha } from '../acoesDaLinha';
+import { montarProximoDaLinha, primarioDaLinha } from '../acoesDaLinha';
 
 // D-1041: "Finalizar" abria a Pós do corte sem bruto, onde o render ficava travado,
 // e a do corte que só precisava de capa. Medido no navegador na D-1019. O clique só
@@ -70,7 +70,7 @@ const PASSO_A_PASSO: [string, Partial<StatusExportCorte>, string, string][] = [
 function proximo(status: Partial<StatusExportCorte>) {
   const ir = vi.fn();
   const tira = montarTira(statusExportPendente({ corte_id: 'c7', numero: 7, titulo: 'Corte', ...status }), 'aprovado');
-  return { ir, passo: proximoDaLinha(tira, 'p1', 'c7', ir) };
+  return { ir, passo: montarProximoDaLinha(tira, 'p1', 'c7', ir) };
 }
 
 describe('D-1041 · o principal do corte aprovado', () => {

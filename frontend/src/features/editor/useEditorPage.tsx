@@ -26,7 +26,7 @@ import { useEditHistory } from './useEditHistory';
 import { useTrechosRiscados } from './useTrechosRiscados';
 import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
+import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, salvarAntesDe, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
 import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
@@ -264,8 +264,7 @@ export function useEditorPage() {
     !corteId || avisarSeBrutoOcupado(brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, notifyToast);
 
   const dispararBruto = (opts?: Parameters<typeof gerarBruto.mutate>[0]) => gerarBruto.mutate(opts);
-  const irParaPos = () =>
-    navigate(postProductionPath(projetoId, corteId));
+  const irParaPos = () => navigate(postProductionPath(projetoId, corteId));
 
   // F-038 — 1ª geração (corte sem bruto): cadeia completa. Dispara metadados via
   // Claude em paralelo (texto não depende dos silêncios); o backend, ao ver que
@@ -273,7 +272,7 @@ export function useEditorPage() {
   const handleGerarBrutoInicial = () => {
     if (brutoOcupado()) return;
     dispararBruto(undefined);
-    gerarMetadadosClaude.mutate('claude');
+    if (!exportStatusAtual?.titulo_youtube) gerarMetadadosClaude.mutate('claude');
   };
 
   // D-160 — regeração (bruto já existe): por DEFAULT roda só o bruto. Os opt-ins
@@ -304,10 +303,11 @@ export function useEditorPage() {
   };
 
   // Botão/atalho principal: 1ª vez → cadeia completa; regeração → só o bruto.
-  const handleGerarBrutoPrincipal = () => {
-    if (brutoPronto) handleRegerarBruto();
-    else handleGerarBrutoInicial();
-  };
+  // D-1041: o ajuste pendente vai para o banco antes, porque o bruto sai de lá.
+  const handleGerarBrutoPrincipal = () =>
+    salvarAntesDe(editHistory, atualizarCorte, notifyToast, () =>
+      brutoPronto ? handleRegerarBruto() : handleGerarBrutoInicial(),
+    );
 
   // D-428 — analisar trechos de novo acrescenta à lista já revisada e custa
   // Claude: com trechos marcados, confirma antes.

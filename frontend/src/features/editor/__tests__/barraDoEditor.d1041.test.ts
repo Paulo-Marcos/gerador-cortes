@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { acaoDaTecla, type Contexto } from '@/upgrade/teclasDaCasca';
-import { barraDoEditor } from '../acoesDoEditor';
+import { montarBarraDoEditor } from '../acoesDoEditor';
 
 // D-1041: no editor, o corte aprovado tinha "Aprovado" como botão principal, e o
 // clique ou o Enter o devolviam a proposto. Medido no navegador na D-1019.
@@ -11,7 +11,7 @@ function barra(p: { aprovado?: boolean; brutoPronto?: boolean; brutoOcupado?: bo
   const acoes = { onAlternarVeredito: vi.fn(), onGerarBruto: vi.fn(), onIrParaPos: vi.fn() };
   return {
     acoes,
-    barra: barraDoEditor({
+    barra: montarBarraDoEditor({
       aprovado: true,
       brutoPronto: false,
       brutoOcupado: false,
@@ -93,7 +93,7 @@ describe('D-1041 · a ligação no editor', () => {
 
   it('a página passa a barra, com o veredito ligado ao mesmo alternar do A', () => {
     const pagina = fonte('../EditorPage.tsx');
-    expect(pagina).toContain('barra={barraDoEditor({ aprovado: estaAprovado(corteUI.status)');
+    expect(pagina).toContain('barra={montarBarraDoEditor({ aprovado: estaAprovado(corteUI.status)');
     expect(pagina).toContain('onAlternarVeredito: toggleAprovado');
     expect(pagina).toContain('onIrParaPos: irParaPos');
   });

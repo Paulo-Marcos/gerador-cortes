@@ -18,7 +18,7 @@ import { montarTira } from '@/upgrade/tiraDoCorte';
 import { MetadadosDoCorteModal } from '@/features/metadata/MetadadosDoCorteModal';
 import { BarraDoCorte } from '@/upgrade/BarraDoCorte';
 import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
-import { estadoDaLinha, maisDaLinha, ondeJaSubiu, primarioDaLinha, proximoDaLinha } from './acoesDaLinha';
+import { estadoDaLinha, maisDaLinha, ondeJaSubiu, primarioDaLinha, montarProximoDaLinha } from './acoesDaLinha';
 import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 import { SeloDaNota } from '@/features/porque-do-corte/SeloDaNota';
 import { SeloDaOrigem } from './SeloDaOrigem';
@@ -189,7 +189,7 @@ export function CorteLinhaAp({
     aprovar: () => aprovar.mutate(undefined, { onError: avisarFalha('aprovar') }),
     voltar: () => atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('voltar') }),
     enviarYoutube: onEnviarYoutube,
-    proximo: proximoDaLinha(tira, projetoId, status.corte_id, navigate),
+    proximo: montarProximoDaLinha(tira, projetoId, status.corte_id, navigate),
     abrirNoYoutube: () =>
       window.open(status.youtube_url_publicado ?? '', '_blank', 'noopener,noreferrer'),
   });

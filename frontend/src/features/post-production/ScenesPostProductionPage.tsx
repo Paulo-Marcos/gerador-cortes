@@ -35,7 +35,8 @@ const SEEK_STEP_SEG = 3;
 import {
   pickPostProductionEntryCut,
   postProductionPath,
-  primarioDaPos,
+  montarPrimarioDaPos,
+  nuncaGerouBruto,
   rawEditorPath,
   resolveRenderCompletionPath,
   parseCenasPayload,
@@ -328,7 +329,7 @@ export function ScenesPostProductionPage() {
   // usuario precisa retrabalhar o pos, este botao re-extrai o trecho da live.
   const brutoAusente = pipelineStatus.data?.fases?.raw === false;
   const arquivosLimpos = Boolean(projeto.data?.arquivos_limpos);
-  const irAoEditor = () => navigate(rawEditorPath(projetoId, corte.id));
+  const nuncaGerou = nuncaGerouBruto({ brutoAusente, arquivosLimpos, videoPronto, cenasGeradas: Boolean(exportEntry?.cenas_geradas), temPonteiroDoBruto: Boolean(corte.arquivo_clip_path) });
   const gerandoBruto = gerarBruto.isPending || brutoEmGeracao;
 
   const aprovadoNaPos = ['aprovado', 'processado'].includes(corte.status);
@@ -409,7 +410,7 @@ export function ScenesPostProductionPage() {
         brutoOcupado={gerandoBruto}
         // O botão do topo diz "Regerar bruto": ele regera o BRUTO. Estava
         // ligado ao render final — um verbo, outra ação.
-        onGerarBruto={brutoAusente && !arquivosLimpos ? irAoEditor : regerarBruto}
+        onGerarBruto={nuncaGerou ? undefined : regerarBruto}
         onToggleFire={() => alternarFire.mutate()}
         fireOcupado={alternarFire.isPending}
         onAprovar={alternarAprovado}
@@ -421,14 +422,14 @@ export function ScenesPostProductionPage() {
             ocupado: atualizarCorte.isPending,
             onAlternar: alternarAprovado,
           },
-          primario: primarioDaPos({
+          primario: montarPrimarioDaPos({
             rodando: renderFinalRunning,
             progresso: renderFinalProgress,
-            videoPronto,
-            brutoAusente,
-            arquivosLimpos,
+            videoPronto, brutoAusente, arquivosLimpos,
+            nuncaGerou,
+            gerandoBruto,
             onRenderizar: renderizarFinal,
-            onIrAoEditor: irAoEditor,
+            onIrAoEditor: () => navigate(rawEditorPath(projetoId, corte.id)),
           }),
         }}
       />

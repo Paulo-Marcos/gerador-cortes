@@ -7,7 +7,7 @@ import { BrutoContextStrip } from './fase1/BrutoContextStrip';
 import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { hmsParaSeg, segParaMmSs } from './timeUtils';
 import { BancadaChrome } from '@/features/editor/BancadaChrome';
-import { barraDoEditor } from './acoesDoEditor';
+import { montarBarraDoEditor } from './acoesDoEditor';
 import { resolveWaveformWindow } from './editorEditState';
 import { rawEditorPath } from '@/features/post-production/postProductionNavigation';
 import { estaAprovado } from '@/lib/statusDoCorte';
@@ -162,7 +162,7 @@ export function EditorPage() {
             }),
         }}
         onAprovar={toggleAprovado}
-        barra={barraDoEditor({ aprovado: estaAprovado(corteUI.status), brutoPronto, brutoOcupado: brutoBusy, salvando: atualizarCorte.isPending, onAlternarVeredito: toggleAprovado, onGerarBruto: handleGerarBrutoPrincipal, onIrParaPos: irParaPos })}
+        barra={montarBarraDoEditor({ aprovado: estaAprovado(corteUI.status), brutoPronto, brutoOcupado: brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, salvando: atualizarCorte.isPending, onAlternarVeredito: toggleAprovado, onGerarBruto: handleGerarBrutoPrincipal, onIrParaPos: irParaPos })}
         onExcluir={excluirCorte}
       />
 
