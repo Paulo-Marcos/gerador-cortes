@@ -37,6 +37,46 @@ export function isCorteVideoPronto(
   return Boolean(status?.video_pronto || corte.is_pos_producao === 1);
 }
 
+/**
+ * D-1041: o principal da Pós sem bruto dizia "a limpeza apagou" até em corte que
+ * nunca teve bruto. Sem limpeza, o caminho é o editor: o bruto sai dos cortes de
+ * lá e a primeira geração também pede os metadados. `arquivos_limpos` só distingue
+ * a limpeza completa; a que deixou resíduo cai no caminho do editor, que também
+ * resolve. Render é GPU: o Enter não dispara, como já era (D-746).
+ */
+export function primarioDaPos(p: {
+  rodando: boolean;
+  progresso: number;
+  videoPronto: boolean;
+  brutoAusente: boolean;
+  arquivosLimpos: boolean;
+  onRenderizar: () => void;
+  onIrAoEditor: () => void;
+}) {
+  if (p.brutoAusente && !p.arquivosLimpos && !p.rodando) {
+    return {
+      texto: 'Gerar bruto no editor',
+      icone: 'scissors' as const,
+      onClick: p.onIrAoEditor,
+      semEnter: true,
+    };
+  }
+  return {
+    texto: p.rodando
+      ? `Renderizando ${p.progresso}%`
+      : p.videoPronto
+        ? 'Renderizar de novo'
+        : 'Renderizar final',
+    icone: p.rodando ? ('loader' as const) : ('clapperboard' as const),
+    onClick: p.onRenderizar,
+    desabilitado: p.rodando || p.brutoAusente,
+    motivo: p.brutoAusente
+      ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
+      : undefined,
+    semEnter: true,
+  };
+}
+
 export function pickPostProductionEntryCut(
   cortes: Corte[],
   statuses: StatusExportCorte[] | undefined,

@@ -1,5 +1,6 @@
 import type { IconName } from '@/upgrade/Icon';
 import type { ScreenAction } from '@/upgrade/ScreenHeader';
+import type { ChromeBarra } from '@/upgrade/UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-870 · O topo do editor (Onda 3, nota 5 e plano do editor: "excluir
@@ -35,4 +36,36 @@ export function acoesDoEditor(p: {
       : []),
   ];
   return itens.length > 0 ? [{ icone: 'more-horizontal', texto: 'Mais', menu: itens }] : [];
+}
+
+/**
+ * D-1041: corte aprovado não tem mais o que aprovar. O principal dizia
+ * "Aprovado", e o clique ou o Enter o devolviam a proposto. O veredito vira o
+ * par reversível da Pós, e o principal passa a ser o próximo passo: gerar o
+ * bruto ou seguir para a Pós. Gerar é trabalho pesado, então o Enter não dispara.
+ * Corte ainda não aprovado fica com o "Aprovar corte" padrão da bancada.
+ */
+export function barraDoEditor(p: {
+  aprovado: boolean;
+  brutoPronto: boolean;
+  brutoOcupado: boolean;
+  salvando: boolean;
+  onAlternarVeredito: () => void;
+  onGerarBruto: () => void;
+  onIrParaPos: () => void;
+}): Partial<ChromeBarra> {
+  if (!p.aprovado) return {};
+  const veredito = { aprovado: true, ocupado: p.salvando, onAlternar: p.onAlternarVeredito };
+  if (p.brutoOcupado) {
+    return {
+      veredito,
+      primario: { texto: 'Gerando bruto…', icone: 'loader', onClick: p.onGerarBruto, desabilitado: true },
+    };
+  }
+  return {
+    veredito,
+    primario: p.brutoPronto
+      ? { texto: 'Ir para a Pós', icone: 'arrow-right', onClick: p.onIrParaPos }
+      : { texto: 'Gerar bruto', icone: 'scissors', onClick: p.onGerarBruto, semEnter: true },
+  };
 }
