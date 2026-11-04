@@ -27,11 +27,15 @@ const h = vi.hoisted(() => ({
   gerarMetadados: vi.fn(),
   avisar: vi.fn(),
   tituloNoExport: '' as string,
+  noExport: true,
+  metadados: undefined as string | undefined,
 }));
 
 vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', () => ({
   useAbrirPasta: h.mutacao,
-  useExportStatus: () => ({ data: { cortes: [{ corte_id: 'c5', titulo_youtube: h.tituloNoExport }] } }),
+  useExportStatus: () => ({
+    data: { cortes: h.noExport ? [{ corte_id: 'c5', titulo_youtube: h.tituloNoExport }] : [] },
+  }),
   useProjeto: () => ({ data: { titulo_live: 'Live' } }),
 }));
 vi.mock('@/features/settings', () => ({
@@ -60,7 +64,7 @@ vi.mock('@/features/editor/useBruto', () => ({
 vi.mock('@/features/editor/useGeracoesDaIa', () => ({
   useGerarMetadadosClaude: () => ({ mutate: h.gerarMetadados }),
   useGerarTrechosClaude: h.mutacao,
-  useStatusMetadadosClaude: () => undefined,
+  useStatusMetadadosClaude: () => h.metadados,
   useTrechosClaudeEmAndamento: () => false,
 }));
 vi.mock('@/components/ui/toaster', () => ({ useToast: () => ({ notify: h.avisar }) }));
@@ -96,6 +100,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.salvar.mockReset();
   h.tituloNoExport = '';
+  h.noExport = true;
+  h.metadados = undefined;
 });
 
 afterEach(async () => {
@@ -122,6 +128,22 @@ describe('D-1041 · o principal do editor, com o hook real', () => {
 
   it('1ª geração com título já escrito: gera o bruto sem reescrever os metadados', async () => {
     h.tituloNoExport = 'Título que já foi revisado';
+    await abrir();
+    tela.handleGerarBrutoPrincipal();
+    expect(h.gerarBruto).toHaveBeenCalledOnce();
+    expect(h.gerarMetadados).not.toHaveBeenCalled();
+  });
+
+  it('corte fora do export, como o devolvido a proposto: na dúvida, não pede metadados', async () => {
+    h.noExport = false;
+    await abrir();
+    tela.handleGerarBrutoPrincipal();
+    expect(h.gerarBruto).toHaveBeenCalledOnce();
+    expect(h.gerarMetadados).not.toHaveBeenCalled();
+  });
+
+  it('com os metadados já rodando, um novo clique não os pede de novo', async () => {
+    h.metadados = 'rodando';
     await abrir();
     tela.handleGerarBrutoPrincipal();
     expect(h.gerarBruto).toHaveBeenCalledOnce();

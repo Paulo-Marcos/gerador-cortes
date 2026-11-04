@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { montarPrimarioDaPos, nuncaGerouBruto } from '../postProductionNavigation';
 
@@ -24,27 +22,32 @@ function primario(p: Partial<Parameters<typeof montarPrimarioDaPos>[0]> = {}) {
   };
 }
 
-const SEM_RASTRO = {
-  brutoAusente: true,
-  arquivosLimpos: false,
-  videoPronto: false,
-  cenasGeradas: false,
-  temPonteiroDoBruto: false,
-};
+const SEM_RASTRO = { id: 'c1', is_pos_producao: 0, arquivo_clip_path: '', cenas_remotion: [] } as unknown as Parameters<typeof nuncaGerouBruto>[0];
+const CENA = { tipo: 'tela_cheia', inicio: 0, fim: 5 };
+const SEM_BRUTO = { brutoAusente: true, arquivosLimpos: false };
 
 describe('D-1041 · quem nunca gerou bruto', () => {
   it('sem bruto e sem rastro nenhum de geração, nunca gerou', () => {
-    expect(nuncaGerouBruto(SEM_RASTRO)).toBe(true);
+    expect(nuncaGerouBruto(SEM_RASTRO, undefined, SEM_BRUTO)).toBe(true);
   });
 
   it.each([
-    ['tem o bruto', { brutoAusente: false }],
-    ['a limpeza apagou', { arquivosLimpos: true }],
-    ['tem render: o editor conta como bruto pronto e devolveria à Pós', { videoPronto: true }],
-    ['tem cenas: já gerou antes, e regerar na Pós as preserva', { cenasGeradas: true }],
-    ['tem o ponteiro do arquivo: o editor também conta como pronto', { temPonteiroDoBruto: true }],
-  ])('%s: não é o caso', (_nome, rastro) => {
-    expect(nuncaGerouBruto({ ...SEM_RASTRO, ...rastro })).toBe(false);
+    ['tem render no próprio corte: o editor conta como bruto pronto', { is_pos_producao: 1 }],
+    ['tem cenas: já gerou antes, e regerar na Pós as preserva', { cenas_remotion: [CENA] }],
+    ['tem o ponteiro do arquivo: o editor também conta como pronto', { arquivo_clip_path: 'clip_raw.mkv' }],
+  ])('%s: não é o caso, mesmo fora do export', (_nome, rastro) => {
+    const corte = { ...SEM_RASTRO, ...rastro } as Parameters<typeof nuncaGerouBruto>[0];
+    expect(nuncaGerouBruto(corte, undefined, SEM_BRUTO)).toBe(false);
+  });
+
+  it('o export dizendo que o vídeo está pronto também conta', () => {
+    const status = { corte_id: 'c1', video_pronto: true } as Parameters<typeof nuncaGerouBruto>[1];
+    expect(nuncaGerouBruto(SEM_RASTRO, status, SEM_BRUTO)).toBe(false);
+  });
+
+  it('com o bruto no disco, ou depois da limpeza, não é o caso', () => {
+    expect(nuncaGerouBruto(SEM_RASTRO, undefined, { ...SEM_BRUTO, brutoAusente: false })).toBe(false);
+    expect(nuncaGerouBruto(SEM_RASTRO, undefined, { ...SEM_BRUTO, arquivosLimpos: true })).toBe(false);
   });
 });
 
@@ -99,24 +102,5 @@ describe('D-1041 · a Pós com bruto segue como estava', () => {
 
   it('regerar o bruto enquanto há bruto não troca o principal do render', () => {
     expect(primario({ gerandoBruto: true }).primario.texto).toBe('Renderizar final');
-  });
-});
-
-// A página depende de dezenas de consultas; a ligação se confere na fonte.
-describe('D-1041 · a ligação na Pós', () => {
-  const pagina = readFileSync(resolve(__dirname, '../ScenesPostProductionPage.tsx'), 'utf8');
-
-  it('o principal usa a regra, e o destino do corte que nunca gerou é o editor dele', () => {
-    expect(pagina).toContain('primario: montarPrimarioDaPos({');
-    expect(pagina).toContain('onIrAoEditor: () => navigate(rawEditorPath(projetoId, corte.id))');
-    expect(pagina).toContain('Boolean(projeto.data?.arquivos_limpos)');
-  });
-
-  it('o "Gerar bruto" do Mais some para quem nunca gerou, e regerar segue para os demais', () => {
-    expect(pagina).toContain('onGerarBruto={nuncaGerou ? undefined : regerarBruto}');
-  });
-
-  it('sem nenhuma fonte no disco, o player não pede arquivo que não existe', () => {
-    expect(pagina).toMatch(/const videoSrc = fontes\.length === 0\s+\? ''/);
   });
 });

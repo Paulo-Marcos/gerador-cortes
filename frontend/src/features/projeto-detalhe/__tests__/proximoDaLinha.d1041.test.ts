@@ -81,6 +81,27 @@ describe('D-1041 · o principal do corte aprovado', () => {
     expect(ir).toHaveBeenCalledWith(destino);
   });
 
+  it.each<[string, Partial<StatusExportCorte>, string, string]>([
+    ['sem capa', { video_pronto: true }, 'Gerar capa em Metadados', '/projetos/p1/metadados?corte=c7'],
+    ['com capa', { video_pronto: true, thumbnail_pronta: true }, 'Completar metadados', '/projetos/p1/metadados?corte=c7'],
+    [
+      'com capa e metadados',
+      { video_pronto: true, thumbnail_pronta: true, metadados_completos: true },
+      'Revisar',
+      '/projetos/p1/final-review?corte=c7',
+    ],
+  ])('renderizado que perdeu o bruto, %s: não pede o bruto de novo', (_nome, status, texto, destino) => {
+    const { ir, passo } = proximo(status);
+    expect(passo.texto).toBe(texto);
+    passo.acao();
+    expect(ir).toHaveBeenCalledWith(destino);
+  });
+
+  it('renderizado com cenas por validar continua pedindo a validação', () => {
+    const { passo } = proximo({ raw_pronto: true, cenas_geradas: true, video_pronto: true });
+    expect(passo.texto).toBe('Validar cenas na Pós');
+  });
+
   it('o verbo do botão é o mesmo do "próximo" que a linha mostra ao lado', () => {
     for (const [, status, texto] of PASSO_A_PASSO.slice(0, 3)) {
       const tira = montarTira(statusExportPendente({ corte_id: 'c7', numero: 7, titulo: 'Corte', ...status }), 'aprovado');

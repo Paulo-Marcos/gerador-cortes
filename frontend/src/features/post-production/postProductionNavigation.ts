@@ -42,21 +42,20 @@ export function isCorteVideoPronto(
  * nasce dos cortes feitos lá. Com rastro de geração anterior (render, cenas, ponteiro
  * do arquivo), o caminho segue sendo regerar na Pós, que preserva o que já foi feito.
  * Mandar esse corte ao editor faria um laço: o editor conta o render como bruto
- * pronto e devolveria à Pós.
+ * pronto e devolveria à Pós. Lê o próprio corte: o export não lista corte devolvido
+ * a proposto, e "não sei" não pode virar "nunca gerou".
  */
-export function nuncaGerouBruto(p: {
-  brutoAusente: boolean;
-  arquivosLimpos: boolean;
-  videoPronto: boolean;
-  cenasGeradas: boolean;
-  temPonteiroDoBruto: boolean;
-}): boolean {
+export function nuncaGerouBruto(
+  corte: Pick<Corte, 'id' | 'is_pos_producao' | 'arquivo_clip_path' | 'cenas_remotion'>,
+  status: StatusExportCorte | undefined,
+  p: { brutoAusente: boolean; arquivosLimpos: boolean },
+): boolean {
   return (
     p.brutoAusente &&
     !p.arquivosLimpos &&
-    !p.videoPronto &&
-    !p.cenasGeradas &&
-    !p.temPonteiroDoBruto
+    !isCorteVideoPronto(corte, status) &&
+    !corte.arquivo_clip_path &&
+    parseCenasPayload(corte.cenas_remotion).cenas.length === 0
   );
 }
 

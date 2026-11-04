@@ -329,7 +329,7 @@ export function ScenesPostProductionPage() {
   // usuario precisa retrabalhar o pos, este botao re-extrai o trecho da live.
   const brutoAusente = pipelineStatus.data?.fases?.raw === false;
   const arquivosLimpos = Boolean(projeto.data?.arquivos_limpos);
-  const nuncaGerou = nuncaGerouBruto({ brutoAusente, arquivosLimpos, videoPronto, cenasGeradas: Boolean(exportEntry?.cenas_geradas), temPonteiroDoBruto: Boolean(corte.arquivo_clip_path) });
+  const nuncaGerou = nuncaGerouBruto(corte, exportEntry, { brutoAusente, arquivosLimpos });
   const gerandoBruto = gerarBruto.isPending || brutoEmGeracao;
 
   const aprovadoNaPos = ['aprovado', 'processado'].includes(corte.status);

@@ -272,7 +272,7 @@ export function useEditorPage() {
   const handleGerarBrutoInicial = () => {
     if (brutoOcupado()) return;
     dispararBruto(undefined);
-    if (!exportStatusAtual?.titulo_youtube) gerarMetadadosClaude.mutate('claude');
+    if (exportStatusAtual && !exportStatusAtual.titulo_youtube && metaClaudeStatus !== 'rodando') gerarMetadadosClaude.mutate('claude');
   };
 
   // D-160 — regeração (bruto já existe): por DEFAULT roda só o bruto. Os opt-ins
