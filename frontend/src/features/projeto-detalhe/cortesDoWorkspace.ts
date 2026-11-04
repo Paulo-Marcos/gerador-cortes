@@ -130,7 +130,10 @@ export function falhaDaConsulta(q: {
 
 /** Lista vazia: diz por quê, e só oferece analisar quando a live não tem
  *  corte nenhum — não quando a busca ou o filtro "No ar" esconderam todos. */
-export function listaVaziaDoWorkspace(busca: string, soNoAr: boolean) {
+export function listaVaziaDoWorkspace(busca: string, soNoAr: boolean, carregados = true) {
+  // D-1038: sem lista e sem falha é a espera (primeira carga, ou "Tentar de novo"
+  // em voo: o TanStack volta a `pending` sem erro), nunca "sem cortes".
+  if (!carregados) return { texto: 'Carregando os cortes…', ofereceAnalise: false };
   if (soNoAr) return { texto: 'Nenhum corte no ar ainda', ofereceAnalise: false };
   if (busca) return { texto: 'Nenhum corte com esse termo', ofereceAnalise: false };
   return { texto: 'Esta live ainda não tem cortes', ofereceAnalise: true };

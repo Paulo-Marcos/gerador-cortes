@@ -366,7 +366,7 @@ export function useWorkspaceProjeto() {
       acoes: acoesDoWorkspace({
         youtubeUrl: dados?.youtube_url,
         temCortes: cortes.length > 0,
-        listaIndisponivel: cortesQuery.isError && !cortesQuery.data,
+        listaIndisponivel: !cortesQuery.data,
         abrindoPasta: pasta.abrindo,
         refazendoTranscricao: refazerTranscricao.isPending,
         novoCorte: () => setNovoCorteAberto(true),
@@ -393,12 +393,12 @@ export function useWorkspaceProjeto() {
       publicados,
       agendados,
       prontidao, cortes,
-      pasta.abrindo, refazerTranscricao.isPending, cortesQuery.isError,
+      pasta.abrindo, refazerTranscricao.isPending, cortesQuery.isError, Boolean(cortesQuery.data),
       // O passo é recriado a cada render: a chave estável evita republicar
       // a casca sem fim (efeito → casca → render → passo novo → efeito).
       JSON.stringify(proxima),
     ],
   );
 
-  return { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, falhaDosCortes: falhaDaConsulta(cortesQuery), fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
+  return { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, cortesCarregados: Boolean(cortesQuery.data), falhaDosCortes: falhaDaConsulta(cortesQuery), fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
 }
