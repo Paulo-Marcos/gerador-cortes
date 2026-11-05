@@ -19,8 +19,13 @@ from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.models import Corte
 from app.services.bruto_progress import BrutoProgress
 from app.services.cancelamento_jobs import TrabalhoEmVoo
-from app.services.cenas_em_geracao import CENAS_ESPERAM_O_BRUTO, recusa_ao_bruto
+from app.services.cenas_em_geracao import (
+    CENAS_ESPERAM_O_BRUTO,
+    recusa_ao_bruto,
+    reservar_ou_recusar,
+)
 from app.services.export import ExportService
+from app.services.marca_de_geracao import ReservaDeGeracao
 from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
@@ -106,6 +111,12 @@ def recusar_cenas_com_bruto_em_andamento(corte_id: str) -> None:
     em_andamento = ExportService.get_tarefa_corte_status(corte_id) == "cortando"
     if em_andamento and not BrutoProgress.chegou_aos_shorts(corte_id):
         raise PedidoInvalido(CENAS_ESPERAM_O_BRUTO)
+
+
+def reservar_cenas_do_operador(corte_id: str) -> ReservaDeGeracao:
+    """A marca para quem grava cenas fora da fila do Claude: Gemini e modo manual (D-1049)."""
+    recusar_cenas_com_bruto_em_andamento(corte_id)
+    return reservar_ou_recusar(corte_id)
 
 
 def _corte_ja_gerou_bruto(corte: Corte) -> bool:

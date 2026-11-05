@@ -16,12 +16,15 @@ from app.domain.compartilhado.erros import PedidoInvalido
 from app.services.marca_de_geracao import MarcaDeGeracao, ReservaDeGeracao
 
 BRUTO_ESPERA_AS_CENAS = (
-    "As cenas deste corte estão sendo geradas. Espere terminar para gerar o bruto: ele pode "
-    "mudar a transcrição, e as cenas sairiam fora do tempo."
+    "As cenas deste corte estão sendo geradas. Espere terminar para gerar o bruto."
 )
 BRUTO_ESPERA_O_BRUTO = "O bruto deste corte já está sendo gerado. Espere terminar para pedir outro."
 CENAS_ESPERAM_O_BRUTO = (
     "O bruto deste corte está sendo gerado. Espere terminar para pedir as cenas."
+)
+DIVIDIR_E_JUNTAR_ESPERAM_AS_CENAS = (
+    "As cenas deste corte estão sendo geradas. Espere terminar para dividir ou juntar: "
+    "a resposta da IA voltaria para um corte que já não é o mesmo."
 )
 
 
@@ -63,3 +66,13 @@ reservar = _marca.reservar
 reservar_ou_recusar = _marca.reservar_ou_recusar
 esta_gerando = _marca.esta_gerando
 recusa_ao_bruto = _marca.recusa_ao_bruto
+
+
+def recusar_dividir_ou_juntar(*cortes_ids: str) -> None:
+    """Dividir e juntar mudam qual corte existe: a exceção a levar as cenas junto (D-1049).
+
+    Trecho e borda, a cena acompanha (RN-36). Aqui parte dela iria para outro corte, e o
+    absorvido deixa de existir antes de a resposta da IA chegar.
+    """
+    if any(esta_gerando(corte_id) for corte_id in cortes_ids):
+        raise PedidoInvalido(DIVIDIR_E_JUNTAR_ESPERAM_AS_CENAS)

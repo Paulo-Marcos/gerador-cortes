@@ -99,9 +99,9 @@ class ExportService(
             ``{"status": "pronto", "clip_path": str}`` em caso de sucesso, ou
             ``{"status": "erro", "mensagem": str}`` caso contrário.
         """
-        # D-1037: a salvaguarda pode reescrever a transcrição que as cenas em voo leram, e
-        # a importação converte os índices contra a transcrição do momento: sairiam fora do
-        # tempo. Por isso o bruto espera. D-1048: e todo bruto segura a marca até os shorts.
+        # D-1037: o bruto espera as cenas em voo: a cadeia e o clique pagariam a mesma geração
+        # duas vezes. A cena em si segue a salvaguarda (D-1049, RN-36).
+        # D-1048: e todo bruto segura a marca até os shorts.
         pedir_cenas = refazer_cenas and settings.claude_auto_cenas_no_bruto
         reserva = reservar(corte_id, gera_cenas=pedir_cenas)
         if reserva is None:

@@ -20,7 +20,7 @@ from app.domain.corte.origem_da_cena import CONTRATO_DA_ORIGEM
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo_falante
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
-from app.services import abertura_do_corte, retrato_wikipedia
+from app.services import abertura_do_corte, origem_das_cenas, retrato_wikipedia
 from app.services.canal import editorial_scaffolds, editorial_skills, modelos_ia
 from app.services.cenas_em_geracao import ReservaDeCenas, reservar_ou_recusar
 from app.services.claude_ia import gerar_json, registrar_skill_usada
@@ -235,7 +235,7 @@ class CenasRemotionService:
 
         t_imp = time.perf_counter()
         await CenasRemotionService.importar_cenas(
-            corte_id, {"cenas": cenas, "pergunta_chat": escolha}
+            corte_id, {"cenas": cenas, "pergunta_chat": escolha}, **info.get("leitura", {})
         )
         logger.info(
             "[ClaudeIA/cenas] corte %s: importar_cenas (retratos + save) em %.1fs",
@@ -320,6 +320,7 @@ class CenasRemotionService:
         return {
             "prompt": prompt_agregado,
             "prompts": prompts,
+            "leitura": {"transcricao_lida": corte.transcricao_final, "dur_bruta": dur_bruta},
             "formato_esperado": {
                 "formato": "cortes",
                 "cenas": [
@@ -386,46 +387,44 @@ class CenasRemotionService:
         return [cena for idx, cena in enumerate(cenas) if idx not in descartados]
 
     @staticmethod
-    async def importar_cenas(corte_id: str, payload: dict) -> dict:
-        """Recebe resultado de IA externa, normaliza e salva as cenas."""
+    async def importar_cenas(
+        corte_id: str, payload: dict, *, transcricao_lida: str | None = None, dur_bruta: float = 0.0
+    ) -> dict:
+        """Normaliza a resposta da IA e salva as cenas, na frase que ela escolheu (RN-36, D-1049).
+
+        O número de legenda vale na transcrição que a IA leu: converte contra ela e a gravação
+        leva a cena à de agora. Sem `transcricao_lida` (manual), vale a do momento.
+        """
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
                 raise ValueError(f"Corte '{corte_id}' não encontrado.")
 
-            transcricao_final = json.loads(corte.transcricao_final or "[]")
+            if transcricao_lida is None:
+                transcricao_lida = corte.transcricao_final
+                dur_bruta = (corte.fim_seg or 0) - (corte.inicio_seg or 0)
+            transcricao_final = json.loads(transcricao_lida or "[]")
             if not transcricao_final:
                 raise ValueError("Transcrição final vazia.")
-            dur_bruta = (corte.fim_seg or 0) - (corte.inicio_seg or 0)
 
         # IMPORTANTE: Granularizar igual ao prompt para os índices baterem
         transcricao_granular = CenasRemotionService._get_granular(transcricao_final)
         CenasRemotionService._exigir_transcricao_dentro_do_corte(transcricao_granular, dur_bruta)
         cenas_raw = payload if isinstance(payload, list) else payload.get("cenas", [])
-        cenas_convertidas = CenasRemotionService._converter_startleg(
-            cenas_raw, transcricao_granular
-        )
-        cenas_convertidas = CenasRemotionService._descartar_cenas_fora_do_corte(
-            cenas_convertidas, dur_bruta
-        )
+        cenas = CenasRemotionService._converter_startleg(cenas_raw, transcricao_granular)
+        cenas = CenasRemotionService._descartar_cenas_fora_do_corte(cenas, dur_bruta)
         escolha = payload.get("pergunta_chat") if isinstance(payload, dict) else None
-        cenas_convertidas = await abertura_do_corte.abrir_com_a_pergunta_escolhida(
-            corte, transcricao_final, escolha, cenas_convertidas
+        cenas = await abertura_do_corte.abrir_com_a_pergunta_escolhida(
+            corte, transcricao_final, escolha, cenas
         )
-        retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)
+        retratos = await CenasRemotionService._preencher_retratos_cenas(cenas)
 
-        resultado = {
-            "formato": "cortes",
-            "cenas": cenas_convertidas,
-            "retratos": retratos,
-        }
+        resultado = {"formato": "cortes", "cenas": cenas, "retratos": retratos}
 
         async with AsyncSessionLocal() as db:
-            corte = await db.get(Corte, corte_id)
-            corte.cenas_remotion = json.dumps(resultado, ensure_ascii=False)
-            await db.commit()
-
-        return resultado
+            return await origem_das_cenas.gravar_cenas_geradas(
+                db, corte_id, resultado, transcricao_lida
+            )
 
     @staticmethod
     async def gerar_cenas(corte_id: str) -> dict:
@@ -516,8 +515,9 @@ class CenasRemotionService:
                 "retratos": retratos,
             }
 
-            corte.cenas_remotion = json.dumps(resultado, ensure_ascii=False)
-            await db.commit()
+            return await origem_das_cenas.gravar_cenas_geradas(
+                db, corte_id, resultado, corte.transcricao_final
+            )
             operational_info("CenasRemotion", f"✅ Cenas salvas no banco para o corte {corte_id}.")
             return resultado
 

@@ -5,10 +5,12 @@ import json
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
-from app.domain.corte.ancora_da_cena import perdeu_frase, seguir_recorte
+from app.domain.corte.ancora_da_cena import levar_cenas_geradas, perdeu_frase, seguir_recorte
 from app.domain.corte.corte_mapper import extrair_cenas_remotion
 from app.domain.corte.origem_da_cena import conferir_cenas
 from app.models import Corte
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def aplicar_recorte_nas_cenas(
@@ -28,6 +30,36 @@ def aplicar_recorte_nas_cenas(
         corte.cenas_validadas = 0
         corte.cenas_validadas_em = None
     corte.cenas_remotion = cenas
+
+
+async def gravar_cenas_geradas(
+    db: AsyncSession, corte_id: str, resultado: dict, transcricao_lida: str | None
+) -> dict:
+    """Grava as cenas que a IA gerou sobre `transcricao_lida`, levadas para a de agora.
+
+    RN-36, D-1049: quem edita não espera a IA, e a cena segue a frase como as gravadas. O
+    `where` grava só se a transcrição não mudou desde a leitura logo acima; se mudou,
+    leva de novo a partir do que a IA leu. Cena sem a frase desfaz a marca de validadas.
+    """
+    while True:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise NaoEncontrado("Corte nao encontrado")
+        await db.refresh(corte)
+        atual = corte.transcricao_final
+        cenas = levar_cenas_geradas(resultado, transcricao_lida, atual)
+        gravadas = json.dumps(cenas, ensure_ascii=False)
+        valores: dict = {"cenas_remotion": gravadas}
+        if perdeu_frase(None, gravadas):
+            valores |= {"cenas_validadas": 0, "cenas_validadas_em": None}
+        gravou = await db.execute(
+            update(Corte)
+            .where(Corte.id == corte_id, Corte.transcricao_final == atual)
+            .values(**valores)
+        )
+        await db.commit()
+        if gravou.rowcount:
+            return cenas
 
 
 async def conferir(corte_id: str) -> list[dict]:

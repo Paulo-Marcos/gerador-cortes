@@ -248,3 +248,34 @@ def seguir_recorte(
         key=lambda c: normalizar_cena_remotion(c)["inicio"] if isinstance(c, dict) else 0.0
     )
     return json.dumps(payload, ensure_ascii=False)
+
+
+def _mesma_fala(transcricao_a: list, transcricao_b: list) -> bool:
+    def falas(transcricao: list) -> list[tuple]:
+        return [(fala.get("start"), fala.get("texto")) for fala in transcricao]
+
+    return falas(transcricao_a) == falas(transcricao_b)
+
+
+def levar_cenas_geradas(
+    resultado: dict, transcricao_lida: str | None, transcricao_atual: str | None
+) -> dict:
+    """As cenas que a IA gerou sobre a transcrição lida, na transcrição de agora (D-1049).
+
+    O mesmo caminho das gravadas (RN-36), mas sem a live: aqui toda frase que sumiu avisa,
+    pois a cena acabou de nascer e ninguém a viu. Transcrição sem tempo por palavra
+    (legenda antiga) não se alinha: se a fala mudou, nenhuma cena pode garantir o lugar.
+    """
+    if transcricao_lida == transcricao_atual:
+        return resultado
+    atual = json.loads(transcricao_atual or "[]")
+    levadas = seguir_recorte(json.dumps(resultado, ensure_ascii=False), transcricao_lida, atual)
+    if levadas is not None:
+        return json.loads(levadas)
+    lida = json.loads(transcricao_lida or "[]")
+    if (_tokens(lida) and _tokens(atual)) or _mesma_fala(lida, atual):
+        return resultado
+    for cena in resultado.get("cenas", []):
+        if normalizar_cena_remotion(cena)["inicio"] > _ABERTURA_SEG:
+            cena["ancora_perdida"] = True
+    return resultado

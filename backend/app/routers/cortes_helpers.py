@@ -21,6 +21,7 @@ from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, sco
 from app.domain.corte.desvio_categoria import classificar_desvio
 from app.domain.corte.riscados import riscados_gravados, trechos_da_ultima_rodada
 from app.models import Corte
+from app.services.bruto_do_corte import reservar_cenas_do_operador
 from fastapi import HTTPException
 from sqlalchemy import inspect
 
@@ -28,6 +29,12 @@ from sqlalchemy import inspect
 _TIMEOUT_DO_FFPROBE_S = 10
 
 logger = logging.getLogger(__name__)
+
+
+async def com_a_marca_das_cenas(corte_id: str):
+    """Segura a marca das cenas durante a rota (D-1049): a recusa vai ao tratador global."""
+    with reservar_cenas_do_operador(corte_id):
+        yield
 
 
 def _hms_to_seg(hms: str) -> float:
