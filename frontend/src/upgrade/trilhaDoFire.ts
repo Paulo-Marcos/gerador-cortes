@@ -15,7 +15,12 @@ const REDES = [
 
 const contar = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
-function casaCurar(fire: FireComBruto | undefined) {
+/** O que a faixa lê de um Fire: as contagens e a declaração de finalizado. */
+type FireDaTrilha = Pick<FireComBruto, 'shorts' | 'finalizado_em'> & {
+  redes: { plataforma: string; publicados: number }[];
+};
+
+function casaCurar(fire: FireDaTrilha | undefined) {
   if (!fire) return { contagem: '—', feita: false };
   const { sugerido, aprovado, total, rejeitado } = fire.shorts;
   if (total - rejeitado === 0) return { contagem: 'sem shorts', feita: false };
@@ -25,7 +30,7 @@ function casaCurar(fire: FireComBruto | undefined) {
   };
 }
 
-function casaPrateleira(fire: FireComBruto | undefined) {
+function casaPrateleira(fire: FireDaTrilha | undefined) {
   if (!fire) return { contagem: '—', feita: false };
   const publicados = (plataforma: string) =>
     fire.redes.find((r) => r.plataforma === plataforma)?.publicados ?? 0;
@@ -44,17 +49,17 @@ type ShortDaTrilha = Pick<ShortSugerido, 'id' | 'status' | 'arquivo_short_path'>
  * "0 prontos" ao lado de um short pronto. Ela só preenche o que ainda não chegou.
  */
 export function comOQueATelaVe(
-  fire: FireComBruto,
+  fire: FireDaTrilha,
   shorts: ShortDaTrilha[] | undefined,
   publicacoes: PublicacaoRegistrada[] | undefined,
-): FireComBruto {
+): FireDaTrilha {
   if (!shorts) return fire;
   const quantos = (status: ShortDaTrilha['status']) => shorts.filter((s) => s.status === status).length;
   const redes = publicacoes
-    ? REDES.map(([, plataforma]) => {
-        const publicados = shorts.filter((s) => plataformasJaPublicadas(publicacoes, s.id).has(plataforma)).length;
-        return { plataforma, publicados, completa: publicados > 0 && publicados === shorts.length };
-      })
+    ? REDES.map(([, plataforma]) => ({
+        plataforma,
+        publicados: shorts.filter((s) => plataformasJaPublicadas(publicacoes, s.id).has(plataforma)).length,
+      }))
     : fire.redes;
   return {
     ...fire,
@@ -72,7 +77,7 @@ export function comOQueATelaVe(
 export function trilhaDoFire(
   tela: TelaId,
   corteId: string | null,
-  fire: FireComBruto | undefined,
+  fire: FireDaTrilha | undefined,
 ): EtapaDaTrilha[] {
   if (!corteId || (tela !== 'fire' && tela !== 'prateleira')) return [];
   return [

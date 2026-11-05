@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useFires } from '@/features/shorts/useFires';
-import { usePublicacoesDoCorte } from '@/features/shorts/useLotePublicacao';
+import { usePublicacoesDoCorte, useRelerPublicacoesDoLote } from '@/features/shorts/useLotePublicacao';
 import { useShortsDoCorte } from '@/features/shorts/useShortsDoCorte';
 import { comOQueATelaVe, trilhaDoFire } from './trilhaDoFire';
 import { corteDaRota, type TelaId } from './upgradeRoutes';
@@ -14,6 +14,7 @@ export function useTrilhaDoFire(tela: TelaId) {
   const fire = useFires(noFire).data?.fires.find((f) => f.corte_id === corteId);
   const shorts = useShortsDoCorte(doCorte).data?.shorts;
   const publicacoes = usePublicacoesDoCorte(doCorte, noFire).data?.publicacoes;
+  useRelerPublicacoesDoLote(doCorte);
   return trilhaDoFire(tela, corteId, fire && comOQueATelaVe(fire, shorts, publicacoes));
 }
 
