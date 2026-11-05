@@ -13,6 +13,7 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tansta
 import { loteApi, type OpcoesDoLote } from './loteApi';
 import { shortsApi } from './shortsApi';
 import { FIRES_KEY } from './useFires';
+import { usePublicarShort } from './useShortsDoCorte';
 import { PRONTOS_KEY } from './useShortsProntos';
 
 export const LOTE_KEY = ['shorts', 'lote'] as const;
@@ -101,6 +102,20 @@ export function atualizarDepoisDoPubliquei(cliente: QueryClient, corteId?: strin
   // D-905: o chip da rede, no cartão do Fire, acende com este clique. Sem isto a
   // lista seguia no cache por até 30 s — justo quando se decide finalizar.
   cliente.invalidateQueries({ queryKey: FIRES_KEY });
+}
+
+/**
+ * D-1051: publicar pelo painel relê o mesmo que o "publiquei". Sem isso, o cartão e a
+ * trilha seguiam dizendo que o short não subiu.
+ */
+export function usePublicarEAtualizar(corteId: string) {
+  const cliente = useQueryClient();
+  const publicar = usePublicarShort();
+  return {
+    ...publicar,
+    mutate: (pedido: Parameters<typeof publicar.mutate>[0]) =>
+      publicar.mutate(pedido, { onSuccess: () => atualizarDepoisDoPubliquei(cliente, corteId) }),
+  };
 }
 
 /** O que já foi publicado deste corte — a tela de seleção nasce sabendo. */

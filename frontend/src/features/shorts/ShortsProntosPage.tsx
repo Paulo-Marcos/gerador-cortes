@@ -174,7 +174,7 @@ export default function ShortsProntosPage() {
             <p className="mt-3 text-[14px] font-semibold">Nada esperando publicação</p>
             <p className="mt-2 text-[13px] leading-relaxed text-[var(--wb-text-mute)]">
               Todo short renderizado já está no YouTube, no TikTok e no Instagram. Os próximos que
-              você finalizar na fábrica aparecem aqui.
+              você renderizar na fábrica aparecem aqui.
             </p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
               <Link to="/shorts">Ir para os Shorts</Link>

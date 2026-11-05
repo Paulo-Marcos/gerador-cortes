@@ -1,4 +1,5 @@
-import type { FireComBruto } from '@/features/shorts/shortsApi';
+import { plataformasJaPublicadas, shortsPublicaveis } from '@/features/shorts/selecaoDoLote';
+import type { FireComBruto, PublicacaoRegistrada, ShortSugerido } from '@/features/shorts/shortsApi';
 import type { EtapaDaTrilha } from './trilhaDaLive';
 import type { TelaId } from './upgradeRoutes';
 
@@ -32,6 +33,39 @@ function casaPrateleira(fire: FireComBruto | undefined) {
   return {
     contagem: `${contar(fire.shorts.renderizado, 'pronto', 'prontos')}, ${redes}`,
     feita: Boolean(fire.finalizado_em),
+  };
+}
+
+type ShortDaTrilha = Pick<ShortSugerido, 'id' | 'status' | 'arquivo_short_path'>;
+
+/**
+ * As contagens pelas mesmas consultas que os cartões da tela leem. A lista dos Fires fica
+ * em cache e nem todo gesto a relê (o fim do render, por exemplo): por ela, a faixa dizia
+ * "0 prontos" ao lado de um short pronto. Ela só preenche o que ainda não chegou.
+ */
+export function comOQueATelaVe(
+  fire: FireComBruto,
+  shorts: ShortDaTrilha[] | undefined,
+  publicacoes: PublicacaoRegistrada[] | undefined,
+): FireComBruto {
+  if (!shorts) return fire;
+  const quantos = (status: ShortDaTrilha['status']) => shorts.filter((s) => s.status === status).length;
+  const redes = publicacoes
+    ? REDES.map(([, plataforma]) => {
+        const publicados = shorts.filter((s) => plataformasJaPublicadas(publicacoes, s.id).has(plataforma)).length;
+        return { plataforma, publicados, completa: publicados > 0 && publicados === shorts.length };
+      })
+    : fire.redes;
+  return {
+    ...fire,
+    redes,
+    shorts: {
+      total: shorts.length,
+      sugerido: quantos('sugerido'),
+      aprovado: quantos('aprovado'),
+      rejeitado: quantos('rejeitado'),
+      renderizado: shortsPublicaveis(shorts).length,
+    },
   };
 }
 
