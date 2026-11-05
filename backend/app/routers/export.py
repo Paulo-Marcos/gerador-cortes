@@ -10,13 +10,14 @@ from app.core.channel_paths import (
 from app.core.logging import operational_info
 from app.database import get_db
 from app.domain.corte.ciclo_corte import CONTAM_NA_PUBLICACAO
-from app.models import Corte, MetadadoCorte
+from app.models import Corte, MetadadoCorte, Projeto
 from app.routers import export_schemas
 from app.routers.errors import erro_interno
 
 # Via o service de configurações: o router não fala com a infraestrutura (D-696).
 from app.services import agenda_youtube_em_voo
 from app.services.app_settings import FILTROS_CINEMA
+from app.services.bruto_defasado import bruto_ficou_para_tras
 from app.services.cancelamento_jobs import (
     CancelamentoNaoSuportado,
     JobNaoEstaEmVoo,
@@ -164,11 +165,19 @@ async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
         resolver_do_projeto(clip_path, corte.projeto_id) if corte and clip_path else None
     )
 
+    gerado = bool(clip_resolvido and clip_resolvido.exists())
+    defasado = False
+    # Regerando, o arquivo no disco é o antigo: comparar com ele diria que os trechos
+    # mudaram ao lado de "Gerando bruto…".
+    if corte and clip_resolvido and gerado and status != "cortando":
+        projeto = await db.get(Projeto, corte.projeto_id)
+        defasado = projeto is not None and bruto_ficou_para_tras(corte, projeto, clip_resolvido)
     return {
         "corte_id": corte_id,
         "status": status,
         "clip_path": clip_path,
-        "clip_gerado": bool(clip_resolvido and clip_resolvido.exists()),
+        "clip_gerado": gerado,
+        "bruto_defasado": defasado,
     }
 
 

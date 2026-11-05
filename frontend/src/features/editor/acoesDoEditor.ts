@@ -50,6 +50,8 @@ export function montarBarraDoEditor(p: {
   brutoPronto: boolean;
   brutoOcupado: boolean;
   salvando: boolean;
+  /** D-1044: os trechos mudaram depois do bruto; seguir levaria o vídeo antigo à Pós. */
+  brutoDefasado?: boolean;
   onAlternarVeredito: () => void;
   onGerarBruto: () => void;
   onIrParaPos: () => void;
@@ -60,6 +62,12 @@ export function montarBarraDoEditor(p: {
     return {
       veredito,
       primario: { texto: 'Gerando bruto…', icone: 'loader', onClick: p.onGerarBruto, desabilitado: true },
+    };
+  }
+  if (p.brutoDefasado) {
+    return {
+      veredito,
+      primario: { texto: 'Regerar bruto', icone: 'scissors', onClick: p.onGerarBruto, semEnter: true },
     };
   }
   return {

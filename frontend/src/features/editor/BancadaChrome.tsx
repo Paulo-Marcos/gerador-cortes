@@ -19,6 +19,7 @@ import {
   type ItemDeLista,
 } from '@/upgrade/UpgradeChrome';
 import { PorQueNaBancada } from '@/features/porque-do-corte/PorQueNaBancada';
+import { PendenciasDoCorte } from './PendenciasDoCorte';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Etapa 4 · a Bancada conversa com a casca.
@@ -102,6 +103,14 @@ function capaDoCorteOuExport(
     resolveThumbUrl(projetoId, exportStatus.find((s) => s.corte_id === c.id)?.thumbnail_path) ??
     undefined
   );
+}
+
+/** O que as três telas de um corte levam à barra: o porquê dele e o que ficou em aberto. */
+function partesDoCorteNaBarra(corte: Corte) {
+  return {
+    extra: <PorQueNaBancada corte={corte} />,
+    pendencias: <PendenciasDoCorte corte={corte} />,
+  };
 }
 
 export function BancadaChrome({
@@ -203,7 +212,7 @@ export function BancadaChrome({
       barra: {
         teclas: [{ teclas: ['Space'], texto: 'tocar' }, { teclas: ['W'], texto: 'por quê' }],
         // D-886: a nota da IA e o porquê do corte, nas três telas de um corte.
-        extra: <PorQueNaBancada corte={corte} />,
+        ...partesDoCorteNaBarra(corte),
         alternancias: [
           {
             texto: 'Fire',

@@ -1,3 +1,4 @@
+import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
 import { estaAprovado } from '@/lib/statusDoCorte';
 import type { StatusCorte, StatusExportCorte } from '@/types/models';
 import { TELAS, type TelaId } from './upgradeRoutes';
@@ -30,6 +31,8 @@ export type EtapaDaTrilha = {
   texto: string;
   /** "3 de 5", "6 propostos", "ok" — ou "—" sem dados ou sem aprovados. */
   contagem: string;
+  /** D-1044: com um corte aberto, o que esta casa diz DELE. A contagem segue sendo a da live. */
+  doCorte?: string;
   feita: boolean;
   /** A casa acesa: a tela aberta ou, no Workspace, onde a live parou. */
   agora: boolean;
@@ -204,6 +207,38 @@ function etapaAcesa(tela: TelaId, passos: Passo[], filtroNoAr: boolean): EtapaId
   return passos.find((p) => !p.feita)?.id ?? 'publicado';
 }
 
+export type ResumoDoCorte = Partial<Record<EtapaId, string>>;
+
+
+/** D-1044: o que cada casa diz do corte aberto, medido só no que já está em cache. */
+export function resumirCorte(
+  corte: {
+    inicio_seg: number;
+    fim_seg: number;
+    // O hms é o que todo trecho traz; o tempo em segundos só vem em parte deles.
+    desvios?: { inicio_hms: string; fim_hms: string }[] | null;
+    alertas_conferir?: { conferido?: boolean }[] | null;
+    cenas_remotion?: unknown;
+    cenas_validadas?: number | boolean | null;
+  },
+  status: { thumbnail_pronta?: boolean; metadados_completos?: boolean; pronto_publicar?: boolean } | undefined,
+): ResumoDoCorte {
+  const sai = corte.fim_seg - corte.inicio_seg - calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios ?? []);
+  const abertos = (corte.alertas_conferir ?? []).filter((a) => !a.conferido).length;
+  const bruto = corte.cenas_remotion as unknown[] | { cenas?: unknown[] } | null | undefined;
+  const cenas = Array.isArray(bruto) ? bruto.length : (bruto?.cenas?.length ?? 0);
+  return {
+    cortes: [sai > 0.05 ? `sai ${Math.max(1, Math.round(sai))} s` : 'sem trechos', ...(abertos > 0 ? [`${abertos} conferir`] : [])].join(', '),
+    pos: cenas === 0 ? 'sem cenas' : `${cenas} ${cenas === 1 ? 'cena' : 'cenas'}${corte.cenas_validadas ? '' : ', por validar'}`,
+    ...(status
+      ? {
+          metadados: !status.thumbnail_pronta ? 'falta capa' : !status.metadados_completos ? 'falta metadado' : 'ok',
+          revisao: status.pronto_publicar ? 'pronto' : 'falta algo',
+        }
+      : {}),
+  };
+}
+
 /**
  * A trilha da live, na ordem do trabalho. Fora de uma live, vazia.
  * `dados` ausente (ainda carregando) dá as casas sem contagem.
@@ -214,12 +249,16 @@ export function trilhaDaLive(
   corteId: string | null = null,
   dados?: DadosDaLive,
   filtroNoAr = false,
+  resumo: ResumoDoCorte = {},
 ): EtapaDaTrilha[] {
   if (!projetoId || !dentroDeUmaLive(tela)) return [];
   const passos = dados ? passosDaLive(dados) : SEM_DADOS;
   const acesa = etapaAcesa(tela, passos, filtroNoAr);
+  // O Workspace conta a live: lá não há corte aberto, e resumo nenhum entra nas casas.
+  const doCorte = tela === 'projeto' ? {} : resumo;
   return passos.map((p) => ({
     ...p,
+    ...(doCorte[p.id] ? { doCorte: doCorte[p.id] } : {}),
     agora: p.id === acesa,
     to: destino(p.id, projetoId, corteId),
   }));

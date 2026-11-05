@@ -97,7 +97,7 @@ describe('FinalReviewPage — checklist', () => {
       ['Color grade aplicado', 'palette'],
       ['Metadados preenchidos', 'file-text'],
       ['Capa renderizada', 'pen-line'],
-      ['Áudio normalizado (-14 LUFS)', 'volume-x'],
+      ['Cenas validadas', 'list-checks'],
     ]);
   });
 

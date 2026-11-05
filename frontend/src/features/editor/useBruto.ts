@@ -1,8 +1,9 @@
+import { useEffect } from 'react';
 import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toaster';
 import type { StatusBrutoResponse } from '@/types/models';
 import { brutoApi, type GerarBrutoOpcoes } from './api/bruto';
-import { invalidaCorte } from './useCortes';
+import { invalidaCorte, useCorte } from './useCortes';
 import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
 
 // O vídeo bruto do corte: o status, os passos e a geração. D-723: saiu do useEditor.
@@ -47,6 +48,13 @@ export async function buscarStatusBruto(qc: QueryClient, corteId: string) {
 
 export function useStatusBruto(corteId: string | undefined) {
   const qc = useQueryClient();
+  // D-1044: o status diz se o bruto ficou para trás, e o corte muda por várias portas
+  // (PATCH, riscar, restaurar, desfazer, arranjo). Reler pela versão do corte não
+  // depende de cada mutação lembrar disso.
+  const versaoDoCorte = useCorte(corteId).dataUpdatedAt;
+  useEffect(() => {
+    if (corteId && versaoDoCorte) void qc.invalidateQueries({ queryKey: statusBrutoKey(corteId) });
+  }, [qc, corteId, versaoDoCorte]);
   return useQuery({
     queryKey: statusBrutoKey(corteId ?? ''),
     queryFn: () => buscarStatusBruto(qc, corteId!),
@@ -98,6 +106,7 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
         corte_id: corteId,
         status: 'cortando',
         clip_gerado: false,
+        bruto_defasado: false,
         clip_path: previous?.clip_path ?? '',
       });
       return { previous };
