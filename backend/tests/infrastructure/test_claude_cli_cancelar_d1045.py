@@ -18,6 +18,7 @@ import os
 import subprocess
 import sys
 import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import psutil
@@ -66,6 +67,8 @@ _PRAZO_SEG = 15.0
 _QUEM_DEVE_MORRER = ("pai", "neto") if os.name == "nt" else ("pai",)
 _CORTE = "c1"
 _JOB = f"bruto:{_CORTE}"
+_RESPOSTA = '{"cenas": [{"tipo": "orfa"}]}'
+_SEM_CENAS = "[]"  # o valor do corte que nasce
 
 
 class ClaudeFalso:
@@ -292,43 +295,82 @@ async def test_a_resposta_que_chega_junto_do_cancelamento_nao_e_gravada(
     assert gravado == []
 
 
-@pytest.mark.asyncio
-async def test_a_resposta_ja_em_maos_nao_chega_ao_banco_com_o_cancelamento_atras(
-    claude, telemetria, monkeypatch
-):
-    """A corrida que o CI achou no Python 3.13.18, forçada em qualquer versão.
-
-    Lá, a thread que termina antes do `wrap_future` faz o `await` voltar sem suspender, e o
-    cancelamento fica na fila do loop, atrás da resposta. Quem segura é o `importar_cenas` de
-    verdade: ele espera o banco antes de gravar, e é nessa espera que o cancelamento entra.
-    """
-    _geracao_de_cenas(monkeypatch)
-    monkeypatch.setattr(CenasRemotionService, "importar_cenas", _IMPORTAR_DE_VERDADE)
+@asynccontextmanager
+async def _corte_que_a_geracao_grava(pasta: Path, monkeypatch):
+    """A gravação de verdade: com transcrição, o `importar_cenas` real grava neste corte."""
     # Em arquivo: cancelar a consulta descarta a conexão, e com ela um banco `:memory:`.
-    engine = create_async_engine(f"sqlite+aiosqlite:///{claude.pasta / 'banco.db'}")
-    tasks: list[asyncio.Task] = []
-
-    async def responde_sem_suspender(*_args, **_kwargs):
-        asyncio.get_running_loop().call_soon(tasks[0].cancel)
-        return {"is_error": False, "result": '{"cenas": [{"tipo": "orfa"}]}'}
-
+    engine = create_async_engine(f"sqlite+aiosqlite:///{pasta / 'banco.db'}")
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         fabrica = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         async with fabrica() as db:
             db.add(Projeto(id="p1", youtube_url="https://x/y"))
-            db.add(Corte(id=_CORTE, projeto_id="p1", numero=1, status="aprovado"))
+            db.add(
+                Corte(
+                    id=_CORTE,
+                    projeto_id="p1",
+                    numero=1,
+                    status="aprovado",
+                    inicio_seg=0,
+                    fim_seg=60,
+                    transcricao_final='[{"inicio": 0, "fim": 5, "texto": "ola"}]',
+                )
+            )
             await db.commit()
+        monkeypatch.setattr(CenasRemotionService, "importar_cenas", _IMPORTAR_DE_VERDADE)
         monkeypatch.setattr(cenas_remotion, "AsyncSessionLocal", fabrica)
+        yield fabrica
+    finally:
+        await engine.dispose()
+
+
+async def _cenas_gravadas(fabrica) -> str:
+    async with fabrica() as db:
+        return (await db.get(Corte, _CORTE)).cenas_remotion
+
+
+@pytest.mark.asyncio
+async def test_sem_cancelar_a_resposta_chega_ao_banco(claude, telemetria, monkeypatch):
+    """O controle do teste abaixo: o corte dele grava, então "não gravou" quer dizer algo."""
+    _geracao_de_cenas(monkeypatch)
+
+    async def responde(*_args, **_kwargs):
+        return {"is_error": False, "result": _RESPOSTA}
+
+    async with _corte_que_a_geracao_grava(claude.pasta, monkeypatch) as fabrica:
+        monkeypatch.setattr(cli, "_run", responde)
+        await CenasRemotionService.gerar_cenas_via_claude(_CORTE)
+
+        assert await _cenas_gravadas(fabrica) != _SEM_CENAS
+
+
+@pytest.mark.asyncio
+async def test_a_resposta_ja_em_maos_nao_chega_ao_banco_com_o_cancelamento_atras(
+    claude, telemetria, monkeypatch
+):
+    """A corrida que o CI achou, forçada em qualquer versão do Python.
+
+    Desde a 3.13.12, a thread que termina antes do `wrap_future` faz o `await` voltar sem
+    suspender, e o cancelamento fica na fila do loop, atrás da resposta. Quem segura é o
+    `importar_cenas` de verdade: ele espera o banco antes de gravar, e é nessa espera que o
+    cancelamento entra.
+    """
+    _geracao_de_cenas(monkeypatch)
+    tasks: list[asyncio.Task] = []
+
+    async def responde_sem_suspender(*_args, **_kwargs):
+        asyncio.get_running_loop().call_soon(tasks[0].cancel)
+        return {"is_error": False, "result": _RESPOSTA}
+
+    async with _corte_que_a_geracao_grava(claude.pasta, monkeypatch) as fabrica:
         monkeypatch.setattr(cli, "_run", responde_sem_suspender)
         tasks.append(_na_fila(CenasRemotionService.gerar_cenas_via_claude(_CORTE)))
 
         with pytest.raises(asyncio.CancelledError):
             await tasks[0]
 
-        async with fabrica() as db:
-            assert (await db.get(Corte, _CORTE)).cenas_remotion == "[]"  # o valor de quem nasce
+        # Tempo de uma gravação que tivesse sobrevivido ao cancelamento terminar.
+        await asyncio.sleep(1)
+        assert await _cenas_gravadas(fabrica) == _SEM_CENAS
         assert len(telemetria) == 1
-    finally:
-        await engine.dispose()
