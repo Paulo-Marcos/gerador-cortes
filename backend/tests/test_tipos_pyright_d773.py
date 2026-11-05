@@ -78,7 +78,6 @@ EXCECOES = {
     "app/services/analise.py::reportAttributeAccessIssue": 1,
     "app/services/canal/prompts_utilitarios.py::reportArgumentType": 1,
     "app/services/cenas_remotion.py::reportArgumentType": 2,
-    "app/services/cenas_remotion.py::reportOptionalMemberAccess": 1,
     "app/services/cenas_remotion.py::reportReturnType": 1,
     "app/services/claude_ia.py::reportArgumentType": 1,
     "app/services/corte.py::reportArgumentType": 4,
