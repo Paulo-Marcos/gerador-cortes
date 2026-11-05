@@ -29,7 +29,7 @@ from dataclasses import dataclass
 
 from app.config import settings
 from app.core.por_loop import PorLoop
-from app.infrastructure import fila_ia
+from app.infrastructure import fila_ia, processos_em_voo
 from app.infrastructure.json_da_ia import RespostaSemJson
 from app.infrastructure.json_da_ia import extract_json as _extract_json
 
@@ -256,6 +256,7 @@ def _matar_arvore(proc: "subprocess.Popen") -> None:
 def _run_sync(
     prompt: str,
     *,
+    cancelavel: processos_em_voo.ProcessoCancelavel,
     model: str,
     max_turns: int,
     timeout: float,
@@ -285,7 +286,7 @@ def _run_sync(
         thinking,
     )
 
-    proc = subprocess.Popen(
+    proc = cancelavel.abrir(
         argv,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -379,10 +380,9 @@ async def _run(
     thinking_tokens: int | None = None,
     background: bool = False,
 ) -> dict:
-    """Wrapper async: roda o subprocess bloqueante numa thread (compatível com o
-    SelectorEventLoop do uvicorn no Windows), limitando concorrência via gate
-    (que dá precedência ao interativo) e fazendo retry com backoff exponencial em
-    erros transitórios (overload/529).
+    """Roda o subprocess numa thread (o SelectorEventLoop do uvicorn no Windows não o
+    suporta), com o gate dando precedência ao interativo, retry com backoff exponencial em
+    erros transitórios (overload/529) e, ao cancelar a espera, a morte do processo (D-1045).
     """
     if not settings.claude_cli_enabled:
         raise ClaudeCliError("Provider Claude desabilitado (CLAUDE_CLI_ENABLED=false).")
@@ -392,7 +392,7 @@ async def _run(
     for tentativa in range(tentativas):
         try:
             async with _get_gate().adquirir(background=background):
-                return await asyncio.to_thread(
+                return await processos_em_voo.em_thread_cancelavel(
                     _run_sync,
                     prompt,
                     model=model,

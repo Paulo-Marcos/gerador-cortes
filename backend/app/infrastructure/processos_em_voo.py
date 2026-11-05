@@ -17,15 +17,20 @@ quem cancela usa um id só e derruba tudo daquele trabalho.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import subprocess
 import threading
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 # O taskkill da árvore inteira volta em milissegundos; 15 s é folga para máquina carregada.
 _TIMEOUT_DO_TASKKILL_S = 15
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 # owner → processos vivos. Protegido por lock: o registro acontece nas threads
 # do pool (onde o ffmpeg roda) e a morte vem do event loop.
@@ -92,6 +97,55 @@ def matar_owner(owner: str) -> int:
     if alvos:
         logger.info("[ProcessosEmVoo] %d processo(s) de '%s' encerrados.", len(alvos), owner)
     return len(alvos)
+
+
+class ProcessoCancelado(RuntimeError):
+    """O cancelamento chegou antes de o processo nascer: ele nem foi aberto."""
+
+
+class ProcessoCancelavel:
+    """O subprocesso de uma chamada em thread, ao alcance de quem a cancela (D-1045).
+
+    O registro por dono (acima) não serve à IA: a geração do clique não tem dono, e
+    entre a thread começar e o processo ser registrado o cancelamento não acharia nada.
+    Aqui o trinco fecha essa corrida: quem cancela primeiro impede o processo de nascer,
+    e o processo que nasceu primeiro é encontrado por quem cancela.
+    """
+
+    def __init__(self) -> None:
+        self._trinco = threading.Lock()
+        self._processo: subprocess.Popen | None = None
+        self._cancelado = False
+
+    def abrir(self, *args: Any, **kwargs: Any) -> subprocess.Popen:
+        with self._trinco:
+            if self._cancelado:
+                raise ProcessoCancelado("Cancelado antes de abrir o processo.")
+            self._processo = subprocess.Popen(*args, **kwargs)  # noqa: S603 — argv do chamador
+            return self._processo
+
+    def cancelar(self) -> None:
+        with self._trinco:
+            self._cancelado = True
+            processo = self._processo
+        if processo is not None:
+            matar_arvore(processo)
+
+
+async def em_thread_cancelavel(funcao: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    """`asyncio.to_thread` que, cancelado, derruba o processo aberto pela função.
+
+    Cancelar a task só solta quem esperava; a thread segue no subprocesso. Por isso a
+    morte fica aqui, no ponto por onde todo cancelamento passa, e não em quem cancela: a
+    fila global, o encerramento do app e um `gather` chegam todos ao mesmo lugar. A função
+    recebe o `cancelavel` por nome. O que ela levantar depois disso ninguém mais lê.
+    """
+    cancelavel = ProcessoCancelavel()
+    try:
+        return await asyncio.to_thread(funcao, *args, cancelavel=cancelavel, **kwargs)
+    except asyncio.CancelledError:
+        cancelavel.cancelar()
+        raise
 
 
 def donos_em_voo() -> list[str]:
