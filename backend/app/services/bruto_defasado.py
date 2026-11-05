@@ -27,14 +27,18 @@ def bruto_ficou_para_tras(corte: Corte, projeto: Projeto, bruto: Path) -> bool:
     """`True` quando o corte de hoje cortaria outros trechos que os do bruto no disco.
 
     Bruto sem registro (de antes da D-1027, ou ilegível) não dá alarme: sem saber o
-    que foi cortado, avisar seria chute.
+    que foi cortado, avisar seria chute. O mesmo vale para o desvio ilegível: o aviso
+    não pode derrubar a rota de status, que a tela lê para saber da geração.
     """
     cortados = trechos_do_bruto.ler_trechos(bruto)
     if cortados is None:
         return False
-    desvios = mesclar_desvios_sobrepostos(_desvios_do_corte(corte, corte.id))
-    inicio, fim = _intervalo_dentro_do_video(corte, projeto)
-    atuais = _segmentos_do_bruto(corte, inicio, fim, desvios)
+    try:
+        desvios = mesclar_desvios_sobrepostos(_desvios_do_corte(corte, corte.id))
+        inicio, fim = _intervalo_dentro_do_video(corte, projeto)
+        atuais = _segmentos_do_bruto(corte, inicio, fim, desvios)
+    except ValueError:
+        return False
     if len(cortados) != len(atuais):
         return True
     return any(

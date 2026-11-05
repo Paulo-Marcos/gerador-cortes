@@ -315,7 +315,7 @@ export function FinalReviewPage() {
       >
         <ChecklistCard items={checklistItems} />
         {/* D-1015: saúde técnica do vídeo, medida em segundo plano; só avisa. */}
-        {videoPronto && <BoletimTecnicoPainel key={corte.id} corteId={corte.id} onIrPara={(seg) => { if (videoRef.current) videoRef.current.currentTime = seg; }} />}
+        {videoPronto && <BoletimTecnicoPainel key={corte.id} corteId={corte.id} player={videoRef} />}
         <CapaCard
           titulo={corte.titulo_proposto ?? projeto.data?.titulo_live ?? 'Corte'}
           pronta={Boolean(exportStatusAtual?.thumbnail_pronta)}

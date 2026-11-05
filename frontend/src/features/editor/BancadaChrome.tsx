@@ -105,6 +105,14 @@ function capaDoCorteOuExport(
   );
 }
 
+/** O que as três telas de um corte levam à barra: o porquê dele e o que ficou em aberto. */
+function partesDoCorteNaBarra(corte: Corte) {
+  return {
+    extra: <PorQueNaBancada corte={corte} />,
+    pendencias: <PendenciasDoCorte corte={corte} />,
+  };
+}
+
 export function BancadaChrome({
   projetoId,
   tituloLive,
@@ -166,7 +174,8 @@ export function BancadaChrome({
     dot: COR_DO_SELO[TOM_DO_CORTE[c.status] ?? 'inerte'].cor,
     ativo: c.id === corte.id,
     onClick: () => navigate(caminhoDoCorte(c)),
-    // D-746: a lista diz onde cada corte parou e abre o metadado dele sem trocar de tela.
+    // D-746: a lista volta a dizer onde cada corte parou (a casca antiga
+    // dizia) e abre o metadado de qualquer um sem trocar de tela.
     tira: statusDe(c) ? montarTira(statusDe(c)!, c.status) : undefined,
     acao: {
       icone: 'tags' as const,
@@ -203,8 +212,7 @@ export function BancadaChrome({
       barra: {
         teclas: [{ teclas: ['Space'], texto: 'tocar' }, { teclas: ['W'], texto: 'por quê' }],
         // D-886: a nota da IA e o porquê do corte, nas três telas de um corte.
-        extra: <PorQueNaBancada corte={corte} />,
-        pendencias: <PendenciasDoCorte corte={corte} />,
+        ...partesDoCorteNaBarra(corte),
         alternancias: [
           {
             texto: 'Fire',

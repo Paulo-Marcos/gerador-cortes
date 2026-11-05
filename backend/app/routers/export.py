@@ -167,7 +167,9 @@ async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
 
     gerado = bool(clip_resolvido and clip_resolvido.exists())
     defasado = False
-    if corte and clip_resolvido and gerado:
+    # Regerando, o arquivo no disco é o antigo: comparar com ele diria que os trechos
+    # mudaram ao lado de "Gerando bruto…".
+    if corte and clip_resolvido and gerado and status != "cortando":
         projeto = await db.get(Projeto, corte.projeto_id)
         defasado = projeto is not None and bruto_ficou_para_tras(corte, projeto, clip_resolvido)
     return {

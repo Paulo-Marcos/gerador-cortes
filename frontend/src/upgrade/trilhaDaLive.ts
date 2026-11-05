@@ -207,10 +207,6 @@ function etapaAcesa(tela: TelaId, passos: Passo[], filtroNoAr: boolean): EtapaId
   return passos.find((p) => !p.feita)?.id ?? 'publicado';
 }
 
-/**
- * A trilha da live, na ordem do trabalho. Fora de uma live, vazia.
- * `dados` ausente (ainda carregando) dá as casas sem contagem.
- */
 export type ResumoDoCorte = Partial<Record<EtapaId, string>>;
 
 
@@ -243,6 +239,10 @@ export function resumirCorte(
   };
 }
 
+/**
+ * A trilha da live, na ordem do trabalho. Fora de uma live, vazia.
+ * `dados` ausente (ainda carregando) dá as casas sem contagem.
+ */
 export function trilhaDaLive(
   tela: TelaId,
   projetoId: string | null,

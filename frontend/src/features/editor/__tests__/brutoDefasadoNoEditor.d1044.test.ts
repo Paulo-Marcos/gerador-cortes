@@ -53,6 +53,10 @@ describe('D-1044 · a falha do bruto com a live fora do disco', () => {
     expect(texto).not.toContain('Arquivo de vídeo original');
   });
 
+  it('a frase que dispara a orientação é a que o backend grava', () => {
+    expect(fonte('../../../../../backend/app/services/export.py')).toContain('Arquivo de vídeo original não encontrado');
+  });
+
   it('as outras falhas seguem com o motivo do backend', () => {
     expect(mensagemDaFalhaDoBruto('Nenhum segmento válido.')).toBe('Geração de bruto falhou: Nenhum segmento válido.');
   });

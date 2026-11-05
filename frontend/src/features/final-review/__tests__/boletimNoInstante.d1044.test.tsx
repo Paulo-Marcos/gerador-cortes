@@ -75,7 +75,7 @@ describe('D-1044 · o boletim leva ao instante', () => {
     expect(desenhar(vi.fn())).not.toContain('Ir para 1:00 no vídeo');
   });
 
-  it('sem player para levar, como num short, o texto continua e não há link', () => {
+  it('sem quem leve o player, o texto continua e não há link', () => {
     const html = desenhar();
     expect(html).toContain('1:15');
     expect(html).not.toContain('Ir para');

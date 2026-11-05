@@ -93,6 +93,30 @@ def test_fim_alem_da_duracao_da_live_segue_a_mesma_conta_da_geracao(tmp_path):
     assert bruto_ficou_para_tras(_corte(), projeto, bruto) is False
 
 
+ARRANJO_INVERTIDO = [
+    {"inicio_seg": 150.0, "fim_seg": 200.0},
+    {"inicio_seg": 100.0, "fim_seg": 150.0},
+]
+
+
+def test_bruto_gerado_com_o_arranjo_de_hoje_nao_avisa(tmp_path):
+    bruto = _bruto(tmp_path, [(150.0, 200.0), (100.0, 150.0)])
+    corte = _corte(arranjo=json.dumps(ARRANJO_INVERTIDO))
+    assert bruto_ficou_para_tras(corte, PROJETO, bruto) is False
+
+
+def test_mesmos_trechos_em_outra_ordem_avisa(tmp_path):
+    # Reordenar os blocos muda o vídeo sem mudar o que sai: a ordem conta.
+    bruto = _bruto(tmp_path, [(100.0, 150.0), (150.0, 200.0)])
+    corte = _corte(arranjo=json.dumps(ARRANJO_INVERTIDO))
+    assert bruto_ficou_para_tras(corte, PROJETO, bruto) is True
+
+
+def test_desvio_ilegivel_nao_da_alarme(tmp_path):
+    bruto = _bruto(tmp_path, [(100.0, 200.0)])
+    assert bruto_ficou_para_tras(_corte([("abc:def", "00:02:10.000")]), PROJETO, bruto) is False
+
+
 # ─── A rota que a tela lê ───────────────────────
 
 
@@ -132,6 +156,29 @@ async def test_rota_sem_o_video_no_disco_nao_avisa_mesmo_com_registro(tmp_path, 
     bruto = _bruto(tmp_path, [(100.0, 200.0)])  # só o registro; o vídeo não existe
     resposta = await _status_da_rota(monkeypatch, bruto, _corte_com_bruto(UM_DESVIO))
     assert resposta["clip_gerado"] is False
+    assert resposta["bruto_defasado"] is False
+
+
+@pytest.mark.asyncio
+async def test_rota_com_desvio_ilegivel_responde_sem_aviso(tmp_path, monkeypatch):
+    bruto = _bruto(tmp_path, [(100.0, 200.0)])
+    bruto.write_bytes(b"video")
+    resposta = await _status_da_rota(
+        monkeypatch, bruto, _corte_com_bruto([("abc:def", "00:02:10.000")])
+    )
+    assert resposta["clip_gerado"] is True
+    assert resposta["bruto_defasado"] is False
+
+
+@pytest.mark.asyncio
+async def test_rota_regerando_nao_compara_com_o_arquivo_antigo(tmp_path, monkeypatch):
+    bruto = _bruto(tmp_path, [(100.0, 200.0)])
+    bruto.write_bytes(b"video")
+    monkeypatch.setattr(
+        export_router.ExportService, "get_tarefa_corte_status", lambda _id: "cortando"
+    )
+    resposta = await _status_da_rota(monkeypatch, bruto, _corte_com_bruto(UM_DESVIO))
+    assert resposta["status"] == "cortando"
     assert resposta["bruto_defasado"] is False
 
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type RefObject, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useShortsDoCorte } from '@/features/shorts/useShortsDoCorte';
 import { Icon } from '@/upgrade/Icon';
@@ -25,13 +25,17 @@ export type OpcaoDoBoletim = { alvo: AlvoDoBoletim; rotulo: string };
 
 const chaveDaOpcao = (o: OpcaoDoBoletim) => `${o.alvo.tipo}:${o.alvo.id}`;
 
+function levarAoInstante(player: RefObject<HTMLVideoElement | null>, segundos: number) {
+  if (player.current) player.current.currentTime = segundos;
+}
+
 export function BoletimTecnicoPainel({
   corteId,
-  onIrPara,
+  player,
 }: {
   corteId: string;
-  /** D-1044: leva o player ao instante da parada ou da emenda. */
-  onIrPara?: (segundos: number) => void;
+  /** D-1044: o vídeo da Revisão, que a parada e a emenda levam ao instante delas. */
+  player?: RefObject<HTMLVideoElement | null>;
 }) {
   const shortsQ = useShortsDoCorte(corteId);
   const [escolhido, setEscolhido] = useState<string>(`corte:${corteId}`);
@@ -54,7 +58,7 @@ export function BoletimTecnicoPainel({
       onRemedir={() => remedir.mutate()}
       remedindo={remedir.isPending}
       // O player da Revisão é o do horizontal: instante de short não se aplica a ele.
-      onIrPara={atual.alvo.tipo === 'corte' ? onIrPara : undefined}
+      onIrPara={atual.alvo.tipo === 'corte' && player ? (seg) => levarAoInstante(player, seg) : undefined}
     />
   );
 }
