@@ -37,6 +37,8 @@ from app.infrastructure.render.bruto_pipeline import build_bruto_pipeline
 from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto, StatusCorte
 from app.services.bruto_progress import BrutoProgress
+from app.services.cenas_da_cadeia import gerar_cenas_da_cadeia, reserva_da_cadeia
+from app.services.cenas_em_geracao import ReservaDeCenas
 from app.services.ciclo_de_vida import marcar_corte
 from app.services.export_bruto import _ExportBrutoMixin
 from app.services.export_bulk_queue import _ExportBulkQueueMixin
@@ -164,17 +166,23 @@ class ExportService(
                 return erro
 
             _gravar_bruto_no_corte(corte, out_path, duracao_real, segmentos)
-            await db.commit()
-            BrutoProgress.marcar(corte_id, "render", "concluido")
+            # D-1037: a marca entra antes do commit, porque a tela lê "com bruto" assim
+            # que ele sai. Reservar só ao chegar nas cenas deixaria a sincronia como
+            # janela: lista vazia, botão livre e o corte pagando a geração duas vezes.
+            pedir_cenas = refazer_cenas and settings.claude_auto_cenas_no_bruto
+            with reserva_da_cadeia(corte_id, pedir_cenas) as reserva:
+                await db.commit()
+                BrutoProgress.marcar(corte_id, "render", "concluido")
 
-            await _etapas_derivadas(
-                db,
-                corte_id,
-                out_path,
-                e_fire=e_fire,
-                refazer_transcricao=refazer_transcricao,
-                refazer_cenas=refazer_cenas,
-            )
+                await _etapas_derivadas(
+                    db,
+                    corte_id,
+                    out_path,
+                    e_fire=e_fire,
+                    refazer_transcricao=refazer_transcricao,
+                    refazer_cenas=refazer_cenas,
+                    reserva_de_cenas=reserva,
+                )
 
             if _log_detalhado():
                 logger.info(f"[ExportService] ✅ Bruto gerado: {out_path.name}")
@@ -471,6 +479,7 @@ async def _etapas_derivadas(
     e_fire: bool,
     refazer_transcricao: bool,
     refazer_cenas: bool,
+    reserva_de_cenas: ReservaDeCenas | None,
 ) -> None:
     """Transcrição, detecção de segmentos, cenas e shorts: derivam do bruto pronto."""
     # D-160 — a re-sincronização do texto (transcricao_final ↔ recorte
@@ -499,8 +508,11 @@ async def _etapas_derivadas(
         f" -> {'iniciando cenas via Claude' if gerar_cenas else 'pulando cenas'}"
         f" p/ {corte_id}",
     )
+    # D-1037: a reserva foi tomada antes do commit do bruto. Vazia aqui quer dizer
+    # que o clique chegou primeiro: o passo se encerra sem pagar a geração de novo,
+    # e quem diz que as cenas ainda estão rodando é a marca do clique.
     if gerar_cenas:
-        await _gerar_cenas(corte_id)
+        await gerar_cenas_da_cadeia(corte_id, reserva_de_cenas)
 
     # D-455 — a fábrica de shorts do corte Fire, o "segundo passo" da
     # geração do bruto. Roda DEPOIS da transcrição (é dela, já rebaseada
@@ -529,18 +541,6 @@ def _disparar_deteccao_de_segmentos(corte_id: str, out_path: Path) -> None:
             "ExportService",
             f"Auto-trigger de detecção de segmentos falhou para {corte_id}: {exc}",
         )
-
-
-async def _gerar_cenas(corte_id: str) -> None:
-    BrutoProgress.marcar(corte_id, "cenas", "rodando")
-    try:
-        from app.services.cenas_remotion import CenasRemotionService
-
-        await CenasRemotionService.gerar_cenas_via_claude(corte_id)
-        BrutoProgress.marcar(corte_id, "cenas", "concluido")
-    except Exception as exc:  # noqa: BLE001 — etapa não-fatal: não derruba o bruto
-        BrutoProgress.marcar(corte_id, "cenas", "erro")
-        operational_error("ExportService", f"Cenas via Claude falharam para {corte_id}: {exc}")
 
 
 async def _sugerir_shorts(corte_id: str) -> None:

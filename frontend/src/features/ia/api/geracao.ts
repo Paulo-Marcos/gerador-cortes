@@ -28,6 +28,14 @@ export const geracaoIaApi = {
   gerarCenasClaude: (corteId: string, provider: ProviderIA = 'claude') =>
     dados(api.POST('/api/claude/corte/{corte_id}/gerar-cenas', doCorte(corteId, provider))),
 
+  // D-1037: a geração pode ser da cadeia do bruto, que nenhuma mutação da tela vê.
+  cenasEmGeracao: (corteId: string) =>
+    dados(
+      api.GET('/api/claude/corte/{corte_id}/cenas-em-geracao', {
+        params: { path: { corte_id: corteId } },
+      }),
+    ),
+
   gerarMetadadosClaude: (corteId: string, provider: ProviderIA = 'claude') =>
     dados(api.POST('/api/claude/corte/{corte_id}/gerar-metadados', doCorte(corteId, provider))),
 

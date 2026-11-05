@@ -793,6 +793,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/claude/corte/{corte_id}/cenas-em-geracao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cenas Em Geracao
+         * @description Se as cenas deste corte estão sendo geradas agora, pelo clique ou pela cadeia do bruto.
+         *
+         *     Rota própria porque o status do projeto só lista os cortes aprovados, e a Pós abre
+         *     também os outros. Lê só memória: a tela pode repetir à vontade.
+         */
+        get: operations["cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/claude/corte/{corte_id}/gerar-cenas": {
         parameters: {
             query?: never;
@@ -6111,6 +6134,13 @@ export interface components {
             formato: string;
             retratos: components["schemas"]["RetratosDasCenas"];
         };
+        /** CenasEmGeracaoResponse */
+        CenasEmGeracaoResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Em Geracao */
+            em_geracao: boolean;
+        };
         /** CenasGeradasResponse */
         CenasGeradasResponse: {
             /** Corte Id */
@@ -9686,6 +9716,11 @@ export interface components {
          * @description Onde cada corte aprovado está no caminho até a publicação.
          */
         StatusExportCorte: {
+            /**
+             * Cenas Em Geracao
+             * @default false
+             */
+            cenas_em_geracao: boolean;
             /** Cenas Geradas */
             cenas_geradas: boolean;
             /** Cenas Validadas */
@@ -12107,6 +12142,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TemaSelecionadoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CenasEmGeracaoResponse"];
                 };
             };
             /** @description Validation Error */

@@ -22,6 +22,7 @@ from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
 from app.services import abertura_do_corte, retrato_wikipedia
 from app.services.canal import editorial_scaffolds, editorial_skills, modelos_ia
+from app.services.cenas_em_geracao import ReservaDeCenas, reservar_ou_recusar
 from app.services.claude_ia import gerar_json, registrar_skill_usada
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -168,29 +169,28 @@ class CenasRemotionService:
             return await _corte_com_metadado(db, corte_id)
 
     @staticmethod
-    async def gerar_cenas_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+    async def gerar_cenas_via_claude(
+        corte_id: str, provider: ProviderIA = "claude", reserva: ReservaDeCenas | None = None
+    ) -> dict:
         """Gera as cenas Remotion de um corte via Claude (skill cenas-expert).
 
         Reaproveita o prompt detalhado (que carrega o schema) e o importador de
         cenas já existentes. Se o corte for longo, o prompt vem particionado —
         geramos por parte e concatenamos as cenas antes de importar.
         """
-        # D-435: a fila só via as cenas quando o Claude CLI anunciava CADA
-        # chamada, então montar o prompt, importar retratos e qualquer falha
-        # antes da 1ª chamada aconteciam sem item nenhum na fila — e a geração
-        # automática disparada pelo bruto parecia não existir. Anunciamos a fase
-        # inteira sob a MESMA chave que as chamadas internas usam, de modo que
-        # elas apenas atualizam este item em vez de criar outro.
-        # BaseException, e não Exception: um CancelledError (reload do backend,
-        # task morta) deixaria o item preso na fila como "em andamento".
-        chave_fila = fila_ia.anunciar_inicio(_SKILL_CENAS, corte_id=corte_id)
-        try:
-            resultado = await CenasRemotionService._gerar_cenas(corte_id, provider)
-        except BaseException as exc:
-            fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
-            raise
-        fila_ia.anunciar_fim(chave_fila, sucesso=True)
-        return resultado
+        # D-1037: a marca vem antes de tudo: a recusa não pode tocar o item da fila do outro.
+        # D-435: anunciamos a fase inteira sob a MESMA chave das chamadas internas, que só
+        # atualizam este item: antes, o que vinha antes da 1ª chamada não aparecia na fila.
+        # BaseException: um CancelledError (reload, task morta) deixaria o item preso.
+        with reserva or reservar_ou_recusar(corte_id):
+            chave_fila = fila_ia.anunciar_inicio(_SKILL_CENAS, corte_id=corte_id)
+            try:
+                resultado = await CenasRemotionService._gerar_cenas(corte_id, provider)
+            except BaseException as exc:
+                fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
+                raise
+            fila_ia.anunciar_fim(chave_fila, sucesso=True)
+            return resultado
 
     @staticmethod
     async def _gerar_cenas(corte_id: str, provider: ProviderIA = "claude") -> dict:

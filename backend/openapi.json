@@ -2802,6 +2802,24 @@
         "title": "CenasDoCorteResponse",
         "type": "object"
       },
+      "CenasEmGeracaoResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "em_geracao": {
+            "title": "Em Geracao",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "corte_id",
+          "em_geracao"
+        ],
+        "title": "CenasEmGeracaoResponse",
+        "type": "object"
+      },
       "CenasGeradasResponse": {
         "properties": {
           "corte_id": {
@@ -11488,6 +11506,11 @@
       "StatusExportCorte": {
         "description": "Onde cada corte aprovado está no caminho até a publicação.",
         "properties": {
+          "cenas_em_geracao": {
+            "default": false,
+            "title": "Cenas Em Geracao",
+            "type": "boolean"
+          },
           "cenas_geradas": {
             "title": "Cenas Geradas",
             "type": "boolean"
@@ -11611,6 +11634,7 @@
           "youtube_url_publicado",
           "youtube_scheduled_at",
           "cenas_geradas",
+          "cenas_em_geracao",
           "cenas_validadas",
           "tiktok_publicado_em"
         ],
@@ -15924,6 +15948,49 @@
         "summary": "Selecionar Tema Do Canal",
         "tags": [
           "Canais"
+        ]
+      }
+    },
+    "/api/claude/corte/{corte_id}/cenas-em-geracao": {
+      "get": {
+        "description": "Se as cenas deste corte estão sendo geradas agora, pelo clique ou pela cadeia do bruto.\n\nRota própria porque o status do projeto só lista os cortes aprovados, e a Pós abre\ntambém os outros. Lê só memória: a tela pode repetir à vontade.",
+        "operationId": "cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CenasEmGeracaoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cenas Em Geracao",
+        "tags": [
+          "Claude IA"
         ]
       }
     },

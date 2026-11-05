@@ -90,11 +90,14 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
       descricao: p.hint,
       sigla: meta?.sigla ?? p.label.slice(0, 3).toUpperCase(),
       // Cenas que nem foram geradas não têm o que validar (achado da
-      // pr-audit da D-868): o verbo segue o que de fato falta.
+      // pr-audit da D-868): o verbo segue o que de fato falta. E não se manda
+      // gerar o que já está gerando (D-1037): o convite é o clique duplicado.
       verbo:
-        p.label === 'Cenas' && !status.cenas_geradas
-          ? 'gerar cenas'
-          : (meta?.verbo ?? p.label.toLowerCase()),
+        p.label === 'Cenas' && status.cenas_em_geracao
+          ? 'gerando cenas'
+          : p.label === 'Cenas' && !status.cenas_geradas
+            ? 'gerar cenas'
+            : (meta?.verbo ?? p.label.toLowerCase()),
       grupo: meta?.grupo ?? ('PUBLICAÇÃO' as GrupoDaTira),
     };
   });

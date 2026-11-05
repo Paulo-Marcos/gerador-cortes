@@ -22,6 +22,7 @@ from app.services.cancelamento_jobs import (
     JobNaoEstaEmVoo,
     cancelar_job,
 )
+from app.services.cenas_em_geracao import em_geracao
 from app.services.export import ExportService
 from app.services.jobs_globais import JobsGlobais
 from app.services.liberacao_publicacao import liberar_publicacao
@@ -138,6 +139,7 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
                 "youtube_video_id": corte.youtube_video_id or "",
                 "youtube_url_publicado": corte.youtube_url_publicado or "",
                 "youtube_scheduled_at": corte.youtube_scheduled_at or "",
+                "cenas_em_geracao": em_geracao(corte.id),
                 "cenas_geradas": _contar_cenas_remotion(corte.cenas_remotion) > 0,
                 "cenas_validadas": bool(corte.cenas_validadas),
                 # D-516: o TikTok e publicacao MANUAL — so o operador sabe que
