@@ -36,7 +36,7 @@ vi.mock('@/features/editor/BancadaChrome', () => ({
 const { FinalReviewPage } = await import('../FinalReviewPage');
 
 /** A linha do checklist com este rótulo: tem o check de feita? */
-function itemFeito(rotulo: string, cenasValidadas: number, videoPronto: boolean): boolean {
+function itemFeito(rotulo: string, cenasValidadas: number, videoPronto: boolean, cenas: unknown[] = [{}]): boolean {
   h.corte = {
     id: 'c1',
     projeto_id: 'p1',
@@ -48,6 +48,7 @@ function itemFeito(rotulo: string, cenasValidadas: number, videoPronto: boolean)
     status: 'aprovado',
     is_pos_producao: 0,
     cenas_validadas: cenasValidadas,
+    cenas_remotion: cenas,
   } as unknown as Corte;
   h.status = statusExportPendente({ corte_id: 'c1', numero: 1, titulo: 'Corte 1', video_pronto: videoPronto });
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
@@ -80,6 +81,10 @@ describe('D-1044 · "Cenas validadas" lê o corte', () => {
 
   it('cenas por validar, com o vídeo pronto: o item NÃO fica verde', () => {
     expect(itemFeito('Cenas validadas', 0, true)).toBe(false);
+  });
+
+  it('corte sem cenas fica pendente: o backend recusa validar, e nada foi validado', () => {
+    expect(itemFeito('Cenas validadas', 0, true, [])).toBe(false);
   });
 
   it('o render pronto continua acendendo só o item do render', () => {
