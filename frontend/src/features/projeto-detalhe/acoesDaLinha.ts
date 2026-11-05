@@ -60,6 +60,12 @@ export function primarioDaLinha(
   }[estado] as Primario;
 }
 
+/** D-1037: durante a geração, o botão não manda gerar nem validar: só leva a acompanhar. */
+function cenasDaLinha(verbo: string | undefined, pos: string): [string, IconName, string] {
+  if (verbo === 'gerando cenas') return ['Gerando cenas na Pós', 'loader', pos];
+  return [verbo === 'gerar cenas' ? 'Gerar cenas na Pós' : 'Validar cenas na Pós', 'list-checks', pos];
+}
+
 /**
  * D-1041: o principal do corte aprovado era "Finalizar" e abria sempre a Pós, com
  * o bruto ou só a capa faltando. Ele passa a seguir a tira: diz o que falta e leva
@@ -82,7 +88,7 @@ export function montarProximoDaLinha(
       Bruto: nuncaGerou
         ? ['Gerar bruto no editor', 'scissors', `/projetos/${projetoId}/cortes/${corteId}`]
         : ['Gerar bruto na Pós', 'scissors', pos],
-      Cenas: [tira.proxima?.verbo === 'gerar cenas' ? 'Gerar cenas na Pós' : 'Validar cenas na Pós', 'list-checks', pos],
+      Cenas: cenasDaLinha(tira.proxima?.verbo, pos),
       Graded: ['Renderizar na Pós', 'clapperboard', pos],
       Overlays: ['Renderizar na Pós', 'clapperboard', pos],
       Final: ['Renderizar na Pós', 'clapperboard', pos],
