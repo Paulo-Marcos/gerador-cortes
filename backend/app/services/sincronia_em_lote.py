@@ -15,6 +15,9 @@ async def sincronizar_todos(
     O `rollback` aqui limpa a sessão para o próximo corte seguir; o primeiro erro é
     relançado ao fim, para a falha não passar por sucesso. Devolve quantos
     cortes foram processados.
+
+    A sessão chega sem nada pendente: o que estiver nela se perde no primeiro
+    `rollback`, daqui ou do retry, e os cortes seguintes nem ficam sabendo (D-1039).
     """
     primeira_falha: Exception | None = None
     for corte_id in ids:
