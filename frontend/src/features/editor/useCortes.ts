@@ -190,12 +190,15 @@ export function useToggleLeitura(corteId: string, projetoId?: string) {
 
 export function useSincronizarTranscricao(corteId: string) {
   const qc = useQueryClient();
+  const { notify } = useToast();
   return useMutation({
     mutationFn: () => cortesApi.sincronizarTranscricao(corteId),
     onSuccess: (data) => {
       qc.setQueryData(corteKey(corteId), data);
       void atualizarLegendasDoCorte(qc, corteId);
     },
+    // D-1040: o aviso do trecho manda para este botão; calado, ele parece ter resolvido.
+    onError: () => notify('Não foi possível atualizar a transcrição. Ela continua desatualizada.', { tone: 'error' }),
   });
 }
 

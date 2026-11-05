@@ -27,6 +27,7 @@ const h = vi.hoisted(() => {
     notify: vi.fn(),
     adicionarDesvio: vi.fn(),
     obterCorte: vi.fn(),
+    sincronizarTranscricao: vi.fn(),
   };
 });
 
@@ -34,7 +35,12 @@ vi.mock('../api/cortes', async (original) => {
   const real = await original<typeof import('../api/cortes')>();
   return {
     ...real,
-    cortesApi: { ...real.cortesApi, adicionarDesvio: h.adicionarDesvio, obterCorte: h.obterCorte },
+    cortesApi: {
+      ...real.cortesApi,
+      adicionarDesvio: h.adicionarDesvio,
+      obterCorte: h.obterCorte,
+      sincronizarTranscricao: h.sincronizarTranscricao,
+    },
   };
 });
 vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', () => ({
@@ -54,7 +60,6 @@ vi.mock('@/features/editor/useCortes', async (original) => ({
   useDeletarCorte: h.mutacao,
   useDividirCorte: h.mutacao,
   useJuntarCortes: h.mutacao,
-  useSincronizarTranscricao: h.mutacao,
   useToggleFire: h.mutacao,
   useToggleLeitura: h.mutacao,
 }));
@@ -130,6 +135,18 @@ describe('D-1040 · o atalho do trecho no bruto', () => {
 
     expect(avisos('error')).toEqual([expect.stringContaining('confirmar')]);
     expect(tela.corte?.desvios).toEqual([h.trecho]);
+  });
+
+  // O aviso acima manda para este botão: se ele falhar calado, o operador acha que resolveu.
+  it('Atualizar transcrição que falha também avisa', async () => {
+    h.sincronizarTranscricao.mockRejectedValue(new Error('Internal Server Error'));
+    await abrir();
+
+    tela.sincTrans.mutate();
+    await assentar();
+
+    expect(h.sincronizarTranscricao).toHaveBeenCalledWith('c1');
+    expect(avisos('error')).toEqual([expect.stringContaining('transcrição')]);
   });
 
   it('trecho e sincronia em dia: mostra o trecho sem aviso', async () => {

@@ -4,14 +4,12 @@ from app.domain.compartilhado.time_convert import to_seg
 from app.domain.corte.segment_calculator import normalizar_desvio
 
 
-def _intervalo(desvio: dict) -> tuple[float, float]:
+def _ler_intervalo(desvio: dict) -> tuple[float, float]:
     normalizado = normalizar_desvio(desvio)
     return normalizado["inicio_seg"], normalizado["fim_seg"]
 
 
-def com_desvio_manual(
-    desvios: list[dict], inicio_hms: str, fim_hms: str, motivo: str
-) -> list[dict]:
+def incluir_desvio(desvios: list[dict], inicio_hms: str, fim_hms: str, motivo: str) -> list[dict]:
     """A lista com o trecho novo, em ordem de início.
 
     D-1040: o mesmo intervalo não entra duas vezes. Repetir é o que o operador faz
@@ -26,6 +24,6 @@ def com_desvio_manual(
         "motivo": motivo or "Desvio manual",
         "origem": "manual",
     }
-    if _intervalo(novo) in map(_intervalo, desvios):
+    if _ler_intervalo(novo) in map(_ler_intervalo, desvios):
         return desvios
     return sorted([*desvios, novo], key=lambda d: d.get("inicio_seg", 0))

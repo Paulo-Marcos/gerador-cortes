@@ -26,7 +26,7 @@ from app.domain.corte.corte_mapper import (
     tem_colapso_de_tempos_das_cenas,
 )
 from app.domain.corte.desvio_categoria import SILENCIO, classificar_desvio
-from app.domain.corte.desvio_manual import com_desvio_manual
+from app.domain.corte.desvio_manual import incluir_desvio
 from app.domain.corte.juncao_cortes import (
     CAMPOS_TEMPO_CENA,
     CAMPOS_TEMPO_REGIAO,
@@ -1356,7 +1356,7 @@ class CorteService:
         if not corte:
             raise ValueError("Corte não encontrado")
 
-        desvios = com_desvio_manual(json.loads(corte.desvios or "[]"), inicio_hms, fim_hms, motivo)
+        desvios = incluir_desvio(json.loads(corte.desvios or "[]"), inicio_hms, fim_hms, motivo)
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
         await db.commit()
 

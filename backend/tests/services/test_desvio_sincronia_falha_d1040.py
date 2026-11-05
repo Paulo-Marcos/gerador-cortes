@@ -160,8 +160,9 @@ async def test_repetir_depois_da_falha_recupera_a_sincronia(cliente, fabrica, si
 @pytest.mark.asyncio
 async def test_mesmo_intervalo_com_outro_motivo_nao_entra_de_novo(cliente, fabrica):
     _adicionar(cliente)
-    _adicionar(cliente, {**_TRECHO, "motivo": "outro motivo"})
+    segunda = _adicionar(cliente, {**_TRECHO, "motivo": "outro motivo"})
 
+    assert segunda.status_code == 200
     desvios = json.loads((await _gravado(fabrica)).desvios)
     assert [d["motivo"] for d in desvios] == ["Trecho manual"]
 
@@ -175,8 +176,9 @@ async def test_intervalo_igual_a_desvio_antigo_sem_segundos_nao_entra_de_novo(cl
         )
         await db.commit()
 
-    _adicionar(cliente)
+    resposta = _adicionar(cliente)
 
+    assert resposta.status_code == 200
     desvios = json.loads((await _gravado(fabrica)).desvios)
     assert [d["motivo"] for d in desvios] == ["antigo"]
 
