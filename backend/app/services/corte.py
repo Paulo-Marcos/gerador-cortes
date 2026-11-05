@@ -26,6 +26,7 @@ from app.domain.corte.corte_mapper import (
     tem_colapso_de_tempos_das_cenas,
 )
 from app.domain.corte.desvio_categoria import SILENCIO, classificar_desvio
+from app.domain.corte.desvio_manual import com_desvio_manual
 from app.domain.corte.juncao_cortes import (
     CAMPOS_TEMPO_CENA,
     CAMPOS_TEMPO_REGIAO,
@@ -1346,31 +1347,30 @@ class CorteService:
     ) -> Corte:
         """Adiciona um desvio criado manualmente ao corte, ordenado por início.
 
-        Insere o desvio com origem `manual`, reordena por `inicio_seg` e sincroniza.
+        Insere o desvio com origem `manual` e sincroniza (RN-36). O mesmo intervalo não
+        entra de novo, e a sincronia que falha não desfaz o trecho: fica marcada em
+        `corte.sincronia_falhou`, para a resposta avisar a tela (D-1040).
         Levanta `ValueError("Corte não encontrado")` (→404).
         """
         corte = await db.get(Corte, corte_id)
         if not corte:
             raise ValueError("Corte não encontrado")
 
-        desvios = json.loads(corte.desvios or "[]")
-
-        novo_desvio = {
-            "inicio_hms": inicio_hms,
-            "fim_hms": fim_hms,
-            "inicio_seg": to_seg(inicio_hms),
-            "fim_seg": to_seg(fim_hms),
-            "motivo": motivo or "Desvio manual",
-            "origem": "manual",
-        }
-
-        desvios.append(novo_desvio)
-        desvios.sort(key=lambda d: d.get("inicio_seg", 0))
-
+        desvios = com_desvio_manual(json.loads(corte.desvios or "[]"), inicio_hms, fim_hms, motivo)
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
         await db.commit()
+
         # D-1031: a cena se move e a marca de validadas se desfaz já (RN-36).
-        await CorteService.sincronizar_transcricao_corte(corte_id)
+        # D-1040: se falhar, o trecho fica; repetir o mesmo intervalo refaz só esta parte.
+        try:
+            await CorteService.sincronizar_transcricao_corte(corte_id)
+        except Exception as e:  # noqa: BLE001 — a sincronia não desfaz o desvio gravado
+            corte.sincronia_falhou = True
+            operational_error(
+                "CorteService",
+                f"Erro ao sincronizar transcrição após adicionar desvio: {e}\n"
+                f"{traceback.format_exc()}",
+            )
         await db.refresh(corte)
         return corte
 

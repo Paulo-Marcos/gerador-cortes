@@ -232,9 +232,22 @@ export function useAnalisarDesvios(corteId: string) {
 
 export function useAdicionarDesvio(corteId: string) {
   const qc = useQueryClient();
+  const { notify } = useToast();
   return useMutation({
     mutationFn: (body: AdicionarDesvioRequest) => cortesApi.adicionarDesvio(corteId, body),
-    onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      // D-1040: o trecho gravou; o que ficou para trás foi a transcrição.
+      if (data.sincronia_falhou) {
+        notify('Trecho gravado, mas a transcrição não acompanhou. Use Atualizar transcrição.', { tone: 'warning' });
+      }
+    },
+    // D-1040: a falha não diz se o trecho gravou. Quem diz é a lista recarregada, e
+    // repetir o mesmo intervalo não duplica.
+    onError: () => {
+      void qc.invalidateQueries({ queryKey: corteKey(corteId) });
+      notify('Não foi possível confirmar o trecho. Se ele não aparecer na lista, tente de novo.', { tone: 'error' });
+    },
   });
 }
 
