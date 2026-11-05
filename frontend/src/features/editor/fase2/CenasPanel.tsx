@@ -9,7 +9,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { useAtualizarCorte } from '@/features/editor/useCortes';
 import { useGravarCenas } from './useGravarCenas';
-import { useGerarCenasClaude } from '@/features/editor/useGeracoesDaIa';
+import { useCenasEmGeracao, useGerarCenasClaude } from '@/features/editor/useGeracoesDaIa';
 import { usePreencherRetratosCenas, useValidarCenasRemotion } from '@/features/editor/useCenas';
 import type { CenaRemotion } from '@/types/models';
 import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
@@ -53,6 +53,17 @@ export interface CenasPanelHandle {
   saveIfDirty: () => boolean;
 }
 
+// A lista sem cenas. Durante a geração, não manda gerar: o convite é o clique que paga
+// duas vezes (D-1037).
+const LISTA_GERANDO = {
+  titulo: 'Gerando cenas',
+  dica: 'As cenas aparecem aqui quando a IA terminar. Pode trocar de corte enquanto isso.',
+};
+const LISTA_SEM_CENAS = {
+  titulo: 'Nenhuma cena gerada',
+  dica: 'Use Gerar por IA para criar automaticamente; ou Manual para uma cena vazia.',
+};
+
 export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPanel(
   {
     corteId,
@@ -68,6 +79,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
   ref,
 ) {
   const gerarClaude = useGerarCenasClaude(corteId, projetoId);
+  const { emGeracao, provider: providerEmVoo } = useCenasEmGeracao(corteId, projetoId);
   const atualizar = useAtualizarCorte(corteId);
   const preencherRetratos = usePreencherRetratosCenas(corteId);
   const validarCenas = useValidarCenasRemotion(corteId, projetoId);
@@ -103,16 +115,14 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       ? 'Nenhuma ficha biografica para buscar'
       : 'Buscar retratos das fichas biograficas';
 
-  const [providerAtivo, setProviderAtivo] = useState<'claude' | 'gemini' | null>(null);
   const ultimaCenas = useUltimaGeracao('cenas-expert', { corteId });
-  const cenasGeradasPor = providerAtivo ?? ultimaCenas.data?.provider ?? null;
+  const cenasGeradasPor = ultimaCenas.data?.provider ?? null;
 
   // F-047: para a geracao, se o corte ja tem cenas e elas nao estao na mesma
   // tela, o clique passa pela confirmacao; sem nenhuma, dispara direto.
   const handleGerarCenas = (provider: 'claude' | 'gemini') => {
     confirmacao.executarOuPedir(confirmacaoRegerarCenas(cenasOrdenadas.length), () => {
-      setProviderAtivo(provider);
-      gerarClaude.mutate(provider, { onSettled: () => setProviderAtivo(null) });
+      gerarClaude.mutate(provider);
     });
   };
 
@@ -181,8 +191,10 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     });
   };
 
-  const validarDisabled = validarCenas.isPending || dirty || cenasOrdenadas.length === 0;
-  const validarTooltip = dirty
+  const validarDisabled = validarCenas.isPending || dirty || cenasOrdenadas.length === 0 || emGeracao;
+  const validarTooltip = emGeracao
+    ? 'Espere as cenas terminarem de ser geradas'
+    : dirty
     ? 'Salve as cenas antes de validar'
     : cenasOrdenadas.length === 0
       ? 'Nenhuma cena para validar'
@@ -246,11 +258,12 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             rotulo="Gerar cenas"
             tamanho="md"
             destaque
-            emVoo={gerarClaude.isPending ? (providerAtivo ?? 'claude') : null}
+            emVoo={providerEmVoo}
+            rotuloEmVoo="gerando cenas…"
             onGerar={handleGerarCenas}
             className="h-[34px] flex-1"
           />
-          {!gerarClaude.isPending && cenasOrdenadas.length > 0 && (
+          {!emGeracao && cenasOrdenadas.length > 0 && (
             <SeloDeProvider
               provider={cenasGeradasPor}
               modelo={ultimaCenas.data?.model}
@@ -352,10 +365,8 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         {cenasOrdenadas.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
             <Icon name="film" ilustracao={30} className="text-[var(--wb-text-dim)]" />
-            <p className="text-sm font-medium text-[var(--wb-text)]">Nenhuma cena gerada</p>
-            <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">
-              Use Gerar por IA para criar automaticamente; ou Manual para uma cena vazia.
-            </p>
+            <p className="text-sm font-medium text-[var(--wb-text)]">{(emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS).titulo}</p>
+            <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">{(emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS).dica}</p>
           </div>
         ) : (
           <ul role="list" className="flex flex-col gap-1.5">

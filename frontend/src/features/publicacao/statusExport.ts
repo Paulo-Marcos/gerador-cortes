@@ -27,6 +27,7 @@ export function statusExportPendente(
     youtube_url_publicado: '',
     youtube_scheduled_at: '',
     cenas_geradas: false,
+    cenas_em_geracao: false,
     cenas_validadas: false,
     tiktok_publicado_em: '',
     ...campos,

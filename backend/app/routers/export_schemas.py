@@ -75,6 +75,8 @@ class StatusExportCorte(RespostaApi):
     youtube_url_publicado: str
     youtube_scheduled_at: str
     cenas_geradas: bool
+    # D-1037: rodando agora, pelo clique ou pela cadeia do bruto.
+    cenas_em_geracao: bool = False
     cenas_validadas: bool
     # D-516: "" = o operador ainda não disse que subiu no TikTok.
     tiktok_publicado_em: str

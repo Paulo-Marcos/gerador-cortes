@@ -8,11 +8,14 @@ Mantidas num router próprio para não tocar nos routers de domínio existentes
 import logging
 
 from app.database import get_db
+from app.domain.compartilhado.erros import ErroDeDominio
 from app.domain.compartilhado.provider_ia import provider_do_modelo
 from app.models import Corte, Projeto
 from app.routers.resposta_api import RespostaApi
 from app.services import telemetria_ia
 from app.services.analise import AnaliseService
+from app.services.bruto_do_corte import recusar_cenas_com_bruto_em_andamento
+from app.services.cenas_em_geracao import esta_gerando
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.claude_ia import ProviderIA
 from app.services.corte import CorteService
@@ -69,6 +72,11 @@ class CenasGeradasResponse(GeracaoDoCorteResponse):
 
 class GeracaoConcluidaResponse(GeracaoDoCorteResponse):
     ok: bool
+
+
+class CenasEmGeracaoResponse(RespostaApi):
+    corte_id: str
+    em_geracao: bool
 
 
 @router.post("/projeto/{projeto_id}/analisar", response_model=AnaliseViaIaResponse)
@@ -155,6 +163,8 @@ async def gerar_cenas_via_claude(
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
+    # D-1037: depois da espera, e sem outra até a reserva: decide com o status de agora.
+    recusar_cenas_com_bruto_em_andamento(corte_id)
     try:
         resultado = await CenasRemotionService.gerar_cenas_via_claude(corte_id, provider=provider)
         return {
@@ -163,11 +173,25 @@ async def gerar_cenas_via_claude(
             "provider": provider,
             **resultado,
         }
+    except ErroDeDominio:
+        # D-1037: a recusa da geração duplicada é do tratador global, com a mensagem
+        # inteira; o `except Exception` abaixo a transformaria em 500.
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("Erro ao gerar cenas via Claude/Gemini")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/corte/{corte_id}/cenas-em-geracao", response_model=CenasEmGeracaoResponse)
+async def consultar_cenas_em_geracao(corte_id: str):
+    """Se as cenas deste corte estão sendo geradas agora, pelo clique ou pela cadeia do bruto.
+
+    Rota própria porque o status do projeto só lista os cortes aprovados, e a Pós abre
+    também os outros. Lê só memória: a tela pode repetir à vontade.
+    """
+    return {"corte_id": corte_id, "em_geracao": esta_gerando(corte_id)}
 
 
 @router.post("/corte/{corte_id}/gerar-metadados", response_model=GeracaoConcluidaResponse)
