@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { providerEmVoo } from '@/lib/providerIa';
 import { geracaoIaApi, useUltimaGeracao } from '@/features/ia';
-import { estaCompleto, pedirGeracao, rotuloDaGeracao } from './geracaoDoCard';
+import { estaCompleto, montarVersaoAnterior, pedirGeracao, rotuloDaGeracao } from './geracaoDoCard';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/components/ui/toaster';
 import { resolveThumbUrl } from '@/lib/api';
 import { metadadosApi, type MetadadoPatch } from './api/metadados';
 import { useRascunhoDoCard } from './rascunhoDoCard';
+import { useVersaoDoDesfazer } from './versaoDoDesfazer';
 import { applyCoverEmojis, applyReadingTitlePrefix } from '@/lib/readingMetadata';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import type { PromptModalKind } from './MetadataCard';
@@ -27,10 +28,8 @@ export function useMetadataCard({
   cut,
   status,
   active = false,
-  
   onMetaLoaded,
   variant = 'card',
-  
 }: {
   projetoId: string;
   cut: Corte;
@@ -134,32 +133,25 @@ export function useMetadataCard({
   // D-746: regerar reescrevia título, capa, descrição e tags sem volta — um
   // título ajustado à mão se perdia. A versão anterior fica guardada até o
   // operador desfazer ou dispensar.
-  const versaoAntesDaIa = useRef<MetadadoPatch | null>(null);
-  const [desfazerIa, setDesfazerIa] = useState<MetadadoPatch | null>(null);
-  // D-1054: a versão guardada é deste corte: não vale para o próximo, nem a geração em voo.
-  useEffect(() => { versaoAntesDaIa.current = null; setDesfazerIa(null); }, [cut.id]);
+  // D-1064: a tela recria o card a cada corte, então o `cut.id` de quem pediu a geração
+  // é o corte dela, mesmo quando ela termina com o card já desmontado.
+  const { desfazerIa, dispensarDesfazer, setDesfazerIa, terminarGeracao, versaoAntesDaIa } = useVersaoDoDesfazer(
+    queryClient,
+    cut.id,
+    { textoNaoSalvo, descartarRascunho },
+  );
 
   // F-038 - geracao automatica por IA: invalida na hora.
   const generateMetadataClaude = useMutation({
     mutationFn: (provider: 'claude' | 'gemini' = 'claude') => pedirGeracao(cut.id, meta, provider),
     onMutate: () => {
       versaoAntesDaIa.current =
-        meta && estaCompleto(meta)
-          ? {
-              titulo_youtube: meta.titulo_youtube,
-              texto_capa: meta.texto_capa,
-              descricao_youtube: meta.descricao_youtube,
-              tags_youtube: meta.tags_youtube,
-              // D-1054: o blur salva antes do clique, e o `meta` ainda não tem esse texto.
-              ...textoNaoSalvo(),
-            }
-          : null;
+        meta && estaCompleto(meta) ? montarVersaoAnterior(meta, textoNaoSalvo()) : null;
     },
     onSuccess: () => {
       notify('Metadados gerados por IA.', { tone: 'success' });
-      // D-1054: regerar substitui de propósito, e o digitado até aqui volta no Desfazer.
-      setDesfazerIa(versaoAntesDaIa.current && { ...versaoAntesDaIa.current, ...textoNaoSalvo() });
-      if (versaoAntesDaIa.current) descartarRascunho();
+      // D-1064: quem pediu pode ter saído da tela: a versão vai para a gaveta do corte dela.
+      setDesfazerIa(terminarGeracao());
       invalidate();
     },
     onError: (error) =>
@@ -167,6 +159,15 @@ export function useMetadataCard({
         tone: 'error',
       }),
   });
+
+  // D-1064: a tela vai junto: o texto do blur de há pouco não pode ficar como rascunho e voltar a gravar.
+  const desfazerGeracao = () => {
+    if (!desfazerIa) return;
+    descartarRascunho();
+    // Com outro Regerar em voo, é este texto que ele vai reescrever.
+    if (versaoAntesDaIa.current) Object.assign(versaoAntesDaIa.current, desfazerIa);
+    saveMutation.mutate(desfazerIa);
+  };
 
   // F-038 - prompt de thumbnail por IA: invalida na hora.
   const generatePromptThumbnailClaude = useMutation({
@@ -330,5 +331,5 @@ export function useMetadataCard({
     }
   };
 
-  return { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, ...campos, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, rotuloIa: rotuloDaGeracao(meta), save, saveMutation, setCapaAmpliada, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, thumbSuggestions, thumbnailReady, thumbnailUrl, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
+  return { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, ...campos, desfazerGeracao, desfazerIa, dispensarDesfazer, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, rotuloIa: rotuloDaGeracao(meta), save, saveMutation, setCapaAmpliada, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, thumbSuggestions, thumbnailReady, thumbnailUrl, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
 }
