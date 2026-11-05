@@ -35,7 +35,7 @@ import { TrilhaDeEtapas } from './TrilhaDeEtapas';
 import { dentroDeUmaLive } from './trilhaDaLive';
 import { useGavetaDaFila } from './useGavetaDaFila';
 import { useTrilho } from './useTrilho';
-import { useTrilhaDaLive } from './useTrilhaDaLive';
+import { useTrilhaDaTela } from './useTrilhaDoFire';
 import {
   UpgradeChromeProvider,
   listaDoChrome,
@@ -189,7 +189,7 @@ function Casca({ children, fila }: CascaProps) {
     () => trilhaDaTela(tela, chrome.rotulos, projetoId),
     [tela, chrome.rotulos, projetoId],
   );
-  const etapasDaLive = useTrilhaDaLive(tela, projetoId);
+  const etapasDaLive = useTrilhaDaTela(tela, projetoId);
   const denso = Boolean(chrome.denso);
 
   // D-746: cada tela visitada entra na pilha (← →) e em "Onde eu estava".

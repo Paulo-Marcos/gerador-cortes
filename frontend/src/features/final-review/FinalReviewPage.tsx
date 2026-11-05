@@ -23,7 +23,7 @@ import {
 } from '@/features/post-production/postProductionNavigation';
 import { settingsApi } from '@/features/settings/api';
 import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
-import { BoletimTecnicoPainel } from './BoletimTecnicoCard';
+import { ApoioDaRevisao } from './ApoioDaRevisao';
 
 // Atalhos Ctrl+J/K (F-041): mesmos limites usados na tela Bruta.
 const SPEED_MIN = 0.25;
@@ -314,8 +314,8 @@ export function FinalReviewPage() {
         }}
       >
         <ChecklistCard items={checklistItems} />
-        {/* D-1015: saúde técnica do vídeo, medida em segundo plano; só avisa. */}
-        {videoPronto && <BoletimTecnicoPainel key={corte.id} corteId={corte.id} player={videoRef} />}
+        {/* D-1051: os shorts do corte. D-1015: a saúde técnica do vídeo, que só avisa. */}
+        <ApoioDaRevisao corte={corte} videoPronto={videoPronto} player={videoRef} />
         <CapaCard
           titulo={corte.titulo_proposto ?? projeto.data?.titulo_live ?? 'Corte'}
           pronta={Boolean(exportStatusAtual?.thumbnail_pronta)}

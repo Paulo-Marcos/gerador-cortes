@@ -50,7 +50,7 @@ export function TrilhaDeEtapas({ etapas }: { etapas: EtapaDaTrilha[] }) {
 
   return (
     <nav
-      aria-label="Etapas da live"
+      aria-label={etapas[0].id === 'curar' ? 'Etapas do Fire' : 'Etapas da live'}
       className="gl"
       style={{
         display: 'grid',
