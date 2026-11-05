@@ -35,6 +35,9 @@ const SEEK_STEP_SEG = 3;
 import {
   pickPostProductionEntryCut,
   postProductionPath,
+  montarPrimarioDaPos,
+  nuncaGerouBruto,
+  rawEditorPath,
   resolveRenderCompletionPath,
   parseCenasPayload,
   resolverVideoFonte,
@@ -299,7 +302,7 @@ export function ScenesPostProductionPage() {
   // D-430: o usuario pode sobrepor esse padrao pelo seletor de fonte; a escolha
   // so vale enquanto a fonte existir (`resolverVideoFonteEfetiva`).
   const exportEntry = exportStatusQ.data?.cortes.find((c) => c.corte_id === corte.id);
-  const videoPronto = Boolean(exportEntry?.video_pronto);
+  const videoPronto = Boolean(pipelineStatus.data?.fases?.encode ?? exportEntry?.video_pronto);
   const brutoDisponivel = pipelineStatus.data?.fases?.raw !== false;
   const videoFonteAutomatica = resolverVideoFonte({ videoPronto, brutoDisponivel });
   const fontes = fontesDisponiveis({
@@ -312,8 +315,11 @@ export function ScenesPostProductionPage() {
     disponiveis: fontes,
     automatica: videoFonteAutomatica,
   });
-  const videoSrc =
-    videoFonte === 'final'
+  // D-1041: sem nenhuma fonte no disco, o player fica vazio em vez de pedir um
+  // arquivo que não existe (`fases` vem carregado quando há `raw === false`).
+  const videoSrc = fontes.length === 0
+    ? ''
+    : videoFonte === 'final'
       ? `${finalVideoUrl(projetoId, corte.id)}?v=${videoBust}`
       : videoFonte === 'raw'
         ? rawVideoBustedUrl(corte.id, videoBust)
@@ -322,6 +328,8 @@ export function ScenesPostProductionPage() {
   // D-430: o bruto so some na limpeza do projeto. Quando isso acontece e o
   // usuario precisa retrabalhar o pos, este botao re-extrai o trecho da live.
   const brutoAusente = pipelineStatus.data?.fases?.raw === false;
+  const arquivosLimpos = Boolean(projeto.data?.arquivos_limpos);
+  const nuncaGerou = nuncaGerouBruto(corte, exportEntry, { brutoAusente, arquivosLimpos });
   const gerandoBruto = gerarBruto.isPending || brutoEmGeracao;
 
   const aprovadoNaPos = ['aprovado', 'processado'].includes(corte.status);
@@ -402,7 +410,7 @@ export function ScenesPostProductionPage() {
         brutoOcupado={gerandoBruto}
         // O botão do topo diz "Regerar bruto": ele regera o BRUTO. Estava
         // ligado ao render final — um verbo, outra ação.
-        onGerarBruto={regerarBruto}
+        onGerarBruto={nuncaGerou ? undefined : regerarBruto}
         onToggleFire={() => alternarFire.mutate()}
         fireOcupado={alternarFire.isPending}
         onAprovar={alternarAprovado}
@@ -414,20 +422,15 @@ export function ScenesPostProductionPage() {
             ocupado: atualizarCorte.isPending,
             onAlternar: alternarAprovado,
           },
-          primario: {
-            texto: renderFinalRunning
-              ? `Renderizando ${renderFinalProgress}%`
-              : videoPronto
-                ? 'Renderizar de novo'
-                : 'Renderizar final',
-            icone: renderFinalRunning ? 'loader' : 'clapperboard',
-            onClick: renderizarFinal,
-            desabilitado: renderFinalRunning || brutoAusente,
-            motivo: brutoAusente
-              ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
-              : undefined,
-            semEnter: true,
-          },
+          primario: montarPrimarioDaPos({
+            rodando: renderFinalRunning,
+            progresso: renderFinalProgress,
+            videoPronto, brutoAusente, arquivosLimpos,
+            nuncaGerou,
+            gerandoBruto,
+            onRenderizar: renderizarFinal,
+            onIrAoEditor: () => navigate(rawEditorPath(projetoId, corte.id)),
+          }),
         }}
       />
 

@@ -1,6 +1,8 @@
 import type { OverflowMenuItem } from '@/components/ui/overflow-menu';
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { finalReviewPath, nuncaGerouBruto, postProductionPath } from '@/features/post-production/postProductionNavigation';
 import { ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
+import type { Tira } from '@/upgrade/tiraDoCorte';
 
 // ─────────────────────────────────────────────────────────────────
 // D-868 · As ações da linha do corte (Onda 3, nota 4: "uma ação por linha").
@@ -39,7 +41,7 @@ export function primarioDaLinha(
     aprovar: () => void;
     voltar: () => void;
     enviarYoutube: () => void;
-    finalizar: () => void;
+    proximo: Pick<Primario, 'texto' | 'icone' | 'acao'>;
     abrirNoYoutube: () => void;
   },
 ): Primario {
@@ -53,9 +55,42 @@ export function primarioDaLinha(
       forte: true,
       acao: h.enviarYoutube,
     },
-    aprovado: { texto: 'Finalizar', icone: 'clapperboard', forte: true, acao: h.finalizar },
+    aprovado: { ...h.proximo, forte: true },
     proposto: { texto: 'Aprovar', icone: 'check', forte: false, acao: h.aprovar },
   }[estado] as Primario;
+}
+
+/**
+ * D-1041: o principal do corte aprovado era "Finalizar" e abria sempre a Pós, com
+ * o bruto ou só a capa faltando. Ele passa a seguir a tira: diz o que falta e leva
+ * à tela onde isso se faz. O clique só leva, então o rótulo diz verbo e destino:
+ * nada dispara ao chegar. As etapas do render são um gesto só. O bruto segue a mesma
+ * regra da Pós: só quem nunca gerou vai ao editor; com rastro, regerar é na Pós.
+ */
+export function montarProximoDaLinha(
+  tira: Tira,
+  projetoId: string,
+  corteId: string,
+  ir: (caminho: string) => void,
+  corte: Corte | undefined,
+): Pick<Primario, 'texto' | 'icone' | 'acao'> {
+  const pos = postProductionPath(projetoId, corteId);
+  const metadados = `/projetos/${projetoId}/metadados?corte=${corteId}`;
+  const nuncaGerou = !corte || nuncaGerouBruto(corte, undefined, { brutoAusente: true, arquivosLimpos: false });
+  const [texto, icone, caminho]: [string, IconName, string] =
+    {
+      Bruto: nuncaGerou
+        ? ['Gerar bruto no editor', 'scissors', `/projetos/${projetoId}/cortes/${corteId}`]
+        : ['Gerar bruto na Pós', 'scissors', pos],
+      Cenas: [tira.proxima?.verbo === 'gerar cenas' ? 'Gerar cenas na Pós' : 'Validar cenas na Pós', 'list-checks', pos],
+      Graded: ['Renderizar na Pós', 'clapperboard', pos],
+      Overlays: ['Renderizar na Pós', 'clapperboard', pos],
+      Final: ['Renderizar na Pós', 'clapperboard', pos],
+      Thumb: ['Gerar capa em Metadados', ICONE_DO_CONCEITO.iaGera, metadados],
+      Meta: ['Completar metadados', 'file-text', metadados],
+    }[tira.proxima?.nome ?? ''] as [string, IconName, string] | undefined ??
+    ['Revisar', 'circle-check', finalReviewPath(projetoId, corteId)];
+  return { texto, icone, acao: () => ir(caminho) };
 }
 
 /**

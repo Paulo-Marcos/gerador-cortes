@@ -25,13 +25,13 @@ import { useEditHistory } from './useEditHistory';
 import { useTrechosRiscados } from './useTrechosRiscados';
 import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
+import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, salvarAntesDe, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
 import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
+import { pedirMetadadosSeFaltam } from './pedirMetadadosSeFaltam';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
 // barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
-// Lido uma vez, no modulo, pela mesma razao do router: casca e tela nunca
-// podem ficar em versoes diferentes dentro da mesma sessao.
+// D-1041: a primeira geração só pede metadados se faltam (pedirMetadadosSeFaltam).
 
 export function findPreviousApprovedCorte(cortes: Corte[], corte: Corte): Corte | null {
   return (
@@ -263,9 +263,8 @@ export function useEditorPage() {
   const brutoOcupado = () =>
     !corteId || avisarSeBrutoOcupado(brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, notifyToast);
 
-  const dispararBruto = (opts?: Parameters<typeof gerarBruto.mutate>[0]) => {
-    gerarBruto.mutate(opts);
-  };
+  const dispararBruto = (opts?: Parameters<typeof gerarBruto.mutate>[0]) => gerarBruto.mutate(opts);
+  const irParaPos = () => navigate(postProductionPath(projetoId, corteId));
 
   // F-038 — 1ª geração (corte sem bruto): cadeia completa. Dispara metadados via
   // Claude em paralelo (texto não depende dos silêncios); o backend, ao ver que
@@ -273,7 +272,7 @@ export function useEditorPage() {
   const handleGerarBrutoInicial = () => {
     if (brutoOcupado()) return;
     dispararBruto(undefined);
-    gerarMetadadosClaude.mutate('claude');
+    if (metaClaudeStatus !== 'rodando') void pedirMetadadosSeFaltam(corteId, () => gerarMetadadosClaude.mutate('claude'));
   };
 
   // D-160 — regeração (bruto já existe): por DEFAULT roda só o bruto. Os opt-ins
@@ -304,10 +303,11 @@ export function useEditorPage() {
   };
 
   // Botão/atalho principal: 1ª vez → cadeia completa; regeração → só o bruto.
-  const handleGerarBrutoPrincipal = () => {
-    if (brutoPronto) handleRegerarBruto();
-    else handleGerarBrutoInicial();
-  };
+  // D-1041: o ajuste pendente vai para o banco antes, porque o bruto sai de lá.
+  const handleGerarBrutoPrincipal = () =>
+    salvarAntesDe(editHistory, atualizarCorte, notifyToast, () =>
+      brutoPronto ? handleRegerarBruto() : handleGerarBrutoInicial(),
+    );
 
   // D-428 — analisar trechos de novo acrescenta à lista já revisada e custa
   // Claude: com trechos marcados, confirma antes.
@@ -635,5 +635,5 @@ export function useEditorPage() {
 
   useShortcuts(bindings, !!corte);
 
-  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
+  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, irParaPos, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
 }
