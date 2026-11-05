@@ -5,7 +5,7 @@ import json
 from typing import cast
 
 from app.database import AsyncSessionLocal
-from app.domain.compartilhado.erros import NaoEncontrado
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.corte.ancora_da_cena import levar_cenas_geradas, perdeu_frase, seguir_recorte
 from app.domain.corte.corte_mapper import extrair_cenas_remotion
 from app.domain.corte.origem_da_cena import conferir_cenas
@@ -75,6 +75,25 @@ async def gravar_cenas_geradas(
         }
         if await _gravar_se(db, corte_id, Corte.transcricao_final == atual, valores):
             return cenas
+
+
+async def gravar_retratos(
+    db: AsyncSession, corte_id: str, lidas: str | None, cenas_com_retratos: str
+) -> None:
+    """Grava os retratos só se as cenas seguem as lidas antes da busca (D-1065).
+
+    A busca fica até dezenas de segundos na rede: uma geração, uma edição ou uma sincronia
+    pode ter gravado nesse intervalo. Recusa em vez de reaplicar: os retratos achados ficam no
+    banco do canal, e buscar de novo é rápido e parte do que o operador tem agora na tela.
+    """
+    valores = {"cenas_remotion": cenas_com_retratos}
+    if await _gravar_se(db, corte_id, Corte.cenas_remotion == lidas, valores):
+        return
+    if not await db.get(Corte, corte_id):
+        raise NaoEncontrado("Corte nao encontrado")
+    raise PedidoInvalido(
+        "As cenas mudaram durante a busca e os retratos não foram gravados. Busque de novo."
+    )
 
 
 async def conferir(corte_id: str) -> list[dict]:

@@ -527,9 +527,10 @@ class CenasRemotionService:
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
-                raise ValueError(f"Corte '{corte_id}' nao encontrado.")
+                raise NaoEncontrado("Corte nao encontrado")
 
-            payload = json.loads(corte.cenas_remotion or "[]")
+            lidas = corte.cenas_remotion
+            payload = json.loads(lidas or "[]")
 
         cenas = _extrair_cenas_payload(payload)
         retratos = await CenasRemotionService._preencher_retratos_cenas(
@@ -537,16 +538,15 @@ class CenasRemotionService:
             forcar=forcar,
         )
 
+        # Entre a leitura e aqui houve rede: a gravação confere se as cenas seguem as lidas (D-1065).
         if retratos["atualizados"] > 0:
             async with AsyncSessionLocal() as db:
-                corte = await db.get(Corte, corte_id)
-                if not corte:
-                    raise ValueError(f"Corte '{corte_id}' nao encontrado.")
-                corte.cenas_remotion = json.dumps(
-                    _payload_com_cenas(payload, cenas),
-                    ensure_ascii=False,
+                await origem_das_cenas.gravar_retratos(
+                    db,
+                    corte_id,
+                    lidas,
+                    json.dumps(_payload_com_cenas(payload, cenas), ensure_ascii=False),
                 )
-                await db.commit()
 
         return {
             "message": "Busca de retratos concluida.",

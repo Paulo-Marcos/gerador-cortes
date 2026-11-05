@@ -20,6 +20,8 @@ import { TIPOS_CENA } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
 import { validateSceneOverlaps } from './sceneValidation';
 import { Icon } from '@/upgrade/Icon';
+import { mensagemErro } from '@/lib/mensagemErro';
+import { ErroDaApi } from '@/shared/api';
 
 // ─────────────────────────────────────────────────────────────
 // CenasPanel — replica `design_reference/src/v3_pos.jsx > TabCenas (449-647)`.
@@ -63,6 +65,10 @@ const LISTA_SEM_CENAS = {
   titulo: 'Nenhuma cena gerada',
   dica: 'Use Gerar por IA para criar automaticamente; ou Manual para uma cena vazia.',
 };
+
+/** O `detail` do backend já é a frase para o operador; o status HTTP é ruído (D-1065). */
+const motivoDaFalhaDosRetratos = (erro: unknown) =>
+  erro instanceof ErroDaApi ? erro.detalhe : mensagemErro(erro, 'Erro ao buscar retratos.');
 
 export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPanel(
   {
@@ -108,12 +114,14 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       cenasOrdenadas.filter((cena) => cena.tipo === 'ficha_biografica' && !cena.retrato_url).length,
     [cenasOrdenadas],
   );
-  const retratosDisabled = preencherRetratos.isPending || totalFichas === 0 || dirty;
-  const retratosTooltip = dirty
-    ? 'Salve as cenas antes de buscar retratos'
-    : totalFichas === 0
-      ? 'Nenhuma ficha biografica para buscar'
-      : 'Buscar retratos das fichas biograficas';
+  const retratosDisabled = preencherRetratos.isPending || totalFichas === 0 || dirty || emGeracao;
+  const retratosTooltip = emGeracao
+    ? 'Espere as cenas terminarem de ser geradas'
+    : dirty
+      ? 'Salve as cenas antes de buscar retratos'
+      : totalFichas === 0
+        ? 'Nenhuma ficha biografica para buscar'
+        : 'Buscar retratos das fichas biograficas';
 
   const ultimaCenas = useUltimaGeracao('cenas-expert', { corteId });
   const cenasGeradasPor = ultimaCenas.data?.provider ?? null;
@@ -184,9 +192,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         });
       },
       onError: (error) => {
-        notify(error instanceof Error ? error.message : 'Erro ao buscar retratos.', {
-          tone: 'error',
-        });
+        notify(motivoDaFalhaDosRetratos(error), { tone: 'error' });
       },
     });
   };

@@ -566,12 +566,7 @@ async def importar_cenas_remotion(
 @router.post("/{corte_id}/cenas-remotion/retratos", response_model=RetratosPreenchidosResponse)
 async def preencher_retratos_cenas_remotion(corte_id: str, forcar: bool = False):
     """Busca retratos da Wikipedia para cenas ficha_biografica ja salvas."""
-    try:
-        return await CenasRemotionService.preencher_retratos(corte_id, forcar=forcar)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        raise erro_interno(e) from e
+    return await CenasRemotionService.preencher_retratos(corte_id, forcar=forcar)
 
 
 @router.post("/{corte_id}/cenas-remotion/validar", response_model=CorteResponse)
