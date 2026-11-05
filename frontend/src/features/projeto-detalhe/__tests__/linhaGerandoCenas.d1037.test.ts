@@ -24,7 +24,7 @@ describe('a linha com as cenas sendo geradas', () => {
     ['sem cenas: a cadeia do bruto em voo', COM_BRUTO],
     ['com cenas por validar: gerando de novo', { ...COM_BRUTO, cenas_geradas: true }],
     [
-      'com cenas validadas: gerar de novo as substitui e leva a marca',
+      'com cenas validadas: gerar de novo as substitui',
       { ...COM_BRUTO, cenas_geradas: true, cenas_validadas: true },
     ],
     ['já renderizado', { ...COM_BRUTO, ...RENDERIZADO }],

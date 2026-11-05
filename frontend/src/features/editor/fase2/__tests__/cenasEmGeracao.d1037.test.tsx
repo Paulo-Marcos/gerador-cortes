@@ -194,6 +194,42 @@ describe('a geração é do corte, não da tela', () => {
   });
 });
 
+describe('o painel enquanto gera', () => {
+  const cena = { tipo: 'barra_inferior', inicio: 0, fim: 5, texto: 'Cena antiga' };
+  const validar = /<button(?:(?!<\/button>)[\s\S])*?Marcar validadas/;
+
+  it('não deixa validar as cenas que estão para ser substituídas', () => {
+    const qc = new QueryClient();
+    servidorDiz(qc, 'a', true);
+
+    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).toContain('disabled');
+  });
+
+  it('sem geração, validar segue livre', () => {
+    const qc = new QueryClient();
+    servidorDiz(qc, 'a', false);
+
+    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).not.toContain('disabled');
+  });
+});
+
+describe('a pergunta ao servidor se repete', () => {
+  it('nos dois estados, e mais depressa enquanto gera: é o que traz a cadeia à tela', async () => {
+    const qc = new QueryClient();
+    const tela = abrir(qc, 'a');
+    limpar = tela.limpar;
+    await assentar();
+
+    const consulta = qc.getQueryCache().find({ queryKey: cenasEmGeracaoKey('a') });
+    const intervalo = consulta?.observers[0]?.options.refetchInterval as (q: unknown) => number;
+    const gerando = intervalo({ state: { data: { em_geracao: true } } });
+    const livre = intervalo({ state: { data: { em_geracao: false } } });
+
+    expect(gerando).toBeGreaterThan(0);
+    expect(livre).toBeGreaterThan(gerando);
+  });
+});
+
 describe('quando a geração de fora termina', () => {
   it('recarrega o corte: as cenas novas aparecem sem o operador pedir', async () => {
     const qc = new QueryClient();

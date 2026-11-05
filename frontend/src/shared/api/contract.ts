@@ -801,13 +801,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Cenas Em Geracao
+         * Consultar Cenas Em Geracao
          * @description Se as cenas deste corte estão sendo geradas agora, pelo clique ou pela cadeia do bruto.
          *
          *     Rota própria porque o status do projeto só lista os cortes aprovados, e a Pós abre
          *     também os outros. Lê só memória: a tela pode repetir à vontade.
          */
-        get: operations["cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get"];
+        get: operations["consultar_cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12155,7 +12155,7 @@ export interface operations {
             };
         };
     };
-    cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get: {
+    consultar_cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get: {
         parameters: {
             query?: never;
             header?: never;

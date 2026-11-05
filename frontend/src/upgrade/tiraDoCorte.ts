@@ -82,8 +82,8 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
   // do YouTube (D-746). Uma ordem só para as duas cascas.
   const ordenados = buildStatusPills(status).map((p) => {
     const meta = POR_ROTULO[p.label];
-    // D-1037: gerar de novo substitui as cenas e leva a marca de validadas. Com a
-    // etapa ainda "feita", a linha mandaria renderizar as cenas que estão por sair.
+    // D-1037: gerar de novo substitui as cenas. Com a etapa ainda "feita", a linha
+    // mandaria renderizar as cenas que estão para ser trocadas.
     const gerandoCenas = p.label === 'Cenas' && Boolean(status.cenas_em_geracao);
     // Etapa nova em `buildStatusPills` sem entrada aqui não pode derrubar
     // a tira: ela entra em PUBLICAÇÃO com as 3 primeiras letras do rótulo.

@@ -61,7 +61,7 @@ export function primarioDaLinha(
 }
 
 /** D-1037: durante a geração, o botão não manda gerar nem validar: só leva a acompanhar. */
-function cenasDaLinha(verbo: string | undefined, pos: string): [string, IconName, string] {
+function montarCenasDaLinha(verbo: string | undefined, pos: string): [string, IconName, string] {
   if (verbo === 'gerando cenas') return ['Gerando cenas na Pós', 'loader', pos];
   return [verbo === 'gerar cenas' ? 'Gerar cenas na Pós' : 'Validar cenas na Pós', 'list-checks', pos];
 }
@@ -88,7 +88,7 @@ export function montarProximoDaLinha(
       Bruto: nuncaGerou
         ? ['Gerar bruto no editor', 'scissors', `/projetos/${projetoId}/cortes/${corteId}`]
         : ['Gerar bruto na Pós', 'scissors', pos],
-      Cenas: cenasDaLinha(tira.proxima?.verbo, pos),
+      Cenas: montarCenasDaLinha(tira.proxima?.verbo, pos),
       Graded: ['Renderizar na Pós', 'clapperboard', pos],
       Overlays: ['Renderizar na Pós', 'clapperboard', pos],
       Final: ['Renderizar na Pós', 'clapperboard', pos],

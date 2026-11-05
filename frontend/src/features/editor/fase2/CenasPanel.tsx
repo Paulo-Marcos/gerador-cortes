@@ -191,8 +191,10 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     });
   };
 
-  const validarDisabled = validarCenas.isPending || dirty || cenasOrdenadas.length === 0;
-  const validarTooltip = dirty
+  const validarDisabled = validarCenas.isPending || dirty || cenasOrdenadas.length === 0 || emGeracao;
+  const validarTooltip = emGeracao
+    ? 'Espere as cenas terminarem de ser geradas'
+    : dirty
     ? 'Salve as cenas antes de validar'
     : cenasOrdenadas.length === 0
       ? 'Nenhuma cena para validar'
@@ -364,9 +366,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
             <Icon name="film" ilustracao={30} className="text-[var(--wb-text-dim)]" />
             <p className="text-sm font-medium text-[var(--wb-text)]">{(emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS).titulo}</p>
-            <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">
-              {(emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS).dica}
-            </p>
+            <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">{(emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS).dica}</p>
           </div>
         ) : (
           <ul role="list" className="flex flex-col gap-1.5">

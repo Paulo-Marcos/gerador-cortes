@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 
 import httpx
@@ -22,11 +24,14 @@ from app.core.tarefas_ativas import TarefasAtivas
 from app.database import get_db
 from app.domain.compartilhado.erros import PedidoInvalido
 from app.models import Base, Corte, Projeto
-from app.routers import claude_ia, export
+from app.routers import claude_ia, cortes, export
 from app.routers.errors import registrar_tratadores
+from app.services import bruto_do_corte
+from app.services import corte as corte_module
 from app.services import export as export_module
 from app.services.bruto_progress import BrutoProgress
 from app.services.cenas_remotion import CenasRemotionService
+from app.services.export import ExportService
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -65,7 +70,7 @@ def presa(monkeypatch):
 
 
 @pytest_asyncio.fixture
-async def cliente(presa):
+async def cliente(presa, monkeypatch):
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -88,6 +93,8 @@ async def cliente(presa):
     registrar_tratadores(app)
     app.include_router(claude_ia.router, prefix="/api/claude")
     app.include_router(export.router, prefix="/api/export")
+    app.include_router(cortes.router, prefix="/api/cortes")
+    monkeypatch.setattr(bruto_do_corte, "AsyncSessionLocal", fabrica)
     app.dependency_overrides[get_db] = banco
     transporte = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transporte, base_url="http://teste") as http:
@@ -117,9 +124,9 @@ def _no_limite(pedido):
 
 
 def _marcado(corte_id="c1") -> bool:
-    from app.services.cenas_em_geracao import em_geracao
+    from app.services.cenas_em_geracao import esta_gerando
 
-    return em_geracao(corte_id)
+    return esta_gerando(corte_id)
 
 
 # ─── A rota recusa a segunda geração ────────────────────────────────────────
@@ -256,7 +263,7 @@ async def test_a_geracao_cancelada_nao_deixa_o_corte_preso(presa):
 
 
 def test_um_dono_antigo_nao_libera_a_reserva_de_outro():
-    from app.services.cenas_em_geracao import em_geracao, reservar
+    from app.services.cenas_em_geracao import esta_gerando, reservar
 
     antiga = reservar("c1")
     antiga.liberar()
@@ -264,8 +271,28 @@ def test_um_dono_antigo_nao_libera_a_reserva_de_outro():
 
     antiga.liberar()
 
-    assert em_geracao("c1") is True
+    assert esta_gerando("c1") is True
     nova.liberar()
+
+
+def test_a_marca_nao_sobrevive_ao_reinicio():
+    """Um processo novo, o que o reinício do backend é, não vê a reserva deste."""
+    from app.services.cenas_em_geracao import reservar
+
+    reserva = reservar("c-reinicio")
+    try:
+        codigo = "from app.services.cenas_em_geracao import esta_gerando; print(esta_gerando('c-reinicio'))"
+        saida = subprocess.run(
+            [sys.executable, "-c", codigo],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        )
+    finally:
+        reserva.liberar()
+
+    assert saida.stdout.strip().endswith("False")
 
 
 # ─── Entre as duas origens: a cadeia do bruto e o clique ────────────────────
@@ -335,19 +362,91 @@ async def test_o_clique_e_recusado_enquanto_a_cadeia_gera(esteira, presa):
     assert _marcado() is False
 
 
+@pytest.mark.parametrize("refazer_cenas", [True, False])
 @pytest.mark.asyncio
-async def test_a_cadeia_nao_gera_de_novo_com_o_clique_em_voo(esteira, presa):
+async def test_o_bruto_nao_comeca_com_o_clique_em_voo(esteira, presa, refazer_cenas):
+    """Todo bruto pode reescrever a transcrição, e a importação converte os índices
+    contra a transcrição do momento: as cenas em voo sairiam deslocadas, sem aviso."""
     clique = asyncio.create_task(CenasRemotionService.gerar_cenas_via_claude("c1"))
     await asyncio.wait_for(presa.comecou.wait(), _LIMITE_SEG)
 
-    resultado = await _no_limite(export_module.ExportService.gerar_bruto_via_worker("c1"))
+    resultado = await _no_limite(
+        export_module.ExportService.gerar_bruto_via_worker("c1", refazer_cenas=refazer_cenas)
+    )
 
-    assert resultado["status"] == "pronto"
+    assert resultado["status"] == "erro"
+    assert "cenas" in resultado["mensagem"]
+    assert corte_module.CorteService.detectar_silencios_tecnico.await_count == 0
     assert presa.chamadas == 1
-    assert _passo("cenas") != "erro", "o bruto está bem; quem gera é a outra origem"
-    assert _marcado() is True, "a cadeia não pode soltar a marca que não é dela"
+    assert _marcado() is True, "o bruto recusado não pode soltar a marca que não é dele"
     presa.solta.set()
     await clique
+    assert _marcado() is False
+
+
+@pytest.mark.asyncio
+async def test_a_rota_do_bruto_recusa_com_mensagem_e_nao_fica_cortando(cliente, presa):
+    primeiro = await _comecar(cliente, presa)
+
+    resposta = await cliente.post("/api/cortes/c1/gerar-bruto")
+
+    assert resposta.status_code == 400
+    assert "cenas" in resposta.json()["detail"]
+    assert ExportService.get_tarefa_corte_status("c1") != "cortando"
+    presa.solta.set()
+    await primeiro
+
+
+@pytest.mark.asyncio
+async def test_a_rota_de_cenas_recusa_enquanto_o_bruto_roda(cliente, presa):
+    """Vale também para o bruto que não vai gerar cenas: ele reescreve a transcrição."""
+    ExportService.set_tarefa_corte_status("c1", "cortando")
+    try:
+        resposta = await _pedir(cliente)
+    finally:
+        ExportService.set_tarefa_corte_status("c1", "pronto")
+
+    assert resposta.status_code == 400
+    assert "bruto" in resposta.json()["detail"]
+    assert presa.chamadas == 0
+
+
+@pytest.mark.asyncio
+async def test_a_marca_cobre_o_bruto_desde_a_salvaguarda(esteira, presa, monkeypatch):
+    """A salvaguarda reescreve a transcrição antes do render: o clique não pode ler ali."""
+    no_caminho: list[bool] = []
+
+    async def na_salvaguarda(*_a, **_k):
+        no_caminho.append(_marcado())
+        with pytest.raises(PedidoInvalido):
+            await _no_limite(CenasRemotionService.gerar_cenas_via_claude("c1"))
+        return {"status": "sucesso"}
+
+    corte_module.CorteService.detectar_silencios_tecnico.side_effect = na_salvaguarda
+    pipeline = export_module.build_bruto_pipeline
+
+    def no_render(**campos):
+        no_caminho.append(_marcado())
+        return pipeline(**campos)
+
+    monkeypatch.setattr(export_module, "build_bruto_pipeline", no_render)
+    presa.solta.set()
+
+    assert (await export_module.ExportService.gerar_bruto_via_worker("c1"))["status"] == "pronto"
+
+    assert no_caminho == [True, True]
+    assert presa.chamadas == 1
+    assert _marcado() is False
+
+
+@pytest.mark.asyncio
+async def test_o_render_que_falha_nao_deixa_o_corte_preso(esteira, presa):
+    esteira.tamanho_do_clip = 0
+
+    resultado = await export_module.ExportService.gerar_bruto_via_worker("c1")
+
+    assert resultado["status"] == "erro"
+    assert presa.chamadas == 0
     assert _marcado() is False
 
 

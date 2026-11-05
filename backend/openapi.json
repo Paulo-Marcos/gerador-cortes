@@ -15954,7 +15954,7 @@
     "/api/claude/corte/{corte_id}/cenas-em-geracao": {
       "get": {
         "description": "Se as cenas deste corte estão sendo geradas agora, pelo clique ou pela cadeia do bruto.\n\nRota própria porque o status do projeto só lista os cortes aprovados, e a Pós abre\ntambém os outros. Lê só memória: a tela pode repetir à vontade.",
-        "operationId": "cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get",
+        "operationId": "consultar_cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get",
         "parameters": [
           {
             "in": "path",
@@ -15988,7 +15988,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Cenas Em Geracao",
+        "summary": "Consultar Cenas Em Geracao",
         "tags": [
           "Claude IA"
         ]

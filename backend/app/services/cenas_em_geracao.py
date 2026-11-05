@@ -16,6 +16,11 @@ from app.domain.compartilhado.erros import PedidoInvalido
 
 _em_curso: dict[str, ReservaDeCenas] = {}
 
+BRUTO_ESPERA_AS_CENAS = (
+    "As cenas deste corte estão sendo geradas. Espere terminar para gerar o bruto: ele pode "
+    "mudar a transcrição, e as cenas sairiam fora do tempo."
+)
+
 
 class ReservaDeCenas:
     """O direito de gerar as cenas de um corte. Solta ao sair do `with`."""
@@ -49,5 +54,5 @@ def reservar_ou_recusar(corte_id: str) -> ReservaDeCenas:
     return reserva
 
 
-def em_geracao(corte_id: str) -> bool:
+def esta_gerando(corte_id: str) -> bool:
     return corte_id in _em_curso

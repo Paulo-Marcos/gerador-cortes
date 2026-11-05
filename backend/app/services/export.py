@@ -37,8 +37,8 @@ from app.infrastructure.render.bruto_pipeline import build_bruto_pipeline
 from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto, StatusCorte
 from app.services.bruto_progress import BrutoProgress
-from app.services.cenas_da_cadeia import gerar_cenas_da_cadeia, reserva_da_cadeia
-from app.services.cenas_em_geracao import ReservaDeCenas
+from app.services.cenas_da_cadeia import gerar_cenas_da_cadeia, reservar_para_a_cadeia
+from app.services.cenas_em_geracao import BRUTO_ESPERA_AS_CENAS, ReservaDeCenas, esta_gerando
 from app.services.ciclo_de_vida import marcar_corte
 from app.services.export_bruto import _ExportBrutoMixin
 from app.services.export_bulk_queue import _ExportBulkQueueMixin
@@ -99,6 +99,20 @@ class ExportService(
             ``{"status": "pronto", "clip_path": str}`` em caso de sucesso, ou
             ``{"status": "erro", "mensagem": str}`` caso contrário.
         """
+        # D-1037: a salvaguarda pode reescrever a transcrição que as cenas em voo leram, e
+        # a importação converte os índices contra a transcrição do momento: sairiam fora do
+        # tempo. Por isso o bruto espera, e a marca da cadeia o cobre desde o começo.
+        if esta_gerando(corte_id):
+            return {"status": "erro", "mensagem": BRUTO_ESPERA_AS_CENAS}
+        pedir_cenas = refazer_cenas and settings.claude_auto_cenas_no_bruto
+        with reservar_para_a_cadeia(corte_id, pedir_cenas) as reserva:
+            return await cls._gerar_bruto(corte_id, refazer_transcricao, reserva)
+
+    @classmethod
+    async def _gerar_bruto(
+        cls, corte_id: str, refazer_transcricao: bool, reserva_de_cenas: ReservaDeCenas | None
+    ) -> dict:
+        """Corpo de `gerar_bruto_via_worker`, já com a marca das cenas resolvida."""
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
@@ -166,23 +180,17 @@ class ExportService(
                 return erro
 
             _gravar_bruto_no_corte(corte, out_path, duracao_real, segmentos)
-            # D-1037: a marca entra antes do commit, porque a tela lê "com bruto" assim
-            # que ele sai. Reservar só ao chegar nas cenas deixaria a sincronia como
-            # janela: lista vazia, botão livre e o corte pagando a geração duas vezes.
-            pedir_cenas = refazer_cenas and settings.claude_auto_cenas_no_bruto
-            with reserva_da_cadeia(corte_id, pedir_cenas) as reserva:
-                await db.commit()
-                BrutoProgress.marcar(corte_id, "render", "concluido")
+            await db.commit()
+            BrutoProgress.marcar(corte_id, "render", "concluido")
 
-                await _etapas_derivadas(
-                    db,
-                    corte_id,
-                    out_path,
-                    e_fire=e_fire,
-                    refazer_transcricao=refazer_transcricao,
-                    refazer_cenas=refazer_cenas,
-                    reserva_de_cenas=reserva,
-                )
+            await _etapas_derivadas(
+                db,
+                corte_id,
+                out_path,
+                e_fire=e_fire,
+                refazer_transcricao=refazer_transcricao,
+                reserva_de_cenas=reserva_de_cenas,
+            )
 
             if _log_detalhado():
                 logger.info(f"[ExportService] ✅ Bruto gerado: {out_path.name}")
@@ -478,7 +486,6 @@ async def _etapas_derivadas(
     *,
     e_fire: bool,
     refazer_transcricao: bool,
-    refazer_cenas: bool,
     reserva_de_cenas: ReservaDeCenas | None,
 ) -> None:
     """Transcrição, detecção de segmentos, cenas e shorts: derivam do bruto pronto."""
@@ -500,18 +507,11 @@ async def _etapas_derivadas(
     # silêncios), para os timings (startLeg) ficarem precisos. Import
     # lazy evita ciclo; falha é não-fatal (não derruba o bruto).
     # D-160 — cenas por IA também são opt-in na regeração (refazer_cenas).
-    gerar_cenas = refazer_cenas and settings.claude_auto_cenas_no_bruto
     operational_debug(
         "ExportService",
-        f"refazer_cenas={refazer_cenas} "
-        f"claude_auto_cenas_no_bruto={settings.claude_auto_cenas_no_bruto}"
-        f" -> {'iniciando cenas via Claude' if gerar_cenas else 'pulando cenas'}"
-        f" p/ {corte_id}",
+        f"{'iniciando cenas via Claude' if reserva_de_cenas else 'pulando cenas'} p/ {corte_id}",
     )
-    # D-1037: a reserva foi tomada antes do commit do bruto. Vazia aqui quer dizer
-    # que o clique chegou primeiro: o passo se encerra sem pagar a geração de novo,
-    # e quem diz que as cenas ainda estão rodando é a marca do clique.
-    if gerar_cenas:
+    if reserva_de_cenas:
         await gerar_cenas_da_cadeia(corte_id, reserva_de_cenas)
 
     # D-455 — a fábrica de shorts do corte Fire, o "segundo passo" da

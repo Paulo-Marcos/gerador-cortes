@@ -14,7 +14,8 @@ from app.models import Corte, Projeto
 from app.routers.resposta_api import RespostaApi
 from app.services import telemetria_ia
 from app.services.analise import AnaliseService
-from app.services.cenas_em_geracao import em_geracao
+from app.services.bruto_do_corte import recusar_cenas_com_bruto_em_andamento
+from app.services.cenas_em_geracao import esta_gerando
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.claude_ia import ProviderIA
 from app.services.corte import CorteService
@@ -161,6 +162,7 @@ async def gerar_cenas_via_claude(
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
+    recusar_cenas_com_bruto_em_andamento(corte_id)
     await _soltar_a_transacao(db)
     try:
         resultado = await CenasRemotionService.gerar_cenas_via_claude(corte_id, provider=provider)
@@ -182,13 +184,13 @@ async def gerar_cenas_via_claude(
 
 
 @router.get("/corte/{corte_id}/cenas-em-geracao", response_model=CenasEmGeracaoResponse)
-async def cenas_em_geracao(corte_id: str):
+async def consultar_cenas_em_geracao(corte_id: str):
     """Se as cenas deste corte estão sendo geradas agora, pelo clique ou pela cadeia do bruto.
 
     Rota própria porque o status do projeto só lista os cortes aprovados, e a Pós abre
     também os outros. Lê só memória: a tela pode repetir à vontade.
     """
-    return {"corte_id": corte_id, "em_geracao": em_geracao(corte_id)}
+    return {"corte_id": corte_id, "em_geracao": esta_gerando(corte_id)}
 
 
 @router.post("/corte/{corte_id}/gerar-metadados", response_model=GeracaoConcluidaResponse)
