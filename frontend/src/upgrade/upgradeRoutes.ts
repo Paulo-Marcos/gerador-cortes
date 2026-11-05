@@ -150,14 +150,14 @@ export const TELAS: Record<TelaId, Def> = {
     titulo: 'Curadoria do Fire',
     padroes: [/^\/shorts\/[^/]+/],
     dentroDe: 'shorts',
-    trilha: ['Shorts', SLOT, 'Curar'],
+    trilha: ['Shorts', SLOT, SLOT, 'Curar'],
   },
   prateleira: {
     icone: 'layout-grid',
     titulo: 'Prateleira do Fire',
     padroes: [/^\/shorts\/[^/]+\/workspace/],
     dentroDe: 'shorts',
-    trilha: ['Shorts', SLOT, 'Prateleira'],
+    trilha: ['Shorts', SLOT, SLOT, 'Prateleira'],
   },
   // D-611: item próprio, e não filha de Shorts — ela não pertence a um Fire.
   prontos: {

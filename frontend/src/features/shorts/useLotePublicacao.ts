@@ -9,10 +9,12 @@
 // O intervalo é condicional de propósito: enquanto o lote corre, dois segundos;
 // depois que ele termina, nada. Uma tela aberta a noite inteira não tem por que
 // perguntar ao backend de dois em dois segundos sobre um lote que acabou.
+import { useEffect, useRef } from 'react';
 import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { loteApi, type OpcoesDoLote } from './loteApi';
 import { shortsApi } from './shortsApi';
 import { FIRES_KEY } from './useFires';
+import { usePublicarShort } from './useShortsDoCorte';
 import { PRONTOS_KEY } from './useShortsProntos';
 
 export const LOTE_KEY = ['shorts', 'lote'] as const;
@@ -101,6 +103,43 @@ export function atualizarDepoisDoPubliquei(cliente: QueryClient, corteId?: strin
   // D-905: o chip da rede, no cartão do Fire, acende com este clique. Sem isto a
   // lista seguia no cache por até 30 s — justo quando se decide finalizar.
   cliente.invalidateQueries({ queryKey: FIRES_KEY });
+}
+
+/**
+ * D-1051: publicar pelo painel relê o mesmo que o "publiquei". Sem isso, o cartão e a
+ * trilha seguiam dizendo que o short não subiu. Vai pela promessa, e não pelo callback do
+ * `mutate`, que não roda se o painel fechar durante o upload. O erro o painel lê do estado.
+ */
+export function usePublicarEAtualizar(corteId: string) {
+  const cliente = useQueryClient();
+  const publicar = usePublicarShort();
+  return {
+    ...publicar,
+    mutate: (pedido: Parameters<typeof publicar.mutate>[0]) => {
+      publicar
+        .mutateAsync(pedido)
+        .then(() => atualizarDepoisDoPubliquei(cliente, corteId))
+        .catch(() => undefined);
+    },
+  };
+}
+
+/**
+ * D-1051: cada short que o lote sobe relê o corte aberto, como faz a central de Prontos.
+ * Sem isso, o cartão e a trilha seguiam em "YT 0" com o vídeo já no ar.
+ */
+export function useRelerPublicacoesDoLote(corteId: string) {
+  const cliente = useQueryClient();
+  const lote = useLoteAtual().data?.lote;
+  const publicados = lote
+    ? lote.raias.flatMap((r) => r.itens).filter((i) => i.estado === 'publicado').length
+    : 0;
+  const anterior = useRef(publicados);
+  useEffect(() => {
+    if (publicados === anterior.current) return;
+    anterior.current = publicados;
+    if (corteId) atualizarDepoisDoPubliquei(cliente, corteId);
+  }, [publicados, corteId, cliente]);
 }
 
 /** O que já foi publicado deste corte — a tela de seleção nasce sabendo. */

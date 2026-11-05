@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { shortsApi, type AndamentoDaLive } from './shortsApi';
+import { linhaDoCortePath } from '@/features/post-production/postProductionNavigation';
+import { shortsApi, type AndamentoDaLive, type FireComBruto } from './shortsApi';
 
 export const FIRES_KEY = ['shorts', 'fires'] as const;
 export const ANDAMENTO_DAS_LIVES_KEY = ['shorts', 'lives', 'andamento'] as const;
@@ -9,12 +10,22 @@ export const ANDAMENTO_DAS_LIVES_KEY = ['shorts', 'lives', 'andamento'] as const
 // na geração do bruto e a curadoria acontece quando o operador quiser. Por isso
 // não há refetch agressivo aqui: nada muda enquanto a tela está aberta, a menos
 // que outra aba gere um bruto — ou que a fábrica de uma live esteja rodando.
-export function useFires() {
+export function useFires(habilitado = true) {
   return useQuery({
     queryKey: FIRES_KEY,
     queryFn: () => shortsApi.listarFires(),
     staleTime: 30_000,
+    enabled: habilitado,
   });
+}
+
+/** D-1051: as migalhas das duas telas do Fire: a live e, nela, a linha do corte de origem. */
+export function rotulosDoFire(fire: FireComBruto | undefined) {
+  if (!fire) return [];
+  return [
+    { texto: fire.projeto_titulo, to: `/projetos/${fire.projeto_id}` },
+    { texto: `Corte #${fire.numero}`, to: linhaDoCortePath(fire.projeto_id, fire.corte_id) },
+  ];
 }
 
 export const estaRodando = (live: AndamentoDaLive) =>

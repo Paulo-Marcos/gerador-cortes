@@ -27,7 +27,8 @@ export type EtapaId =
   | 'publicado';
 
 export type EtapaDaTrilha = {
-  id: EtapaId;
+  /** `curar` e `prateleira` são as casas da trilha do Fire (`trilhaDoFire`). */
+  id: EtapaId | 'curar' | 'prateleira';
   texto: string;
   /** "3 de 5", "6 propostos", "ok" — ou "—" sem dados ou sem aprovados. */
   contagem: string;
@@ -113,7 +114,7 @@ const TELA_DA_ETAPA: Partial<Record<EtapaId, TelaId>> = {
 
 const STATUS_JA_BAIXADO = new Set(['transcrevendo', 'pronto', 'analisando', 'analisado']);
 
-type Passo = Omit<EtapaDaTrilha, 'agora' | 'to'>;
+type Passo = Omit<EtapaDaTrilha, 'agora' | 'to' | 'id'> & { id: EtapaId };
 
 /** "n de m" sobre os aprovados; sem aprovados, a etapa ainda não começou. */
 function sobreAprovados(
