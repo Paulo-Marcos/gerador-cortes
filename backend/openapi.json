@@ -3276,6 +3276,11 @@
             "title": "Segmentos Detectados",
             "type": "array"
           },
+          "sincronia_falhou": {
+            "default": false,
+            "title": "Sincronia Falhou",
+            "type": "boolean"
+          },
           "status": {
             "$ref": "#/components/schemas/StatusCorte"
           },

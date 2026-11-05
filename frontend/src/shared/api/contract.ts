@@ -6370,6 +6370,11 @@ export interface components {
              * @default []
              */
             segmentos_detectados: components["schemas"]["SegmentoDetectadoDoCorte"][];
+            /**
+             * Sincronia Falhou
+             * @default false
+             */
+            sincronia_falhou: boolean;
             status: components["schemas"]["StatusCorte"];
             /** Tema Central */
             tema_central: string;
