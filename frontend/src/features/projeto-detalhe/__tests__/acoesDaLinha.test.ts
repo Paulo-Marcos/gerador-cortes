@@ -17,7 +17,7 @@ function handlers() {
     aprovar: vi.fn(),
     voltar: vi.fn(),
     enviarYoutube: vi.fn(),
-    finalizar: vi.fn(),
+    proximo: { texto: 'Gerar capa em Metadados', icone: 'sparkle' as const, acao: vi.fn() },
     abrirNoYoutube: vi.fn(),
   };
 }
@@ -43,7 +43,7 @@ describe('primarioDaLinha', () => {
   it('cada estado pede uma coisa, com rótulo — e o clique faz essa coisa', () => {
     const casos = [
       ['proposto', 'Aprovar', 'aprovar', false],
-      ['aprovado', 'Finalizar', 'finalizar', true],
+      ['aprovado', 'Gerar capa em Metadados', 'proximo', true],
       ['pronto', 'Enviar ao YouTube', 'enviarYoutube', true],
       ['publicado', 'No ar', 'abrirNoYoutube', false],
       ['rejeitado', 'Voltar', 'voltar', false],
@@ -53,7 +53,7 @@ describe('primarioDaLinha', () => {
       const p = primarioDaLinha(estado, h);
       expect([p.texto, p.forte]).toEqual([texto, forte]);
       p.acao();
-      expect(h[acao]).toHaveBeenCalledOnce();
+      expect(acao === 'proximo' ? h.proximo.acao : h[acao]).toHaveBeenCalledOnce();
     }
   });
 

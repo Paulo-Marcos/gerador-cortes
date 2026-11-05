@@ -1,15 +1,78 @@
 import asyncio
+import json
 import shutil
 from pathlib import Path
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.database import AsyncSessionLocal
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.models import Corte, Projeto
+from app.services.corte import CorteService
+from app.services.ingestao import IngestaoService
 from app.services.media_retention import MediaRetentionService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+async def _carregar_projeto(db: AsyncSession, projeto_id: str) -> Projeto:
+    projeto = await db.get(Projeto, projeto_id)
+    if not projeto:
+        raise NaoEncontrado("Projeto não encontrado")
+    return projeto
+
+
+async def _ressincronizar_cortes(projeto_id: str) -> int:
+    # Sessão sem `begin`: o lote faz um commit por corte, para um não derrubar os outros.
+    async with AsyncSessionLocal() as db:
+        return await CorteService.sincronizar_transcricao_do_projeto(projeto_id, db)
+
+
 class ProjetoService:
+    @staticmethod
+    async def atualizar_transcricao(projeto_id: str, transcricao: object) -> int:
+        """Grava a transcrição da live e, só depois, a copia para os cortes (D-1039).
+
+        A ordem é o que mantém os dois coerentes: pendente na sessão do lote, a
+        transcrição sumia no primeiro `rollback`, e os cortes seguintes gravavam um
+        texto que o projeto não tinha. Devolve quantos cortes foram sincronizados.
+        """
+        # Gravada antes do lote, uma transcrição sem forma de lista ficaria no projeto.
+        if not isinstance(transcricao, list):
+            raise PedidoInvalido("Campo 'transcricao' precisa ser uma lista")
+
+        async with AsyncSessionLocal() as db, db.begin():
+            projeto = await _carregar_projeto(db, projeto_id)
+            projeto.transcricao_raw = json.dumps(transcricao, ensure_ascii=False)
+
+        return await _ressincronizar_cortes(projeto_id)
+
+    @staticmethod
+    async def atualizar_sincronia_da_legenda(projeto_id: str, offset_ms: int) -> int:
+        """Baixa a legenda com o offset novo, grava os dois e sincroniza os cortes (D-1039).
+
+        O download acontece sem sessão aberta (ADR-0016). Se a legenda não vier, nem o
+        offset muda. Devolve quantos cortes foram sincronizados.
+        """
+        async with AsyncSessionLocal() as db:
+            projeto = await _carregar_projeto(db, projeto_id)
+            # O caminho parte do id que o banco devolveu, nunca do que veio na URL.
+            id_do_banco = projeto.id
+            youtube_url, video_path = projeto.youtube_url, projeto.arquivo_video_path
+
+        if not (projetos_dir() / id_do_banco).exists():
+            raise RuntimeError("Diretório do projeto não encontrado")
+
+        transcricao = await IngestaoService._extrair_legenda(
+            id_do_banco, youtube_url, video_path, legenda_offset_ms=offset_ms
+        )
+
+        async with AsyncSessionLocal() as db, db.begin():
+            projeto = await _carregar_projeto(db, projeto_id)
+            projeto.legenda_offset_ms = offset_ms
+            projeto.transcricao_raw = json.dumps(transcricao, ensure_ascii=False)
+
+        return await _ressincronizar_cortes(projeto_id)
+
     @staticmethod
     async def deletar_projeto(projeto_id: str, db: AsyncSession) -> bool:
         projeto = await db.get(Projeto, projeto_id)

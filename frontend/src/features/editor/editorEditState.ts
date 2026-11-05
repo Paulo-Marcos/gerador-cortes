@@ -123,3 +123,39 @@ export function desfechoDaFalhaAoSalvar(erro: unknown): {
     tom: 'error',
   };
 }
+
+/**
+ * D-1041: o bruto sai do que está gravado no banco. Gerar com um ajuste ainda não
+ * salvo cortava o trecho antigo em silêncio, agora no gesto mais provável, o botão
+ * principal. Salva primeiro; se salvar falhar, avisa e não gera.
+ */
+export function salvarAntesDe(
+  historico: { getPresent: () => Partial<Corte>; reset: (valor: Partial<Corte>) => void },
+  atualizar: {
+    mutate: (
+      patch: Partial<Corte>,
+      opcoes: { onSuccess: () => void; onError: (erro: unknown) => void },
+    ) => void;
+  },
+  avisar: (mensagem: string, opcoes: { tone: 'error' }) => void,
+  depois: () => void,
+) {
+  const pendentes = historico.getPresent();
+  if (Object.keys(pendentes).length === 0) {
+    depois();
+    return;
+  }
+  atualizar.mutate(
+    { ...pendentes },
+    {
+      onSuccess: () => {
+        historico.reset({});
+        depois();
+      },
+      onError: (erro) => {
+        const motivo = erro instanceof Error ? erro.message : 'erro';
+        avisar(`Não consegui salvar os ajustes (${motivo}), então o bruto não foi gerado.`, { tone: 'error' });
+      },
+    },
+  );
+}

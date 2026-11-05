@@ -4,6 +4,7 @@ import logging
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.core.logging import operational_error, operational_info
 from app.database import get_db
+from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.projeto.analise_aditiva import normalizar_descartados
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
@@ -191,29 +192,14 @@ async def listar_projetos():
 @router.patch(
     "/{projeto_id}/transcricao", response_model=projetos_schemas.TranscricaoRefeitaResponse
 )
-async def atualizar_transcricao_projeto(
-    projeto_id: str, body: dict, db: AsyncSession = Depends(get_db)
-):
+async def atualizar_transcricao_projeto(projeto_id: str, body: dict):
     """Atualiza a transcrição bruta do projeto e sincroniza todos os cortes."""
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
-
     nova_trans = body.get("transcricao")
     if nova_trans is None:
         raise HTTPException(status_code=400, detail="Campo 'transcricao' é obrigatório")
 
-    projeto.transcricao_raw = json.dumps(nova_trans, ensure_ascii=False)
+    total_sincronizados = await ProjetoService.atualizar_transcricao(projeto_id, nova_trans)
 
-    # Sincroniza todos os cortes vinculados para refletir a mudança (texto ou tempo)
-    from app.services.corte import CorteService
-
-    # Carrega cortes se necessário
-    # D-652: em lote — a transcrição da live é lida e parseada UMA vez para
-    # todos os cortes, em vez de uma vez por corte.
-    total_sincronizados = await CorteService.sincronizar_transcricao_do_projeto(projeto_id, db)
-
-    await db.commit()
     return {
         "message": "Transcrição do projeto atualizada com sucesso",
         "total_cortes_sincronizados": total_sincronizados,
@@ -545,50 +531,23 @@ class SincroniaLegendaRequest(BaseModel):
 @router.put(
     "/{projeto_id}/sincronia-legenda", response_model=projetos_schemas.SincroniaDaLegendaResponse
 )
-async def atualizar_sincronia_legenda(
-    projeto_id: str, body: SincroniaLegendaRequest, db: AsyncSession = Depends(get_db)
-):
+async def atualizar_sincronia_legenda(projeto_id: str, body: SincroniaLegendaRequest):
     """Atualiza o offset manual da legenda e reprocessa a transcrição do vídeo."""
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    offset_ms = int(body.offset_segundos * 1000)
 
-    projeto.legenda_offset_ms = int(body.offset_segundos * 1000)
-    total_sincronizados = 0
-
-    # Atualiza a transcrição raw no banco
     try:
-        from app.services.ingestao import IngestaoService
-
-        projeto_dir = projetos_dir() / projeto_id
-        if not projeto_dir.exists():
-            raise Exception("Diretório do projeto não encontrado")
-
-        nova_transcricao = await IngestaoService._extrair_legenda(
-            projeto.id,
-            projeto.youtube_url,
-            projeto.arquivo_video_path,
-            legenda_offset_ms=projeto.legenda_offset_ms,
+        total_sincronizados = await ProjetoService.atualizar_sincronia_da_legenda(
+            projeto_id, offset_ms
         )
-        import json
-
-        projeto.transcricao_raw = json.dumps(nova_transcricao, ensure_ascii=False)
-
-        # 3. Sincronizar os cortes existentes para aplicar o novo offset neles também
-        from app.services.corte import CorteService
-
-        # D-652: em lote (uma leitura da transcrição para todos os cortes).
-        total_sincronizados = await CorteService.sincronizar_transcricao_do_projeto(projeto_id, db)
-
-        await db.commit()
-
+    except NaoEncontrado:
+        raise
     except Exception as e:
         operational_error("ProjetosRouter", f"Erro ao reprocessar legenda: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao reprocessar legenda: {str(e)}") from e
 
     return {
         "message": "Sincronia atualizada e transcrição reprocessada para todo o projeto",
-        "offset_ms": projeto.legenda_offset_ms,
+        "offset_ms": offset_ms,
         "cortes_sincronizados": total_sincronizados,
     }
 

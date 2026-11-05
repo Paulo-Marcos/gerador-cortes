@@ -106,7 +106,12 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
   // intermediários (grade, final) e um corte pode subir sem cenas Remotion.
   // Sem esta guarda, a tira mandava fazer cenas de um vídeo já publicado.
   const noAr = ordenados.some((p) => p.nome === 'YouTube' && p.done);
-  const iProxima = rejeitado || noAr ? -1 : ordenados.findIndex((p) => !p.done);
+  // D-1041: com o vídeo final pronto, o que só servia para chegar nele não é o que
+  // falta. Pedir bruto a esse corte faria um laço: o editor o conta como pronto e o
+  // devolve à Pós. Cenas por validar continuam valendo: renderizar não as validou.
+  const jaCumpriu = (p: (typeof ordenados)[number]) =>
+    status.video_pronto && (p.nome === 'Bruto' || p.verbo === 'gerar cenas');
+  const iProxima = rejeitado || noAr ? -1 : ordenados.findIndex((p) => !p.done && !jaCumpriu(p));
 
   const pips: Pip[] = ordenados.map((p, i) => ({
     sigla: p.sigla,
