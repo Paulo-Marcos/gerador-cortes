@@ -72,7 +72,7 @@ export function montarProximoDaLinha(
   projetoId: string,
   corteId: string,
   ir: (caminho: string) => void,
-  corte?: Corte,
+  corte: Corte | undefined,
 ): Pick<Primario, 'texto' | 'icone' | 'acao'> {
   const pos = postProductionPath(projetoId, corteId);
   const metadados = `/projetos/${projetoId}/metadados?corte=${corteId}`;

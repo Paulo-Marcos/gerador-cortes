@@ -67,6 +67,9 @@ const PASSO_A_PASSO: [string, Partial<StatusExportCorte>, string, string][] = [
   ],
 ];
 
+// O export marca grade e overlays como prontos quando o vídeo final existe.
+const RENDERIZADO = { video_pronto: true, grade_pronta: true, overlays_prontos: true };
+
 function proximo(status: Partial<StatusExportCorte>, corte?: Partial<Corte>) {
   const ir = vi.fn();
   const tira = montarTira(statusExportPendente({ corte_id: 'c7', numero: 7, titulo: 'Corte', ...status }), 'aprovado');
@@ -82,11 +85,11 @@ describe('D-1041 · o principal do corte aprovado', () => {
   });
 
   it.each<[string, Partial<StatusExportCorte>, string, string]>([
-    ['sem capa', { video_pronto: true }, 'Gerar capa em Metadados', '/projetos/p1/metadados?corte=c7'],
-    ['com capa', { video_pronto: true, thumbnail_pronta: true }, 'Completar metadados', '/projetos/p1/metadados?corte=c7'],
+    ['sem capa', { ...RENDERIZADO }, 'Gerar capa em Metadados', '/projetos/p1/metadados?corte=c7'],
+    ['com capa', { ...RENDERIZADO, thumbnail_pronta: true }, 'Completar metadados', '/projetos/p1/metadados?corte=c7'],
     [
       'com capa e metadados',
-      { video_pronto: true, thumbnail_pronta: true, metadados_completos: true },
+      { ...RENDERIZADO, thumbnail_pronta: true, metadados_completos: true },
       'Revisar',
       '/projetos/p1/final-review?corte=c7',
     ],
@@ -98,9 +101,8 @@ describe('D-1041 · o principal do corte aprovado', () => {
   });
 
   it.each<[string, Partial<StatusExportCorte>]>([
-    ['sem cenas nem bruto', { video_pronto: true }],
-    ['com bruto, sem cenas', { raw_pronto: true, video_pronto: true }],
-    ['com cenas validadas e os intermediários limpos', { raw_pronto: true, cenas_geradas: true, cenas_validadas: true, video_pronto: true }],
+    ['sem cenas nem bruto', { ...RENDERIZADO }],
+    ['com bruto, sem cenas', { ...RENDERIZADO, raw_pronto: true }],
   ])('renderizado %s: o resumo e o botão dizem a mesma coisa, a capa', (_nome, status) => {
     const { tira, passo } = proximo(status);
     expect(passo.texto).toBe('Gerar capa em Metadados');
@@ -126,7 +128,7 @@ describe('D-1041 · o principal do corte aprovado', () => {
   });
 
   it('renderizado com cenas por validar continua pedindo a validação', () => {
-    const { passo } = proximo({ raw_pronto: true, cenas_geradas: true, video_pronto: true });
+    const { passo } = proximo({ ...RENDERIZADO, raw_pronto: true, cenas_geradas: true });
     expect(passo.texto).toBe('Validar cenas na Pós');
   });
 

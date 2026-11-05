@@ -107,7 +107,7 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
   // falta. Pedir bruto a esse corte faria um laço: o editor o conta como pronto e o
   // devolve à Pós. Cenas por validar continuam valendo: renderizar não as validou.
   const jaCumpriu = (p: (typeof ordenados)[number]) =>
-    status.video_pronto && (['Bruto', 'Graded', 'Overlays'].includes(p.nome) || p.verbo === 'gerar cenas');
+    status.video_pronto && (p.nome === 'Bruto' || p.verbo === 'gerar cenas');
   const iProxima = rejeitado || noAr ? -1 : ordenados.findIndex((p) => !p.done && !jaCumpriu(p));
 
   const pips: Pip[] = ordenados.map((p, i) => ({

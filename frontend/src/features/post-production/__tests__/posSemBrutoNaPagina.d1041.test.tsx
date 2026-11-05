@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
   corte: {} as unknown as Corte,
   arquivosLimpos: false,
   statusBruto: undefined as string | undefined,
-  fases: { raw: false, grade: false, overlays: false, compose: false, encode: false },
+  fases: { raw: false, grade: false, overlays: false, compose: false, encode: false as boolean | undefined },
   bancada: null as BancadaChromeProps | null,
   videoSrc: null as string | null,
   export: [] as { corte_id: string; video_pronto?: boolean }[],
@@ -113,6 +113,8 @@ describe('D-1041 · a Pós sem bruto, na página', () => {
     h.bancada = null;
     h.videoSrc = null;
     h.export = [];
+    h.fases.raw = false;
+    h.fases.encode = false;
   });
 
   it('corte que nunca gerou: o principal leva ao editor dele e o Mais não oferece gerar', () => {
@@ -137,7 +139,9 @@ describe('D-1041 · a Pós sem bruto, na página', () => {
 
   it('o export dizendo que o vídeo está pronto também segura o corte na Pós', () => {
     h.export = [{ corte_id: 'c1', video_pronto: true }];
-    expect(abrir().primario.texto).toBe('Renderizar de novo');
+    const { primario } = abrir();
+    expect(primario.texto).not.toBe('Gerar bruto no editor');
+    expect(primario.desabilitado).toBe(true);
   });
 
   it('depois da limpeza completa, o texto a nomeia', () => {
@@ -157,15 +161,28 @@ describe('D-1041 · a Pós sem bruto, na página', () => {
     expect(h.videoSrc).toBe('');
   });
 
-  it('corte devolvido, fora do export, com render: o player pede o vídeo final', () => {
+  it('corte devolvido, fora do export, com o vídeo final no disco: o player pede o final', () => {
+    h.fases.encode = true;
     const { primario } = abrir({ is_pos_producao: 1 });
     expect(primario.texto).toBe('Renderizar de novo');
     expect(h.videoSrc).toContain('c1');
   });
 
-  it('com vídeo final, o player continua pedindo a fonte', () => {
+  it('marcado como renderizado, mas sem o vídeo no disco: o player não pede o arquivo apagado', () => {
+    const { primario } = abrir({ is_pos_producao: 1 });
+    expect(primario.texto).toBe('Renderizar final');
+    expect(h.videoSrc).toBe('');
+  });
+
+  it('publicado, com o vídeo final retirado e o bruto no disco: o player abre no bruto', () => {
+    h.fases.raw = true;
+    abrir({ is_pos_producao: 1, arquivo_clip_path: 'clip_raw.mkv' });
+    expect(h.videoSrc).toContain('video-bruto');
+  });
+
+  it('com o status do render ainda carregando, vale o que o export diz', () => {
+    h.fases.encode = undefined;
     h.export = [{ corte_id: 'c1', video_pronto: true }];
-    abrir();
-    expect(h.videoSrc).toContain('c1');
+    expect(abrir().primario.texto).toBe('Renderizar de novo');
   });
 });

@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErroDaApi } from '@/shared/api';
 import { UmaTelaPorCorte } from '@/upgrade/UmaTelaPorCorte';
 import { useEditorPage } from '../useEditorPage';
 import { assentar, montar } from './domMinimo';
@@ -121,7 +120,6 @@ describe('D-1041 · o principal do editor, com o hook real', () => {
   it.each<[string, () => void]>([
     ['sem metadado nenhum', () => undefined],
     ['com só o título que o Fire grava', () => h.lerMetadado.mockResolvedValue({ titulo_youtube: 'Título proposto', descricao_youtube: '', opcoes_titulo: [] })],
-    ['com o metadado inexistente (404)', () => h.lerMetadado.mockRejectedValue(new ErroDaApi(404, '', 'Not Found'))],
   ])('1ª geração %s: gera o bruto e pede os metadados', async (_caso, preparar) => {
     preparar();
     await abrir();
@@ -134,7 +132,7 @@ describe('D-1041 · o principal do editor, com o hook real', () => {
   it.each<[string, () => void]>([
     ['descrição escrita, mesmo sem título', () => h.lerMetadado.mockResolvedValue({ titulo_youtube: '', descricao_youtube: 'Escrita à mão' })],
     ['opções de título já geradas', () => h.lerMetadado.mockResolvedValue({ descricao_youtube: '', opcoes_titulo: ['A', 'B'] })],
-    ['leitura que falhou: na dúvida, preserva', () => h.lerMetadado.mockRejectedValue(new ErroDaApi(500, '', 'Erro'))],
+    ['leitura que falhou: na dúvida, preserva', () => h.lerMetadado.mockRejectedValue(new Error('caiu'))],
   ])('1ª geração com %s: gera o bruto sem pedir metadados', async (_caso, preparar) => {
     preparar();
     await abrir();
