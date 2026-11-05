@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { providerEmVoo } from '@/lib/providerIa';
 import { geracaoIaApi, useUltimaGeracao } from '@/features/ia';
-import { pedirGeracao, rotuloDaGeracao, versaoParaDesfazer } from './geracaoDoCard';
+import { estaCompleto, pedirGeracao, rotuloDaGeracao } from './geracaoDoCard';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/components/ui/toaster';
 import { resolveThumbUrl } from '@/lib/api';
@@ -149,7 +149,15 @@ export function useMetadataCard({
   const generateMetadataClaude = useMutation({
     mutationFn: (provider: 'claude' | 'gemini' = 'claude') => pedirGeracao(cut.id, meta, provider),
     onMutate: () => {
-      versaoAntesDaIa.current = versaoParaDesfazer(meta);
+      versaoAntesDaIa.current =
+        meta && estaCompleto(meta)
+          ? {
+              titulo_youtube: meta.titulo_youtube,
+              texto_capa: meta.texto_capa,
+              descricao_youtube: meta.descricao_youtube,
+              tags_youtube: meta.tags_youtube,
+            }
+          : null;
     },
     onSuccess: () => {
       notify('Metadados gerados por IA.', { tone: 'success' });

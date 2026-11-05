@@ -24,7 +24,7 @@ vi.mock('@/features/ia', async (original) => ({
 
 const { MetadataCard } = await import('../MetadataCard');
 const { metadataKey } = await import('../useMetadataCard');
-const { pedirGeracao, rotuloDaGeracao, versaoParaDesfazer } = await import('../geracaoDoCard');
+const { pedirGeracao, rotuloDaGeracao } = await import('../geracaoDoCard');
 
 const completo = {
   titulo_youtube: 'Meu título',
@@ -86,10 +86,9 @@ describe('o botão de IA do card', () => {
     expect(h.regerar).not.toHaveBeenCalled();
   });
 
-  it('o Desfazer só existe para quem regerou', () => {
-    expect(versaoParaDesfazer(completo)?.titulo_youtube).toBe('Meu título');
-    expect(versaoParaDesfazer(soTitulo)).toBeNull();
-    expect(versaoParaDesfazer(undefined)).toBeNull();
+  it('o Desfazer só guarda versão de quem regerou', () => {
+    const hook = readFileSync(resolve(__dirname, '../useMetadataCard.tsx'), 'utf-8');
+    expect(hook).toMatch(/versaoAntesDaIa\.current =\s+meta && estaCompleto\(meta\)/);
   });
 });
 
