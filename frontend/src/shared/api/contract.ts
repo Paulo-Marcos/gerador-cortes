@@ -848,6 +848,8 @@ export interface paths {
         /**
          * Gerar Metadados Via Claude
          * @description Gera os metadados do corte via Claude (skill metadados-expert).
+         *
+         *     Preenche só o que falta; `substituir` é o Regerar explícito (D-1043).
          */
         post: operations["gerar_metadados_via_claude_api_claude_corte__corte_id__gerar_metadados_post"];
         delete?: never;
@@ -12233,6 +12235,7 @@ export interface operations {
         parameters: {
             query?: {
                 provider?: "claude" | "gemini";
+                substituir?: boolean;
             };
             header?: never;
             path: {

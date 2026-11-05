@@ -66,7 +66,7 @@ export function MetadataCard(props: {
   onRequestClose,
 } = props;
   const card = useMetadataCard(props);
-  const { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix } = card;
+  const { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, rotuloIa, save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix } = card;
 
 
   return (
@@ -266,7 +266,7 @@ export function MetadataCard(props: {
                 Textos do YouTube
               </h3>
               <AcaoDeIa
-                rotulo="Regerar metadados"
+                rotulo={rotuloIa}
                 destaque
                 emVoo={metadadosEmVoo}
                 onGerar={(provider) => generateMetadataClaude.mutate(provider)}
@@ -455,10 +455,10 @@ export function MetadataCard(props: {
                 declarado no hand-off, é cor de marca. */}
             <div className="flex flex-wrap items-end gap-2 pt-1">
               <SegmentedAiManual
-                label="Regerar metadados"
+                label={rotuloIa}
                 emVoo={metadadosEmVoo}
-                aiTitle="Regerar"
-                aiDescricao="Regerar metadados"
+                aiTitle={rotuloIa.split(' ')[0]}
+                aiDescricao={rotuloIa}
                 onAi={(provider) => generateMetadataClaude.mutate(provider)}
                 manualIcon="wand-sparkles"
                 onManual={() => setManualKind('metadata')}

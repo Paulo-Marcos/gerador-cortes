@@ -13,6 +13,7 @@ from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.corte.metadado_corte import formatar_bloco_capitulos, so_o_que_falta
 from app.domain.corte.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
@@ -35,13 +36,11 @@ from app.services.claude_ia import (
     registrar_skill_usada,
     sem_cercas_de_codigo,
 )
+from app.services.metadados_em_geracao import reservar_ou_recusar
 from app.services.pedidos_capa_chatgpt import pedir_sozinho
 from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import select
-
-# O YouTube só mostra capítulos a partir de três marcas.
-_MINIMO_DE_CAPITULOS = 3
 
 logger = logging.getLogger(__name__)
 
@@ -102,30 +101,6 @@ def formatar_transcricao_timestampada(segmentos: list | None, bucket_seg: float 
     if bucket_textos and bucket_inicio is not None:
         linhas.append(f"[{_mmss(bucket_inicio)}] " + " ".join(bucket_textos))
     return "\n".join(linhas)
-
-
-def formatar_bloco_capitulos(chapters: list | None) -> str:
-    """Monta o bloco 'Capítulos:' da descrição a partir dos chapters da IA (D-342).
-
-    Cada item é ``{"inicio": "MM:SS", "titulo": str}``. O YouTube só ativa
-    capítulos se o primeiro for ``00:00`` e houver **pelo menos 3** timestamps
-    crescentes — então, diante de lista vazia, curta ou malformada, devolvemos
-    ``""`` (nenhum bloco) em vez de um bloco quebrado que só polui a descrição.
-    """
-    if not chapters or len(chapters) < _MINIMO_DE_CAPITULOS:
-        return ""
-    linhas: list[str] = []
-    for cap in chapters:
-        if not isinstance(cap, dict):
-            return ""
-        inicio = str(cap.get("inicio", "")).strip()
-        titulo = str(cap.get("titulo", "")).strip()
-        if not inicio or not titulo:
-            return ""
-        linhas.append(f"{inicio} {titulo}")
-    if not linhas[0].startswith("00:00"):
-        return ""
-    return "Capítulos:\n" + "\n".join(linhas)
 
 
 def formatar_bloco_hints_thumbnail(hints: str | None) -> str:
@@ -393,31 +368,42 @@ class MetadadosService:
             )
 
     @staticmethod
-    async def gerar_metadados_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+    async def gerar_metadados_via_claude(
+        corte_id: str, provider: ProviderIA = "claude", substituir: bool = False
+    ) -> dict:
         """Gera metadados do corte via Claude usando contexto puro + skill.
 
         WHY: a expertise editorial (regras de título, lista negra, famílias,
         checklist) vive inteira em `.claude/skills/metadados-expert/SKILL.md`.
         O service só fornece o input do corte — espelho do fluxo da thumbnail.
+        D-1043: preenche o que falta; `substituir` é o Regerar explícito.
         """
-        skill = editorial_skills.resolver_skill(SKILL_METADADOS)
-        ctx = await MetadadosService.montar_contexto_meta(corte_id)
-        # D-349: o scaffold (invólucro "INPUT DO CORTE" + contrato de saída) vem do
-        # banco por canal, como as demais etapas. O corpo/expertise (regras de
-        # título, checklist, seção OUTPUT) continua na skill metadados-expert.
-        scaffold_meta = editorial_scaffolds.resolver_scaffold("metadados")
-        prompt = scaffold_meta.format(
-            variacao=bloco_variacao_de(skill.lentes),
-            titulo_proposto=ctx["titulo_proposto"],
-            tema_central=ctx["tema"],
-            numero_corte=ctx["numero_corte"],
-            resumo_historico=ctx["resumo"],
-            transcricao_marcada=ctx["transcricao_marcada"],
-            historico_titulos=ctx["historico_titulos"],
-        )
-        registrar_skill_usada(SKILL_METADADOS, skill, scaffold_meta)
-        resultado = await gerar_json(provider, prompt, skill, SKILL_METADADOS, corte_id=corte_id)
-        await MetadadosService.importar_resultado_meta(corte_id, resultado)
+        with reservar_ou_recusar(corte_id):
+            skill = editorial_skills.resolver_skill(SKILL_METADADOS)
+            ctx = await MetadadosService.montar_contexto_meta(corte_id)
+            # D-349: o scaffold (invólucro "INPUT DO CORTE" + contrato de saída) vem do
+            # banco por canal, como as demais etapas. O corpo/expertise (regras de
+            # título, checklist, seção OUTPUT) continua na skill metadados-expert.
+            scaffold_meta = editorial_scaffolds.resolver_scaffold("metadados")
+            prompt = scaffold_meta.format(
+                variacao=bloco_variacao_de(skill.lentes),
+                titulo_proposto=ctx["titulo_proposto"],
+                tema_central=ctx["tema"],
+                numero_corte=ctx["numero_corte"],
+                resumo_historico=ctx["resumo"],
+                transcricao_marcada=ctx["transcricao_marcada"],
+                historico_titulos=ctx["historico_titulos"],
+            )
+            registrar_skill_usada(SKILL_METADADOS, skill, scaffold_meta)
+            resultado = await gerar_json(
+                provider, prompt, skill, SKILL_METADADOS, corte_id=corte_id
+            )
+            gravar = (
+                MetadadosService.substituir_resultado_meta
+                if substituir
+                else MetadadosService.importar_resultado_meta
+            )
+            await gravar(corte_id, resultado)
         logger.info("[ClaudeIA] Metadados gerados via Claude p/ corte %s", corte_id[:8])
         return {"ok": True}
 
@@ -549,8 +535,17 @@ class MetadadosService:
         }
 
     @staticmethod
-    async def importar_resultado_meta(corte_id: str, resultado: dict):
-        """Salva metadados vindos de IA externa com a mesma lógica do gerar_metadados."""
+    async def substituir_resultado_meta(corte_id: str, resultado: dict):
+        """Pedido explícito (Regerar, colar o resultado): reescreve os textos do metadado."""
+        await MetadadosService.importar_resultado_meta(corte_id, resultado, substituir=True)
+
+    @staticmethod
+    async def importar_resultado_meta(corte_id: str, resultado: dict, substituir: bool = False):
+        """Grava o resultado da IA; sem `substituir`, só no que falta (D-1043).
+
+        O padrão é o seguro: o gesto do bruto pede sozinho, e o texto do operador fica.
+        Quem quer reescrever (Regerar, colar o resultado) usa `substituir_resultado_meta`.
+        """
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
@@ -588,28 +583,33 @@ class MetadadosService:
             opcoes_titulo = resultado.get("opcoes_titulo") or []
             opcoes_texto_capa = resultado.get("opcoes_texto_capa") or []
 
-            meta.titulo_youtube = (
+            titulo = (
                 resultado.get("titulo")
                 or (opcoes_titulo[0] if opcoes_titulo else None)
                 or corte.titulo_proposto
             )
             if corte.is_leitura:
-                meta.titulo_youtube = aplicar_prefixo_leitura_titulo(
-                    meta.titulo_youtube,
-                    corte.autor_leitura,
-                    getattr(corte, "parte_leitura", 1),
+                titulo = aplicar_prefixo_leitura_titulo(
+                    titulo, corte.autor_leitura, getattr(corte, "parte_leitura", 1)
                 )
 
-            meta.descricao_youtube = descricao_completa
-            meta.tags_youtube = json.dumps(tags, ensure_ascii=False)
-            meta.opcoes_titulo = json.dumps(opcoes_titulo, ensure_ascii=False)
-            meta.opcoes_texto_capa = json.dumps(opcoes_texto_capa, ensure_ascii=False)
-
+            textos = {
+                "titulo_youtube": titulo,
+                "descricao_youtube": descricao_completa,
+                "tags_youtube": json.dumps(tags, ensure_ascii=False),
+                "opcoes_titulo": json.dumps(opcoes_titulo, ensure_ascii=False),
+                "opcoes_texto_capa": json.dumps(opcoes_texto_capa, ensure_ascii=False),
+            }
             if opcoes_texto_capa:
-                tc = opcoes_texto_capa[0]
-                meta.texto_capa = aplicar_emojis_texto_capa(
-                    tc, bool(corte.is_fire), bool(corte.is_leitura)
+                textos["texto_capa"] = aplicar_emojis_texto_capa(
+                    opcoes_texto_capa[0], bool(corte.is_fire), bool(corte.is_leitura)
                 )
+            if not substituir:
+                # Relido nesta sessão: vale também o que foi digitado enquanto a IA pensava.
+                gravados = {campo: getattr(meta, campo) for campo in textos}
+                textos = so_o_que_falta(textos, gravados, corte.titulo_proposto)
+            for campo, valor in textos.items():
+                setattr(meta, campo, valor)
 
             meta.link_live_com_timestamp = link_live
             meta.canal_credito = projeto.canal_origem
