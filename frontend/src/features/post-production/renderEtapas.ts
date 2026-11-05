@@ -136,8 +136,9 @@ export function avisoDoFimDoRender(
     return { texto: `${status.stage}. O vídeo final não foi refeito.`, tom: 'success' };
   }
   if (status.state === 'idle') {
+    // `idle` não diz que o render morreu: ele pode ter terminado antes do reinício.
     return {
-      texto: 'O backend reiniciou e perdeu este render. O vídeo aqui pode ser o anterior: confira ou renderize de novo.',
+      texto: 'O backend não sabe como este render terminou. O vídeo aqui pode ser o anterior: confira ou renderize de novo.',
       tom: 'warning',
     };
   }

@@ -133,13 +133,17 @@ describe('D-1057 · o fim do render na Pós', () => {
     expect(h.avisar.mock.calls[0][1]).toEqual({ tone: 'success' });
   });
 
-  it('backend que reiniciou no meio fica na Pós e avisa que o vídeo pode ser o anterior', () => {
+  // `idle` só diz que o backend não conhece o render: ele pode ter terminado bem antes
+  // do reinício, e aí o vídeo é o novo. O aviso não afirma que o render se perdeu.
+  it.each([true, false])('backend sem o render (assistiu: %s) fica na Pós e não afirma o que não sabe', (assistiu) => {
     const status = statusNoFim({ state: 'idle', progress: 0, stage: 'Aguardando render final' });
-    abrirAPos().aoAcabar!({ concluiu: false, falhou: false, status, assistiu: true });
+    abrirAPos().aoAcabar!({ concluiu: false, falhou: false, status, assistiu });
     expect(h.navegar).not.toHaveBeenCalled();
     expect(h.avisar).toHaveBeenCalledTimes(1);
-    expect(h.avisar.mock.calls[0][0]).toContain('reiniciou');
-    expect(h.avisar.mock.calls[0][0]).toContain('anterior');
+    expect(h.avisar.mock.calls[0][0]).toContain('não sabe como este render terminou');
+    expect(h.avisar.mock.calls[0][0]).toContain('pode ser o anterior');
+    expect(h.avisar.mock.calls[0][0]).not.toContain('perdeu');
+    expect(h.avisar.mock.calls[0][0]).not.toContain('reiniciou');
     expect(h.avisar.mock.calls[0][1]).toEqual({ tone: 'warning' });
   });
 
