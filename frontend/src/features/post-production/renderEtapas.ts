@@ -121,6 +121,30 @@ export function selecaoParaRequest(
   };
 }
 
+/**
+ * O que dizer quando o render acaba sem vídeo novo (D-1057). A tela fica onde está,
+ * com o vídeo que já tinha: sem o aviso, parece que nada aconteceu ou que está pronto.
+ * Cancelar não pede aviso, porque foi o operador quem mandou parar.
+ */
+export function avisoDoFimDoRender(
+  status: PipelineStatusResponse,
+): { texto: string; tom: 'success' | 'warning' | 'error' } | null {
+  if (status.state === 'error') {
+    return { texto: `O render final falhou: ${status.error || 'o backend não disse por quê'}.`, tom: 'error' };
+  }
+  if (status.state === 'parcial') {
+    return { texto: `${status.stage}. O vídeo final não foi refeito.`, tom: 'success' };
+  }
+  if (status.state === 'idle') {
+    // `idle` não diz que o render morreu: ele pode ter terminado antes do reinício.
+    return {
+      texto: 'O backend não sabe como este render terminou. O vídeo aqui pode ser o anterior: confira ou renderize de novo.',
+      tom: 'warning',
+    };
+  }
+  return null;
+}
+
 /** Resumo legível do que o request vai fazer (mostrado no modal). */
 export function descreverRequest(req: RenderRequest | null): string {
   if (!req) return 'Marque ao menos uma etapa.';

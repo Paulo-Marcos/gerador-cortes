@@ -9632,7 +9632,7 @@ export interface components {
              * State
              * @enum {string}
              */
-            state: "idle" | "running" | "done" | "error" | "cancelled";
+            state: "idle" | "running" | "done" | "parcial" | "error" | "cancelled";
             /** Tem Etapas Concluidas */
             tem_etapas_concluidas: boolean;
         };

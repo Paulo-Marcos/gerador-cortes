@@ -1,9 +1,10 @@
 """A situação do render com o vídeo antigo no disco (D-1035).
 
 O `video.mp4` do render anterior fica publicado durante o render novo. A tela só
-conclui no `state == "done"` e não olha o arquivo: quem reconhece "ocioso com
-vídeo pronto" é o backend, que responde `done`. Se isso mudar, o `Renderizar de
-novo` volta a depender do arquivo no front.
+conclui no `state == "done"` e não olha o arquivo, e o backend também não: o `done`
+vem só do render que terminou neste processo (D-1057). Com o arquivo valendo como
+`done`, o reinício no meio de um `Renderizar de novo` abria a Revisão com o vídeo
+velho.
 """
 
 from __future__ import annotations
@@ -60,11 +61,11 @@ async def corte_com_video_antigo(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_ocioso_com_o_video_no_disco_responde_done(corte_com_video_antigo):
+async def test_ocioso_com_o_video_no_disco_responde_idle(corte_com_video_antigo):
     situacao = await situacao_do_render.situacao_do_pipeline(CORTE_ID)
 
     assert situacao["fases"]["encode"] is True
-    assert (situacao["state"], situacao["running"]) == ("done", False)
+    assert (situacao["state"], situacao["running"]) == ("idle", False)
 
 
 @pytest.mark.asyncio

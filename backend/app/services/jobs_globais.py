@@ -215,6 +215,7 @@ def _jobs_pos() -> list[JobGlobal]:
 _RENDER_ESTADO: dict[str, EstadoJob] = {
     "running": "rodando",
     "done": "concluido",
+    "parcial": "concluido",
     "error": "erro",
     "cancelled": "cancelado",
 }
