@@ -170,6 +170,8 @@ class LayoutDoCorte(ItemDoCorte):
 
 
 class CorteResponse(BaseModel):
+    # D-1040: só `adicionar-desvio` liga: o trecho gravou, a transcrição ficou para trás.
+    sincronia_falhou: bool = False
     id: str
     projeto_id: str
     numero: int

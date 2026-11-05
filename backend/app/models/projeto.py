@@ -85,6 +85,8 @@ class Projeto(Base):
 
 class Corte(Base):
     __tablename__ = "cortes"
+    # D-1040: não é coluna. Vale na instância da requisição, para a resposta avisar a tela.
+    sincronia_falhou = False
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     # D-650: "os cortes deste projeto" é a consulta mais quente do app.

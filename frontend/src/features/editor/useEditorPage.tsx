@@ -7,7 +7,6 @@ import { useMotivosVisiveis } from '@/features/channels/useMotivosDeExclusao';
 import { corteKey, useAdicionarDesvio, useAtualizarCorte, useCorte, useCortesProjeto, useDeletarCorte, useDividirCorte, useJuntarCortes, useSincronizarTranscricao, useToggleFire, useToggleLeitura } from '@/features/editor/useCortes';
 import { avisarSeBrutoOcupado, useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaude, useTrechosClaudeEmAndamento } from '@/features/editor/useGeracoesDaIa';
-import { cortesApi } from '@/features/editor/api/cortes';
 import { useToast } from '@/components/ui/toaster';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { estaAprovado, statusAoAlternarVeredito } from '@/lib/statusDoCorte';
@@ -103,6 +102,7 @@ export const ATALHOS_DO_EDITOR = [
 
 // D-729: o container de EditorPage — estado, efeitos e ações. A view, em
 // EditorPage.tsx, só desenha o que este hook devolve.
+// D-1040: trecho novo só pela mutação, que avisa a falha e recarrega a lista.
 export function useEditorPage() {
   const { id: projetoId = '', corteId = '' } = useParams<{ id: string; corteId: string }>();
   const navigate = useNavigate();
@@ -430,13 +430,13 @@ export function useEditorPage() {
     riscados.riscar(idx);
   }
 
-  async function onCriarCorteDaSelecao(inicioHms: string, fimHms: string, titulo: string) {
-    await cortesApi.adicionarDesvio(corteId, {
+  // D-1040: sem aviso, o operador apertava de novo sem saber que o trecho já gravou.
+  function onCriarCorteDaSelecao(inicioHms: string, fimHms: string, titulo: string) {
+    adicionarDesvio.mutate({
       inicio_hms: inicioHms,
       fim_hms: fimHms,
       motivo: titulo,
     });
-    corteQuery.refetch();
   }
 
   function onSeekTimeline(seg: number) {
@@ -452,7 +452,7 @@ export function useEditorPage() {
     const time = playerRef.current?.getCurrentTime() ?? corteUI.inicio_seg;
     const start = Math.max(corteUI.inicio_seg, time);
     const end = Math.min(corteUI.fim_seg, start + 5);
-    void onCriarCorteDaSelecao(segParaHms(start, true), segParaHms(end, true), 'Trecho manual');
+    onCriarCorteDaSelecao(segParaHms(start, true), segParaHms(end, true), 'Trecho manual');
   }
 
   // F-061: divide o corte em dois no ponteiro do player. Exige salvar antes —
