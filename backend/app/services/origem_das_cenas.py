@@ -56,7 +56,10 @@ async def gravar_cenas_geradas(
 
     RN-36, D-1049: quem edita não espera a IA, e a cena segue a frase como as gravadas. O
     `where` grava só se a transcrição não mudou desde a leitura logo acima; se mudou,
-    leva de novo a partir do que a IA leu. Cena sem a frase desfaz a marca de validadas.
+    leva de novo a partir do que a IA leu.
+
+    D-1046: cenas novas saem sem a marca de validadas, porque ninguém as conferiu. Só o
+    recorte, que leva as mesmas cenas, guarda a marca quando a frase continua lá.
     """
     while True:
         corte = await db.get(Corte, corte_id)
@@ -65,10 +68,11 @@ async def gravar_cenas_geradas(
         await db.refresh(corte)
         atual = corte.transcricao_final
         cenas = levar_cenas_geradas(resultado, transcricao_lida, atual)
-        gravadas = json.dumps(cenas, ensure_ascii=False)
-        valores: dict = {"cenas_remotion": gravadas}
-        if perdeu_frase(None, gravadas):
-            valores |= {"cenas_validadas": 0, "cenas_validadas_em": None}
+        valores = {
+            "cenas_remotion": json.dumps(cenas, ensure_ascii=False),
+            "cenas_validadas": 0,
+            "cenas_validadas_em": None,
+        }
         if await _gravar_se(db, corte_id, Corte.transcricao_final == atual, valores):
             return cenas
 
