@@ -2,6 +2,7 @@
 leva as cenas junto e, se tirar a frase de alguma, desfaz a validação (D-1030, RN-36)."""
 
 import json
+from typing import cast
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
@@ -9,7 +10,7 @@ from app.domain.corte.ancora_da_cena import levar_cenas_geradas, perdeu_frase, s
 from app.domain.corte.corte_mapper import extrair_cenas_remotion
 from app.domain.corte.origem_da_cena import conferir_cenas
 from app.models import Corte
-from sqlalchemy import update
+from sqlalchemy import CursorResult, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -52,10 +53,14 @@ async def gravar_cenas_geradas(
         valores: dict = {"cenas_remotion": gravadas}
         if perdeu_frase(None, gravadas):
             valores |= {"cenas_validadas": 0, "cenas_validadas_em": None}
-        gravou = await db.execute(
-            update(Corte)
-            .where(Corte.id == corte_id, Corte.transcricao_final == atual)
-            .values(**valores)
+        # O cast é do pyright: a execução de um UPDATE sempre devolve um CursorResult.
+        gravou = cast(
+            CursorResult,
+            await db.execute(
+                update(Corte)
+                .where(Corte.id == corte_id, Corte.transcricao_final == atual)
+                .values(**valores)
+            ),
         )
         await db.commit()
         if gravou.rowcount:
