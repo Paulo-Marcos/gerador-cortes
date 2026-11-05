@@ -149,6 +149,30 @@ describe('D-1040 · o atalho do trecho no bruto', () => {
     expect(avisos('error')).toEqual([expect.stringContaining('transcrição')]);
   });
 
+  // O `+` da lista manda sempre o mesmo marcador: repetir sem nada entrar parecia botão quebrado.
+  it('o + repetido, sem nada entrar na lista, diz por quê', async () => {
+    h.obterCorte.mockResolvedValue(h.corteDe([h.trecho]));
+    h.adicionarDesvio.mockResolvedValue({ ...h.corteDe([h.trecho]), sincronia_falhou: false });
+    await abrir();
+
+    tela.onAdicionarDesvio({ inicio_hms: '00:00:00', fim_hms: '00:00:05', motivo: 'Manual' });
+    await assentar();
+
+    expect(avisos('info')).toEqual([expect.stringContaining('já está na lista')]);
+  });
+
+  it('nada entrou e a sincronia falhou: vale só o aviso da transcrição', async () => {
+    h.obterCorte.mockResolvedValue(h.corteDe([h.trecho]));
+    h.adicionarDesvio.mockResolvedValue({ ...h.corteDe([h.trecho]), sincronia_falhou: true });
+    await abrir();
+
+    tela.adicionarTrechoAqui();
+    await assentar();
+
+    expect(avisos('warning')).toEqual([expect.stringContaining('transcrição')]);
+    expect(avisos('info')).toEqual([]);
+  });
+
   it('trecho e sincronia em dia: mostra o trecho sem aviso', async () => {
     h.adicionarDesvio.mockResolvedValue({ ...h.corteDe([h.trecho]), sincronia_falhou: false });
     await abrir();
