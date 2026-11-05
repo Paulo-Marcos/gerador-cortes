@@ -7,6 +7,7 @@ import { copyTextToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/components/ui/toaster';
 import { resolveThumbUrl } from '@/lib/api';
 import { metadadosApi, type MetadadoPatch } from './api/metadados';
+import { useRascunhoDoCard } from './rascunhoDoCard';
 import { applyCoverEmojis, applyReadingTitlePrefix } from '@/lib/readingMetadata';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import type { PromptModalKind } from './MetadataCard';
@@ -14,9 +15,7 @@ import type { PromptModalKind } from './MetadataCard';
 
 export const metadataKey = (corteId: string) => ['metadado', corteId] as const;
 
-export function sanitizeDescription(text: string) {
-  return text ? text.replace(/#{2,}/g, '#') : text;
-}
+export { sanitizeDescription } from './rascunhoDoCard';
 
 // D-729: o container de MetadataCard — estado, efeitos e ações. A view, em
 // MetadataCard.tsx, só desenha o que este hook devolve.
@@ -58,16 +57,13 @@ export function useMetadataCard({
   const [showTags, setShowTags] = useState(modal);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [manualKind, setManualKind] = useState<PromptModalKind | null>(null);
-  const [title, setTitle] = useState('');
-  const [coverText, setCoverText] = useState('');
-  const [description, setDescription] = useState('');
-  const [tagsText, setTagsText] = useState('');
 
   const metaQuery = useQuery({
     queryKey: metadataKey(cut.id),
     queryFn: () => metadadosApi.obterMetadado(cut.id),
   });
   const meta = metaQuery.data;
+  const { textoNaoSalvo, descartarRascunho, ...campos } = useRascunhoDoCard(cut.id, meta);
   const generated = Boolean(meta?.titulo_youtube);
   const promptReady = Boolean(meta?.prompt_thumbnail);
   // Emoldurar, comprimir e trocar gravam por cima do MESMO nome de arquivo.
@@ -108,10 +104,6 @@ export function useMetadataCard({
   useEffect(() => {
     if (!meta) return;
     onMetaLoaded?.(cut.id, meta);
-    setTitle(meta.titulo_youtube);
-    setCoverText(meta.texto_capa);
-    setDescription(sanitizeDescription(meta.descricao_youtube));
-    setTagsText((meta.tags_youtube ?? []).join(', '));
   }, [cut.id, meta, onMetaLoaded]);
 
   const invalidate = () => {
@@ -144,6 +136,8 @@ export function useMetadataCard({
   // operador desfazer ou dispensar.
   const versaoAntesDaIa = useRef<MetadadoPatch | null>(null);
   const [desfazerIa, setDesfazerIa] = useState<MetadadoPatch | null>(null);
+  // D-1054: a versão guardada é deste corte: não vale para o próximo, nem a geração em voo.
+  useEffect(() => { versaoAntesDaIa.current = null; setDesfazerIa(null); }, [cut.id]);
 
   // F-038 - geracao automatica por IA: invalida na hora.
   const generateMetadataClaude = useMutation({
@@ -156,12 +150,16 @@ export function useMetadataCard({
               texto_capa: meta.texto_capa,
               descricao_youtube: meta.descricao_youtube,
               tags_youtube: meta.tags_youtube,
+              // D-1054: o blur salva antes do clique, e o `meta` ainda não tem esse texto.
+              ...textoNaoSalvo(),
             }
           : null;
     },
     onSuccess: () => {
       notify('Metadados gerados por IA.', { tone: 'success' });
-      setDesfazerIa(versaoAntesDaIa.current);
+      // D-1054: regerar substitui de propósito, e o digitado até aqui volta no Desfazer.
+      setDesfazerIa(versaoAntesDaIa.current && { ...versaoAntesDaIa.current, ...textoNaoSalvo() });
+      if (versaoAntesDaIa.current) descartarRascunho();
       invalidate();
     },
     onError: (error) =>
@@ -304,6 +302,7 @@ export function useMetadataCard({
       ([campo, valor]) => JSON.stringify(gravado?.[campo] ?? null) !== JSON.stringify(valor ?? null),
     );
     if (!mudou) return;
+    if (versaoAntesDaIa.current) Object.assign(versaoAntesDaIa.current, patch);
     saveMutation.mutate(patch);
   };
 
@@ -331,5 +330,5 @@ export function useMetadataCard({
     }
   };
 
-  return { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, rotuloIa: rotuloDaGeracao(meta), save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
+  return { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, ...campos, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, rotuloIa: rotuloDaGeracao(meta), save, saveMutation, setCapaAmpliada, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, thumbSuggestions, thumbnailReady, thumbnailUrl, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
 }
