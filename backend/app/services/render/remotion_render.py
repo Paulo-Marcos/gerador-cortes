@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from app.core.channel_paths import projetos_dir
 from app.core.por_loop import PorLoop
 from app.database import AsyncSessionLocal
+from app.domain.corte.render_etapas import eh_render_parcial
 from app.models import Corte
 from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.render.finalizacao_do_corte import finalizar_corte_com_sucesso
@@ -135,7 +136,12 @@ class RemotionRenderService:
         def handle_result(t):
             try:
                 t.result()
-                RenderProgressStore.done(corte_id)
+                if eh_render_parcial(parar_em):
+                    RenderProgressStore.parcial(
+                        corte_id, f"Render parcial concluído (parou em {parar_em})"
+                    )
+                else:
+                    RenderProgressStore.done(corte_id)
                 logger.info("[RemotionRender] Tarefa %s concluída com sucesso.", corte_id)
             except asyncio.CancelledError:
                 # D-426: o operador mandou parar. `CancelledError` é

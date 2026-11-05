@@ -47,21 +47,13 @@ async def situacao_do_pipeline(corte_id: str) -> dict:
         "render_final": _arquivo_aproveitavel(paths["final"]),
         "encode": _arquivo_aproveitavel(paths["final"]),
     }
-    progress = RenderProgressStore.get(corte_id).to_dict()
-    if progress["state"] == "idle" and fases["encode"]:
-        progress = {
-            "state": "done",
-            "progress": 100,
-            "stage": "Render final concluído",
-            "running": False,
-            "elapsed_seconds": 0.0,
-            "error": "",
-        }
+    # D-1057: o `video.mp4` não vira `done`. Ele pode ser o do render anterior, e o
+    # progresso mora em memória: depois de um reinício, `idle` é tudo o que se sabe.
     return {
         "fases": fases,
         "overlays_count": len(overlays),
         "tem_etapas_concluidas": any(fases[k] for k in ("grade", "overlays", "compose", "encode")),
-        **progress,
+        **RenderProgressStore.get(corte_id).to_dict(),
     }
 
 

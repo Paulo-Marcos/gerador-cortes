@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-
 import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/features/settings';
 import { useRenderFinal, useStudioUrl } from '@/features/editor/useRender';
+import { avisoDoFimDoRender } from './renderEtapas';
 import { useAtualizarCorte, useCorte, useCortesProjeto, useToggleFire } from '@/features/editor/useCortes';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { mensagemDaFalhaDoBruto } from '@/features/editor/editorEditState';
@@ -122,14 +123,14 @@ export function ScenesPostProductionPage() {
     iniciar: startRenderFinal,
   } = useRenderFinal(corteId, {
     aoMudarStatus: () => void exportStatusQ.refetch(),
-    aoAcabar: ({ concluiu, falhou, status, assistiu }) => {
+    aoAcabar: ({ concluiu, status, assistiu }) => {
       // D-746: a falha só limpava o estado — o operador ficava esperando um
-      // render que já tinha morrido.
-      if (falhou) {
-        notifyToast(`O render final falhou: ${status.error || 'o backend não disse por quê'}.`, {
-          tone: 'error',
-        });
-        return;
+      // render que já tinha morrido. D-1057: render parcial e backend reiniciado
+      // também avisam, porque a tela fica aqui com o vídeo que já tinha, e esse
+      // vídeo não é o resultado do pedido.
+      const aviso = avisoDoFimDoRender(status);
+      if (aviso) {
+        notifyToast(aviso.texto, { tone: aviso.tom });
       }
       // Render concluído: jogar o usuário direto na tela final, mesmo com
       // ?fase=2 preservado, porque aqui o vídeo passou a estar pronto.

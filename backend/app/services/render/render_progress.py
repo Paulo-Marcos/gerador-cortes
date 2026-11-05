@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from typing import Literal
 
-RenderState = Literal["idle", "running", "done", "error", "cancelled"]
+RenderState = Literal["idle", "running", "done", "parcial", "error", "cancelled"]
 
 
 @dataclass
@@ -70,6 +70,23 @@ class RenderProgressStore:
         now = time.time()
         cls._progress[corte_id] = RenderProgress(
             state="done",
+            progress=100,
+            stage=stage,
+            started_at=current.started_at if current else now,
+            updated_at=now,
+        )
+
+    @classmethod
+    def parcial(cls, corte_id: str, stage: str) -> None:
+        """Desfecho do render que parou antes do vídeo final, como pedido (D-1057).
+
+        Estado próprio, não `done`: `done` leva a tela à Revisão, e aqui o
+        `video.mp4` não foi refeito.
+        """
+        current = cls._progress.get(corte_id)
+        now = time.time()
+        cls._progress[corte_id] = RenderProgress(
+            state="parcial",
             progress=100,
             stage=stage,
             started_at=current.started_at if current else now,

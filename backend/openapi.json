@@ -11307,6 +11307,7 @@
               "idle",
               "running",
               "done",
+              "parcial",
               "error",
               "cancelled"
             ],
