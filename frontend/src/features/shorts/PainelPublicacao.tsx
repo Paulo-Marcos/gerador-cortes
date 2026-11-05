@@ -16,10 +16,9 @@ import {
   useCapaDoShort,
   usePostDoShort,
   usePreviaPublicacao,
-  usePublicarShort,
 } from './useShortsDoCorte';
 import { comSegundos } from './capaDoShort';
-import { useConfirmarPublicacao, usePublicacoesDoCorte } from './useLotePublicacao';
+import { useConfirmarPublicacao, usePublicacoesDoCorte, usePublicarEAtualizar } from './useLotePublicacao';
 import { plataformasJaPublicadas } from './selecaoDoLote';
 import type { ShortSugerido } from './shortsApi';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
@@ -45,7 +44,7 @@ interface Props {
 export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCapa }: Props) {
   const shortId = short.id;
   const previa = usePreviaPublicacao(shortId);
-  const publicar = usePublicarShort();
+  const publicar = usePublicarEAtualizar(corteId);
   const post = usePostDoShort(shortId);
   const escrevendoPost = useIsMutating({ mutationKey: gerarPostKey(shortId) }) > 0;
   const capa = useCapaDoShort(shortId);

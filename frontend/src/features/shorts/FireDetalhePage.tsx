@@ -18,7 +18,7 @@ import { useShortcuts } from '@/shared/atalhos/shortcuts';
 import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
 import { normalizarVelocidade, useVelocidadePlayerPadrao } from '@/features/settings';
-import type { ShortSugerido } from './shortsApi';
+import type { FireComBruto, ShortSugerido } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
 import type { Borda } from './linhaDoTempoShort';
 import { NavegacaoDoPlayer } from './NavegacaoDoPlayer';
@@ -38,7 +38,7 @@ import { PresetDoGanchoModal } from './PresetDoGanchoModal';
 import { PresetDoPalcoModal } from './PresetDoPalcoModal';
 import { useEdicaoDoShort } from './useEdicaoDoShort';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
-import { useFires } from './useFires';
+import { rotulosDoFire, useFires } from './useFires';
 import { estaFinalizado } from './filtrosDosFires';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import {
@@ -497,13 +497,13 @@ export default function FireDetalhePage() {
 // Separado da pagina por dois motivos: a pagina ja tem 400 linhas de
 // orquestracao de player/regua/modais, e o chrome so precisa de TRES coisas
 // dela — o Fire, o corte e o estado da gravacao.
-function FireChrome({
+export function FireChrome({
   corteId,
   fire,
   estado,
 }: {
   corteId: string;
-  fire: { titulo: string; projeto_titulo: string; projeto_id: string; duracao_seg: number } | undefined;
+  fire: FireComBruto | undefined;
   estado: 'parado' | 'gravando' | 'gravado' | 'falhou' | 'em-dia';
 }) {
   const navigate = useNavigate();
@@ -514,7 +514,7 @@ function FireChrome({
       // R4: a migalha do meio é a LIVE de origem — e agora leva até ela. Do
       // short não se voltava para a live pela trilha, que é o percurso da
       // queixa "não tenho como voltar para onde estava".
-      rotulos: fire ? [{ texto: fire.projeto_titulo, to: `/projetos/${fire.projeto_id}` }] : [],
+      rotulos: rotulosDoFire(fire),
       denso: true,
       acoes: [
         {

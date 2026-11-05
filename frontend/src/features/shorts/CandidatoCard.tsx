@@ -466,7 +466,7 @@ export function CandidatoCard({
         <PlayerDoArquivo
           titulo="prévia · sem filtro"
           src={shortVideoUrl(short.id, 'previa')}
-          nota="O filtro entra só no finalizar, junto com o recorte — se viesse depois, mexeria na cor da legenda."
+          nota="O filtro entra só no render, junto com o recorte — se viesse depois, mexeria na cor da legenda."
         />
       )}
 

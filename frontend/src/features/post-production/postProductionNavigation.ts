@@ -4,6 +4,11 @@ export function finalReviewPath(projetoId: string, corteId: string): string {
   return `/projetos/${projetoId}/final-review?corte=${corteId}`;
 }
 
+/** D-1051: a linha do corte na live; o Workspace a traz à vista e põe o foco nela. */
+export function linhaDoCortePath(projetoId: string, corteId: string): string {
+  return `/projetos/${projetoId}?corte=${corteId}`;
+}
+
 export function rawEditorPath(projetoId: string, corteId: string): string {
   return `/projetos/${projetoId}/cortes/${corteId}?fase=1`;
 }

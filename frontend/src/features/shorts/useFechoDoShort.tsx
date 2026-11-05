@@ -36,7 +36,7 @@ export interface FechoDoShort {
   /** Abre a capa — idem. */
   abrirCapa: () => void;
   /**
-   * O gesto do "Finalizar": dispara o render e manda a IA escrever o post.
+   * O gesto do "Renderizar" da Prateleira: dispara o render e manda a IA escrever o post.
    *
    * Recebe o disparo em vez de chamá-lo, para o hook não precisar conhecer a
    * mutation — quem sabe renderizar é a tela, e este hook só sabe a ordem.

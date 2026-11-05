@@ -42,7 +42,7 @@ export function RodapeDoFire({ fire }: { fire: FireComBruto }) {
           title={
             temPronto
               ? 'Os shorts prontos deste corte, com publicação em massa'
-              : 'Ainda não há short finalizado neste corte'
+              : 'Ainda não há short renderizado neste corte'
           }
         >
           <Icon name="layout-grid" />

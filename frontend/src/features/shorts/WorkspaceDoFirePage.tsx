@@ -35,7 +35,7 @@ import { PainelPublicacao } from './PainelPublicacao';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { PublicarEmLoteModal } from './PublicarEmLoteModal';
 import { plataformasJaPublicadas, shortsPublicaveis } from './selecaoDoLote';
-import { useFires } from './useFires';
+import { rotulosDoFire, useFires } from './useFires';
 import {
   useCapaDoShort,
   useProgressoRender,
@@ -130,7 +130,7 @@ function CartaoDoPronto({
                 ) : (
                   <Icon name="clapperboard" />
                 )}
-                {renderizando ? 'renderizando…' : 'Finalizar'}
+                {renderizando ? 'renderizando…' : 'Renderizar'}
               </Button>
             </div>
           </div>
@@ -256,7 +256,7 @@ export default function WorkspaceDoFirePage() {
         .filter(Boolean)
         .join(' · '),
       // R4: idem à tela de curadoria — a live de origem é clicável.
-      rotulos: fire ? [{ texto: fire.projeto_titulo, to: `/projetos/${fire.projeto_id}` }] : [],
+      rotulos: rotulosDoFire(fire),
       acoes: [
         { icone: ICONE_DO_CONCEITO.editar, texto: 'Voltar à edição', onClick: () => navigate(`/shorts/${corteId}`) },
       ],

@@ -7,7 +7,9 @@ import { useMotivosVisiveis } from '@/features/channels/useMotivosDeExclusao';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { ShortsDesteCorte } from '@/features/shorts/ShortsDesteCorte';
 import { useCapaDaLinha } from './useCapaDaLinha';
+import { useFocoDaLinhaNaUrl } from './useFocoDaLinhaNaUrl';
 import { formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
@@ -163,6 +165,7 @@ export function CorteLinhaAp({
 }: CorteLinhaApProps) {
   const navigate = useNavigate();
   const abrirPasta = useAbrirPasta();
+  const refDaLinha = useFocoDaLinhaNaUrl(status.corte_id);
   const aprovar = useAprovar(status.corte_id, projetoId);
   const atualizar = useAtualizarCorte(status.corte_id, projetoId);
   const { notify } = useToast();
@@ -222,6 +225,7 @@ export function CorteLinhaAp({
 
   return (
     <article
+      ref={refDaLinha}
       className="card row"
       tabIndex={0}
       onKeyDown={aoTeclar}
@@ -325,9 +329,7 @@ export function CorteLinhaAp({
             {status.titulo || `Corte #${status.numero}`}
           </button>
           {corte?.is_fire ? (
-            <span style={{ color: 'var(--accent)', flex: 'none' }} title="Marcado como fire">
-              <Icon name="flame" />
-            </span>
+            <ShortsDesteCorte corteId={status.corte_id} />
           ) : null}
           <SeloDeEstado tom={TOM_DO_CORTE[estado]}>{estado}</SeloDeEstado>
           <SeloDaOrigem origem={corte?.origem_analise} />
