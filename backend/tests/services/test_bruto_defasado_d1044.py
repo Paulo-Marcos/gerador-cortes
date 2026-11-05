@@ -9,8 +9,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
+import pytest
 from app.infrastructure import trechos_do_bruto
+from app.models import Corte, Projeto
+from app.routers import export as export_router
 from app.services.bruto_defasado import bruto_ficou_para_tras
 
 
@@ -87,3 +91,52 @@ def test_fim_alem_da_duracao_da_live_segue_a_mesma_conta_da_geracao(tmp_path):
     bruto = _bruto(tmp_path, [(100.0, 150.0)])
     projeto = SimpleNamespace(duracao_segundos=150)
     assert bruto_ficou_para_tras(_corte(), projeto, bruto) is False
+
+
+# ─── A rota que a tela lê ───────────────────────
+
+
+async def _status_da_rota(monkeypatch, bruto: Path, corte, projeto=PROJETO) -> dict:
+    monkeypatch.setattr(export_router, "resolver_do_projeto", lambda _valor, _projeto: bruto)
+    db = AsyncMock()
+    db.get.side_effect = lambda modelo, _id: {Corte: corte, Projeto: projeto}[modelo]
+    return await export_router.status_corte("c1", db=db)
+
+
+def _corte_com_bruto(desvios=()):
+    corte = _corte(desvios)
+    corte.projeto_id = "p1"
+    corte.arquivo_clip_path = "clip_raw.mkv"
+    return corte
+
+
+@pytest.mark.asyncio
+async def test_rota_avisa_quando_o_bruto_ficou_para_tras(tmp_path, monkeypatch):
+    bruto = _bruto(tmp_path, [(100.0, 200.0)])
+    bruto.write_bytes(b"video")
+    resposta = await _status_da_rota(monkeypatch, bruto, _corte_com_bruto(UM_DESVIO))
+    assert resposta["clip_gerado"] is True
+    assert resposta["bruto_defasado"] is True
+
+
+@pytest.mark.asyncio
+async def test_rota_com_o_bruto_em_dia_nao_avisa(tmp_path, monkeypatch):
+    bruto = _bruto(tmp_path, [(100.0, 120.0), (130.0, 200.0)])
+    bruto.write_bytes(b"video")
+    resposta = await _status_da_rota(monkeypatch, bruto, _corte_com_bruto(UM_DESVIO))
+    assert resposta["bruto_defasado"] is False
+
+
+@pytest.mark.asyncio
+async def test_rota_sem_o_video_no_disco_nao_avisa_mesmo_com_registro(tmp_path, monkeypatch):
+    bruto = _bruto(tmp_path, [(100.0, 200.0)])  # só o registro; o vídeo não existe
+    resposta = await _status_da_rota(monkeypatch, bruto, _corte_com_bruto(UM_DESVIO))
+    assert resposta["clip_gerado"] is False
+    assert resposta["bruto_defasado"] is False
+
+
+@pytest.mark.asyncio
+async def test_rota_de_corte_que_nao_existe_responde_sem_aviso(tmp_path, monkeypatch):
+    resposta = await _status_da_rota(monkeypatch, tmp_path / "clip_raw.mkv", None)
+    assert resposta["clip_gerado"] is False
+    assert resposta["bruto_defasado"] is False

@@ -166,13 +166,16 @@ async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
     )
 
     gerado = bool(clip_resolvido and clip_resolvido.exists())
-    projeto = await db.get(Projeto, corte.projeto_id) if gerado else None
+    defasado = False
+    if corte and clip_resolvido and gerado:
+        projeto = await db.get(Projeto, corte.projeto_id)
+        defasado = projeto is not None and bruto_ficou_para_tras(corte, projeto, clip_resolvido)
     return {
         "corte_id": corte_id,
         "status": status,
         "clip_path": clip_path,
         "clip_gerado": gerado,
-        "bruto_defasado": bool(projeto and bruto_ficou_para_tras(corte, projeto, clip_resolvido)),
+        "bruto_defasado": defasado,
     }
 
 
