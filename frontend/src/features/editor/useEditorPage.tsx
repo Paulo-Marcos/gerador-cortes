@@ -289,7 +289,7 @@ export function useEditorPage() {
       }
     }
     dispararBruto(plano.bruto);
-    if (plano.metadados) gerarMetadadosClaude.mutate('claude');
+    if (plano.metadados) gerarMetadadosClaude.mutate({ substituir: true });
   };
 
   // D-428 — com bruto já na mão, regerar substitui o vídeo atual: passa pela

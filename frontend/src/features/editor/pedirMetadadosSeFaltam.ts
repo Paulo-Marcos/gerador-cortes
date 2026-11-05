@@ -1,13 +1,12 @@
 import { metadadosApi } from '@/features/metadata/api/metadados';
 
 /**
- * D-1041: a primeira geração do bruto também pede os metadados, e a geração grava
- * título, descrição e tags por cima do que houver. Lê o metadado do próprio corte
- * na hora: o export não lista corte devolvido e fica velho logo depois de aprovar,
- * e o título sozinho não prova nada, porque o Fire grava o título proposto. Só há o
- * que preservar com descrição ou opções de título. Corte sem metadado responde com
- * os campos vazios. Sem conseguir ler, não pede: a linha do corte segue mostrando
- * "Completar metadados", e o bruto, que é o pedido do gesto, sai do mesmo jeito.
+ * D-1041: a primeira geração do bruto também pede os metadados. D-1043: o backend só
+ * preenche o que falta, então esta leitura não protege texto: evita pagar uma geração
+ * sem nada a preencher. Lê o metadado do próprio corte na hora: o export não lista
+ * corte devolvido e fica velho logo depois de aprovar, e o título sozinho não prova
+ * nada, porque o Fire grava o título proposto. Sem conseguir ler, não pede: a linha do
+ * corte segue mostrando "Completar metadados".
  */
 export async function pedirMetadadosSeFaltam(corteId: string, pedir: () => void): Promise<void> {
   try {

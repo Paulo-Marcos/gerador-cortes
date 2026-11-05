@@ -39,6 +39,14 @@ export const geracaoIaApi = {
   gerarMetadadosClaude: (corteId: string, provider: ProviderIA = 'claude') =>
     dados(api.POST('/api/claude/corte/{corte_id}/gerar-metadados', doCorte(corteId, provider))),
 
+  // D-1043: a geração preenche só o que falta; substituir é pedido explícito.
+  regerarMetadadosClaude: (corteId: string, provider: ProviderIA = 'claude') =>
+    dados(
+      api.POST('/api/claude/corte/{corte_id}/gerar-metadados', {
+        params: { path: { corte_id: corteId }, query: { provider, substituir: true } },
+      }),
+    ),
+
   gerarPromptThumbnailClaude: (corteId: string, provider: ProviderIA = 'claude') =>
     dados(
       api.POST('/api/claude/corte/{corte_id}/gerar-prompt-thumbnail', doCorte(corteId, provider)),

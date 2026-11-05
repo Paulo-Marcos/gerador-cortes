@@ -182,7 +182,7 @@ async def importar_meta(
 ):
     """Importa metadados gerados por IA externa e salva."""
     try:
-        await MetadadosService.importar_resultado_meta(corte_id, body.model_dump())
+        await MetadadosService.substituir_resultado_meta(corte_id, body.model_dump())
         return {"message": "Metadados importados com sucesso"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
