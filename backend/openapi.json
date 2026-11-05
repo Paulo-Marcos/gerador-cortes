@@ -16064,7 +16064,7 @@
     },
     "/api/claude/corte/{corte_id}/gerar-metadados": {
       "post": {
-        "description": "Gera os metadados do corte via Claude (skill metadados-expert).",
+        "description": "Gera os metadados do corte via Claude (skill metadados-expert).\n\nPreenche só o que falta; `substituir` é o Regerar explícito (D-1043).",
         "operationId": "gerar_metadados_via_claude_api_claude_corte__corte_id__gerar_metadados_post",
         "parameters": [
           {
@@ -16088,6 +16088,16 @@
               ],
               "title": "Provider",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "substituir",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Substituir",
+              "type": "boolean"
             }
           }
         ],

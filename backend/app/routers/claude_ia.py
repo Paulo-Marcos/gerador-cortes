@@ -196,21 +196,33 @@ async def consultar_cenas_em_geracao(corte_id: str):
 
 @router.post("/corte/{corte_id}/gerar-metadados", response_model=GeracaoConcluidaResponse)
 async def gerar_metadados_via_claude(
-    corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
+    corte_id: str,
+    provider: ProviderIA = "claude",
+    substituir: bool = False,
+    db: AsyncSession = Depends(get_db),
 ):
-    """Gera os metadados do corte via Claude (skill metadados-expert)."""
+    """Gera os metadados do corte via Claude (skill metadados-expert).
+
+    Preenche só o que falta; `substituir` é o Regerar explícito (D-1043).
+    """
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await MetadadosService.gerar_metadados_via_claude(corte_id, provider=provider)
+        resultado = await MetadadosService.gerar_metadados_via_claude(
+            corte_id, provider=provider, substituir=substituir
+        )
         return {
             "message": "Metadados gerados via IA",
             "corte_id": corte_id,
             "provider": provider,
             **resultado,
         }
+    except ErroDeDominio:
+        # D-1043: a recusa da geração duplicada é do tratador global, com a mensagem
+        # inteira; o `except Exception` abaixo a transformaria em 500.
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001

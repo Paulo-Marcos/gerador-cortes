@@ -153,7 +153,11 @@ export function useGerarMetadadosClaude(corteId: string) {
   const { notify } = useToast();
   return useMutation({
     mutationKey: metadadosClaudeKey(corteId),
-    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarMetadadosClaude(corteId, provider),
+    // D-1043: o gesto do bruto preenche o que falta; "Também refazer" pede `substituir`.
+    mutationFn: (pedido: 'claude' | 'gemini' | { substituir: true } = 'claude') =>
+      typeof pedido === 'string'
+        ? geracaoIaApi.gerarMetadadosClaude(corteId, pedido)
+        : geracaoIaApi.regerarMetadadosClaude(corteId),
     onSuccess: () => {
       notify('Metadados gerados via IA.', { tone: 'success' });
       qc.invalidateQueries({ queryKey: ['metadado', corteId] });
