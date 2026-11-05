@@ -162,8 +162,9 @@ async def gerar_cenas_via_claude(
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
-    recusar_cenas_com_bruto_em_andamento(corte_id)
     await _soltar_a_transacao(db)
+    # D-1037: depois da espera, e sem outra até a reserva: decide com o status de agora.
+    recusar_cenas_com_bruto_em_andamento(corte_id)
     try:
         resultado = await CenasRemotionService.gerar_cenas_via_claude(corte_id, provider=provider)
         return {

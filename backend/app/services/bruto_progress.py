@@ -51,6 +51,14 @@ class BrutoProgress:
                 return
 
     @classmethod
+    def chegou_aos_shorts(cls, corte_id: str) -> bool:
+        """Os shorts são o último passo: dali em diante o bruto não mexe mais no texto."""
+        return any(
+            passo["chave"] == PASSO_SHORTS[0] and passo["status"] != "pendente"
+            for passo in cls._store.get(corte_id, [])
+        )
+
+    @classmethod
     def get(cls, corte_id: str) -> list[dict]:
         """Retorna os passos do corte (lista vazia se não há sessão)."""
         return cls._store.get(corte_id, [])
