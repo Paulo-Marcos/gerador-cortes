@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useCortesProjeto } from '@/features/editor/useCortes';
 import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { dadosDaLive, dentroDeUmaLive, filtroNoArLigado, trilhaDaLive } from './trilhaDaLive';
+import { dadosDaLive, dentroDeUmaLive, filtroNoArLigado, resumirCorte, trilhaDaLive } from './trilhaDaLive';
 import { corteDaLive, type TelaId } from './upgradeRoutes';
 
 /**
@@ -19,9 +19,9 @@ export function useTrilhaDaLive(tela: TelaId, projetoId: string | null) {
   const projeto = useProjeto(daLive).data;
   const cortes = useCortesProjeto(daLive).data;
   const exportados = useExportStatus(daLive).data?.cortes;
-  return useMemo(
-    () =>
-      trilhaDaLive(tela, projetoId, corteId, dadosDaLive(projeto, cortes, exportados), filtroNoAr),
-    [tela, projetoId, corteId, projeto, cortes, exportados, filtroNoAr],
-  );
+  return useMemo(() => {
+    const aberto = corteId ? cortes?.find((c) => c.id === corteId) : undefined;
+    const resumo = aberto ? resumirCorte(aberto, exportados?.find((s) => s.corte_id === corteId)) : {};
+    return trilhaDaLive(tela, projetoId, corteId, dadosDaLive(projeto, cortes, exportados), filtroNoAr, resumo);
+  }, [tela, projetoId, corteId, projeto, cortes, exportados, filtroNoAr]);
 }

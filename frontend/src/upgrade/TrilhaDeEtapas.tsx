@@ -71,7 +71,8 @@ export function TrilhaDeEtapas({ etapas }: { etapas: EtapaDaTrilha[] }) {
             aria-current={e.agora ? 'step' : undefined}
             // O ✓ é desenho (aria-hidden): o leitor de tela ouve a palavra.
             aria-label={`${e.texto}: ${e.contagem}${e.feita ? ', concluída' : ''}`}
-            title={`${e.texto} · ${e.contagem}`}
+            title={e.doCorte ? `${e.texto} · este corte: ${e.doCorte} · na live: ${e.contagem}` : `${e.texto} · ${e.contagem}`}
+            aria-description={e.doCorte ? `Este corte: ${e.doCorte}` : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -99,7 +100,7 @@ export function TrilhaDeEtapas({ etapas }: { etapas: EtapaDaTrilha[] }) {
                   color: 'var(--mute)',
                 }}
               >
-                {e.contagem}
+                {e.doCorte ?? e.contagem}
               </span>
             </span>
           </Link>

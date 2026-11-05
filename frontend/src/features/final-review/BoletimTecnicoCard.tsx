@@ -8,6 +8,7 @@ import {
   linhaDeEmendas,
   linhaDeParada,
   linhaDeVolume,
+  relogio,
   TEXTO_DA_REFERENCIA,
   TEXTO_QUE_NAO_BLOQUEIA,
   totalDeAvisos,
@@ -24,7 +25,14 @@ export type OpcaoDoBoletim = { alvo: AlvoDoBoletim; rotulo: string };
 
 const chaveDaOpcao = (o: OpcaoDoBoletim) => `${o.alvo.tipo}:${o.alvo.id}`;
 
-export function BoletimTecnicoPainel({ corteId }: { corteId: string }) {
+export function BoletimTecnicoPainel({
+  corteId,
+  onIrPara,
+}: {
+  corteId: string;
+  /** D-1044: leva o player ao instante da parada ou da emenda. */
+  onIrPara?: (segundos: number) => void;
+}) {
   const shortsQ = useShortsDoCorte(corteId);
   const [escolhido, setEscolhido] = useState<string>(`corte:${corteId}`);
   const opcoes: OpcaoDoBoletim[] = [
@@ -45,6 +53,8 @@ export function BoletimTecnicoPainel({ corteId }: { corteId: string }) {
       onEscolher={(o) => setEscolhido(chaveDaOpcao(o))}
       onRemedir={() => remedir.mutate()}
       remedindo={remedir.isPending}
+      // O player da Revisão é o do horizontal: instante de short não se aplica a ele.
+      onIrPara={atual.alvo.tipo === 'corte' ? onIrPara : undefined}
     />
   );
 }
@@ -57,6 +67,7 @@ export function BoletimTecnicoCard({
   onEscolher,
   onRemedir,
   remedindo = false,
+  onIrPara,
 }: {
   boletim: BoletimTecnico | undefined;
   erroDaConsulta?: boolean;
@@ -65,6 +76,7 @@ export function BoletimTecnicoCard({
   onEscolher: (opcao: OpcaoDoBoletim) => void;
   onRemedir: () => void;
   remedindo?: boolean;
+  onIrPara?: (segundos: number) => void;
 }) {
   const pronto = boletim?.estado === 'pronto';
   const avisos = pronto ? totalDeAvisos(boletim) : 0;
@@ -116,9 +128,33 @@ export function BoletimTecnicoCard({
           erroDaConsulta={erroDaConsulta}
           onRemedir={onRemedir}
           remedindo={remedindo}
+          onIrPara={onIrPara}
         />
       </div>
     </section>
+  );
+}
+
+/** O texto vira link para o instante quando a tela tem um player para levar. */
+function NoInstante({
+  segundos,
+  onIrPara,
+  children,
+}: {
+  segundos: number;
+  onIrPara?: (segundos: number) => void;
+  children: React.ReactNode;
+}) {
+  if (!onIrPara) return <>{children}</>;
+  return (
+    <button
+      type="button"
+      className="text-left underline"
+      title={`Ir para ${relogio(segundos)} no vídeo`}
+      onClick={() => onIrPara(segundos)}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -127,11 +163,13 @@ function Corpo({
   erroDaConsulta,
   onRemedir,
   remedindo,
+  onIrPara,
 }: {
   boletim: BoletimTecnico | undefined;
   erroDaConsulta: boolean;
   onRemedir: () => void;
   remedindo: boolean;
+  onIrPara?: (segundos: number) => void;
 }) {
   if (erroDaConsulta) {
     return <p className="text-[var(--wb-warn)]">Não consegui consultar o boletim agora.</p>;
@@ -182,7 +220,9 @@ function Corpo({
           <ul className="flex flex-col gap-0.5">
             {boletim.paradas.map((p) => (
               <li key={p.inicio_seg} className="text-[var(--wb-warn)]">
-                {linhaDeParada(p)}
+                <NoInstante segundos={p.inicio_seg} onIrPara={onIrPara}>
+                  {linhaDeParada(p)}
+                </NoInstante>
               </li>
             ))}
           </ul>
@@ -192,7 +232,18 @@ function Corpo({
       </Bloco>
       <Bloco titulo="Emendas">
         {boletim.emendas ? (
-          <p>{linhaDeEmendas(boletim.emendas)}</p>
+          <>
+            <p>{linhaDeEmendas(boletim.emendas)}</p>
+            {boletim.emendas.itens
+              .filter((e) => e.acima_do_p99)
+              .map((e) => (
+                <p key={e.tempo_seg} className="text-[var(--wb-warn)]">
+                  <NoInstante segundos={e.tempo_seg} onIrPara={onIrPara}>
+                    {`${relogio(e.tempo_seg)} · degrau acima do normal da fala`}
+                  </NoInstante>
+                </p>
+              ))}
+          </>
         ) : (
           <p className="text-[var(--wb-text-mute)]">
             {boletim.emendas_aviso ?? 'As emendas não foram medidas.'}

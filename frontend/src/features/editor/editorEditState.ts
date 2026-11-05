@@ -125,6 +125,16 @@ export function desfechoDaFalhaAoSalvar(erro: unknown): {
 }
 
 /**
+ * D-1044: sem a live no disco, o backend só diz que o arquivo não foi encontrado. O
+ * operador precisa saber o que fazer: a limpeza apaga a live, e a Biblioteca baixa de novo.
+ */
+export function mensagemDaFalhaDoBruto(motivo: string): string {
+  return motivo.includes('vídeo original')
+    ? 'A live não está mais no disco: baixe de novo na Biblioteca para gerar o bruto.'
+    : `Geração de bruto falhou: ${motivo}`;
+}
+
+/**
  * D-1041: o bruto sai do que está gravado no banco. Gerar com um ajuste ainda não
  * salvo cortava o trecho antigo em silêncio, agora no gesto mais provável, o botão
  * principal. Salva primeiro; se salvar falhar, avisa e não gera.

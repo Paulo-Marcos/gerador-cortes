@@ -141,7 +141,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         </span>
       ))}
 
-      {barra.veredito ? <Veredito {...barra.veredito} /> : null}
+      {barra.veredito ? <Veredito {...barra.veredito} /> : null}{barra.pendencias}
       <div style={{ flex: 1, minWidth: 8 }} />
 
       {barra.alternancias?.map((a) => (

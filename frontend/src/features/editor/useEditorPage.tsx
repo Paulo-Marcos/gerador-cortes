@@ -26,7 +26,7 @@ import { useEditHistory } from './useEditHistory';
 import { useTrechosRiscados } from './useTrechosRiscados';
 import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { applyDesvioChange, desfechoDaFalhaAoSalvar, mergeDirtyPatch, salvarAntesDe, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
+import { applyDesvioChange, desfechoDaFalhaAoSalvar, mensagemDaFalhaDoBruto, mergeDirtyPatch, salvarAntesDe, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
 import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
 import { pedirMetadadosSeFaltam } from './pedirMetadadosSeFaltam';
 
@@ -360,7 +360,7 @@ export function useEditorPage() {
     // Transitou para erro (vindo de qualquer outro estado): notificar.
     if (atual && atual.startsWith('erro:') && anterior !== atual) {
       const msg = atual.replace(/^erro:\s*/, '');
-      notifyToast(`Geração de bruto falhou: ${msg}`, { tone: 'error' });
+      notifyToast(mensagemDaFalhaDoBruto(msg), { tone: 'error' });
     }
   }, [brutoStatusRaw, brutoLidoEm, visitaDesde, corteId, qc, notifyToast, navigate, projetoId]);
 

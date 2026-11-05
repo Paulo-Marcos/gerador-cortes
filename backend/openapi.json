@@ -11452,6 +11452,11 @@
       "StatusCorteBrutoResponse": {
         "description": "A tarefa de gerar o bruto do corte (`nao_iniciado` quando nunca rodou).",
         "properties": {
+          "bruto_defasado": {
+            "default": false,
+            "title": "Bruto Defasado",
+            "type": "boolean"
+          },
           "clip_gerado": {
             "title": "Clip Gerado",
             "type": "boolean"
@@ -11480,7 +11485,8 @@
           "corte_id",
           "status",
           "clip_path",
-          "clip_gerado"
+          "clip_gerado",
+          "bruto_defasado"
         ],
         "title": "StatusCorteBrutoResponse",
         "type": "object"

@@ -5,6 +5,7 @@ import { useVelocidadePlayerPadrao } from '@/features/settings';
 import { useRenderFinal, useStudioUrl } from '@/features/editor/useRender';
 import { useAtualizarCorte, useCorte, useCortesProjeto, useToggleFire } from '@/features/editor/useCortes';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
+import { mensagemDaFalhaDoBruto } from '@/features/editor/editorEditState';
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
@@ -100,7 +101,7 @@ export function ScenesPostProductionPage() {
     // Transitou para erro: notificar o usuário com a mensagem real do backend.
     if (atual && atual.startsWith('erro:') && anterior !== atual) {
       const msg = atual.replace(/^erro:\s*/, '');
-      notifyToast(`Geração de bruto falhou: ${msg}`, { tone: 'error' });
+      notifyToast(mensagemDaFalhaDoBruto(msg), { tone: 'error' });
     }
   }, [statusBruto.data?.status, notifyToast]);
 
