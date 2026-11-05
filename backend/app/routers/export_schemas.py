@@ -94,6 +94,7 @@ class StatusCorteBrutoResponse(RespostaApi):
     status: str
     clip_path: str | None
     clip_gerado: bool
+    bruto_defasado: bool = False
 
 
 # ─── Publicação ──────────────────────────────────────────────────────────────

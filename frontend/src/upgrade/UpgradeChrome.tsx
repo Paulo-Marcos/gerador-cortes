@@ -113,6 +113,8 @@ export type ChromeBarra = {
   teclas?: Array<{ teclas: string[]; texto: string }>;
   /** Controles de lote (destinos, agendamento) à esquerda do fiel. */
   extra?: ReactNode;
+  /** D-1044: o que ficou aberto no corte, ao lado do veredito. Só avisa. */
+  pendencias?: ReactNode;
   /** D-610: qualificadores do item (Fire, Leitura). Ligam e desligam — não
    *  decidem —, mas moram AO LADO das decisões porque são dadas no mesmo
    *  momento: quem aprova um corte é quem sabe se ele é Fire. */

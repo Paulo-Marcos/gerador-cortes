@@ -226,11 +226,11 @@ export function FinalReviewPage() {
       icon: 'edit-3',
     },
     {
-      // Audio normalizado: nao temos campo dedicado — assumimos OK quando
-      // o video final esta pronto (encoder normaliza para -14 LUFS).
-      ok: Boolean(exportStatusAtual?.video_pronto),
-      label: 'Áudio normalizado (-14 LUFS)',
-      icon: 'volume-x',
+      // D-1044: aqui era "Áudio normalizado", verde fixo ao lado de boletim com aviso
+      // de volume. Quem mede o som é o boletim; isto é o que a Pós deixou em aberto.
+      ok: Boolean(corte.cenas_validadas),
+      label: 'Cenas validadas',
+      icon: 'list-checks',
     },
   ];
 
@@ -315,7 +315,7 @@ export function FinalReviewPage() {
       >
         <ChecklistCard items={checklistItems} />
         {/* D-1015: saúde técnica do vídeo, medida em segundo plano; só avisa. */}
-        {videoPronto && <BoletimTecnicoPainel key={corte.id} corteId={corte.id} />}
+        {videoPronto && <BoletimTecnicoPainel key={corte.id} corteId={corte.id} player={videoRef} />}
         <CapaCard
           titulo={corte.titulo_proposto ?? projeto.data?.titulo_live ?? 'Corte'}
           pronta={Boolean(exportStatusAtual?.thumbnail_pronta)}

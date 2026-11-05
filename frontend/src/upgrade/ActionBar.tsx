@@ -108,6 +108,16 @@ function MotivoDoPrimario({ motivo }: { motivo: string }) {
   );
 }
 
+/** O estado do corte, antes dos botões: o veredito e o que ficou em aberto (D-1044). */
+function EstadoDoCorte({ barra }: { barra: ChromeBarra }) {
+  return (
+    <>
+      {barra.veredito ? <Veredito {...barra.veredito} /> : null}
+      {barra.pendencias}
+    </>
+  );
+}
+
 export function ActionBar({ barra }: { barra: ChromeBarra }) {
   return (
     <div
@@ -141,7 +151,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         </span>
       ))}
 
-      {barra.veredito ? <Veredito {...barra.veredito} /> : null}
+      <EstadoDoCorte barra={barra} />
       <div style={{ flex: 1, minWidth: 8 }} />
 
       {barra.alternancias?.map((a) => (

@@ -9707,6 +9707,11 @@ export interface components {
          * @description A tarefa de gerar o bruto do corte (`nao_iniciado` quando nunca rodou).
          */
         StatusCorteBrutoResponse: {
+            /**
+             * Bruto Defasado
+             * @default false
+             */
+            bruto_defasado: boolean;
             /** Clip Gerado */
             clip_gerado: boolean;
             /** Clip Path */
