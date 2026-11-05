@@ -19,7 +19,7 @@ from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.models import Corte
 from app.services.bruto_progress import BrutoProgress
 from app.services.cancelamento_jobs import TrabalhoEmVoo
-from app.services.cenas_em_geracao import BRUTO_ESPERA_AS_CENAS, esta_gerando
+from app.services.cenas_em_geracao import CENAS_ESPERAM_O_BRUTO, recusa_ao_bruto
 from app.services.export import ExportService
 from app.services.tasks import fire_and_forget
 
@@ -52,8 +52,9 @@ async def iniciar_geracao(
         return {"message": "Geração de bruto já em andamento", "corte_id": corte_id}
     # D-1037: a mesma regra do ExportService, aqui para o operador ler a recusa na hora,
     # em vez de ver o bruto "cortando" e cair em erro logo depois.
-    if esta_gerando(corte_id):
-        raise PedidoInvalido(BRUTO_ESPERA_AS_CENAS)
+    recusa = recusa_ao_bruto(corte_id)
+    if recusa:
+        raise PedidoInvalido(recusa)
 
     if not _corte_ja_gerou_bruto(corte):
         # Primeira geração: cadeia completa (comportamento inalterado).
@@ -62,7 +63,8 @@ async def iniciar_geracao(
 
     ExportService.set_tarefa_corte_status(corte_id, "cortando")
     # D-1037: zera já, junto com o status: o progresso do bruto anterior diria que
-    # este chegou aos shorts, e o clique passaria antes da salvaguarda.
+    # este chegou aos shorts, e o clique passaria antes da salvaguarda. Depois das duas
+    # saídas acima (D-1048): quem não vai rodar não apaga o progresso de quem está rodando.
     BrutoProgress.iniciar(corte_id, incluir_shorts=bool(corte.is_fire))
 
     async def _run():
@@ -98,13 +100,12 @@ def recusar_cenas_com_bruto_em_andamento(corte_id: str) -> None:
     """D-1037: o clique espera o bruto, que pode reescrever a transcrição que ele leria.
 
     Vale para o bruto pedido pela tela, até ele chegar aos shorts, que não mexem no
-    texto. O bruto da fábrica de shorts não grava `cortando` e fica fora desta recusa.
+    texto. O bruto da fábrica de shorts não grava `cortando`: quem o recusa é a marca
+    (`reservar_ou_recusar`), com esta mesma mensagem (D-1048).
     """
     em_andamento = ExportService.get_tarefa_corte_status(corte_id) == "cortando"
     if em_andamento and not BrutoProgress.chegou_aos_shorts(corte_id):
-        raise PedidoInvalido(
-            "O bruto deste corte está sendo gerado. Espere terminar para pedir as cenas."
-        )
+        raise PedidoInvalido(CENAS_ESPERAM_O_BRUTO)
 
 
 def _corte_ja_gerou_bruto(corte: Corte) -> bool:

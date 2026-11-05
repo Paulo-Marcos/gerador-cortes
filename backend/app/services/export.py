@@ -37,8 +37,8 @@ from app.infrastructure.render.bruto_pipeline import build_bruto_pipeline
 from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto, StatusCorte
 from app.services.bruto_progress import BrutoProgress
-from app.services.cenas_da_cadeia import gerar_cenas_da_cadeia, reservar_para_a_cadeia
-from app.services.cenas_em_geracao import BRUTO_ESPERA_AS_CENAS, ReservaDeCenas, esta_gerando
+from app.services.cenas_da_cadeia import gerar_cenas_da_cadeia
+from app.services.cenas_em_geracao import ReservaDeCenas, recusa_ao_bruto, reservar
 from app.services.ciclo_de_vida import marcar_corte
 from app.services.export_bruto import _ExportBrutoMixin
 from app.services.export_bulk_queue import _ExportBulkQueueMixin
@@ -101,16 +101,17 @@ class ExportService(
         """
         # D-1037: a salvaguarda pode reescrever a transcrição que as cenas em voo leram, e
         # a importação converte os índices contra a transcrição do momento: sairiam fora do
-        # tempo. Por isso o bruto espera, e a marca da cadeia o cobre desde o começo.
-        if esta_gerando(corte_id):
-            return {"status": "erro", "mensagem": BRUTO_ESPERA_AS_CENAS}
+        # tempo. Por isso o bruto espera. D-1048: e todo bruto segura a marca até os shorts.
         pedir_cenas = refazer_cenas and settings.claude_auto_cenas_no_bruto
-        with reservar_para_a_cadeia(corte_id, pedir_cenas) as reserva:
+        reserva = reservar(corte_id, gera_cenas=pedir_cenas)
+        if reserva is None:
+            return {"status": "erro", "mensagem": recusa_ao_bruto(corte_id)}
+        with reserva:
             return await cls._gerar_bruto(corte_id, refazer_transcricao, reserva)
 
     @classmethod
     async def _gerar_bruto(
-        cls, corte_id: str, refazer_transcricao: bool, reserva_de_cenas: ReservaDeCenas | None
+        cls, corte_id: str, refazer_transcricao: bool, reserva: ReservaDeCenas
     ) -> dict:
         """Corpo de `gerar_bruto_via_worker`, já com a marca das cenas resolvida."""
         async with AsyncSessionLocal() as db:
@@ -189,7 +190,7 @@ class ExportService(
                 out_path,
                 e_fire=e_fire,
                 refazer_transcricao=refazer_transcricao,
-                reserva_de_cenas=reserva_de_cenas,
+                reserva=reserva,
             )
 
             if _log_detalhado():
@@ -486,7 +487,7 @@ async def _etapas_derivadas(
     *,
     e_fire: bool,
     refazer_transcricao: bool,
-    reserva_de_cenas: ReservaDeCenas | None,
+    reserva: ReservaDeCenas,
 ) -> None:
     """Transcrição, detecção de segmentos, cenas e shorts: derivam do bruto pronto."""
     # D-160 — a re-sincronização do texto (transcricao_final ↔ recorte
@@ -504,22 +505,21 @@ async def _etapas_derivadas(
     # O status só vira "pronto" quando o worker inteiro retorna (inclui as
     # cenas abaixo) — assim o botão fica em loading até TUDO terminar.
     # F-038 — cenas via Claude APÓS o re-sync (transcrição já sem
-    # silêncios), para os timings (startLeg) ficarem precisos. Import
-    # lazy evita ciclo; falha é não-fatal (não derruba o bruto).
+    # silêncios), para os timings (startLeg) ficarem precisos. Falha é não-fatal.
     # D-160 — cenas por IA também são opt-in na regeração (refazer_cenas).
     operational_debug(
         "ExportService",
-        f"{'iniciando cenas via Claude' if reserva_de_cenas else 'pulando cenas'} p/ {corte_id}",
+        f"{'iniciando cenas via Claude' if reserva.gera_cenas else 'pulando cenas'} p/ {corte_id}",
     )
-    if reserva_de_cenas:
-        await gerar_cenas_da_cadeia(corte_id, reserva_de_cenas)
+    if reserva.gera_cenas:
+        await gerar_cenas_da_cadeia(corte_id, reserva)
+    # D-1037: daqui em diante nada mexe no texto, e os shorts levam minutos: soltar aqui,
+    # e não só ao sair do `with`, para o clique nas cenas não esperar por eles.
+    reserva.liberar()
 
-    # D-455 — a fábrica de shorts do corte Fire, o "segundo passo" da
-    # geração do bruto. Roda DEPOIS da transcrição (é dela, já rebaseada
-    # na timeline do bruto, que os candidatos nascem) e é gateada por
-    # Fire: só o corte que o editor marcou como top vira short.
-    # Falha é não-fatal — a sugestão é derivada do bruto, não parte da
-    # entrega dele, exatamente como as cenas acima.
+    # D-455 — a fábrica de shorts do corte Fire, o "segundo passo" da geração do bruto.
+    # Roda DEPOIS da transcrição (é dela, já rebaseada na timeline do bruto, que os
+    # candidatos nascem) e só o corte Fire vira short. Falha é não-fatal, como as cenas.
     if e_fire and settings.claude_auto_shorts_no_bruto:
         await _sugerir_shorts(corte_id)
 
