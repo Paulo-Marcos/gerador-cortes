@@ -1,3 +1,4 @@
+import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
 import { estaAprovado } from '@/lib/statusDoCorte';
 import type { StatusCorte, StatusExportCorte } from '@/types/models';
 import { TELAS, type TelaId } from './upgradeRoutes';
@@ -212,24 +213,26 @@ function etapaAcesa(tela: TelaId, passos: Passo[], filtroNoAr: boolean): EtapaId
  */
 export type ResumoDoCorte = Partial<Record<EtapaId, string>>;
 
-const SEGUNDOS = (s: number) => `${Math.round(s)} s`;
 
 /** D-1044: o que cada casa diz do corte aberto, medido só no que já está em cache. */
 export function resumirCorte(
   corte: {
-    desvios?: { inicio_seg?: number; fim_seg?: number }[] | null;
+    inicio_seg: number;
+    fim_seg: number;
+    // O hms é o que todo trecho traz; o tempo em segundos só vem em parte deles.
+    desvios?: { inicio_hms: string; fim_hms: string }[] | null;
     alertas_conferir?: { conferido?: boolean }[] | null;
     cenas_remotion?: unknown;
     cenas_validadas?: number | boolean | null;
   },
   status: { thumbnail_pronta?: boolean; metadados_completos?: boolean; pronto_publicar?: boolean } | undefined,
 ): ResumoDoCorte {
-  const sai = (corte.desvios ?? []).reduce((t, d) => t + Math.max(0, (d.fim_seg ?? 0) - (d.inicio_seg ?? 0)), 0);
+  const sai = corte.fim_seg - corte.inicio_seg - calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios ?? []);
   const abertos = (corte.alertas_conferir ?? []).filter((a) => !a.conferido).length;
   const bruto = corte.cenas_remotion as unknown[] | { cenas?: unknown[] } | null | undefined;
   const cenas = Array.isArray(bruto) ? bruto.length : (bruto?.cenas?.length ?? 0);
   return {
-    cortes: [sai > 0 ? `sai ${SEGUNDOS(sai)}` : 'sem trechos', ...(abertos > 0 ? [`${abertos} conferir`] : [])].join(', '),
+    cortes: [sai > 0.05 ? `sai ${Math.max(1, Math.round(sai))} s` : 'sem trechos', ...(abertos > 0 ? [`${abertos} conferir`] : [])].join(', '),
     pos: cenas === 0 ? 'sem cenas' : `${cenas} ${cenas === 1 ? 'cena' : 'cenas'}${corte.cenas_validadas ? '' : ', por validar'}`,
     ...(status
       ? {
