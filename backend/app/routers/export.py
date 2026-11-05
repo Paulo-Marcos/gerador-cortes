@@ -143,10 +143,8 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
                 "cenas_em_geracao": esta_gerando(corte.id),
                 "cenas_geradas": _contar_cenas_remotion(corte.cenas_remotion) > 0,
                 "cenas_validadas": bool(corte.cenas_validadas),
-                # D-516: o TikTok e publicacao MANUAL — so o operador sabe que
-                # aconteceu, e ele diz isso pelo botao "publiquei" (D-512). Sem
-                # trafegar a marca, a tela esquece a confirmacao ao reabrir e
-                # pergunta de novo por um corte que ja subiu.
+                # D-516: o TikTok e publicacao MANUAL, confirmada no botao "publiquei" (D-512).
+                # Sem trafegar a marca, a tela pergunta de novo ao reabrir.
                 "tiktok_publicado_em": (
                     corte.tiktok_publicado_em.isoformat() if corte.tiktok_publicado_em else ""
                 ),
