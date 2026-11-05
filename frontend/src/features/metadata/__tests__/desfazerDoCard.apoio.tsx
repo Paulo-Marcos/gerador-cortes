@@ -95,19 +95,19 @@ function Sonda({ corteId }: { corteId: string }) {
 }
 
 /** Como a rota e o modal: a `key` recria o card a cada corte, e fechar o desmonta. */
-function Tela({ recriar }: { recriar: boolean }) {
+function Tela() {
   const [corteId, setCorteId] = useState('c1');
   const [aberto, setAberto] = useState(true);
   irParaCorte = setCorteId;
   mostrarModal = setAberto;
-  return aberto ? <Sonda key={recriar ? corteId : 'o mesmo card'} corteId={corteId} /> : null;
+  return aberto ? <Sonda key={corteId} corteId={corteId} /> : null;
 }
 
-export async function abrirCard(staleTime = 0, recriar = true) {
+export async function abrirCard(staleTime = 0) {
   const cliente = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime } } });
   ({ limpar } = montar(
     <QueryClientProvider client={cliente}>
-      <Tela recriar={recriar} />
+      <Tela />
     </QueryClientProvider>,
   ));
   await assentar();

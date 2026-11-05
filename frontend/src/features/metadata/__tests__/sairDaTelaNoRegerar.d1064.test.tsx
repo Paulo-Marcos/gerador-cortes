@@ -207,25 +207,6 @@ describe('S2: trocar de corte durante o Regerar', () => {
   });
 });
 
-describe('o mesmo card trocando de corte, sem a tela recriar', () => {
-  it('a geração termina na gaveta do corte que a pediu, e é ele quem é relido', async () => {
-    await abrirCard(60_000, false);
-    await clicarNaIa();
-    await trocarDeCorte('c2');
-    await digitarTitulo('rascunho de c2');
-
-    await iaTermina();
-
-    expect(card.title).toBe('rascunho de c2');
-    expect(card.desfazerIa).toBeNull();
-
-    await trocarDeCorte('c1');
-
-    expect(card).toMatchObject(TELA_DA_IA);
-    expect(card.desfazerIa).toEqual(GRAVADO);
-  });
-});
-
 describe('S2: fechar o modal durante o Regerar', () => {
   it('a IA termina com o modal fechado: ao reabrir, o Desfazer está lá', async () => {
     await abrirCard();

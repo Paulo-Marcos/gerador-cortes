@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { providerEmVoo } from '@/lib/providerIa';
 import { geracaoIaApi, useUltimaGeracao } from '@/features/ia';
@@ -133,7 +133,8 @@ export function useMetadataCard({
   // D-746: regerar reescrevia título, capa, descrição e tags sem volta — um
   // título ajustado à mão se perdia. A versão anterior fica guardada até o
   // operador desfazer ou dispensar.
-  const corteDaGeracao = useRef(cut.id);
+  // D-1064: a tela recria o card a cada corte, então o `cut.id` de quem pediu a geração
+  // é o corte dela, mesmo quando ela termina com o card já desmontado.
   const { desfazerIa, dispensarDesfazer, setDesfazerIa, terminarGeracao, versaoAntesDaIa } = useVersaoDoDesfazer(
     queryClient,
     cut.id,
@@ -144,15 +145,14 @@ export function useMetadataCard({
   const generateMetadataClaude = useMutation({
     mutationFn: (provider: 'claude' | 'gemini' = 'claude') => pedirGeracao(cut.id, meta, provider),
     onMutate: () => {
-      corteDaGeracao.current = cut.id;
       versaoAntesDaIa.current =
         meta && estaCompleto(meta) ? montarVersaoAnterior(meta, textoNaoSalvo()) : null;
     },
     onSuccess: () => {
       notify('Metadados gerados por IA.', { tone: 'success' });
       // D-1064: quem pediu pode ter saído da tela: a versão vai para a gaveta do corte dela.
-      setDesfazerIa(terminarGeracao(corteDaGeracao.current));
-      void queryClient.invalidateQueries({ queryKey: metadataKey(corteDaGeracao.current) });
+      setDesfazerIa(terminarGeracao());
+      invalidate();
     },
     onError: (error) =>
       notify(error instanceof Error ? error.message : 'Erro ao gerar metadados por IA.', {

@@ -62,16 +62,15 @@ export function useVersaoDoDesfazer(
      * o rascunho de quem está no corte dá lugar à IA e volta no Desfazer (D-1054). Completar
      * não tem versão: não oferece nada e deixa o rascunho.
      */
-    terminarGeracao: (corteDaGeracao: string) => {
-      const daGeracao = abrirGaveta(cliente, corteDaGeracao);
-      const versao = daGeracao.versaoEmVoo.current;
-      const abertos = [...daGeracao.cards];
-      daGeracao.oferta = versao && Object.assign({}, versao, ...abertos.map((card) => card.textoNaoSalvo()));
+    terminarGeracao: () => {
+      const versao = gaveta.versaoEmVoo.current;
+      const abertos = [...gaveta.cards];
+      gaveta.oferta = versao && Object.assign({}, versao, ...abertos.map((card) => card.textoNaoSalvo()));
       for (const card of abertos) {
         if (versao) card.descartarRascunho();
-        card.avisar(daGeracao.oferta);
+        card.avisar(gaveta.oferta);
       }
-      return daGeracao.oferta;
+      return gaveta.oferta;
     },
   };
 }
