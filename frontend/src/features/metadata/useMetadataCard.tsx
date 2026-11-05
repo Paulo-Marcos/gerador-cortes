@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { providerEmVoo } from '@/lib/providerIa';
 import { geracaoIaApi, useUltimaGeracao } from '@/features/ia';
+import { pedirGeracao, rotuloDaGeracao, versaoParaDesfazer } from './geracaoDoCard';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/components/ui/toaster';
 import { resolveThumbUrl } from '@/lib/api';
@@ -146,17 +147,9 @@ export function useMetadataCard({
 
   // F-038 - geracao automatica por IA: invalida na hora.
   const generateMetadataClaude = useMutation({
-    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarMetadadosClaude(cut.id, provider),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => pedirGeracao(cut.id, meta, provider),
     onMutate: () => {
-      versaoAntesDaIa.current =
-        meta && (meta.titulo_youtube || meta.descricao_youtube)
-          ? {
-              titulo_youtube: meta.titulo_youtube,
-              texto_capa: meta.texto_capa,
-              descricao_youtube: meta.descricao_youtube,
-              tags_youtube: meta.tags_youtube,
-            }
-          : null;
+      versaoAntesDaIa.current = versaoParaDesfazer(meta);
     },
     onSuccess: () => {
       notify('Metadados gerados por IA.', { tone: 'success' });
@@ -330,5 +323,5 @@ export function useMetadataCard({
     }
   };
 
-  return { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
+  return { applyFrame, capaAmpliada, capaChegou, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, rotuloIa: rotuloDaGeracao(meta), save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix };
 }
