@@ -7,10 +7,7 @@ from app.database import get_db
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.models import Corte
 from app.routers import projetos_schemas
-from app.routers.cortes_helpers import (
-    _corte_to_dict,
-    _hms_to_seg,
-)
+from app.routers.cortes_helpers import _corte_to_dict, _hms_to_seg, com_a_marca_das_cenas
 from app.routers.cortes_schemas import (
     AdicionarDesvioRequest,
     ArranjoResponse,
@@ -50,6 +47,7 @@ from app.routers.resposta_api import (
 )
 from app.services import abrir_no_sistema, bruto_do_corte, remotion_studio
 from app.services import arranjo as arranjo_service
+from app.services.cenas_em_geracao import recusar_dividir_ou_juntar
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
 from app.services.deteccao_segmentos import (
@@ -256,6 +254,7 @@ async def dividir_corte(
     if body.ponto_seg is None and not body.ponto_hms:
         raise HTTPException(status_code=400, detail="Informe ponto_seg ou ponto_hms.")
     ponto = body.ponto_seg if body.ponto_seg is not None else _hms_to_seg(body.ponto_hms)
+    recusar_dividir_ou_juntar(corte_id)
 
     try:
         original_id, novo_id = await CorteService.dividir_corte(corte_id, float(ponto))
@@ -293,6 +292,7 @@ async def juntar_cortes(
             raise HTTPException(
                 status_code=400, detail="Este é o último corte: não há com quem juntar."
             )
+        recusar_dividir_ou_juntar(corte_id, outro_id)
         sobrevivente_id = await CorteService.juntar_cortes(corte_id, outro_id)
     except ValueError as e:
         msg = str(e)
@@ -528,11 +528,10 @@ async def bruto_progress(corte_id: str):
 
 
 @router.post("/{corte_id}/gerar-cenas-remotion", response_model=CenasDoCorteResponse)
-async def gerar_cenas_remotion(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def gerar_cenas_remotion(corte_id: str, _marca: None = Depends(com_a_marca_das_cenas)):
     """Gera cenas visuais via Gemini AI a partir da transcrição final do corte."""
     try:
-        resultado = await CenasRemotionService.gerar_cenas(corte_id)
-        return resultado
+        return await CenasRemotionService.gerar_cenas(corte_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
@@ -551,12 +550,13 @@ async def exportar_prompt_cenas(corte_id: str):
 
 
 @router.post("/{corte_id}/cenas-remotion/importar", response_model=CenasDoCorteResponse)
-async def importar_cenas_remotion(corte_id: str, body: ImportarCenasRequest):
+async def importar_cenas_remotion(
+    corte_id: str, body: ImportarCenasRequest, _marca: None = Depends(com_a_marca_das_cenas)
+):
     """Importa cenas geradas por IA externa, normaliza e salva."""
     try:
         payload = body.model_dump(exclude_none=True)
-        resultado = await CenasRemotionService.importar_cenas(corte_id, payload)
-        return resultado
+        return await CenasRemotionService.importar_cenas(corte_id, payload)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:

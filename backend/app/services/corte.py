@@ -628,20 +628,20 @@ async def _gravar_sincronia(
     # seguintes morrem em PendingRollbackError — o retry era inócuo e
     # mascarava o erro real. D-716: o `rollback` descarta o que foi atribuído; relê e refaz.
     for attempt in range(_TENTATIVAS_DE_GRAVACAO):
-        # Cenas e marca de validadas se refazem a cada tentativa, a partir do que está
-        # gravado agora: assim não se apaga a edição de outra sessão (D-1018, D-1030).
-        origem_das_cenas.aplicar_recorte_nas_cenas(corte, nova_trans, trans_raw)
-        corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
-        corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
-        corte.transcricao_final_texto = texto
+        # Cenas e marca de validadas se refazem a cada tentativa, a partir do que está gravado
+        # agora: não se apaga a edição de outra sessão nem a geração recém-gravada (D-1030, D-1049).
+        colunas = {
+            "transcricao_corte": json.dumps(trans_bruta, ensure_ascii=False),
+            "transcricao_final": json.dumps(nova_trans, ensure_ascii=False),
+            "transcricao_final_texto": texto,
+        }
         try:
-            await db.commit()
+            await origem_das_cenas.gravar_recorte(db, corte, nova_trans, trans_raw, colunas)
             break
         except Exception as e:
             if "locked" in str(e).lower() and attempt < _TENTATIVAS_DE_GRAVACAO - 1:
                 await db.rollback()
                 await asyncio.sleep(0.5 * (attempt + 1))
-                await db.refresh(corte)
                 continue
             raise e
 
