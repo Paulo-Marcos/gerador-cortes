@@ -82,17 +82,22 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
   // do YouTube (D-746). Uma ordem só para as duas cascas.
   const ordenados = buildStatusPills(status).map((p) => {
     const meta = POR_ROTULO[p.label];
+    // D-1037: gerar de novo substitui as cenas. Com a etapa ainda "feita", a linha
+    // mandaria renderizar as cenas que estão para ser trocadas.
+    const gerandoCenas = p.label === 'Cenas' && Boolean(status.cenas_em_geracao);
     // Etapa nova em `buildStatusPills` sem entrada aqui não pode derrubar
     // a tira: ela entra em PUBLICAÇÃO com as 3 primeiras letras do rótulo.
     return {
       nome: p.label,
-      done: p.done,
+      done: p.done && !gerandoCenas,
       descricao: p.hint,
       sigla: meta?.sigla ?? p.label.slice(0, 3).toUpperCase(),
       // Cenas que nem foram geradas não têm o que validar (achado da
-      // pr-audit da D-868): o verbo segue o que de fato falta.
-      verbo:
-        p.label === 'Cenas' && !status.cenas_geradas
+      // pr-audit da D-868): o verbo segue o que de fato falta. E não se manda
+      // gerar o que já está gerando (D-1037): o convite é o clique duplicado.
+      verbo: gerandoCenas
+        ? 'gerando cenas'
+        : p.label === 'Cenas' && !status.cenas_geradas
           ? 'gerar cenas'
           : (meta?.verbo ?? p.label.toLowerCase()),
       grupo: meta?.grupo ?? ('PUBLICAÇÃO' as GrupoDaTira),

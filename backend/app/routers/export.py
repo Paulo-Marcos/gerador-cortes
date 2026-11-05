@@ -23,6 +23,7 @@ from app.services.cancelamento_jobs import (
     JobNaoEstaEmVoo,
     cancelar_job,
 )
+from app.services.cenas_em_geracao import esta_gerando
 from app.services.export import ExportService
 from app.services.jobs_globais import JobsGlobais
 from app.services.liberacao_publicacao import liberar_publicacao
@@ -139,12 +140,11 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
                 "youtube_video_id": corte.youtube_video_id or "",
                 "youtube_url_publicado": corte.youtube_url_publicado or "",
                 "youtube_scheduled_at": corte.youtube_scheduled_at or "",
+                "cenas_em_geracao": esta_gerando(corte.id),
                 "cenas_geradas": _contar_cenas_remotion(corte.cenas_remotion) > 0,
                 "cenas_validadas": bool(corte.cenas_validadas),
-                # D-516: o TikTok e publicacao MANUAL — so o operador sabe que
-                # aconteceu, e ele diz isso pelo botao "publiquei" (D-512). Sem
-                # trafegar a marca, a tela esquece a confirmacao ao reabrir e
-                # pergunta de novo por um corte que ja subiu.
+                # D-516: o TikTok e publicacao MANUAL, confirmada no botao "publiquei" (D-512).
+                # Sem trafegar a marca, a tela pergunta de novo ao reabrir.
                 "tiktok_publicado_em": (
                     corte.tiktok_publicado_em.isoformat() if corte.tiktok_publicado_em else ""
                 ),

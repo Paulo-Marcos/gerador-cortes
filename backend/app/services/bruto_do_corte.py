@@ -15,9 +15,11 @@ from pathlib import Path
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain.compartilhado.erros import NaoEncontrado
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.models import Corte
+from app.services.bruto_progress import BrutoProgress
 from app.services.cancelamento_jobs import TrabalhoEmVoo
+from app.services.cenas_em_geracao import BRUTO_ESPERA_AS_CENAS, esta_gerando
 from app.services.export import ExportService
 from app.services.tasks import fire_and_forget
 
@@ -48,6 +50,10 @@ async def iniciar_geracao(
 
     if ExportService.get_tarefa_corte_status(corte_id) == "cortando":
         return {"message": "Geração de bruto já em andamento", "corte_id": corte_id}
+    # D-1037: a mesma regra do ExportService, aqui para o operador ler a recusa na hora,
+    # em vez de ver o bruto "cortando" e cair em erro logo depois.
+    if esta_gerando(corte_id):
+        raise PedidoInvalido(BRUTO_ESPERA_AS_CENAS)
 
     if not _corte_ja_gerou_bruto(corte):
         # Primeira geração: cadeia completa (comportamento inalterado).
@@ -55,6 +61,9 @@ async def iniciar_geracao(
         refazer_cenas = True
 
     ExportService.set_tarefa_corte_status(corte_id, "cortando")
+    # D-1037: zera já, junto com o status: o progresso do bruto anterior diria que
+    # este chegou aos shorts, e o clique passaria antes da salvaguarda.
+    BrutoProgress.iniciar(corte_id, incluir_shorts=bool(corte.is_fire))
 
     async def _run():
         try:
@@ -83,6 +92,19 @@ async def iniciar_geracao(
     # precisa desse id — senão o botão da fila não acha o que parar (D-426).
     TrabalhoEmVoo.registrar(f"bruto:{corte_id}", task, owner=f"task:gerar-bruto-{corte_id[:8]}")
     return {"message": "Geração de bruto iniciada", "corte_id": corte_id}
+
+
+def recusar_cenas_com_bruto_em_andamento(corte_id: str) -> None:
+    """D-1037: o clique espera o bruto, que pode reescrever a transcrição que ele leria.
+
+    Vale para o bruto pedido pela tela, até ele chegar aos shorts, que não mexem no
+    texto. O bruto da fábrica de shorts não grava `cortando` e fica fora desta recusa.
+    """
+    em_andamento = ExportService.get_tarefa_corte_status(corte_id) == "cortando"
+    if em_andamento and not BrutoProgress.chegou_aos_shorts(corte_id):
+        raise PedidoInvalido(
+            "O bruto deste corte está sendo gerado. Espere terminar para pedir as cenas."
+        )
 
 
 def _corte_ja_gerou_bruto(corte: Corte) -> bool:

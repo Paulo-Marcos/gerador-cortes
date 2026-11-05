@@ -1,8 +1,15 @@
-import { useMutation, useMutationState, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toaster';
 import { geracaoIaApi } from '@/features/ia';
 import { invalidaCorte } from './useCortes';
 import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
+import type { ProviderIA } from '@/lib/providerIa';
 
 // As gerações do corte que chamam a IA pela assinatura: trechos, cenas e
 // metadados. D-723: saíram do useEditor.
@@ -16,6 +23,12 @@ import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
 export const metadadosClaudeKey = (corteId: string) => ['claude-metadados', corteId] as const;
 
 export const trechosClaudeKey = (corteId: string) => ['claude-trechos', corteId] as const;
+
+export const cenasClaudeKey = (corteId: string) => ['claude-cenas', corteId] as const;
+
+// Fora da chave do corte de propósito: `invalidaCorte` roda de dentro da consulta
+// e, sob a mesma chave, cancelaria a própria consulta que a chamou.
+export const cenasEmGeracaoKey = (corteId: string) => ['cenas-em-geracao', corteId] as const;
 
 /** Estado da geração de metadados via Claude DESTE corte. `concluido`/`erro`
  * valem até o react-query coletar a mutação encerrada (gcTime). */
@@ -84,6 +97,7 @@ export function useGerarCenasClaude(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
+    mutationKey: cenasClaudeKey(corteId),
     mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarCenasClaude(corteId, provider),
     onSuccess: (data) => {
       notify(`${data.total_cenas} cena(s) gerada(s) via IA.`, { tone: 'success' });
@@ -94,7 +108,43 @@ export function useGerarCenasClaude(corteId: string, projetoId?: string) {
         tone: 'error',
       });
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: cenasEmGeracaoKey(corteId) }),
   });
+}
+
+/** Pergunta ao servidor. Quando a geração de fora termina, as cenas novas estão no
+ * banco e o corte em cache ficou velho: é o que faz a Pós mostrá-las sozinha. */
+export async function buscarCenasEmGeracao(qc: QueryClient, corteId: string, projetoId?: string) {
+  const antes = qc.getQueryData<{ em_geracao: boolean }>(cenasEmGeracaoKey(corteId))?.em_geracao;
+  const agora = await geracaoIaApi.cenasEmGeracao(corteId);
+  if (antes && !agora.em_geracao) invalidaCorte(qc, corteId, projetoId);
+  return agora;
+}
+
+const INTERVALO_GERANDO_MS = 2_500;
+const INTERVALO_LIVRE_MS = 5_000;
+
+/**
+ * D-1037: as cenas deste corte estão sendo geradas? Duas fontes, porque cada uma
+ * vê o que a outra não vê: a mutação responde no instante do clique e sabe o
+ * provedor; o servidor é o único que vê a cadeia do bruto e sobrevive a recarregar
+ * a página. A cadeia é sempre do Claude, daí o padrão.
+ */
+export function useCenasEmGeracao(corteId: string, projetoId?: string) {
+  const qc = useQueryClient();
+  const noClique = useMutationState({
+    filters: { mutationKey: cenasClaudeKey(corteId), exact: true, status: 'pending' },
+    select: (mutation) => mutation.state.variables as ProviderIA | undefined,
+  });
+  const noServidor = useQuery({
+    queryKey: cenasEmGeracaoKey(corteId),
+    queryFn: () => buscarCenasEmGeracao(qc, corteId, projetoId),
+    refetchInterval: (query) =>
+      query.state.data?.em_geracao ? INTERVALO_GERANDO_MS : INTERVALO_LIVRE_MS,
+  });
+  const emGeracao = noClique.length > 0 || Boolean(noServidor.data?.em_geracao);
+  const provider: ProviderIA | null = emGeracao ? (noClique[0] ?? 'claude') : null;
+  return { emGeracao, provider };
 }
 
 // F-038 — gera os metadados do corte via Claude (skill metadados-expert).
