@@ -1,4 +1,4 @@
-"""O passo de cenas na cadeia do bruto, com a marca da D-1037.
+"""O passo de cenas na cadeia do bruto, com a marca que o bruto já segura (D-1037).
 
 Fora de `cenas_em_geracao` porque precisa chamar o `CenasRemotionService`, que já
 importa aquele módulo. E fora de `export`, que está no teto da catraca de tamanho.
@@ -6,27 +6,9 @@ importa aquele módulo. E fora de `export`, que está no teto da catraca de tama
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
-
 from app.core.logging import operational_error
 from app.services.bruto_progress import BrutoProgress
-from app.services.cenas_em_geracao import ReservaDeCenas, reservar
-
-
-@contextmanager
-def reservar_para_a_cadeia(corte_id: str, pedir: bool) -> Iterator[ReservaDeCenas | None]:
-    """A cadeia do bruto segura a marca do começo do bruto até as cenas.
-
-    `None` quando ela não vai gerar. Vale para toda saída: erro no render ou na
-    sincronia, cancelamento do bruto.
-    """
-    reserva = reservar(corte_id) if pedir else None
-    try:
-        yield reserva
-    finally:
-        if reserva:
-            reserva.liberar()
+from app.services.cenas_em_geracao import ReservaDeCenas
 
 
 async def gerar_cenas_da_cadeia(corte_id: str, reserva: ReservaDeCenas) -> None:

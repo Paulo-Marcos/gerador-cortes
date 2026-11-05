@@ -85,7 +85,8 @@ async def _regerar_bruto_preservando_pos_producao(corte_id: str) -> None:
 
     A `transcricao_final` do corte ainda e ressincronizada pela salvaguarda de
     silencios, que roda em toda geracao do bruto (so nao ressincroniza se a
-    deteccao do FFmpeg falhar).
+    deteccao do FFmpeg falhar). Por isso o worker segura a marca das cenas ate os
+    shorts, e um clique em "Gerar cenas" no meio e recusado (D-1048).
     """
     resultado = await ExportService.gerar_bruto_via_worker(
         corte_id, refazer_transcricao=False, refazer_cenas=False
@@ -99,7 +100,7 @@ async def _regerar_bruto_preservando_pos_producao(corte_id: str) -> None:
 def _bruto_ja_propos_shorts(corte_id: str) -> bool:
     return any(
         passo["chave"] == "shorts" and passo["status"] == "concluido"
-        for passo in BrutoProgress.get(corte_id)
+        for passo in BrutoProgress.deste_bruto(corte_id)
     )
 
 
