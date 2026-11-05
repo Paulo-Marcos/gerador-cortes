@@ -13,6 +13,7 @@ pai, e o neto prenderia o `communicate` do teste.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import os
 import subprocess
 import sys
@@ -23,10 +24,14 @@ import psutil
 import pytest
 from app.core.tarefas_ativas import TarefasAtivas
 from app.infrastructure import claude_cli_client as cli
+from app.models import Base, Corte, Projeto
 from app.services import cenas_remotion
 from app.services.canal.editorial_skills import SkillResolvida
 from app.services.cancelamento_jobs import TrabalhoEmVoo, cancelar_job
 from app.services.cenas_remotion import CenasRemotionService
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+_IMPORTAR_DE_VERDADE = inspect.getattr_static(CenasRemotionService, "importar_cenas")
 
 _CLAUDE_FALSO = r"""
 import json, os, subprocess, sys, time
@@ -233,6 +238,9 @@ def _geracao_de_cenas(monkeypatch) -> list[dict]:
         return {"prompts": [{"texto": "prompt"}]}
 
     async def importar_cenas(_corte_id, payload):
+        # Como o de verdade, que espera o banco (`await db.get`) antes de gravar. Sem isto, um
+        # dublê que nunca suspende faz a gravação caber no passo em que a resposta chega.
+        await asyncio.sleep(0)
         gravado.append(payload)
         return {"total_cenas": len(payload["cenas"])}
 
@@ -263,7 +271,10 @@ async def test_nada_e_gravado_depois_de_cancelar(claude, telemetria, thread_saiu
 async def test_a_resposta_que_chega_junto_do_cancelamento_nao_e_gravada(
     claude, telemetria, monkeypatch
 ):
-    """O cancelamento e a resposta se cruzam: paga ou não, ela já não vale."""
+    """O cancelamento e a resposta se cruzam: as cenas não entram.
+
+    A telemetria fica de fora: se a resposta chegou, a chamada foi paga, e registrá-la é certo.
+    """
     gravado = _geracao_de_cenas(monkeypatch)
     loop = asyncio.get_running_loop()
     tasks: list[asyncio.Task] = []
@@ -279,4 +290,45 @@ async def test_a_resposta_que_chega_junto_do_cancelamento_nao_e_gravada(
         await tasks[0]
 
     assert gravado == []
-    assert telemetria == []
+
+
+@pytest.mark.asyncio
+async def test_a_resposta_ja_em_maos_nao_chega_ao_banco_com_o_cancelamento_atras(
+    claude, telemetria, monkeypatch
+):
+    """A corrida que o CI achou no Python 3.13.18, forçada em qualquer versão.
+
+    Lá, a thread que termina antes do `wrap_future` faz o `await` voltar sem suspender, e o
+    cancelamento fica na fila do loop, atrás da resposta. Quem segura é o `importar_cenas` de
+    verdade: ele espera o banco antes de gravar, e é nessa espera que o cancelamento entra.
+    """
+    _geracao_de_cenas(monkeypatch)
+    monkeypatch.setattr(CenasRemotionService, "importar_cenas", _IMPORTAR_DE_VERDADE)
+    # Em arquivo: cancelar a consulta descarta a conexão, e com ela um banco `:memory:`.
+    engine = create_async_engine(f"sqlite+aiosqlite:///{claude.pasta / 'banco.db'}")
+    tasks: list[asyncio.Task] = []
+
+    async def responde_sem_suspender(*_args, **_kwargs):
+        asyncio.get_running_loop().call_soon(tasks[0].cancel)
+        return {"is_error": False, "result": '{"cenas": [{"tipo": "orfa"}]}'}
+
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        fabrica = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async with fabrica() as db:
+            db.add(Projeto(id="p1", youtube_url="https://x/y"))
+            db.add(Corte(id=_CORTE, projeto_id="p1", numero=1, status="aprovado"))
+            await db.commit()
+        monkeypatch.setattr(cenas_remotion, "AsyncSessionLocal", fabrica)
+        monkeypatch.setattr(cli, "_run", responde_sem_suspender)
+        tasks.append(_na_fila(CenasRemotionService.gerar_cenas_via_claude(_CORTE)))
+
+        with pytest.raises(asyncio.CancelledError):
+            await tasks[0]
+
+        async with fabrica() as db:
+            assert (await db.get(Corte, _CORTE)).cenas_remotion == "[]"  # o valor de quem nasce
+        assert len(telemetria) == 1
+    finally:
+        await engine.dispose()
