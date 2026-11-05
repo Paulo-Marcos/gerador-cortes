@@ -630,13 +630,13 @@ async def _gravar_sincronia(
     for attempt in range(_TENTATIVAS_DE_GRAVACAO):
         # Cenas e marca de validadas se refazem a cada tentativa, a partir do que está gravado
         # agora: não se apaga a edição de outra sessão nem a geração recém-gravada (D-1030, D-1049).
-        await db.refresh(corte)
-        origem_das_cenas.aplicar_recorte_nas_cenas(corte, nova_trans, trans_raw)
-        corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
-        corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
-        corte.transcricao_final_texto = texto
+        colunas = {
+            "transcricao_corte": json.dumps(trans_bruta, ensure_ascii=False),
+            "transcricao_final": json.dumps(nova_trans, ensure_ascii=False),
+            "transcricao_final_texto": texto,
+        }
         try:
-            await db.commit()
+            await origem_das_cenas.gravar_recorte(db, corte, nova_trans, trans_raw, colunas)
             break
         except Exception as e:
             if "locked" in str(e).lower() and attempt < _TENTATIVAS_DE_GRAVACAO - 1:

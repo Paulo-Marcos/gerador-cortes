@@ -515,11 +515,11 @@ class CenasRemotionService:
                 "retratos": retratos,
             }
 
-            return await origem_das_cenas.gravar_cenas_geradas(
+            gravadas = await origem_das_cenas.gravar_cenas_geradas(
                 db, corte_id, resultado, corte.transcricao_final
             )
             operational_info("CenasRemotion", f"✅ Cenas salvas no banco para o corte {corte_id}.")
-            return resultado
+            return gravadas
 
     @staticmethod
     async def preencher_retratos(corte_id: str, forcar: bool = False) -> dict:

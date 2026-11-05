@@ -453,6 +453,49 @@ async def test_a_sincronia_em_voo_nao_apaga_as_cenas_recem_gravadas(
     await _conferir_na_frase(fabrica)
 
 
+_CENA_QUE_SE_MOVE = {
+    "formato": "cortes",
+    "cenas": [{"tipo": "enfase", "inicio": 25.0, "fim": 28.0}],
+}
+
+
+@pytest.mark.parametrize(
+    "cenas_antes",
+    [{}, {"cenas_remotion": json.dumps(_CENA_QUE_SE_MOVE)}],
+    ids=["sem_cenas", "com_cena_que_se_move"],
+)
+@pytest.mark.asyncio
+async def test_a_geracao_que_grava_entre_a_leitura_e_a_gravacao_da_sincronia_acompanha(
+    cenas_antes, cliente, ia, fabrica, monkeypatch
+):
+    # A janela estreita: a sincronia já releu o corte, e a geração grava antes de ela gravar.
+    # Com cena que se move, as velhas voltavam por cima; sem cena, a nova ficava para trás.
+    await _gravar(fabrica, **cenas_antes, desvios=json.dumps([_DESVIO]))
+    geracao = await _gerar_presa(cliente, ia)
+    reler, gravar_sincronia = AsyncSession.refresh, corte_module._gravar_sincronia
+    estado = {"gravando": False, "cruzou": False}
+
+    async def gravar_marcando(*args, **kwargs):
+        estado["gravando"] = True
+        return await gravar_sincronia(*args, **kwargs)
+
+    async def reler_e_deixar_a_geracao_gravar(self, *args, **kwargs):
+        await reler(self, *args, **kwargs)
+        if estado["gravando"] and not estado["cruzou"]:
+            estado["cruzou"] = True
+            await _terminar(ia, geracao)
+
+    monkeypatch.setattr(corte_module, "_gravar_sincronia", gravar_marcando)
+    monkeypatch.setattr(AsyncSession, "refresh", reler_e_deixar_a_geracao_gravar)
+
+    await CorteService.sincronizar_transcricao_corte("c1")
+
+    assert estado["cruzou"], "a geração não gravou na janela"
+    # A sincronia não pode desistir: a transcrição nova precisa ter sido gravada.
+    assert _tempo_da_frase(await _ler(fabrica)) == pytest.approx(30.0, abs=_FOLGA_SEG)
+    await _conferir_na_frase(fabrica)
+
+
 # ─── quando a cena NÃO acompanha: fica onde está, e avisa ────────────────────
 
 
@@ -620,6 +663,23 @@ async def test_o_gemini_reserva_a_marca_e_leva_a_cena(cliente, ia, fabrica):
     await _terminar(ia, gemini)
     assert not esta_gerando("c1"), "a marca ficou presa"
     await _conferir_na_frase(fabrica)
+
+
+@pytest.mark.asyncio
+async def test_o_gemini_registra_que_salvou_e_devolve_as_cenas(cliente, ia, fabrica, monkeypatch):
+    registros = []
+    monkeypatch.setattr(
+        cenas_module, "operational_info", lambda _origem, texto: registros.append(texto)
+    )
+    gemini = asyncio.create_task(cliente.post("/api/cortes/c1/gerar-cenas-remotion"))
+    await _no_limite(ia.comecou.wait())
+
+    ia.solta.set()
+    resposta = await _no_limite(gemini)
+
+    assert resposta.status_code == 200, resposta.text
+    assert any("Cenas salvas" in texto for texto in registros), registros
+    assert resposta.json()["cenas"] == json.loads((await _ler(fabrica)).cenas_remotion)["cenas"]
 
 
 @pytest.mark.asyncio
