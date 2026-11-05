@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { assentar, montar } from '../../editor/__tests__/domMinimo';
 import type { Corte } from '@/types/models';
 
-// D-1064: as duas regressões do Desfazer que a auditoria do #327 mediu. Na S1, o blur e o
-// clique saem juntos, e o texto do blur ficava na tela por cima do que o Desfazer gravou.
-// Na S2, ir e voltar de corte durante o Regerar apagava a versão guardada, e o texto
-// anterior ficava sem volta. Roda o hook de verdade, com o servidor em memória.
+// D-1064: duas perdas do Desfazer. Na S1, o blur e o clique saem juntos, e o texto do blur
+// ficava na tela por cima do que o Desfazer gravou. Na S2, quem sai da tela durante o Regerar
+// perdia a versão anterior: trocar de corte recria o card (`UmaTelaPorCorte`, D-1033) e fechar
+// o modal o desmonta, enquanto a geração segue. Roda o hook de verdade, com o servidor em memória.
 
 const h = vi.hoisted(() => ({
   servidor: {} as Record<string, Record<string, unknown>>,
@@ -83,20 +83,32 @@ const TELA_DA_IA = {
 
 let card: Card;
 let irParaCorte: (id: string) => void;
+let mostrarModal: (aberto: boolean) => void;
 let limpar: () => Promise<void>;
 
-function Sonda() {
-  const [corteId, setCorteId] = useState('c1');
-  irParaCorte = setCorteId;
-  card = useMetadataCard({ projetoId: 'p1', cut: { id: corteId } as Corte, variant: 'modal' });
+function Sonda({ corteId }: { corteId: string }) {
+  const desenhado = useMetadataCard({ projetoId: 'p1', cut: { id: corteId } as Corte, variant: 'modal' });
+  // Depois do commit: é o que chegou à tela, não um desenho que o React descartou.
+  useEffect(() => {
+    card = desenhado;
+  });
   return null;
 }
 
-async function abrirCard(staleTime = 0) {
+/** Como a rota e o modal: a `key` recria o card a cada corte, e fechar o desmonta. */
+function Tela({ recriar }: { recriar: boolean }) {
+  const [corteId, setCorteId] = useState('c1');
+  const [aberto, setAberto] = useState(true);
+  irParaCorte = setCorteId;
+  mostrarModal = setAberto;
+  return aberto ? <Sonda key={recriar ? corteId : 'o mesmo card'} corteId={corteId} /> : null;
+}
+
+async function abrirCard(staleTime = 0, recriar = true) {
   const cliente = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime } } });
   ({ limpar } = montar(
     <QueryClientProvider client={cliente}>
-      <Sonda />
+      <Tela recriar={recriar} />
     </QueryClientProvider>,
   ));
   await assentar();
@@ -137,7 +149,22 @@ async function sairDoTitulo() {
 /** O que o botão Desfazer do card faz; o fio do botão está em `botoesDoDesfazer`. */
 async function clicarEmDesfazer() {
   card.desfazerGeracao();
-  card.setDesfazerIa(null);
+  card.dispensarDesfazer();
+  await assentar();
+}
+
+async function clicarEmManter() {
+  card.dispensarDesfazer();
+  await assentar();
+}
+
+async function fecharModal() {
+  mostrarModal(false);
+  await assentar();
+}
+
+async function abrirModal() {
+  mostrarModal(true);
   await assentar();
 }
 
@@ -238,7 +265,7 @@ describe('S1: digitar depois do Regerar e clicar direto em Desfazer', () => {
   });
 });
 
-describe('S2: ir e voltar de corte durante o Regerar', () => {
+describe('S2: trocar de corte durante o Regerar', () => {
   it('termina de volta no corte: a IA entra e a versão anterior fica no Desfazer', async () => {
     await abrirCard();
     await clicarNaIa();
@@ -269,7 +296,7 @@ describe('S2: ir e voltar de corte durante o Regerar', () => {
     expect(h.servidor.c1).toMatchObject({ titulo_youtube: 'digitado na volta' });
   });
 
-  it('o salvo antes de sair do corte continua na versão', async () => {
+  it('o salvo antes de sair continua na versão', async () => {
     await abrirCard();
     await clicarNaIa();
     await digitarTitulo('salvo em c1');
@@ -280,6 +307,19 @@ describe('S2: ir e voltar de corte durante o Regerar', () => {
     await iaTermina();
 
     expect(card.desfazerIa).toEqual({ ...GRAVADO, titulo_youtube: 'salvo em c1' });
+  });
+
+  it('o salvo depois de voltar também entra na versão', async () => {
+    await abrirCard();
+    await clicarNaIa();
+    await trocarDeCorte('c2');
+    await trocarDeCorte('c1');
+    await digitarTitulo('salvo na volta');
+    await sairDoTitulo();
+
+    await iaTermina();
+
+    expect(card.desfazerIa).toEqual({ ...GRAVADO, titulo_youtube: 'salvo na volta' });
   });
 
   it('termina no outro corte: a versão espera a volta, e o outro corte não a vê', async () => {
@@ -302,6 +342,20 @@ describe('S2: ir e voltar de corte durante o Regerar', () => {
     expect(h.servidor.c1).toMatchObject(GRAVADO);
     expect(h.servidor.c2).toEqual(DO_OUTRO_CORTE);
     expect(card).toMatchObject(TELA_GRAVADA);
+  });
+
+  it('termina no outro corte: o rascunho de lá fica, e o Desfazer não grava nele', async () => {
+    await abrirCard();
+    await clicarNaIa();
+    await trocarDeCorte('c2');
+    await digitarTitulo('rascunho de c2');
+
+    await iaTermina();
+
+    expect(card.title).toBe('rascunho de c2');
+    card.desfazerGeracao();
+    await assentar();
+    expect(salvosEm('c2')).toEqual([]);
   });
 
   it('termina no outro corte: quem é relido é o corte da geração', async () => {
@@ -344,19 +398,6 @@ describe('S2: ir e voltar de corte durante o Regerar', () => {
     expect(card.desfazerIa).toEqual(GRAVADO);
   });
 
-  it('dispensada com Manter, a oferta não volta', async () => {
-    await abrirCard();
-    await clicarNaIa();
-    await iaTermina();
-    card.setDesfazerIa(null);
-    await assentar();
-
-    await trocarDeCorte('c2');
-    await trocarDeCorte('c1');
-
-    expect(card.desfazerIa).toBeNull();
-  });
-
   it('o Completar de um corte, terminando noutro, não apaga a oferta de lá', async () => {
     h.servidor.c1 = { ...GRAVADO, descricao_youtube: '' };
     h.regerar.mockImplementation(iaEmEspera('c2', DA_IA));
@@ -375,16 +416,192 @@ describe('S2: ir e voltar de corte durante o Regerar', () => {
     expect(card.desfazerIa).toEqual(DO_OUTRO_CORTE);
   });
 
-  it('a geração que falha não oferece Desfazer na volta', async () => {
-    h.regerar.mockImplementation(async () => {
-      throw new Error('a IA caiu');
-    });
+  it('a geração que falha longe do corte não oferece Desfazer na volta', async () => {
+    let cair: (erro: Error) => void = () => undefined;
+    h.regerar.mockImplementation(
+      () =>
+        new Promise((_, rejeitar) => {
+          cair = rejeitar;
+        }),
+    );
     await abrirCard();
     await clicarNaIa();
     await trocarDeCorte('c2');
+
+    cair(new Error('a IA caiu'));
+    await assentar();
     await trocarDeCorte('c1');
 
     expect(card.desfazerIa).toBeNull();
     expect(card).toMatchObject(TELA_GRAVADA);
+  });
+});
+
+describe('o mesmo card trocando de corte, sem a tela recriar', () => {
+  it('a geração termina na gaveta do corte que a pediu, e é ele quem é relido', async () => {
+    await abrirCard(60_000, false);
+    await clicarNaIa();
+    await trocarDeCorte('c2');
+    await digitarTitulo('rascunho de c2');
+
+    await iaTermina();
+
+    expect(card.title).toBe('rascunho de c2');
+    expect(card.desfazerIa).toBeNull();
+
+    await trocarDeCorte('c1');
+
+    expect(card).toMatchObject(TELA_DA_IA);
+    expect(card.desfazerIa).toEqual(GRAVADO);
+  });
+});
+
+describe('S2: fechar o modal durante o Regerar', () => {
+  it('a IA termina com o modal fechado: ao reabrir, o Desfazer está lá', async () => {
+    await abrirCard();
+    await clicarNaIa();
+    await fecharModal();
+
+    await iaTermina();
+    await abrirModal();
+
+    expect(card).toMatchObject(TELA_DA_IA);
+    expect(card.desfazerIa).toEqual(GRAVADO);
+
+    await clicarEmDesfazer();
+
+    expect(h.servidor.c1).toMatchObject(GRAVADO);
+    expect(card).toMatchObject(TELA_GRAVADA);
+  });
+
+  it('reabre antes de terminar: o rascunho é substituído, e o Desfazer chega sozinho', async () => {
+    await abrirCard();
+    await clicarNaIa();
+    await fecharModal();
+    await abrirModal();
+    await digitarTitulo('digitado ao reabrir');
+
+    await iaTermina();
+
+    expect(card).toMatchObject(TELA_DA_IA);
+    expect(card.desfazerIa).toEqual({ ...GRAVADO, titulo_youtube: 'digitado ao reabrir' });
+  });
+
+  it('o card que nasceu antes da oferta também a dispensa com Manter', async () => {
+    await abrirCard();
+    await clicarNaIa();
+    await fecharModal();
+    await abrirModal();
+    await iaTermina();
+    expect(card.desfazerIa).toEqual(GRAVADO);
+
+    await clicarEmManter();
+
+    expect(card.desfazerIa).toBeNull();
+  });
+
+  it('a oferta ainda sem resposta continua ao fechar e reabrir', async () => {
+    await abrirCard();
+    await clicarNaIa();
+    await iaTermina();
+
+    await fecharModal();
+    await abrirModal();
+
+    expect(card.desfazerIa).toEqual(GRAVADO);
+  });
+});
+
+describe('quando a versão sai', () => {
+  async function regerarAte(gerado: object) {
+    h.regerar.mockImplementation(iaEmEspera('c1', gerado));
+    await clicarNaIa();
+    await iaTermina();
+  }
+
+  it('Desfazer: sai, e não volta ao reabrir nem ao trocar de corte', async () => {
+    await abrirCard();
+    await regerarAte(DA_IA);
+
+    await clicarEmDesfazer();
+    expect(card.desfazerIa).toBeNull();
+
+    await fecharModal();
+    await abrirModal();
+    expect(card.desfazerIa).toBeNull();
+
+    await trocarDeCorte('c2');
+    await trocarDeCorte('c1');
+    expect(card.desfazerIa).toBeNull();
+  });
+
+  it('Manter: sai, fica o texto da IA, e não volta ao reabrir nem ao trocar de corte', async () => {
+    await abrirCard();
+    await regerarAte(DA_IA);
+
+    await clicarEmManter();
+    expect(card.desfazerIa).toBeNull();
+    expect(card).toMatchObject(TELA_DA_IA);
+    expect(h.salvos).toEqual([]);
+
+    await fecharModal();
+    await abrirModal();
+    expect(card.desfazerIa).toBeNull();
+
+    await trocarDeCorte('c2');
+    await trocarDeCorte('c1');
+    expect(card.desfazerIa).toBeNull();
+  });
+
+  it('segundo Regerar: a versão nova é o texto que ele reescreveu, um nível só', async () => {
+    const SEGUNDA = { ...DA_IA, titulo_youtube: 'Segunda da IA' };
+    await abrirCard();
+    await regerarAte(DA_IA);
+
+    await regerarAte(SEGUNDA);
+
+    expect(card.title).toBe('Segunda da IA');
+    expect(card.desfazerIa).toEqual(DA_IA);
+  });
+
+  it('segundo Regerar que falha: a oferta anterior continua valendo', async () => {
+    await abrirCard();
+    await regerarAte(DA_IA);
+
+    h.regerar.mockImplementation(async () => {
+      throw new Error('a IA caiu');
+    });
+    await clicarNaIa();
+
+    expect(card.desfazerIa).toEqual(GRAVADO);
+    expect(card).toMatchObject(TELA_DA_IA);
+  });
+
+  it('Desfazer durante o segundo Regerar: o que ele gravou é o que a IA reescreve, e volta', async () => {
+    const SEGUNDA = { ...DA_IA, titulo_youtube: 'Segunda da IA' };
+    await abrirCard();
+    await regerarAte(DA_IA);
+    h.regerar.mockImplementation(iaEmEspera('c1', SEGUNDA));
+    await clicarNaIa();
+
+    await clicarEmDesfazer();
+    await iaTermina();
+
+    expect(card.title).toBe('Segunda da IA');
+    expect(card.desfazerIa).toEqual(GRAVADO);
+  });
+
+  it('Regerar num corte não mexe na oferta do outro', async () => {
+    await abrirCard();
+    await regerarAte(DA_IA);
+
+    await trocarDeCorte('c2');
+    h.regerar.mockImplementation(iaEmEspera('c2', DA_IA));
+    await clicarNaIa();
+    await iaTermina();
+    expect(card.desfazerIa).toEqual(DO_OUTRO_CORTE);
+
+    await trocarDeCorte('c1');
+    expect(card.desfazerIa).toEqual(GRAVADO);
   });
 });

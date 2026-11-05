@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { geracaoIaApi } from '@/features/ia';
 import type { MetadadoCorte } from '@/types/models';
 import type { MetadadoPatch } from './api/metadados';
@@ -35,19 +34,5 @@ export function montarVersaoAnterior(meta: MetadadoCorte, naoSalvo: MetadadoPatc
     descricao_youtube: meta.descricao_youtube,
     tags_youtube: meta.tags_youtube,
     ...naoSalvo,
-  };
-}
-
-/** D-1064: a oferta de Desfazer anda com o corte dela, e só esse corte a vê, mesmo indo e voltando. */
-export function useOfertaDeDesfazer(corteId: string) {
-  const [versaoOferecida, setDesfazerIa] = useState<MetadadoPatch | null>(null);
-  const [corteDaOferta, setCorteDaOferta] = useState(corteId);
-  return {
-    desfazerIa: corteDaOferta === corteId ? versaoOferecida : null,
-    setDesfazerIa,
-    oferecerDesfazer: (corte: string, versao: MetadadoPatch | null) => {
-      setCorteDaOferta(corte);
-      setDesfazerIa(versao);
-    },
   };
 }

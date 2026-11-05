@@ -16,7 +16,7 @@ const h = vi.hoisted(() => ({
   cliques: {} as Record<string, Clique>,
   oferta: null as object | null,
   desfazerGeracao: vi.fn(),
-  setDesfazerIa: vi.fn(),
+  dispensarDesfazer: vi.fn(),
 }));
 
 vi.mock('@/components/ui/button', async (original) => {
@@ -37,7 +37,7 @@ vi.mock('../useMetadataCard', async (original) => {
       ...real.useMetadataCard(props),
       desfazerIa: h.oferta,
       desfazerGeracao: h.desfazerGeracao,
-      setDesfazerIa: h.setDesfazerIa,
+      dispensarDesfazer: h.dispensarDesfazer,
     }),
   };
 });
@@ -74,7 +74,7 @@ beforeEach(() => {
   h.cliques = {};
   h.oferta = { titulo_youtube: 'Título gravado' };
   h.desfazerGeracao.mockClear();
-  h.setDesfazerIa.mockClear();
+  h.dispensarDesfazer.mockClear();
 });
 
 describe('a faixa do Desfazer', () => {
@@ -84,7 +84,7 @@ describe('a faixa do Desfazer', () => {
     h.cliques.Desfazer();
 
     expect(h.desfazerGeracao).toHaveBeenCalledTimes(1);
-    expect(h.setDesfazerIa).toHaveBeenCalledWith(null);
+    expect(h.dispensarDesfazer).toHaveBeenCalledTimes(1);
   });
 
   it('o botão Manter só dispensa a oferta', () => {
@@ -92,7 +92,7 @@ describe('a faixa do Desfazer', () => {
 
     h.cliques.Manter();
 
-    expect(h.setDesfazerIa).toHaveBeenCalledWith(null);
+    expect(h.dispensarDesfazer).toHaveBeenCalledTimes(1);
     expect(h.desfazerGeracao).not.toHaveBeenCalled();
   });
 
