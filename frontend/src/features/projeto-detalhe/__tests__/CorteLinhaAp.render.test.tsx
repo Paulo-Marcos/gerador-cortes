@@ -26,7 +26,7 @@ const h = vi.hoisted(() => ({
   pastaPendente: false,
   janelaLarga: true,
   limiares: [] as number[],
-  primario: undefined as Record<string, () => void> | undefined,
+  primario: undefined as Parameters<typeof import('../acoesDaLinha').primarioDaLinha>[1] | undefined,
   mais: undefined as
     | { items: OverflowMenuItem[]; label?: string; grande?: boolean; onAbertoMudou?: unknown }
     | undefined,
@@ -217,10 +217,10 @@ describe('CorteLinhaAp · o principal faz o que diz (D-868)', () => {
     expect(h.atualizar.mock.calls[0][0]).toEqual({ status: 'proposto' });
   });
 
-  it('Finalizar leva à Pós do corte; Enviar chama o envio que a tela passou', () => {
+  it('o próximo passo do corte sem bruto abre o editor; Enviar chama o envio que a tela passou', () => {
     desenhar({ status: 'aprovado' });
-    h.primario!.finalizar();
-    expect(h.navegar).toHaveBeenCalledWith('/projetos/p1/post-production?corte=c7');
+    h.primario!.proximo.acao();
+    expect(h.navegar).toHaveBeenCalledWith('/projetos/p1/cortes/c7');
     h.primario!.enviarYoutube();
     expect(props.onEnviarYoutube).toHaveBeenCalledOnce();
   });
@@ -231,7 +231,7 @@ describe('CorteLinhaAp · o principal faz o que diz (D-868)', () => {
   });
 
   it('o principal forte é o do botão primário; Aprovar é o comum', () => {
-    expect(botao(arvoreDaLinha({ status: 'aprovado' }), 'Finalizar').props.className).toBe('btn btn-pri');
+    expect(botao(arvoreDaLinha({ status: 'aprovado' }), 'Gerar bruto no editor').props.className).toBe('btn btn-pri');
     expect(botao(arvoreDaLinha(), 'Aprovar').props.className).toBe('btn');
   });
 

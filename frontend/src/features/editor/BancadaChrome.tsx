@@ -48,7 +48,7 @@ export type BancadaChromeProps = {
   cortes: Corte[];
   corte: Corte;
   exportStatus: StatusExportCorte[];
-  /** Caminho da fase certa de cada corte (bruto, pós ou revisão). */
+  /** Caminho de cada corte na tela atual: trocar de corte não troca de tela. */
   caminhoDoCorte: (corte: Corte) => string;
   /** Rótulo da fase, para o subtítulo: "bruto 18:32 · trecho 46s". */
   sub: string;
@@ -84,8 +84,8 @@ export type BancadaChromeProps = {
   /** D-746: excluir o corte de vez (a tela confirma antes). Fica no topo. */
   onExcluir?: () => void;
   onNovoTrecho?: () => void;
-  /** D-746: a tela troca peças da barra padrão (bruto). A Pós usa para dizer
-   *  a verdade: primário "Renderizar final", veredito à parte, sem Salvar.
+  /** D-746: a tela troca peças da barra padrão. A Pós e o editor usam para dizer
+   *  a verdade: primário com o próximo passo, veredito à parte.
    *  Chave presente com `undefined` REMOVE a peça. */
   barra?: Partial<ChromeBarra>;
 };

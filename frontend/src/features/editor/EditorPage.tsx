@@ -7,8 +7,10 @@ import { BrutoContextStrip } from './fase1/BrutoContextStrip';
 import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { hmsParaSeg, segParaMmSs } from './timeUtils';
 import { BancadaChrome } from '@/features/editor/BancadaChrome';
+import { montarBarraDoEditor } from './acoesDoEditor';
 import { resolveWaveformWindow } from './editorEditState';
 import { rawEditorPath } from '@/features/post-production/postProductionNavigation';
+import { estaAprovado } from '@/lib/statusDoCorte';
 import { ORIGEM_API } from '@/lib/apiBase';
 import { useEditorPage } from './useEditorPage';
 import { Icon } from '@/upgrade/Icon';
@@ -19,7 +21,7 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
 }
 
 export function EditorPage() {
-  const { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef } = useEditorPage();
+  const { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, irParaPos, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef } = useEditorPage();
 
 
   if (!projetoId) return <Navigate to="/projetos" replace />;
@@ -124,9 +126,8 @@ export function EditorPage() {
 
   // ── Shell Workbench (Etapa 3): mesma orquestração, re-hospedada ──
   // Painel CORTES retrátil + centro (player 16:9 com cap → transporte →
-  // contexto → timeline flex:1) + painel direito retrátil. A lógica acima
-  // (hooks, atalhos, dirty, waveform window) é EXATAMENTE a mesma do
-  // layout legado — só o container muda.
+  // contexto → timeline flex:1) + painel direito retrátil. O principal da barra
+  // diz o próximo passo do corte (D-1041).
 
   return (
     <>
@@ -161,6 +162,7 @@ export function EditorPage() {
             }),
         }}
         onAprovar={toggleAprovado}
+        barra={montarBarraDoEditor({ aprovado: estaAprovado(corteUI.status), brutoPronto, brutoOcupado: brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, salvando: atualizarCorte.isPending, onAlternarVeredito: toggleAprovado, onGerarBruto: handleGerarBrutoPrincipal, onIrParaPos: irParaPos })}
         onExcluir={excluirCorte}
       />
 

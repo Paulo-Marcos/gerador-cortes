@@ -37,6 +37,79 @@ export function isCorteVideoPronto(
   return Boolean(status?.video_pronto || corte.is_pos_producao === 1);
 }
 
+/**
+ * D-1041: só o corte que nunca gerou nada vai ao editor, onde a primeira geração
+ * nasce dos cortes feitos lá. Com rastro de geração anterior (render, cenas, ponteiro
+ * do arquivo), o caminho segue sendo regerar na Pós, que preserva o que já foi feito.
+ * Mandar esse corte ao editor faria um laço: o editor conta o render como bruto
+ * pronto e devolveria à Pós. Lê o próprio corte: o export não lista corte devolvido
+ * a proposto, e "não sei" não pode virar "nunca gerou".
+ */
+export function nuncaGerouBruto(
+  corte: Pick<Corte, 'id' | 'is_pos_producao' | 'arquivo_clip_path' | 'cenas_remotion'>,
+  status: StatusExportCorte | undefined,
+  p: { brutoAusente: boolean; arquivosLimpos: boolean },
+): boolean {
+  return (
+    p.brutoAusente &&
+    !p.arquivosLimpos &&
+    !isCorteVideoPronto(corte, status) &&
+    !corte.arquivo_clip_path &&
+    parseCenasPayload(corte.cenas_remotion).cenas.length === 0
+  );
+}
+
+/**
+ * D-1041: o principal da Pós sem bruto dizia "a limpeza apagou" até em corte que
+ * nunca teve bruto. `arquivos_limpos` só distingue a limpeza completa: fora dela, o
+ * texto não culpa a limpeza. Render é GPU: o Enter não dispara, como já era (D-746).
+ */
+export function montarPrimarioDaPos(p: {
+  rodando: boolean;
+  progresso: number;
+  videoPronto: boolean;
+  brutoAusente: boolean;
+  arquivosLimpos: boolean;
+  nuncaGerou: boolean;
+  gerandoBruto: boolean;
+  onRenderizar: () => void;
+  onIrAoEditor: () => void;
+}) {
+  if (p.brutoAusente && p.gerandoBruto && !p.rodando) {
+    return {
+      texto: 'Gerando bruto…',
+      icone: 'loader' as const,
+      onClick: p.onRenderizar,
+      desabilitado: true,
+      semEnter: true,
+    };
+  }
+  if (p.nuncaGerou && !p.rodando) {
+    return {
+      texto: 'Gerar bruto no editor',
+      icone: 'scissors' as const,
+      onClick: p.onIrAoEditor,
+      semEnter: true,
+    };
+  }
+  return {
+    texto: p.rodando
+      ? `Renderizando ${p.progresso}%`
+      : p.videoPronto
+        ? 'Renderizar de novo'
+        : 'Renderizar final',
+    icone: p.rodando ? ('loader' as const) : ('clapperboard' as const),
+    onClick: p.onRenderizar,
+    desabilitado: p.rodando || p.brutoAusente,
+    motivo: p.brutoAusente
+      ? p.arquivosLimpos
+        ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
+        : 'Sem o vídeo bruto: regere o bruto antes de renderizar.'
+      : undefined,
+    semEnter: true,
+  };
+}
+
 export function pickPostProductionEntryCut(
   cortes: Corte[],
   statuses: StatusExportCorte[] | undefined,
