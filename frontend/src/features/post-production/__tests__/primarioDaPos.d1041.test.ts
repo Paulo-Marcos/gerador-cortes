@@ -16,6 +16,7 @@ function primario(p: Partial<Parameters<typeof montarPrimarioDaPos>[0]> = {}) {
       arquivosLimpos: false,
       nuncaGerou: false,
       gerandoBruto: false,
+      planoValidado: true,
       ...acoes,
       ...p,
     }),
