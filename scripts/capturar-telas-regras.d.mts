@@ -35,6 +35,22 @@ export function conferirTema(lido: string | null | undefined, pedido: string, te
 export function criarRegistroDeHashes(): {
   registrar(tela: string, arquivo: string, bytes: Uint8Array): string;
 };
+export type Passo =
+  | { clicar: Alvo; requisito?: string }
+  | { tecla: { key: string; code: string; tecla: number; shift?: boolean } };
+
+export type Tela = {
+  id: string;
+  titulo: string;
+  rota: string;
+  passos?: Passo[];
+  abre?: string;
+  espera?: number;
+};
+
+export const DIALOGO: string;
+export function montarTelas(projetos: { video: string; cortes: string }): { telas: Tela[]; modais: Tela[] };
+
 export function escolherProjetosPadrao(
   projetos: ProjetoDaLista[],
   prontosPorProjeto?: Record<string, number>,

@@ -8,8 +8,10 @@ import {
   conferirTema,
   criarRegistroDeHashes,
   ErroDeCaptura,
+  DIALOGO,
   escolherProjetosPadrao,
   montarClique,
+  montarTelas,
 } from '../../../../../scripts/capturar-telas-regras.mjs';
 
 // D-1069: na v0.7.0 o scripts/capturar-telas.mjs saiu com exit 0 e 13 das
@@ -163,6 +165,50 @@ describe('escolherProjetosPadrao', () => {
   it('banco sem candidato é erro, não um ID inventado', () => {
     expect(() => escolherProjetosPadrao([])).toThrow('[projetos] nenhum projeto com vídeo');
     expect(() => escolherProjetosPadrao([projetos[3]])).toThrow('dois ou mais cortes');
+  });
+});
+
+describe('montarTelas', () => {
+  const { telas, modais } = montarTelas({ video: 'V', cortes: 'C' });
+  const alvoDe = (passo: NonNullable<(typeof telas)[number]['passos']>[number]) =>
+    'clicar' in passo ? JSON.stringify(passo.clicar) : `tecla ${passo.tecla.shift ? 'Shift+' : ''}${passo.tecla.key}`;
+
+  it('todo modal confere que abriu', () => {
+    expect(modais).toHaveLength(8);
+    for (const modal of modais) expect(modal.abre, modal.id).toBeTruthy();
+    expect(modais.filter((m) => m.abre !== DIALOGO).map((m) => m.id)).toEqual(['20-form-nova-live']);
+  });
+
+  it('todo passo é um clique por nome ou uma tecla, nada mais', () => {
+    for (const { id, passos = [] } of [...telas, ...modais]) {
+      for (const passo of passos) expect('clicar' in passo || 'tecla' in passo, id).toBe(true);
+    }
+  });
+
+  // A lista abaixo é a revisada: só abre aba, menu, formulário ou modal.
+  // Ação nova entra aqui de propósito, depois de conferir que não grava nada.
+  it('os alvos são exatamente os que só abrem coisas', () => {
+    const alvos = [...telas, ...modais].flatMap(({ id, passos = [] }) => passos.map((p) => `${id}: ${alvoDe(p)}`));
+    expect(alvos).toEqual([
+      '13-config-aplicacao: {"nome":"Aplicação"}',
+      '14-config-skills: {"nomeContem":"Skills editoriais"}',
+      '20-form-nova-live: {"nome":"Nova live"}',
+      '21-modal-analise-ia: {"nome":"Mais"}',
+      '21-modal-analise-ia: {"nome":"Reanalisar"}',
+      '22-modal-auditoria: {"nome":"Mais"}',
+      '22-modal-auditoria: {"nome":"Auditar análise"}',
+      '23-modal-publicar-massa: {"nomeRegex":"^Publicar \\\\d+ cortes?\\\\b"}',
+      '24-modal-adicionar-corte: {"nome":"Novo corte"}',
+      '25-modal-atalhos-editor: tecla Shift+?',
+      '26-paleta-busca: {"nomeContem":"Buscar live, tela ou ação"}',
+      '27-modal-metadados: {"nomeComeca":"Metadados do corte #"}',
+    ]);
+  });
+
+  it('as rotas usam os projetos recebidos, sem ID fixo', () => {
+    const rotas = [...telas, ...modais].map((t) => t.rota).filter((r) => r.startsWith('/projetos/'));
+    expect(rotas.length).toBeGreaterThan(0);
+    for (const rota of rotas) expect(rota).toMatch(/^\/projetos\/(V|C)(\/|$)/);
   });
 });
 
