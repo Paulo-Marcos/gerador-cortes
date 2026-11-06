@@ -386,8 +386,8 @@ export function ScenesPostProductionPage() {
   );
 
   // ── Shell Workbench (Etapa 4): steps no topo do conteúdo da aba, painel
-  // CORTES retrátil e o EditorFase2 (player+timeline+painéis de cenas/
-  // layout/filtros com todos os atalhos) re-hospedado intacto no centro.
+  // CORTES retrátil e o EditorFase2 (player+timeline+painéis de cenas e
+  // layout com todos os atalhos) re-hospedado intacto no centro.
 
   return (
     <>
@@ -428,8 +428,8 @@ export function ScenesPostProductionPage() {
             rodando: renderFinalRunning,
             progresso: renderFinalProgress,
             videoPronto, brutoAusente, arquivosLimpos,
-            nuncaGerou,
-            gerandoBruto,
+            nuncaGerou, gerandoBruto,
+            planoValidado: corte.cenas_validadas === 1,
             onRenderizar: renderizarFinal,
             onIrAoEditor: () => navigate(rawEditorPath(projetoId, corte.id)),
           }),

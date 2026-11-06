@@ -15,6 +15,8 @@ Conceitos:
   o pipeline não finaliza o corte (não marca PROCESSADO).
 """
 
+from app.domain.compartilhado.erros import PedidoInvalido
+
 ORDEM_FASES = {"grade": 1, "overlays": 2, "render_final": 3}
 
 # Aliases legados de retomada: antes "compose"/"encode" eram fases distintas;
@@ -68,3 +70,25 @@ def eh_render_parcial(parar_em: str | None) -> bool:
     """
     limite = normalizar_fase(parar_em)
     return limite in ORDEM_FASES and limite != "render_final"
+
+
+PLANO_NAO_VALIDADO = (
+    "O plano de cenas ainda não foi validado. Confira as cenas e valide o plano "
+    "para renderizar o final."
+)
+
+
+def exigir_plano_validado(parar_em: str | None, plano_validado: bool) -> None:
+    """RN-37: o render final só sai com o plano de cenas validado (D-1072).
+
+    O vídeo final leva as cenas para o público; sem o operador ter conferido o
+    plano, sairia o que a IA propôs. O render parcial (`grade`, `overlays`) não
+    produz o vídeo e segue livre, para corrigir uma etapa sem validar nada.
+    Fase desconhecida em `parar_em` conta como final: na dúvida, recusa.
+
+    >>> exigir_plano_validado("grade", plano_validado=False)
+    >>> exigir_plano_validado(None, plano_validado=True)
+    """
+    if plano_validado or eh_render_parcial(parar_em):
+        return
+    raise PedidoInvalido(PLANO_NAO_VALIDADO)

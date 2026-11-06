@@ -53,16 +53,6 @@ export function gradedVideoUrl(projetoId: string, corteId: string): string {
   return `${VIDEOS_BASE}/${projetoId}/cortes/${corteId}/graded/clip_graded.mp4`;
 }
 
-export function versaoVideoUrl(
-  projetoId: string,
-  corteId: string,
-  filtro: string,
-  preview: boolean,
-): string {
-  const arquivo = preview ? 'preview.mp4' : 'video.mp4';
-  return `${VIDEOS_BASE}/${projetoId}/cortes/${corteId}/versoes/${filtro}/${arquivo}`;
-}
-
 export function rawVideoRedirectUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
 }

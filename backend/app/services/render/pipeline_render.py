@@ -14,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import app.domain.corte.render_etapas as render_etapas
 from app.config import settings
 from app.core.channel_paths import projetos_dir
 from app.core.logging import (
@@ -301,14 +302,13 @@ async def _preparar_contexto(
     report: Callable[[int, str], None],
     started_at: float,
 ) -> _RenderCtx:
-    """Carrega corte/projeto, monta os paths do corte e o `event_log`.
+    """Carrega corte/projeto, monta os paths e o `event_log`; emite `pipeline_iniciado`.
 
-    Emite `pipeline_iniciado` e devolve o `_RenderCtx` que as fases
-    consomem. Concentra o setup que era inline no orquestrador.
-    """
+    RN-37 (D-1072): o plano se confere de novo após a vaga de render, que demora."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise ValueError(f"Corte '{corte_id}' não encontrado")
+    render_etapas.exigir_plano_validado(parar_em, plano_validado=bool(corte.cenas_validadas))
 
     projeto = await db.get(Projeto, corte.projeto_id)
     render_config = ProjetoRenderConfig.preparar(projeto, corte)
