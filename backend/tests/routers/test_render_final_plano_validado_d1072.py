@@ -241,3 +241,57 @@ async def test_validar_o_plano_vazio_destrava_o_render(cliente, fabrica, disparo
 
     assert _renderizar(cliente, "c-pendente").status_code == 200
     assert [d["corte_id"] for d in disparos] == ["c-pendente"]
+
+
+# ── A espera pela vaga de render não fura a regra ──
+#
+# A rota confere o plano no pedido, mas o pipeline só lê o corte depois de pegar
+# uma das vagas de render, o que pode levar minutos. Se a marca cair nessa espera
+# (o operador salvou cenas, a IA regerou), o pipeline confere de novo e recusa.
+
+
+@pytest.mark.asyncio
+async def test_marca_que_cai_na_fila_de_render_recusa_no_pipeline(fabrica, monkeypatch, tmp_path):
+    import asyncio
+
+    from app.services.render import pipeline_render, remotion_render
+
+    monkeypatch.setattr(pipeline_render, "projetos_dir", lambda: tmp_path)
+    vaga = remotion_render._obter_render_gate()
+    ocupadas = 0
+    while not vaga.locked():
+        await vaga.acquire()
+        ocupadas += 1
+
+    tarefa = await RemotionRenderService.renderizar_corte("c-validado")
+    await asyncio.sleep(0)
+    async with fabrica() as db:
+        (await db.get(Corte, "c-validado")).cenas_validadas = 0
+        await db.commit()
+    for _ in range(ocupadas):
+        vaga.release()
+
+    with pytest.raises(PedidoInvalido):
+        await tarefa
+    await asyncio.sleep(0)
+    progresso = RenderProgressStore.get("c-validado").to_dict()
+    assert progresso["state"] == "error"
+    assert progresso["error"] == PLANO_NAO_VALIDADO
+
+
+@pytest.mark.asyncio
+async def test_pipeline_confere_o_plano_ao_preparar(fabrica, monkeypatch, tmp_path):
+    from app.services.render import pipeline_render
+
+    monkeypatch.setattr(pipeline_render, "projetos_dir", lambda: tmp_path)
+
+    async def preparar(db, corte_id, parar_em=None):
+        return await pipeline_render._preparar_contexto(
+            db, corte_id, "f", True, "auto", parar_em, lambda *_: None, 0.0
+        )
+
+    async with fabrica() as db:
+        with pytest.raises(PedidoInvalido, match="plano de cenas ainda não foi validado"):
+            await preparar(db, "c-pendente")
+        assert (await preparar(db, "c-pendente", parar_em="grade")).corte_id == "c-pendente"
+        assert (await preparar(db, "c-validado")).corte_id == "c-validado"
