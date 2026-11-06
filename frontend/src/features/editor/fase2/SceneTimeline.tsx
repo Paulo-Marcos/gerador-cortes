@@ -6,8 +6,8 @@ import type { CenaRemotion, Desvio, SegmentoDetectado, WaveformPeaksResponse } f
 import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { metaCena } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
-import { ComOrigensDoPlano, LegendaDaOrigem } from './CenaComOrigem';
-import { ORIGENS } from './planoDasCenas';
+import { ComOrigensDoPlano, IconeDaOrigem, LegendaDaOrigem } from './CenaComOrigem';
+import { ORIGENS, tirarCenasRiscadas } from './planoDasCenas';
 import type { YoutubeLayout, YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
 import { limitar } from '@/lib/limitar';
 import { Icon } from '@/upgrade/Icon';
@@ -320,7 +320,7 @@ export function SceneTimeline({
   const innerContentRef = useRef<HTMLDivElement | null>(null);
   const hasSelectedRegion = selectedRegionIdx != null && selectedRegionIdx >= 0;
   const safeDuration = Math.max(1, duration);
-  const ordenadas = [...cenas].sort((a, b) => a.inicio - b.inicio);
+  const ordenadas = (readOnly ? tirarCenasRiscadas(cenas) : [...cenas]).sort((a, b) => a.inicio - b.inicio);
   const regioes: YoutubeLayoutRegion[] = layoutYoutube?.regioes ?? [];
   const displayedRegioes = dragState
     ? regioes.map((region, idx) => (idx === dragState.index ? dragState.region : region))
@@ -767,7 +767,7 @@ export function SceneTimeline({
                   <button
                     key={`${cena.tipo}-${idx}-${cena.inicio}`}
                     type="button"
-                    title={`${meta.label} · ${cena.texto || ''} · ${segParaMmSs(cena.inicio, true)}`}
+                    title={`${meta.label}${origens ? ` · ${ORIGENS[origens[idx]].rotulo}` : ''} · ${cena.texto || ''} · ${segParaMmSs(cena.inicio, true)}`}
                     onKeyDown={blockKeyboardActivation}
                     onClick={(event) => {
                       if (!podeNavegar) return;
@@ -785,7 +785,7 @@ export function SceneTimeline({
                       onSeek(tempo);
                     }}
                     disabled={!podeNavegar}
-                    aria-label={`Cena ${meta.label}`}
+                    aria-label={`Cena ${meta.label}${origens ? `, ${ORIGENS[origens[idx]].rotulo}` : ''}`}
                     aria-pressed={isSelected}
                     className={cn(
                       'absolute z-10 flex items-center gap-1.5 overflow-hidden rounded-[5px] border px-2 transition-colors',
@@ -803,7 +803,7 @@ export function SceneTimeline({
                   >
                     <SceneTypeIcon tipo={cena.tipo} />
                     <span className="truncate text-[10.5px] font-semibold text-[var(--wb-text)]">
-                      {cena.texto || meta.label}
+                      {origens && <IconeDaOrigem origem={origens[idx]} />}{cena.texto || meta.label}
                     </span>
                   </button>
                 );

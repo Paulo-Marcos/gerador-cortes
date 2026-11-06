@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { tirarCenasRiscadas } from '@video-renderer/public-api';
 import { avisosDaCena, useAvisosDasCenas } from '@/features/editor/useCenas';
 import type { CenaRemotion } from '@/types/models';
+import type { IconName } from '@/upgrade/Icon';
 import { validateSceneOverlaps, type SceneValidationResult } from './sceneValidation';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -12,6 +14,9 @@ import { validateSceneOverlaps, type SceneValidationResult } from './sceneValida
 export type OrigemNoPlano = 'conferida' | 'conferir' | 'manual' | 'riscada';
 
 type Aviso = Parameters<typeof avisosDaCena>[0][number];
+
+/** A mesma regra do render: a riscada fica no plano e fora do vídeo. */
+export { tirarCenasRiscadas };
 
 /**
  * A riscada vem antes de tudo: não vai ao vídeo. A manual vem antes dos avisos, porque
@@ -27,6 +32,13 @@ export function origemNoPlano(cena: CenaRemotion, avisos: string[]): OrigemNoPla
 export const origensDoPlano = (cenas: CenaRemotion[], avisos: Aviso[]): OrigemNoPlano[] =>
   cenas.map((cena) => origemNoPlano(cena, avisosDaCena(avisos, cena)));
 
+/**
+ * Os avisos que ainda contam: os das cenas que vão ao vídeo. O aviso de uma cena riscada
+ * não pede mais nada (a barra de pendências do corte também não o conta).
+ */
+export const avisosDoQueVaiAoVideo = <A extends Aviso>(avisos: A[], cenas: CenaRemotion[]): A[] =>
+  avisos.filter((aviso) => !cenas.some((cena) => cena.riscada && avisosDaCena([aviso], cena).length > 0));
+
 /** Quantas cenas ainda pedem conferência: o "faltam N" do Validar o plano. */
 export const contarQuantasFaltam = (origens: OrigemNoPlano[]): number =>
   origens.filter((origem) => origem === 'conferir').length;
@@ -38,21 +50,25 @@ export const contarQuantasFaltam = (origens: OrigemNoPlano[]): number =>
 export function usePlanoDasCenas(corteId: string, cenasOrdenadas: CenaRemotion[]) {
   const avisos = useAvisosDasCenas(corteId);
   return useMemo(() => {
-    const cenasDoRender = cenasOrdenadas.filter((cena) => !cena.riscada);
+    const cenasDoRender = tirarCenasRiscadas(cenasOrdenadas);
     const origens = origensDoPlano(cenasOrdenadas, avisos);
     const riscadas = cenasOrdenadas.length - cenasDoRender.length;
     return { cenasDoRender, riscadas, origens, faltam: contarQuantasFaltam(origens) };
   }, [cenasOrdenadas, avisos]);
 }
 
-/** O que cada origem mostra: o rótulo do card, o da legenda e as cores (fundo, borda, texto). */
+/**
+ * O que cada origem mostra: o rótulo do card, o da legenda, as cores (fundo, borda, texto)
+ * e o ícone. O ícone e o tracejado distinguem a origem sem depender só da cor (WCAG 1.4.1).
+ */
 export const ORIGENS: Record<
   OrigemNoPlano,
-  { rotulo: string; legenda: string; soft: string; border: string; color: string; tracejada?: boolean }
+  { rotulo: string; legenda: string; icone: IconName; soft: string; border: string; color: string; tracejada?: boolean }
 > = {
   conferida: {
     rotulo: 'da IA · conferida',
     legenda: 'da IA, conferida',
+    icone: 'check',
     soft: 'var(--wb-info-soft)',
     border: 'var(--wb-info)',
     color: 'var(--wb-info)',
@@ -60,6 +76,7 @@ export const ORIGENS: Record<
   conferir: {
     rotulo: 'conferir',
     legenda: 'pede conferência',
+    icone: 'triangle-alert',
     soft: 'var(--wb-warn-soft)',
     border: 'var(--wb-warn)',
     color: 'var(--wb-warn-ink)',
@@ -69,6 +86,7 @@ export const ORIGENS: Record<
   manual: {
     rotulo: 'manual',
     legenda: 'manual',
+    icone: 'pen',
     soft: 'var(--wb-ok-soft)',
     border: 'var(--wb-ok)',
     color: 'var(--wb-ok-ink)',
@@ -76,6 +94,7 @@ export const ORIGENS: Record<
   riscada: {
     rotulo: 'riscada',
     legenda: 'riscada',
+    icone: 'eye-off',
     soft: 'var(--wb-bg-inset)',
     border: 'var(--wb-text-dim)',
     color: 'var(--wb-text-dim)',
@@ -132,7 +151,7 @@ export function criarCenaManual(cenasOrdenadas: CenaRemotion[]): CenaRemotion {
   };
 }
 
-export const riscarCena =(cena: CenaRemotion): CenaRemotion => ({ ...cena, riscada: true });
+export const riscarCena = (cena: CenaRemotion): CenaRemotion => ({ ...cena, riscada: true });
 
 /** Tira a marca em vez de gravar `false`: a cena volta a ser como era. */
 export function trazerCenaDeVolta(cena: CenaRemotion): CenaRemotion {

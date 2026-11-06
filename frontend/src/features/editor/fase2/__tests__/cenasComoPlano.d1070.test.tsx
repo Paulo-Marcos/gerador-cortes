@@ -235,6 +235,8 @@ describe('o card', () => {
     expect(html).toContain('<s class');
     expect(html).toContain('Pergunta riscada');
     expect(html).toContain('fora do render');
+    // O texto da linha do intervalo passa de 4.5:1: `--wb-text-dim` ficava entre 2.96 e 3.63.
+    expect(html).toMatch(/text-\[var\(--wb-text-mute\)\]">[^<]*fora do render/);
     expect(html).not.toContain('editor');
     procurarBotao(elemento, 'Trazer de volta')?.props.onClick();
     expect(onTrazerDeVolta).toHaveBeenCalledOnce();
@@ -308,5 +310,34 @@ describe('a mesma cor na linha do tempo', () => {
     const html = timeline(undefined);
     expect(html).not.toContain('pede conferência');
     expect(blocos(html)[0]).not.toContain('var(--wb-info)');
+  });
+
+  it('a origem não depende só da cor: o bloco traz o ícone e diz a origem ao leitor de tela', () => {
+    const [conferida, conferir, manual, riscada] = blocos(timeline('c1'));
+    expect(conferida).toContain('aria-label="Cena Enfase, da IA · conferida"');
+    expect(conferir).toContain(', conferir"');
+    expect(manual).toContain('title="Enfase · manual · ');
+    expect(riscada).toContain(', riscada"');
+    const html = timeline('c1');
+    // O último ícone antes do texto do bloco (o primeiro é o do tipo da cena).
+    const iconeAntes = (texto: string) =>
+      [...html.slice(0, html.indexOf(`</svg>${texto}`)).matchAll(/lucide-([a-z-]+)/g)].at(-1)?.[1];
+    expect(iconeAntes('Conferida')).toBe('check');
+    expect(iconeAntes('Com aviso')).toBe('triangle-alert');
+    expect(iconeAntes('Escrita à mão')).toBe('pen');
+    expect(iconeAntes('Riscada<')).toBe('eye-off');
+  });
+
+  it('a legenda leva o mesmo ícone do bloco', () => {
+    const html = renderToStaticMarkup(<LegendaDaOrigem />);
+    for (const icone of ['check', 'triangle-alert', 'pen', 'eye-off']) expect(html).toContain(`lucide-${icone}`);
+  });
+
+  it('só leitura (Revisão final) não desenha a riscada: ela não está no vídeo', () => {
+    const html = renderToStaticMarkup(
+      <SceneTimeline cenas={PLANO} currentTime={0} duration={60} onSeek={vi.fn()} readOnly seekable />,
+    );
+    expect(html).toContain('Conferida');
+    expect(html).not.toContain('Riscada');
   });
 });

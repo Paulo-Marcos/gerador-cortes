@@ -72,7 +72,7 @@ export function PlanoDaCena({
           className="min-w-0 flex-1 border-0 bg-transparent text-left"
           title="Ir para essa cena"
         >
-          <span className="block font-code text-[11px] text-[var(--wb-text-dim)]">
+          <span className="block font-code text-[11px] text-[var(--wb-text-mute)]">
             {cena.inicio.toFixed(1)}s → {cena.fim.toFixed(1)}s · {metaCena(cena.tipo).label} · fora do render
           </span>
           <s className="block truncate text-[12.5px] text-[var(--wb-text-mute)]">{cena.texto || metaCena(cena.tipo).label}</s>
@@ -130,6 +130,11 @@ function OrigensDoCorte({
   return <>{children(origensDoPlano(cenas, avisos))}</>;
 }
 
+/** O ícone da origem: a mesma marca no bloco da linha do tempo e na legenda. */
+export function IconeDaOrigem({ origem }: { origem: OrigemNoPlano }) {
+  return <Icon name={ORIGENS[origem].icone} className="mr-0.5 inline flex-shrink-0 align-[-1px]" />;
+}
+
 /** A legenda das cores, igual no painel e na linha do tempo. */
 export function LegendaDaOrigem({ className }: { className?: string }) {
   return (
@@ -141,6 +146,7 @@ export function LegendaDaOrigem({ className }: { className?: string }) {
             className={cn('inline-block h-2.5 w-2.5 rounded-[2px] border', ORIGENS[origem].tracejada && 'border-dashed')}
             style={{ background: ORIGENS[origem].soft, borderColor: ORIGENS[origem].border }}
           />
+          <IconeDaOrigem origem={origem} />
           {ORIGENS[origem].legenda}
         </span>
       ))}
