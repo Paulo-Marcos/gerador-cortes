@@ -137,6 +137,12 @@
     "ancora_perdida": {
       "type": "boolean"
     },
+    "riscada": {
+      "type": "boolean"
+    },
+    "manual": {
+      "type": "boolean"
+    },
     "retrato_url": {
       "type": "string"
     },

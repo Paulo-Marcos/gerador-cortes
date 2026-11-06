@@ -2,7 +2,7 @@ import { AbsoluteFill, Sequence, useVideoConfig } from "remotion";
 import type { OverlayTimelineProps } from "./overlay-schema";
 import { FrameOffsetContext } from "./frame-context";
 import { renderCenaV2 } from "./cenas-v2";
-import { normalizarCenaRemotion } from "./schema";
+import { normalizarCenaRemotion, tirarCenasRiscadas } from "./schema";
 import { CardLayoutContext, FontPresetProvider, SombraContext } from "./cenas-v2/_shared";
 import { EstiloDasCenasProvider } from "./cenas-limpo";
 import { continuaNaProxima } from "./cenas-limpo/movimento";
@@ -15,13 +15,15 @@ import { SharedCardZoneFrame } from "./shared-card-zone";
  * próprio offset temporal.
  */
 export const OverlayTimelineV2: React.FC<OverlayTimelineProps> = ({
-  cenas,
+  cenas: cenasDoPlano,
   sombraNivelPadrao,
   layoutCardPadrao,
   fontPreset,
   estiloCenas,
 }) => {
   const { fps } = useVideoConfig();
+  // D-1070: a riscada sai antes do morph, para não contar como vizinha de ninguém.
+  const cenas = tirarCenasRiscadas(cenasDoPlano);
   // D-918: o morph do estilo limpo — quem continua quem, entre vizinhas.
   const normalizadas = cenas.map((cena) => normalizarCenaRemotion(cena));
 

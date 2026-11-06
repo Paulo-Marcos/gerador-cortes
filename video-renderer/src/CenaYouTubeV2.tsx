@@ -4,7 +4,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { normalizarCenaRemotion, YouTubeProps } from "./schema";
+import { normalizarCenaRemotion, tirarCenasRiscadas, YouTubeProps } from "./schema";
 import { FrameOffsetContext } from "./frame-context";
 import { renderCenaV2 } from "./cenas-v2";
 import { CardLayoutContext, FontPresetProvider, SombraContext } from "./cenas-v2/_shared";
@@ -53,7 +53,7 @@ export const CenaYouTubeV2: React.FC<YouTubeProps> = ({
           <SombraContext.Provider value={sombraNivelPadrao}>
             <CardLayoutContext.Provider value={layoutCardPadrao}>
               <FrameOffsetContext.Provider value={startOffset}>
-                {cenas.map((cena, index) => {
+                {tirarCenasRiscadas(cenas).map((cena, index) => {
                   const cenaNormalizada = normalizarCenaRemotion(cena);
                   const isActive =
                     currentTime >= cenaNormalizada.inicio &&

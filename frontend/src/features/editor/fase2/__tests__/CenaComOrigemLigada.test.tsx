@@ -35,7 +35,9 @@ describe('o aviso chega à cena certa da lista', () => {
           ativa={false}
           sobreposta={false}
           onChange={vi.fn()}
-          onRemove={vi.fn()}
+          origem="conferir"
+          onRiscar={vi.fn()}
+          onTrazerDeVolta={vi.fn()}
           onSeek={vi.fn()}
         />
         </TooltipProvider>

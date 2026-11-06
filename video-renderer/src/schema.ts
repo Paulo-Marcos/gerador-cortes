@@ -165,6 +165,12 @@ const cenaBaseSchema = z.object({
   frase_ancora: z.string().optional(),   // guardada quando a frase sai do corte
   ancora_perdida: z.boolean().optional(),
 
+  // O plano de cenas da Pós (D-1070): também não mudam o visual. A riscada fica no
+  // plano para poder voltar, mas sai do vídeo (`tirarCenasRiscadas`). A manual é a que
+  // o operador criou ou reescreveu.
+  riscada: z.boolean().optional(),
+  manual: z.boolean().optional(),
+
   // Retrato (ficha_biografica): URL absoluta ou relativa (/api/retratos/slug)
   // para a foto do personagem. Quando ausente, a cena renderiza placeholder.
   retrato_url: z.string().optional(),
@@ -196,6 +202,10 @@ export const cenaSchema = z.preprocess((valor) => {
 }, cenaBaseSchema);
 
 export type CenaRemotion = z.infer<typeof cenaSchema>;
+
+/** As cenas que vão ao vídeo: a riscada continua no plano, mas não entra no render (D-1070). */
+export const tirarCenasRiscadas = <T extends { riscada?: boolean }>(cenas: readonly T[]): T[] =>
+  cenas.filter((cena) => !cena.riscada);
 
 // ─── Schema CenaYouTube ────────────────────────────────────────────────────
 export const youtubeSchema = z.object({

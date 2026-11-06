@@ -27,14 +27,22 @@ export function avisosDaCena(
  * acompanha a versão do corte no cache: salvou ou regerou, ela confere de novo.
  */
 export function useAvisosDaCena(corteId: string, cena: CenaRemotion): string[] {
+  return avisosDaCena(useAvisosDasCenas(corteId), cena);
+}
+
+/** Os avisos de todas as cenas do corte, para o plano (D-1070); sem corte, nenhum. */
+export function useAvisosDasCenas(corteId: string | undefined) {
   const { dataUpdatedAt } = useCorte(corteId);
   const { data } = useQuery({
-    queryKey: conferenciaDaOrigemKey(corteId, dataUpdatedAt),
-    queryFn: () => cenasApi.conferirOrigem(corteId),
+    queryKey: conferenciaDaOrigemKey(corteId ?? '', dataUpdatedAt),
+    queryFn: () => cenasApi.conferirOrigem(corteId!),
+    enabled: Boolean(corteId),
     placeholderData: keepPreviousData,
   });
-  return avisosDaCena(data?.avisos ?? [], cena);
+  return data?.avisos ?? SEM_AVISOS;
 }
+
+const SEM_AVISOS: { tipo: string | null; inicio: number; mensagem: string }[] = [];
 
 export function useGerarCenasRemotion(corteId: string) {
   const qc = useQueryClient();

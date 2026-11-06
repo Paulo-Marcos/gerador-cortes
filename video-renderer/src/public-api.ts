@@ -7,6 +7,8 @@
 
 // O contrato da cena: o schema zod é a fonte, e o tipo sai dele.
 export { cenaSchema, type CenaRemotion } from "./schema";
+// D-1070: a prévia tira as riscadas pela mesma regra do render.
+export { tirarCenasRiscadas } from "./schema";
 
 // O que a prévia do editor precisa para desenhar uma cena como o render.
 export { renderCenaV2 } from "./cenas-v2";

@@ -196,7 +196,7 @@ describe('a geração é do corte, não da tela', () => {
 
 describe('o painel enquanto gera', () => {
   const cena = { tipo: 'barra_inferior', inicio: 0, fim: 5, texto: 'Cena antiga' };
-  const validar = /<button(?:(?!<\/button>)[\s\S])*?Marcar validadas/;
+  const validar = /<button(?:(?!<\/button>)[\s\S])*?Validar o plano/;
 
   it('não deixa validar as cenas que estão para ser substituídas', () => {
     const qc = new QueryClient();

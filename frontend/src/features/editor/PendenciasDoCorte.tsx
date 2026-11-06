@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { conferenciaDaOrigemKey } from '@/shared/chavesDeCache';
-import type { Corte } from '@/types/models';
+import type { CenaRemotion, Corte } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 import { cenasApi } from './api/cenas';
+import { avisosDoQueVaiAoVideo } from './fase2/planoDasCenas';
 import { useStatusBruto } from './useBruto';
 import { useCorte } from './useCortes';
 
@@ -43,6 +44,16 @@ export function retratoDoCorte(
   };
 }
 
+/**
+ * As cenas gravadas do corte, venham como lista ou no envelope com `cenas`. O contrato
+ * HTTP tipa a cena por cima (`tipo` é texto livre); daqui só se lê tipo, início e riscada.
+ */
+function cenasDoCorte(corte: Pick<Corte, 'cenas_remotion'>): CenaRemotion[] {
+  const cenas = corte.cenas_remotion;
+  return (Array.isArray(cenas) ? cenas : (cenas?.cenas ?? [])) as unknown as CenaRemotion[];
+}
+
+// D-1070: o aviso de uma cena riscada não conta; ela não vai ao vídeo.
 export function PendenciasDoCorte({ corte }: { corte: Corte }) {
   const { dataUpdatedAt } = useCorte(corte.id);
   const statusBruto = useStatusBruto(corte.id);
@@ -54,7 +65,7 @@ export function PendenciasDoCorte({ corte }: { corte: Corte }) {
   const pendencias = listarPendencias(
     retratoDoCorte(corte, {
       brutoDefasado: Boolean(statusBruto.data?.bruto_defasado),
-      avisosDeCena: conferencia.data?.avisos?.length ?? 0,
+      avisosDeCena: avisosDoQueVaiAoVideo(conferencia.data?.avisos ?? [], cenasDoCorte(corte)).length,
     }),
   );
   if (pendencias.length === 0) return null;

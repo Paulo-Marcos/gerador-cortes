@@ -2,15 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { fetchWaveformPeaks, waveformPeaksUrl } from '@/lib/api';
-import type {
-  CenaRemotion,
-  Desvio,
-  SegmentoDetectado,
-  WaveformPeaksResponse,
-} from '@/types/models';
+import type { CenaRemotion, Desvio, SegmentoDetectado, WaveformPeaksResponse } from '@/types/models';
 import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { metaCena } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
+import { ComOrigensDoPlano, IconeDaOrigem, LegendaDaOrigem } from './CenaComOrigem';
+import { ORIGENS, tirarCenasRiscadas } from './planoDasCenas';
 import type { YoutubeLayout, YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
 import { limitar } from '@/lib/limitar';
 import { Icon } from '@/upgrade/Icon';
@@ -118,6 +115,24 @@ const WAVEFORM_BAR_COUNT = 220;
  *  acionar o onClick do <button> via teclado — isso causava conflito com
  *  o atalho global de play/pause (Space) e "travamento" indesejado de
  *  segmentos quando o usuario apertava Space com um bloco focado. */
+/** As cores do bloco da cena (a da origem no plano, D-1070, ou a do tipo) e o destaque. */
+type CorDoBloco = { soft: string; border: string; color: string; tracejada?: boolean };
+function coresDoBloco(cor: CorDoBloco, isSelected: boolean, isActive: boolean): React.CSSProperties {
+  const destaque = isSelected ? 'var(--wb-accent)' : isActive ? cor.color : null;
+  return {
+    background: destaque ? `color-mix(in oklch, ${destaque} 30%, var(--wb-bg-card))` : cor.soft,
+    borderColor: destaque ?? cor.border,
+    borderWidth: destaque ? 2 : 1,
+    borderStyle: cor.tracejada ? 'dashed' : undefined,
+    color: cor.color,
+    boxShadow: isSelected
+      ? '0 0 0 2px color-mix(in oklch, var(--wb-accent) 45%, transparent)'
+      : isActive
+        ? 'var(--wb-shadow)'
+        : undefined,
+  };
+}
+
 function blockKeyboardActivation(event: React.KeyboardEvent<HTMLElement>): void {
   if (event.key === ' ' || event.key === 'Enter') {
     event.preventDefault();
@@ -305,7 +320,7 @@ export function SceneTimeline({
   const innerContentRef = useRef<HTMLDivElement | null>(null);
   const hasSelectedRegion = selectedRegionIdx != null && selectedRegionIdx >= 0;
   const safeDuration = Math.max(1, duration);
-  const ordenadas = [...cenas].sort((a, b) => a.inicio - b.inicio);
+  const ordenadas = (readOnly ? tirarCenasRiscadas(cenas) : [...cenas]).sort((a, b) => a.inicio - b.inicio);
   const regioes: YoutubeLayoutRegion[] = layoutYoutube?.regioes ?? [];
   const displayedRegioes = dragState
     ? regioes.map((region, idx) => (idx === dragState.index ? dragState.region : region))
@@ -741,10 +756,10 @@ export function SceneTimeline({
               onClick={handleTrackClick}
             >
               <WaveformBackdrop bars={waveformBars} />
-              {ordenadas.map((cena, idx) => {
+              <ComOrigensDoPlano corteId={waveformCorteId} cenas={ordenadas}>{(origens) => ordenadas.map((cena, idx) => {
                 const left = Math.max(0, Math.min(100, (cena.inicio / safeDuration) * 100));
                 const width = Math.max(1, ((cena.fim - cena.inicio) / safeDuration) * 100);
-                const style = sceneTypeStyle(cena.tipo);
+                const style = origens ? ORIGENS[origens[idx]] : sceneTypeStyle(cena.tipo);
                 const meta = metaCena(cena.tipo);
                 const isActive = activeIdx === idx;
                 const isSelected = selectedCenaIdx === idx;
@@ -752,7 +767,7 @@ export function SceneTimeline({
                   <button
                     key={`${cena.tipo}-${idx}-${cena.inicio}`}
                     type="button"
-                    title={`${meta.label} · ${cena.texto || ''} · ${segParaMmSs(cena.inicio, true)}`}
+                    title={`${meta.label}${origens ? ` · ${ORIGENS[origens[idx]].rotulo}` : ''} · ${cena.texto || ''} · ${segParaMmSs(cena.inicio, true)}`}
                     onKeyDown={blockKeyboardActivation}
                     onClick={(event) => {
                       if (!podeNavegar) return;
@@ -770,7 +785,7 @@ export function SceneTimeline({
                       onSeek(tempo);
                     }}
                     disabled={!podeNavegar}
-                    aria-label={`Cena ${meta.label}`}
+                    aria-label={`Cena ${meta.label}${origens ? `, ${ORIGENS[origens[idx]].rotulo}` : ''}`}
                     aria-pressed={isSelected}
                     className={cn(
                       'absolute z-10 flex items-center gap-1.5 overflow-hidden rounded-[5px] border px-2 transition-colors',
@@ -783,35 +798,20 @@ export function SceneTimeline({
                       width: `${width}%`,
                       top: 4,
                       bottom: 4,
-                      background: isSelected
-                        ? 'color-mix(in oklch, var(--wb-accent) 30%, var(--wb-bg-card))'
-                        : isActive
-                          ? `color-mix(in oklch, ${style.color} 30%, var(--wb-bg-card))`
-                          : style.soft,
-                      borderColor: isSelected
-                        ? 'var(--wb-accent)'
-                        : isActive
-                          ? style.color
-                          : style.border,
-                      borderWidth: isSelected || isActive ? 2 : 1,
-                      color: style.color,
-                      boxShadow: isSelected
-                        ? '0 0 0 2px color-mix(in oklch, var(--wb-accent) 45%, transparent)'
-                        : isActive
-                          ? 'var(--wb-shadow)'
-                          : undefined,
+                      ...coresDoBloco(style, isSelected, isActive),
                     }}
                   >
                     <SceneTypeIcon tipo={cena.tipo} />
                     <span className="truncate text-[10.5px] font-semibold text-[var(--wb-text)]">
-                      {cena.texto || meta.label}
+                      {origens && <IconeDaOrigem origem={origens[idx]} />}{cena.texto || meta.label}
                     </span>
                   </button>
                 );
-              })}
+              })}</ComOrigensDoPlano>
             </div>
           </div>
 
+          {waveformCorteId && ordenadas.length > 0 && <LegendaDaOrigem className="mb-1.5" />}
           {/* Trilha Layout YT (I-029 v2: mais alta, sem rotulo "compartilhada/full"). */}
           <div className="flex items-center gap-2">
             <div
