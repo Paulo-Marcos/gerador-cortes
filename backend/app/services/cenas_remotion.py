@@ -7,14 +7,13 @@ from datetime import datetime
 from app.core.logging import operational_debug, operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
-from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
+from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
     coalescer_chaves_mascote,
-    extrair_cenas_remotion,
 )
 from app.domain.corte.origem_da_cena import CONTRATO_DA_ORIGEM
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo_falante
@@ -148,7 +147,8 @@ class CenasRemotionService:
     async def validar(corte_id: str, validado: bool) -> Corte:
         """Marca — ou desmarca — as cenas do corte como conferidas pelo editor (D-705).
 
-        Validar exige ao menos uma cena salva no roteiro visual; desfazer, não.
+        D-1072 (RN-37): o plano vazio também se valida. É a decisão do operador que
+        destrava o render final, não a existência de cenas.
         """
         async with AsyncSessionLocal() as db:
             async with db.begin():
@@ -156,10 +156,6 @@ class CenasRemotionService:
                 if not corte:
                     raise NaoEncontrado("Corte nao encontrado")
                 if validado:
-                    if not extrair_cenas_remotion(json.loads(corte.cenas_remotion or "[]")):
-                        raise PedidoInvalido(
-                            "Nao ha cenas para validar. Gere ou importe cenas antes."
-                        )
                     corte.cenas_validadas = 1
                     corte.cenas_validadas_em = datetime.utcnow()
                 else:
