@@ -29,6 +29,7 @@ class _FakeDB:
                 id="corteY",
                 projeto_id="projX",
                 arquivo_clip_path=None,
+                cenas_validadas=1,
             )
         return types.SimpleNamespace(
             layout_youtube_padrao=None,
