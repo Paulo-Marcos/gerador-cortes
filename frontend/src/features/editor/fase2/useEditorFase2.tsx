@@ -80,9 +80,6 @@ export function useEditorFase2({
   // tem ref atribuida; aba inativa fica nula e a tecla vira no-op.
   const cenasPanelRef = useRef<CenasPanelHandle>(null);
   const layoutPanelRef = useRef<YoutubeLayoutPanelHandle>(null);
-  // Bruto pronto = clip raw existe em disco. Sem isso, ffmpeg não tem o que
-  // filtrar e o backend rejeita a chamada de processar-multiversion.
-  const brutoPronto = Boolean(corte.arquivo_clip_path);
 
   // Mesma queryKey usada pelo RendererConfigControls — alteração no dropdown
   // refresca esta query e o player re-renderiza com a versão/sombra atualizadas.
@@ -96,8 +93,6 @@ export function useEditorFase2({
     queryFn: settingsApi.obterSettings,
     staleTime: 30_000,
   });
-  // I-023: a aba "Filtros" da Pós-Produção é só para testes; cuida sozinha
-  // de sugerir o filtro_global_padrao como seleção inicial.
   const fontePresetSelecionado = projeto?.fonte_preset ?? 'atual';
   // F-048: cascade lazy global -> projeto -> corte. O resultado e o layout
   // efetivo visto pelo preview e usado pelo backend ao renderizar.
@@ -486,5 +481,5 @@ export function useEditorFase2({
   );
   useShortcuts(editorBindings);
 
-  return { abaDireita, brutoPronto, cenaAtivaIdx, cenasFora, cenasPanelRef, decidindoSegmento, decidirSegmento, detectandoSegmentos, duracaoDoCorte, fontePresetMutation, fontePresetSelecionado, handleAddRegion, handleAjustarRegiaoSelecionada, handleResizeRegion, handleSelecionarCena, handleSelecionarRegiao, handleToggleRemotion, layoutPanelRef, layoutYoutube, offsetSeg, popoverSegmento, projeto, remotionEnabled, reprocessarSegmentos, segmentosDetectados, selectedCenaIdx, selectedRegionIdx, setAbaDireita, setPopoverSegmento, timelineDuration, timelineWrapperRef };
+  return { abaDireita, cenaAtivaIdx, cenasFora, cenasPanelRef, decidindoSegmento, decidirSegmento, detectandoSegmentos, duracaoDoCorte, fontePresetMutation, fontePresetSelecionado, handleAddRegion, handleAjustarRegiaoSelecionada, handleResizeRegion, handleSelecionarCena, handleSelecionarRegiao, handleToggleRemotion, layoutPanelRef, layoutYoutube, offsetSeg, popoverSegmento, projeto, remotionEnabled, reprocessarSegmentos, segmentosDetectados, selectedCenaIdx, selectedRegionIdx, setAbaDireita, setPopoverSegmento, timelineDuration, timelineWrapperRef };
 }
