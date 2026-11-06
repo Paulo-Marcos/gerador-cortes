@@ -1443,6 +1443,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cortes/{corte_id}/cenas-remotion/rodadas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comparar Rodadas Das Cenas
+         * @description A rodada atual das cenas, a anterior e o que entrou, saiu e mudou entre elas.
+         */
+        get: operations["comparar_rodadas_das_cenas_api_cortes__corte_id__cenas_remotion_rodadas_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cortes/{corte_id}/cenas-remotion/rodadas/desfazer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desfazer Rodada Das Cenas
+         * @description Volta à rodada anterior e guarda a atual no lugar dela; devolve a comparação nova.
+         */
+        post: operations["desfazer_rodada_das_cenas_api_cortes__corte_id__cenas_remotion_rodadas_desfazer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cortes/{corte_id}/cenas-remotion/validar": {
         parameters: {
             query?: never;
@@ -6122,6 +6162,19 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** CenaQueMudouResponse */
+        CenaQueMudouResponse: {
+            /** Anterior */
+            anterior: {
+                [key: string]: unknown;
+            };
+            /** Atual */
+            atual: {
+                [key: string]: unknown;
+            };
+            /** Campos */
+            campos: string[];
+        };
         /**
          * CenasDoCorteResponse
          * @description As cenas geradas ou importadas, já normalizadas. A forma de cada cena é o
@@ -6520,6 +6573,11 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** DesfazerRodadaRequest */
+        DesfazerRodadaRequest: {
+            /** Versao */
+            versao?: string | null;
+        };
         /** DestinoEscalonadoResponse */
         DestinoEscalonadoResponse: {
             /** Destino */
@@ -6595,6 +6653,19 @@ export interface components {
             motivo?: string | null;
             /** Ok */
             ok: boolean;
+        };
+        /** DiferencasDasRodadasResponse */
+        DiferencasDasRodadasResponse: {
+            /** Entraram */
+            entraram: {
+                [key: string]: unknown;
+            }[];
+            /** Mudaram */
+            mudaram: components["schemas"]["CenaQueMudouResponse"][];
+            /** Sairam */
+            sairam: {
+                [key: string]: unknown;
+            }[];
         };
         /** DividirBlocoRequest */
         DividirBlocoRequest: {
@@ -9315,6 +9386,29 @@ export interface components {
             monetizar: boolean;
             /** Relacionar Short */
             relacionar_short: boolean;
+        };
+        /** RodadaDasCenasResponse */
+        RodadaDasCenasResponse: {
+            /** Cenas */
+            cenas: {
+                [key: string]: unknown;
+            }[];
+            /** Gerada Em */
+            gerada_em: string | null;
+            /** Origem */
+            origem: string | null;
+            /** Validadas */
+            validadas: boolean;
+            /** Validadas Em */
+            validadas_em: string | null;
+        };
+        /** RodadasDasCenasResponse */
+        RodadasDasCenasResponse: {
+            anterior: components["schemas"]["RodadaDasCenasResponse"] | null;
+            atual: components["schemas"]["RodadaDasCenasResponse"];
+            diferencas: components["schemas"]["DiferencasDasRodadasResponse"];
+            /** Versao */
+            versao: string;
         };
         /**
          * RoteiroDeCenasDoCorte
@@ -13228,6 +13322,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetratosPreenchidosResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comparar_rodadas_das_cenas_api_cortes__corte_id__cenas_remotion_rodadas_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RodadasDasCenasResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    desfazer_rodada_das_cenas_api_cortes__corte_id__cenas_remotion_rodadas_desfazer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DesfazerRodadaRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RodadasDasCenasResponse"];
                 };
             };
             /** @description Validation Error */

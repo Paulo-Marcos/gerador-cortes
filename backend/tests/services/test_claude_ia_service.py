@@ -991,7 +991,7 @@ class TestCenasMetadados:
 
         capturado: dict = {}
 
-        async def fake_importar(_corte_id, payload):
+        async def fake_importar(_corte_id, payload, **_kw):
             capturado["payload"] = payload
             return payload
 

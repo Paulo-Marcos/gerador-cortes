@@ -17,6 +17,7 @@ from app.domain.corte.corte_mapper import (
     extrair_cenas_remotion,
 )
 from app.domain.corte.origem_da_cena import CONTRATO_DA_ORIGEM
+from app.domain.corte.rodada_das_cenas import OrigemDasCenas
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo_falante
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
@@ -114,14 +115,6 @@ def _texto_da_parte(
 
 
 _url_retrato_para_remotion = retrato_wikipedia.url_para_remotion
-
-
-def _extrair_cenas_payload(payload: object) -> list:
-    if isinstance(payload, list):
-        return payload
-    if isinstance(payload, dict) and isinstance(payload.get("cenas"), list):
-        return payload["cenas"]
-    return []
 
 
 def _payload_com_cenas(payload: object, cenas: list) -> object:
@@ -234,8 +227,9 @@ class CenasRemotionService:
             raise ValueError("Claude não retornou cenas.")
 
         t_imp = time.perf_counter()
+        leitura = {**info.get("leitura", {}), "origem": provider}  # RN-37: quem gerou
         await CenasRemotionService.importar_cenas(
-            corte_id, {"cenas": cenas, "pergunta_chat": escolha}, **info.get("leitura", {})
+            corte_id, {"cenas": cenas, "pergunta_chat": escolha}, **leitura
         )
         logger.info(
             "[ClaudeIA/cenas] corte %s: importar_cenas (retratos + save) em %.1fs",
@@ -388,7 +382,12 @@ class CenasRemotionService:
 
     @staticmethod
     async def importar_cenas(
-        corte_id: str, payload: dict, *, transcricao_lida: str | None = None, dur_bruta: float = 0.0
+        corte_id: str,
+        payload: dict,
+        *,
+        origem: OrigemDasCenas = "manual",
+        transcricao_lida: str | None = None,
+        dur_bruta: float = 0.0,
     ) -> dict:
         """Normaliza a resposta da IA e salva as cenas, na frase que ela escolheu (RN-36, D-1049).
 
@@ -423,7 +422,7 @@ class CenasRemotionService:
 
         async with AsyncSessionLocal() as db:
             return await origem_das_cenas.gravar_cenas_geradas(
-                db, corte_id, resultado, transcricao_lida
+                db, corte_id, resultado, transcricao_lida, origem
             )
 
     @staticmethod
@@ -516,7 +515,7 @@ class CenasRemotionService:
             }
 
             gravadas = await origem_das_cenas.gravar_cenas_geradas(
-                db, corte_id, resultado, corte.transcricao_final
+                db, corte_id, resultado, corte.transcricao_final, "gemini"
             )
             operational_info("CenasRemotion", f"✅ Cenas salvas no banco para o corte {corte_id}.")
             return gravadas
@@ -532,7 +531,7 @@ class CenasRemotionService:
             lidas = corte.cenas_remotion
             payload = json.loads(lidas or "[]")
 
-        cenas = _extrair_cenas_payload(payload)
+        cenas = extrair_cenas_remotion(payload)
         retratos = await CenasRemotionService._preencher_retratos_cenas(
             cenas,
             forcar=forcar,

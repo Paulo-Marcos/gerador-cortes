@@ -48,7 +48,7 @@ EXCECOES = {
     "backend/app/services/canal/editorial_scaffolds.py": 669,
     "backend/app/services/canal/editorial_skills.py": 869,
     "backend/app/services/capa_tiktok.py": 520,
-    "backend/app/services/cenas_remotion.py": 928,
+    "backend/app/services/cenas_remotion.py": 927,
     "backend/app/services/claude_ia.py": 519,
     "backend/app/services/corte.py": 1632,
     "backend/app/services/export.py": 555,

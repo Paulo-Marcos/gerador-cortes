@@ -2775,6 +2775,34 @@
         "title": "CenaDoCorte",
         "type": "object"
       },
+      "CenaQueMudouResponse": {
+        "properties": {
+          "anterior": {
+            "additionalProperties": true,
+            "title": "Anterior",
+            "type": "object"
+          },
+          "atual": {
+            "additionalProperties": true,
+            "title": "Atual",
+            "type": "object"
+          },
+          "campos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Campos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "atual",
+          "anterior",
+          "campos"
+        ],
+        "title": "CenaQueMudouResponse",
+        "type": "object"
+      },
       "CenasDoCorteResponse": {
         "description": "As cenas geradas ou importadas, já normalizadas. A forma de cada cena é o\ncontrato da cena (D-725); aqui ela passa como objeto.",
         "properties": {
@@ -3615,6 +3643,23 @@
         "title": "DefinirCenasRequest",
         "type": "object"
       },
+      "DesfazerRodadaRequest": {
+        "properties": {
+          "versao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Versao"
+          }
+        },
+        "title": "DesfazerRodadaRequest",
+        "type": "object"
+      },
       "DestinoEscalonadoResponse": {
         "properties": {
           "destino": {
@@ -3800,6 +3845,40 @@
           "ok"
         ],
         "title": "DiarizacaoResponse",
+        "type": "object"
+      },
+      "DiferencasDasRodadasResponse": {
+        "properties": {
+          "entraram": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Entraram",
+            "type": "array"
+          },
+          "mudaram": {
+            "items": {
+              "$ref": "#/components/schemas/CenaQueMudouResponse"
+            },
+            "title": "Mudaram",
+            "type": "array"
+          },
+          "sairam": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sairam",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entraram",
+          "sairam",
+          "mudaram"
+        ],
+        "title": "DiferencasDasRodadasResponse",
         "type": "object"
       },
       "DividirBlocoRequest": {
@@ -10579,6 +10658,98 @@
           "relacionar_short"
         ],
         "title": "RoboDoStudio",
+        "type": "object"
+      },
+      "RodadaDasCenasResponse": {
+        "properties": {
+          "cenas": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cenas",
+            "type": "array"
+          },
+          "gerada_em": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gerada Em"
+          },
+          "origem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origem"
+          },
+          "validadas": {
+            "title": "Validadas",
+            "type": "boolean"
+          },
+          "validadas_em": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validadas Em"
+          }
+        },
+        "required": [
+          "origem",
+          "gerada_em",
+          "validadas",
+          "validadas_em",
+          "cenas"
+        ],
+        "title": "RodadaDasCenasResponse",
+        "type": "object"
+      },
+      "RodadasDasCenasResponse": {
+        "properties": {
+          "anterior": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RodadaDasCenasResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "atual": {
+            "$ref": "#/components/schemas/RodadaDasCenasResponse"
+          },
+          "diferencas": {
+            "$ref": "#/components/schemas/DiferencasDasRodadasResponse"
+          },
+          "versao": {
+            "title": "Versao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "versao",
+          "atual",
+          "anterior",
+          "diferencas"
+        ],
+        "title": "RodadasDasCenasResponse",
         "type": "object"
       },
       "RoteiroDeCenasDoCorte": {
@@ -17680,6 +17851,109 @@
           }
         },
         "summary": "Preencher Retratos Cenas Remotion",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/cenas-remotion/rodadas": {
+      "get": {
+        "description": "A rodada atual das cenas, a anterior e o que entrou, saiu e mudou entre elas.",
+        "operationId": "comparar_rodadas_das_cenas_api_cortes__corte_id__cenas_remotion_rodadas_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RodadasDasCenasResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Comparar Rodadas Das Cenas",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/cenas-remotion/rodadas/desfazer": {
+      "post": {
+        "description": "Volta à rodada anterior e guarda a atual no lugar dela; devolve a comparação nova.",
+        "operationId": "desfazer_rodada_das_cenas_api_cortes__corte_id__cenas_remotion_rodadas_desfazer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DesfazerRodadaRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RodadasDasCenasResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Desfazer Rodada Das Cenas",
         "tags": [
           "Cortes"
         ]
