@@ -240,7 +240,7 @@ def _geracao_de_cenas(monkeypatch) -> list[dict]:
     async def montar_prompt(_corte_id):
         return {"prompts": [{"texto": "prompt"}]}
 
-    async def importar_cenas(_corte_id, payload):
+    async def importar_cenas(_corte_id, payload, **_kw):
         # Como o de verdade, que espera o banco (`await db.get`) antes de gravar. Sem isto, um
         # dublê que nunca suspende faz a gravação caber no passo em que a resposta chega.
         await asyncio.sleep(0)
