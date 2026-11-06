@@ -28,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -35,6 +36,12 @@ SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 NIVEIS = ("patch", "minor", "major")
 # Keep a Changelog: o que cada categoria significa para o número da versão.
 CATEGORIAS_DE_PATCH = {"Fixed", "Security"}
+# Quebra de compatibilidade se declara abrindo a entrada com `**BREAKING**`
+# (ou `BREAKING:`, a forma da skill de release). A palavra no meio do texto não
+# conta: "its breaking changes touch no code here" (D-982) é uma correção, e a
+# entrada que só CITA a marca não é quebra; a partir da 1.0, as duas forçariam
+# um major (D-1067).
+MARCA_DE_QUEBRA = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*BREAKING\*\*|BREAKING:)", re.M)
 COPIAS_DA_VERSAO = [
     "VERSION",
     "backend/openapi.json",
@@ -119,11 +126,12 @@ def juntar_secoes(*partes: dict[str, str]) -> dict[str, str]:
 
 def nivel_sugerido(secoes: dict[str, str], atual: str) -> str:
     """Correção só → patch; qualquer outra categoria → minor. Quebra marcada
-    ("BREAKING") → major a partir da 1.0; antes dela, a minor faz esse papel
-    (SemVer, item 4: na 0.y.z tudo pode mudar)."""
+    (entrada aberta por `**BREAKING**` ou `BREAKING:`, em qualquer categoria)
+    → major a partir da 1.0; antes dela, a minor faz esse papel (SemVer, item
+    4: na 0.y.z tudo pode mudar)."""
     if not secoes:
         raise ErroDeRelease("o [Unreleased] do CHANGELOG está vazio: não há o que lançar")
-    quebra = any("BREAKING" in corpo.upper() for corpo in secoes.values())
+    quebra = any(MARCA_DE_QUEBRA.search(corpo) for corpo in secoes.values())
     if quebra and ler_semver(atual)[0] >= 1:
         return "major"
     if quebra or set(secoes) - CATEGORIAS_DE_PATCH:
@@ -244,19 +252,29 @@ def marcas_de_unlock(
 # ---- efeitos: git, npm, arquivos -------------------------------------------
 
 
+def comando_para_o_log(comando: list[str], limite: int = 200) -> str:
+    """O comando legível no log: argumento longo sai encurtado, com o tamanho.
+    A mensagem inteira de um commit ou de uma tag no log esconde o que importa."""
+    return " ".join(
+        arg if len(arg) <= limite else f"{arg[:60]}…(+{len(arg) - 60} caracteres)"
+        for arg in comando
+    )
+
+
 def rodar(
     comando: list[str], pasta: Path | None = None, env: dict | None = None, timeout=1800
 ) -> str:
     # `pasta=RAIZ` como padrão ficaria fixo na definição da função: um teste que
     # troca a RAIZ criou uma tag no repositório de verdade (D-782). Resolve aqui.
     ambiente = {**os.environ, "PYTHONUTF8": "1", **(env or {})}
-    print(f"  $ {' '.join(comando)}", flush=True)
+    print(f"  $ {comando_para_o_log(comando)}", flush=True)
     feito = subprocess.run(
         comando, cwd=pasta or RAIZ, env=ambiente, capture_output=True, text=True,
         encoding="utf-8", errors="replace", timeout=timeout,
     )  # fmt: skip
     if feito.returncode != 0:
-        raise ErroDeRelease(f"falhou: {' '.join(comando)}\n{(feito.stdout + feito.stderr)[-3000:]}")
+        saida = (feito.stdout + feito.stderr)[-3000:]
+        raise ErroDeRelease(f"falhou: {comando_para_o_log(comando)}\n{saida}")
     return feito.stdout
 
 
@@ -409,8 +427,16 @@ def compilar_fragmentos(motor: str) -> list[str]:
 def criar_tag(versao: str, resumo: str, notas: str, sha: str = "HEAD") -> None:
     # verbatim: sem ele o git apaga as linhas "### Added" etc., que começam
     # com "#" e contam como comentário na mensagem (achado no ensaio 3).
+    # Por arquivo, e não por -m: as notas da 0.7.0 deram 76 mil caracteres, e
+    # o Windows recusa linha de comando acima de ~32 mil (WinError 206, D-1067).
     mensagem = f"CutCut {versao} — {resumo}\n\n{notas}"
-    rodar(["git", "tag", "-a", "--cleanup=verbatim", f"v{versao}", sha, "-m", mensagem])
+    descritor, caminho = tempfile.mkstemp(prefix=f"tag-v{versao}-", suffix=".txt")
+    try:
+        with os.fdopen(descritor, "w", encoding="utf-8", newline="\n") as arquivo:
+            arquivo.write(mensagem)
+        rodar(["git", "tag", "-a", "--cleanup=verbatim", f"v{versao}", sha, "-F", caminho])
+    finally:
+        os.remove(caminho)
 
 
 def imprimir_como_abrir_o_pr(versao: str, sha: str) -> None:
