@@ -127,28 +127,27 @@ describe('Validar o plano (faltam N)', () => {
   });
 });
 
-describe('Validar sem cenas (decisão de 06/11: plano vazio de propósito)', () => {
+// O plano vazio fica como na main: o "Validar sem cenas" sobe com a D-1072, junto com a
+// liberação do backend. Aqui o botão só valida um plano que tem cenas.
+describe('o botão de validar', () => {
   const validarDoPainel = () => h.botoes.find((b) => b['data-testid'] === 'botao-validar-cenas')!;
 
-  it('com zero cenas e fora da geração, o botão aparece livre e valida', () => {
-    const html = painel({ cenas: [], avisos: [] });
-    expect(botaoValidar(html)).toContain('Validar sem cenas');
+  it('com cenas, fica livre e o clique valida o plano', () => {
+    painel({ avisos: [] });
     expect(validarDoPainel().disabled).toBe(false);
     (validarDoPainel().onClick as () => void)();
     expect(h.validar).toHaveBeenCalledWith(true, expect.anything());
   });
 
-  it('durante a geração, segue travado como o outro', () => {
-    painel({ cenas: [], avisos: [], gerando: true });
+  it('com zero cenas, segue travado como na main e não oferece validar sem cenas', () => {
+    const html = painel({ cenas: [], avisos: [] });
     expect(validarDoPainel().disabled).toBe(true);
+    expect(botaoValidar(html)).not.toContain('sem cenas');
   });
 
-  it('com todas as cenas riscadas, o vídeo também sai sem cenas', () => {
-    expect(botaoValidar(painel({ cenas: [cena('x', { riscada: true })], avisos: [] }))).toContain('Validar sem cenas');
-  });
-
-  it('com cenas, segue "Validar o plano"', () => {
-    expect(botaoValidar(painel({ avisos: [] }))).not.toContain('sem cenas');
+  it('durante a geração, fica travado', () => {
+    painel({ avisos: [], gerando: true });
+    expect(validarDoPainel().disabled).toBe(true);
   });
 });
 

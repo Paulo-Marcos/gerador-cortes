@@ -189,23 +189,23 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     });
   };
 
-  const validarDisabled = validarCenas.isPending || dirty || emGeracao;
+  const validarDisabled = validarCenas.isPending || dirty || cenasOrdenadas.length === 0 || emGeracao;
   const validarTooltip = emGeracao
     ? 'Espere as cenas terminarem de ser geradas'
     : dirty
     ? 'Salve as cenas antes de validar'
-    : cenasValidadas
-      ? 'Desfazer a validação do plano'
-      : cenasDoRender.length === 0 // D-1070: validar de propósito um plano vazio libera o render sem cenas.
-        ? 'O vídeo sai sem nenhuma cena'
+    : cenasOrdenadas.length === 0
+      ? 'Nenhuma cena para validar'
+      : cenasValidadas
+        ? 'Desfazer a validação do plano'
         : faltam > 0
           ? `${faltam} cena(s) pedem conferência; os avisos não impedem validar`
           : 'Validar o plano de cenas';
   const rotuloDoValidar = cenasValidadas
     ? 'Plano validado'
-    : cenasDoRender.length === 0
-      ? 'Validar sem cenas'
-      : `Validar o plano${faltam > 0 ? ` (faltam ${faltam})` : ''}`;
+    : faltam > 0
+      ? `Validar o plano (faltam ${faltam})`
+      : 'Validar o plano';
 
   const handleValidarCenas = () => {
     validarCenas.mutate(!cenasValidadas, {
