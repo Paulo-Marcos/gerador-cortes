@@ -180,23 +180,22 @@ async def test_validar_com_validado_false_desfaz_a_marca(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_validar_recusa_quando_nao_ha_cenas_salvas(monkeypatch):
+async def test_validar_sem_cenas_salvas_valida_o_plano_vazio(monkeypatch):
+    # RN-37 (D-1072): o plano vazio também se valida; é a decisão do operador
+    # que destrava o render final, não a existência de cenas.
     corte = _corte_estavel(cenas_remotion="[]", cenas_validadas=0)
     db = _db_que_retorna(corte)
     _sessao_do_service(monkeypatch, db)
 
-    with pytest.raises(ErroDeDominio) as exc:
-        await cortes_router.validar_cenas_remotion(
-            "corte-1",
-            body=ValidarCenasRequest(validado=True),
-        )
+    resposta = await cortes_router.validar_cenas_remotion(
+        "corte-1",
+        body=ValidarCenasRequest(validado=True),
+    )
 
-    status, detalhe = await _http_de(exc.value)
-    assert status == 400
-    assert "Nao ha cenas" in detalhe
-    assert not _confirmou(db)
-    # nao alterou a flag
-    assert corte.cenas_validadas == 0
+    assert corte.cenas_validadas == 1
+    assert corte.cenas_validadas_em is not None
+    assert resposta["cenas_validadas"] == 1
+    assert _confirmou(db)
 
 
 @pytest.mark.asyncio

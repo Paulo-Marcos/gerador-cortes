@@ -209,3 +209,35 @@ def test_regra_libera_com_plano_validado(parar_em):
 @pytest.mark.parametrize("parar_em", ["grade", "overlays"])
 def test_regra_deixa_o_parcial_passar_sem_plano(parar_em):
     exigir_plano_validado(parar_em, plano_validado=False)
+
+
+# ── Plano vazio: o que destrava é a decisão do operador, não haver cenas ──
+
+
+async def _esvaziar_o_plano(fabrica, corte_id: str) -> None:
+    async with fabrica() as db:
+        (await db.get(Corte, corte_id)).cenas_remotion = json.dumps({"cenas": []})
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_plano_vazio_sem_validar_trava_o_render(cliente, fabrica, disparos):
+    await _esvaziar_o_plano(fabrica, "c-pendente")
+
+    resposta = _renderizar(cliente, "c-pendente")
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == PLANO_NAO_VALIDADO
+    assert disparos == []
+
+
+@pytest.mark.asyncio
+async def test_validar_o_plano_vazio_destrava_o_render(cliente, fabrica, disparos):
+    await _esvaziar_o_plano(fabrica, "c-pendente")
+
+    validacao = cliente.post("/api/cortes/c-pendente/cenas-remotion/validar", json={})
+    assert validacao.status_code == 200
+    assert validacao.json()["cenas_validadas"] == 1
+
+    assert _renderizar(cliente, "c-pendente").status_code == 200
+    assert [d["corte_id"] for d in disparos] == ["c-pendente"]
