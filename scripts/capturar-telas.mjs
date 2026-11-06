@@ -5,7 +5,10 @@
 //
 // Uso:
 //   node scripts/capturar-telas.mjs --versao v1
-//   node scripts/capturar-telas.mjs --versao v2 --base http://localhost:4302
+//   node scripts/capturar-telas.mjs --versao v2 --base http://localhost:4304 --api http://localhost:8003/api
+//
+// Projetos-cobaia: CAPTURA_PROJETO_VIDEO e CAPTURA_PROJETO_CORTES; sem
+// elas, o script escolhe pela API (ver escolherProjetosPadrao).
 //
 // Saída: capturas/<versao>/*.jpg + indice.md (índice das telas).
 //
@@ -13,13 +16,27 @@
 // DevTools Protocol e dirige a navegação por WebSocket nativo do Node
 // (sem puppeteer/playwright — nenhuma dependência nova no projeto).
 //
+// Falha alto (D-1069): botão ausente ou desabilitado, modal que não abre,
+// tema que não pegou e captura idêntica a outra param o script com o nome
+// da tela. As regras moram em capturar-telas-regras.mjs, com teste.
+//
 // SEGURANÇA: só clica em botões que ABREM modais/telas. Nunca aprova,
-// rejeita, renderiza, publica ou deleta — a lista `ACOES` é explícita.
+// rejeita, renderiza, publica ou deleta — a lista `MODAIS` é explícita.
 // ─────────────────────────────────────────────────────────────
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import {
+  conferirAbertura,
+  conferirClique,
+  conferirTema,
+  criarRegistroDeHashes,
+  ErroDeCaptura,
+  escolherProjetosPadrao,
+  montarClique,
+  montarTelas,
+} from './capturar-telas-regras.mjs';
 
 const args = process.argv.slice(2);
 const arg = (nome, padrao) => {
@@ -27,7 +44,9 @@ const arg = (nome, padrao) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : padrao;
 };
 
-const BASE = arg('base', 'http://localhost:4302');
+// Padrões do DEV (dev.ports.local.ps1): frontend 4301, backend 8001.
+const BASE = arg('base', 'http://localhost:4301');
+const API = arg('api', 'http://localhost:8001/api');
 const VERSAO = arg('versao', 'v1');
 const LARGURA = Number(arg('largura', '1600'));
 const ALTURA = Number(arg('altura', '900'));
@@ -38,122 +57,6 @@ const CHROME_CANDIDATOS = [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-];
-
-/** Projetos-cobaia do banco DEV (ajuste se trocar a base de teste). */
-const PROJ_COM_VIDEO = process.env.CAPTURA_PROJETO_VIDEO ?? 'd8e0b585-da97-4739-98da-e93f34795ad5';
-const PROJ_MULTI_CORTES = process.env.CAPTURA_PROJETO_CORTES ?? 'e3d5cadf-2370-495e-8211-ec6087042687';
-
-/**
- * Telas capturadas. `acao` roda no browser DEPOIS do load — use apenas
- * para abrir modais/paineis (nada destrutivo).
- */
-const TELAS = [
-  { id: '01-biblioteca', titulo: 'Biblioteca (lista de projetos)', rota: '/projetos' },
-  {
-    id: '02-workspace',
-    titulo: 'Workspace do projeto (cards de corte)',
-    rota: `/projetos/${PROJ_MULTI_CORTES}`,
-  },
-  {
-    id: '03-bruto',
-    titulo: 'Editor Bruto (player + timeline + trechos)',
-    rota: `/projetos/${PROJ_COM_VIDEO}/cortes`,
-    espera: 4000,
-  },
-  {
-    id: '04-pos',
-    titulo: 'Pós-produção (cenas + preview + layout YouTube)',
-    rota: `/projetos/${PROJ_MULTI_CORTES}/post-production`,
-    espera: 4000,
-  },
-  {
-    id: '05-revisao-final',
-    titulo: 'Revisão final (vídeo final + checklist + capa)',
-    rota: `/projetos/${PROJ_MULTI_CORTES}/final-review`,
-    espera: 3500,
-  },
-  {
-    id: '06-metadados',
-    titulo: 'Metadados & thumbnails',
-    rota: `/projetos/${PROJ_MULTI_CORTES}/metadados`,
-    espera: 3000,
-  },
-  { id: '07-ranking', titulo: 'Ranking de lives', rota: '/ranking-lives' },
-  { id: '08-buscar-lives', titulo: 'Buscar novas lives', rota: '/buscar-lives' },
-  { id: '09-padroes-thumbnail', titulo: 'Padrões de thumbnail', rota: '/padroes-thumbnail' },
-  { id: '10-analises', titulo: 'Análises (stat-cards + abas)', rota: '/analises' },
-  { id: '11-atalhos', titulo: 'Atalhos (editáveis)', rota: '/atalhos' },
-  { id: '12-config-canal', titulo: 'Configurações · Canal ativo', rota: '/canais' },
-  {
-    id: '13-config-aplicacao',
-    titulo: 'Configurações · Aplicação (aparência + globais)',
-    rota: '/canais',
-    acao: `[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Aplicação')?.click()`,
-  },
-  {
-    id: '14-config-skills',
-    titulo: 'Configurações · Skills editoriais (bloco-portal aberto)',
-    rota: '/canais',
-    acao: `[...document.querySelectorAll('button')].find(b => b.textContent.includes('Skills editoriais'))?.click()`,
-    espera: 2500,
-  },
-];
-
-/** Modais — abertos por clique seguro (nada destrutivo). */
-const MODAIS = [
-  {
-    id: '20-modal-novo-projeto',
-    titulo: 'Modal · Novo projeto',
-    rota: '/projetos',
-    acao: `[...document.querySelectorAll('button')].find(b => b.textContent.includes('Novo projeto'))?.click()`,
-  },
-  {
-    id: '21-modal-analise-ia',
-    titulo: 'Modal · Análise IA',
-    rota: `/projetos/${PROJ_MULTI_CORTES}`,
-    acao: `[...document.querySelectorAll('button')].find(b => b.textContent.includes('Análise IA'))?.click()`,
-  },
-  {
-    id: '22-modal-auditoria',
-    titulo: 'Modal · Auditar análise',
-    rota: `/projetos/${PROJ_MULTI_CORTES}`,
-    acao: `[...document.querySelectorAll('button')].find(b => b.textContent.includes('Auditar análise'))?.click()`,
-    espera: 2500,
-  },
-  {
-    id: '23-modal-publicar-massa',
-    titulo: 'Modal · Publicar em massa',
-    rota: `/projetos/${PROJ_MULTI_CORTES}`,
-    acao: `[...document.querySelectorAll('button')].find(b => b.textContent.includes('Publicar em massa'))?.click()`,
-  },
-  {
-    id: '24-modal-adicionar-corte',
-    titulo: 'Modal · Adicionar corte manualmente',
-    rota: `/projetos/${PROJ_COM_VIDEO}/cortes`,
-    acao: `document.querySelector('[aria-label="Adicionar corte manualmente"]')?.click()`,
-    espera: 4000,
-  },
-  {
-    id: '25-modal-atalhos-editor',
-    titulo: 'Modal · Atalhos do editor (?)',
-    rota: `/projetos/${PROJ_COM_VIDEO}/cortes`,
-    acao: `document.querySelector('[aria-label="Atalhos"]')?.click()`,
-    espera: 4000,
-  },
-  {
-    id: '26-dropdown-nova-aba',
-    titulo: 'Dropdown · Nova aba (seletor de projeto)',
-    rota: '/projetos',
-    acao: `document.querySelector('[aria-label="Nova aba de trabalho"]')?.click()`,
-  },
-  {
-    id: '27-modal-metadados',
-    titulo: 'Modal · Metadados (a partir do painel de cortes)',
-    rota: `/projetos/${PROJ_COM_VIDEO}/cortes`,
-    acao: `[...document.querySelectorAll('[aria-label^="Abrir metadados"]')][0]?.click()`,
-    espera: 4000,
-  },
 ];
 
 /** Telas que também são capturadas no tema escuro. */
@@ -208,7 +111,43 @@ async function acharChrome() {
   return bin;
 }
 
+async function lerJson(url) {
+  let resposta;
+  try {
+    resposta = await fetch(url);
+  } catch (erro) {
+    throw new ErroDeCaptura('projetos', `o backend não respondeu em ${url} (${erro.message}); confira --api.`);
+  }
+  if (!resposta.ok) throw new ErroDeCaptura('projetos', `${url} respondeu ${resposta.status}.`);
+  return resposta.json();
+}
+
+/** Cortes prontos para publicar e ainda fora do ar (a regra do botão da tela de Metadados). */
+async function contarProntos(projetoId) {
+  const { cortes = [] } = await lerJson(`${API}/export/projeto/${projetoId}/status`);
+  return cortes.filter((c) => c.pronto_publicar && !c.youtube_url_publicado).length;
+}
+
+/** Os projetos-cobaia: as variáveis de ambiente valem; sem elas, o banco escolhe. */
+async function resolverProjetos() {
+  let video = process.env.CAPTURA_PROJETO_VIDEO;
+  let cortes = process.env.CAPTURA_PROJETO_CORTES;
+  if (!video || !cortes) {
+    const projetos = await lerJson(`${API}/projetos`);
+    const prontos = {};
+    for (const p of projetos.filter((x) => x.total_cortes >= 2)) prontos[p.id] = await contarProntos(p.id);
+    const padrao = escolherProjetosPadrao(projetos, prontos);
+    video ??= padrao.comVideo;
+    cortes ??= padrao.multiCortes;
+  }
+  // Um ID que não existe dava 404 na tela e a captura saía com a página de erro.
+  for (const id of new Set([video, cortes])) await lerJson(`${API}/projetos/${id}`);
+  return { video, cortes };
+}
+
 async function main() {
+  const projetos = await resolverProjetos();
+  const { telas, modais } = montarTelas(projetos);
   const bin = await acharChrome();
   const perfil = path.join(process.env.TEMP ?? '/tmp', `capturas-chrome-${Date.now()}`);
   const chrome = spawn(
@@ -258,38 +197,66 @@ async function main() {
     await mkdir(SAIDA, { recursive: true });
     const capturadas = [];
 
-    const capturar = async ({ id, titulo, rota, acao, espera = 2200 }, tema) => {
+    const hashes = criarRegistroDeHashes();
+    let scriptDoTema = null;
+
+    const avaliar = async (expression) => {
+      const { result } = await cdp.enviar('Runtime.evaluate', { expression, returnByValue: true });
+      return result.value;
+    };
+    const contar = (seletor) => avaliar(`document.querySelectorAll(${JSON.stringify(seletor)}).length`);
+
+    const executarPasso = async (passo, id) => {
+      if (passo.clicar) {
+        conferirClique(await avaliar(montarClique(passo.clicar)), id, passo.clicar, passo.requisito);
+      } else {
+        const { key, code, tecla, shift } = passo.tecla;
+        const evento = { key, code, windowsVirtualKeyCode: tecla, modifiers: shift ? 8 : 0 };
+        await cdp.enviar('Input.dispatchKeyEvent', { type: 'keyDown', text: key, ...evento });
+        await cdp.enviar('Input.dispatchKeyEvent', { type: 'keyUp', ...evento });
+      }
+      await esperar(700);
+    };
+
+    const capturar = async ({ id, titulo, rota, passos = [], abre, espera = 2200 }, tema) => {
       const sufixo = tema === 'dark' ? '-escuro' : '';
       const arquivo = `${id}${sufixo}.jpg`;
 
-      // Tema + flag do shell aplicados antes de qualquer script da página.
-      await cdp.enviar('Page.addScriptToEvaluateOnNewDocument', {
-        source: `try {
-          localStorage.setItem('wb-theme', ${JSON.stringify(tema)});
-          localStorage.setItem('workbench-shell', '1');
-        } catch (e) {}`,
-      });
+      // O tema da casca (useUpgradeTheme lê `upgrade-theme` ao carregar),
+      // gravado antes de qualquer script da página. Um script por captura:
+      // o anterior sai, senão eles se acumulam a cada navegação.
+      if (scriptDoTema) {
+        await cdp.enviar('Page.removeScriptToEvaluateOnNewDocument', { identifier: scriptDoTema });
+      }
+      ({ identifier: scriptDoTema } = await cdp.enviar('Page.addScriptToEvaluateOnNewDocument', {
+        source: `try { localStorage.setItem('upgrade-theme', ${JSON.stringify(tema)}); } catch (e) {}`,
+      }));
 
       await cdp.enviar('Page.navigate', { url: `${BASE}${rota}` });
       await esperar(espera);
-      if (acao) {
-        await cdp.enviar('Runtime.evaluate', { expression: acao, awaitPromise: false });
-        await esperar(1200);
-      }
+      conferirTema(await avaliar(`document.querySelector('.ap')?.getAttribute('data-theme') ?? null`), tema, id);
+
+      const antes = abre ? await contar(abre) : 0;
+      for (const passo of passos) await executarPasso(passo, id);
+      if (abre) conferirAbertura(antes, await contar(abre), id, abre);
+      if (passos.length) await esperar(500);
 
       const { data } = await cdp.enviar('Page.captureScreenshot', { format: 'jpeg', quality: 90 });
-      await writeFile(path.join(SAIDA, arquivo), Buffer.from(data, 'base64'));
+      const bytes = Buffer.from(data, 'base64');
+      await writeFile(path.join(SAIDA, arquivo), bytes);
+      hashes.registrar(id, arquivo, bytes);
       capturadas.push({ arquivo, titulo, rota, tema });
       process.stdout.write(`  ✓ ${arquivo}\n`);
     };
 
-    console.log(`\nCapturando ${VERSAO} de ${BASE} (${LARGURA}×${ALTURA})\n`);
+    console.log(`\nCapturando ${VERSAO} de ${BASE} (${LARGURA}×${ALTURA})`);
+    console.log(`Projetos: com vídeo ${projetos.video} · vários cortes ${projetos.cortes}\n`);
     console.log('Telas:');
-    for (const tela of TELAS) await capturar(tela, 'light');
+    for (const tela of telas) await capturar(tela, 'light');
     console.log('Modais:');
-    for (const modal of MODAIS) await capturar(modal, 'light');
+    for (const modal of modais) await capturar(modal, 'light');
     console.log('Tema escuro:');
-    for (const tela of TELAS.filter((t) => TAMBEM_NO_ESCURO.has(t.id))) {
+    for (const tela of telas.filter((t) => TAMBEM_NO_ESCURO.has(t.id))) {
       await capturar(tela, 'dark');
     }
 
