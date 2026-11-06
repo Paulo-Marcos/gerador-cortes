@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-06
+
 ### Added
 - **Spread a batch of shorts across the channel's audience window.** The
   batch modal gains a third "when": besides "now" and "one date for all",
@@ -81,6 +83,243 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   follows it — the empty option reads "padrão do canal (Name)" — and changing
   it changes every clip that follows, since nothing is copied. A clip can still
   pick another preset; deleting the default preset clears it (D-901).
+- **A "clean" stage style, with a channel header you can customize.** Canais
+  gains a "Palco do canal" section: pick the stage style ("Atual", the chamfered
+  chrome as before, or "Limpo", a flat graphite background with rounded video
+  windows and no lines or brackets), switch the channel header (image + name +
+  @) and the speaker plate on or off, override the name and handle, and upload
+  the image shown next to the @ (the mascot's "apresentador" pose until you do).
+  It applies to the horizontal stage and to the shorts' stage of the active
+  channel on the next render; the cut's own window geometry is untouched, and
+  the editor preview and the shorts preview draw the same stage. The clean
+  style has its own background, a halftone dot pattern in the lower-left and
+  upper-right corners over a coral-to-petrol glow (or plain halftone, glow,
+  linen, flat), and on shorts the windows sit inside a thin contour of that
+  background instead of touching the frame edges. Every fixed component says
+  where it sits and how big it is: the header's size and position (video and
+  short), the plate's size and position (automatic or fixed), and the short's
+  contour width (0 turns it off). On shorts with the screen inset over the
+  person, the inset's corners are rounded too. The uploaded header image must
+  be a real image up to 10 MB, and the stage is edited on the active channel
+  only (D-911).
+- **A cleaner short: video "echo" around the windows, a shadow-only caption
+  and a highlighted word in the hook.** The channel's stage settings (Canais)
+  gain two choices for shorts. "Em volta das janelas" can show the stage
+  background, as before, or the echo: the main window blurred, desaturated and
+  darkened in the bands around the windows, so the frame looks like it comes
+  from the video itself (clean style only; each window keeps its contour and
+  rounded corners). "Legenda" can keep the outline, as before, or switch to a
+  soft shadow with no black border around the letters. In the hook, write the
+  word or phrase to highlight between asterisks (`*Game of Thrones*`) and it is
+  drawn in the channel accent; the cover and metadata prompts get the text
+  without the asterisks. The shorts preview shows all three as the render
+  does (D-913).
+- **Scenes in the clean style, and cards each channel can tune.** When the
+  channel's stage is set to "Limpo", every scene type is drawn as a single
+  Block from the design catalog: a 6 px accent stroke, a small uppercase
+  kicker, the title, the body and a footer — no box, no HUD, no forced caps,
+  and the mascot only on the closing call. Over the full video the card gets a
+  local scrim that follows the scene's shadow level; on the shared stage it
+  sits on the graphite with none. The comparison, list, timeline, source,
+  lower bar, thesis, closing call and chat question get their catalog shapes.
+  In Canais → "Cards (cenas)" the channel picks which scene types appear in
+  the video (in any style), the card size, and where cards sit over the full
+  video; on the shared stage each cut's card zone still decides. The editor
+  preview draws the same scenes (D-916).
+- **Motion for the clean-style scenes.** In the clean style the accent stroke
+  grows first (6 frames), then the text comes in line by line — each line
+  rising 10 px over 6 frames, 4 frames apart — and everything leaves in the
+  last 6 frames; the scrim fades in and out with the text. The highlighted
+  number counts up to its value (only when it has a single numeric core, so
+  "1 em 1 milhão" stays as written), the emphasis underline draws itself, and
+  two scenes of the same family less than 0.25 s apart keep the stroke and
+  swap only the text. The lower bar never stays on screen for more than 4 s.
+  The current style does not change (D-918).
+- **See what changed, in Portuguese, inside the app.** A "Novidades" item
+  under Ferramentas (and in the ⌘K palette) lists every version from this
+  CHANGELOG — the newest first, starting with what is already on main without
+  a number. The AI of your subscription rewrites each entry for the operator:
+  a Portuguese title, what changed and, when there is something to do, a "Como
+  usar" with where it lives in the app and the steps. It translates by itself
+  as each version is opened, eight entries at a time, and keeps the result, so
+  each entry is translated once; until then the card shows the English
+  original, which stays one click away. The rail item gets a dot when
+  something arrived since your last visit, and those cards are marked "novo
+  para você". On the first visit, everything that already has a version
+  counts as seen (D-922).
+- **Choose the AI models in one place.** Canais → Aplicação → "Modelos de IA"
+  says which model answers each tier — heavy, medium and fast — for Claude and
+  for Gemini (Antigravity), plus the text and image models of the Gemini API.
+  Each picker lists what the provider offers on this machine (the `agy` list,
+  the Gemini key's list, and the Claude aliases and ids) and saves by itself.
+  The skills of the channel now pick only the tier, so when a model is retired
+  you change it once instead of skill by skill; skills saved before keep their
+  tier (opus → heavy, sonnet → medium, haiku → fast). Gemini 3.1 Pro left
+  Antigravity, so the heavy and medium Gemini tiers now default to
+  `gemini-3.8-flash-high` (D-924).
+- **Covers use frames of the cut as the host reference.** In host mode, the
+  ChatGPT robot now takes frames from the cut's own video at the moment the host
+  says the cover line (the YouTube thumbnail and TikTok art look for the cover
+  text, the short art for its cover line or hook) and attaches them, cropped on
+  the host and enlarged, instead of the photo bank. The request says the
+  identity and the expression come from those frames, and the host's
+  `EXPRESSION` line points to them. The host is found through the webcam marked
+  in the cut layout and, without it, by who moves while the line is said. When
+  the line is not found, the video is missing or no live face is in view, the
+  robot falls back to the photo bank as before (D-929).
+- **"Estilizar capa" on the TikTok cover.** A modal like the stage one: pick the
+  cover style (follow the stage, current or clean), the clean background, show or
+  hide each component (title, image, handle, and in the clean style the channel
+  header and an accent stroke), drag them on a live preview drawn by the same
+  composition that renders the PNG, and save named presets to reuse. The style
+  is per channel; saving redoes the clip's cover (D-933).
+- **Width and height for the card over the full video.** In the position modal,
+  the card in full mode could only be moved: it was never selected, so its resize
+  handle never showed. Now it shows, and stretching it turns the card into a box
+  with its own width and height. With "fill the space" the text spreads across
+  the box width, the size (%) becomes the font size, and whatever does not fit
+  shrinks. "No box" goes back to position and scale. The panel also has width,
+  height, X and Y fields (D-941).
+- Na tela de Canais, o bloco "Capa do TikTok" ganhou o botão **Estilizar capa**: abre o mesmo modal da capa de um corte, sem precisar de um corte — a prévia vai sem a arte e com um texto de exemplo, e salvar grava o estilo do canal (D-947).
+- A análise da live ganhou a opção 'As duas': roda o Claude e depois o Gemini, soma os cortes das duas (pulando quase-duplicatas) e avisa quantos cada uma trouxe; se uma falhar, a outra roda mesmo assim (D-977).
+- **The robots check the logged-in account before every upload.** YouTube (cut
+  and short), Instagram through the API, and the TikTok and Instagram browser
+  robots now read which account is logged in and refuse to send when it is not
+  the channel's account, saying which account they found and which one they
+  expected. The first upload of each destination learns the account, so nothing
+  stops after the update; from then on only that account passes. An account
+  that cannot be read also blocks the upload. Canais → Aplicação gains "Conta de
+  cada destino", listing the learned account of each destination with a
+  "Esquecer" button for when you switch accounts on purpose: the next upload
+  learns the new one.
+- **The Biblioteca card says whether the live's horizontal cuts are already
+  up.** Each project card now carries two network chips, YouTube and TikTok,
+  next to the stage strip: lit when every cut with a finished video has gone
+  up on that network, dimmed otherwise, with "N of M cuts ready" in the
+  tooltip. "Finished video" is the same count the card already shows — the cut
+  is on YouTube or its `video.mp4` is on disk — so a cut still waiting to be
+  sent keeps the chip off. The TikTok chip reads the manual confirmation the
+  operator gives on the project screen. A live with nothing ready yet shows no
+  chips. Same reading as the network icons on the Shorts card, one height
+  above: there the question is about a cut's shorts, here about the whole
+  live (D-987).
+- **Each cut on the project screen shows which AI proposed it.** A small
+  icon next to the title marks the cuts proposed by Claude, by Gemini
+  (Antigravity) or pasted by hand as JSON, with the name in the tooltip, so the
+  operator can compare the quality of each provider at a glance. The origin
+  comes from the proposal frozen when the analysis is imported (D-303); a cut
+  created by hand, or older than that record, shows no icon. The cut API now
+  returns it as `origem_analise` (D-988).
+- **The editor workbench shows which AI proposed each cut.** The same icon from
+  the project screen (Claude, Gemini or pasted by hand) now sits next to each
+  cut in the "Cortes da live" side list and next to the open cut's title in the
+  top bar, so the operator sees it while editing. Cuts with no recorded origin
+  show no icon (D-991).
+- **Deleting a cut the AI proposed now records why, and the proposal stays.**
+  Deleting a cut used to orphan its frozen proposal (D-303): no project, no
+  date, no reason. In D-989, 177 of the 570 cortador-expert proposals had been
+  deleted, and finding which live each came from took reconstruction by time
+  and text. The proposal snapshot now keeps the project, the moment it was
+  deleted and an optional reason from a closed list (weak theme, repeats
+  another cut, doesn't stand alone, off the channel's line, too short,
+  audio/video problem). The "Excluir de vez" dialog, in the editor and on the
+  project's cut list (R), offers those reasons as chips only for AI-proposed
+  cuts; confirming without picking one still deletes at once. The project's
+  editorial telemetry counts the deleted proposals by reason, including the
+  ones left without a reason. Migration 009 drops the snapshot's foreign key to
+  the cut (SQLite never enforced it here) by rebuilding the table from its own
+  stored DDL, and fills in the project of every snapshot whose cut still
+  exists; proposals deleted before this change stay without a project.
+- **Each short the AI proposes now keeps its original proposal, frozen.**
+  Cuts had a frozen copy of the AI's proposal (D-303); shorts did not. In
+  D-989 the shorts-expert's edges, length and score could only be rebuilt from
+  the AI call log by matching titles, which is how we learned the operator
+  stretches 43 of 65 accepted shorts (median +13 s). Now every short born from
+  the AI is saved next to a snapshot with its start, end, score, hook, title,
+  provider and model, and nothing rewrites it: editing the edges, generating
+  again or merging cuts only touches the short. The snapshot outlives the
+  short: deleting the cut (which takes its shorts along) only stamps the moment
+  it was deleted. The project's editorial telemetry gains a `shorts` section
+  comparing proposal and final for each short (edge and length deltas, using
+  the net length when the short is stitched, and whether the hook changed),
+  plus the D-989 tally: how many accepted shorts were stretched or shortened,
+  and the median change in length. The new table is created at boot; no
+  migration was needed.
+- **Each channel sets the duration range of its shorts on the Canais screen.**
+  The shorts expert proposed candidates between 15 and 90 s, a range fixed in
+  `config.py` and only changeable by deploy — against ADR-0012, which puts
+  editable configuration in the channel's database. The telemetry of D-989
+  showed the ceiling did not fit: 25 of the 28 shorts above 90 s were accepted
+  by the operator. The new "Duração dos shorts" section on Canais reads and
+  saves the range per channel (default still 15 to 90 s), the prompt and the
+  discard of out-of-range candidates follow it, and a minimum equal to or above
+  the maximum is refused by the domain, with the message shown on the screen.
+- **Doubtful claims get a "conferir" alert instead of being cut.** The
+  trechos-expert used to mark a doubtful fact (a number, a date, an author) as
+  a removal of category `imprecisao`, and the operator undid 77% of them,
+  because taking the sentence out took content with it. Now the skill can list
+  those spans under a separate `conferir` key: the span stays in the cut, and
+  the editor sees it as a hatched band on top of the timeline waveform plus a
+  "Conferir" strip above it, with a button to jump to the span and one to mark
+  it as checked. The alert lives in its own column of the cut and nothing that
+  computes the cut (segments, net duration, final transcript, render) reads it.
+  An `imprecisao` still proposed as a removal by an older skill becomes an
+  alert too, and so does one pasted in the manual mode; a removal the editor
+  marked by hand is never reclassified. Splitting a cut gives each half its own
+  alerts, and joining two keeps the alerts of the one that is deleted. A
+  checked alert stays recorded, so the next generation does not propose it
+  again.
+- **A cut can be deleted for more than one reason.** The reason chips in the
+  "Excluir o corte de vez" dialog (D-993) were single choice, but a cut often
+  leaves for two reasons at once — a weak theme that also repeats another cut.
+  The chips are now multiple choice and still optional: none marked deletes at
+  once, with no reason. The proposal snapshot keeps the list in the same
+  field, as the slugs joined by "|" in the vocabulary's order; unknown slugs
+  are dropped. Records saved with a single reason read as a one-item list, so
+  no migration was needed. The editorial telemetry counts every reason marked:
+  `total` still counts deleted proposals, while each reason adds one per
+  deletion that marked it.
+- **Each channel edits its own list of reasons for deleting a cut.** The
+  reasons offered when deleting a cut the AI proposed (D-993, D-1005) were a
+  fixed vocabulary in the code. They now live in the channel's settings
+  database and are edited on the Channels screen, under "Motivos de excluir um
+  corte": a new reason gets a stable slug derived from its name and shows up
+  as a chip from then on, and hiding a reason takes it off the chips without
+  touching history — cuts already deleted for it stay counted and named in the
+  editorial telemetry. A channel that never edited the list keeps the six
+  reasons of today. Deleting a cut accepts only the reasons the channel
+  currently shows; a channel that hid them all no longer asks.
+- **Instagram Reels can now be scheduled.** A batch with dates no longer posts
+  every Reel at once: with the Instagram robot on, each Reel goes through the
+  Meta Business Suite reels composer, which uploads it, sets the caption and
+  cover, types the date and time, reads them back, and schedules. The account
+  shown in the composer is learned and checked like every other destination,
+  and the channel's publishing blocks now include Instagram Reels. A Reel with
+  no date keeps going through instagram.com. The first run asks for one login
+  to the Business Suite in the robot's window.
+- **Each cut now has a technical report card on the Final Review.** With no AI,
+  the app measures the final video (and each rendered short) in the background,
+  after the render: integrated loudness, true peak and loudness range
+  (`ebur128`), stretches where the picture froze (320x180 gray frames, at most 3
+  pixels changing for 0.33 s or more, with the origin: the freeze came from the
+  live, or showed up in the render) and the seams between the pieces of the raw
+  cut (how many, how many have sound on both sides above -40 dBFS, and the
+  sample step against the p99 of the cut's own speech). The card only warns and
+  never blocks publishing; the -14 LUFS (±1) and -1 dBTP references are shown as
+  a market convention, not a platform requirement. The result is saved next to
+  the video and discarded when the file, or the pieces that made it, change. If
+  the video was cleaned off the disk the card says so instead of failing. Audio
+  and render are untouched.
+- **Reviewing a cut no longer means listening to all of it.** Each trecho now shows
+  the speech that leaves and how the join reads, right in the list. The AI has to
+  quote what it removes: in 12 real cuts, 3.6% of quoted edges disagreed with the
+  transcript, and the app kept them silently. Now a mark whose quote doesn't match
+  stays out of the cut, struck through, with the reason. A mark with no quote still
+  goes in, labeled as not checked.
+- **Removing a trecho strikes it.** It stays visible and comes back with one click,
+  and "Desfazer a rodada" strikes everything the last AI run marked, except what you
+  adjusted by hand.
+- **As cenas agora mostram de onde vem o que afirmam.** Na aprovação, cada cena traz a frase da fala, quem disse e a fonte, com aviso quando a citação não é literal, o número não está na frase ou o autor não é quem falou. O aviso nunca reescreve a cena. O rótulo "Dado" só aparece no card de número com fonte, e a cena acompanha a frase quando o corte muda.
 
 ### Changed
 - **A long cover phrase no longer becomes the TikTok label.** The YouTube
@@ -121,6 +360,209 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hook modal). The "Prontos" cards get the cover button too, and the short
   cover modal now opens on "Arte desenhada" instead of the video frame
   (D-900).
+- **The release script compiles the changelog fragments.** Each demand now
+  writes its own `changelog.d/<ID>.<category>.md` instead of editing
+  `[Unreleased]`, so queued PRs no longer collide on the same lines.
+  `bin/release.py` counts the fragments when suggesting the version level,
+  merges them into `[Unreleased]` through the Guia engine and deletes them in
+  the release commit. With fragments present, the release requires `GUIA_PY`
+  (the path to the Guia `bin/guia.py`) and stops before the gate without it,
+  instead of shipping without those entries (D-912).
+- **Dependencies brought up to date, in a batch.** Remotion 4.0.534 in the
+  frontend and the renderer (zod stays on 4.5.4, the version Remotion pins);
+  sqlalchemy 2.1.4, google-api-python-client 2.201, google-genai 2.29 and
+  ruff 0.16.10, with the Python locks regenerated from `requirements.in`;
+  `actions/setup-node` 7.1 in CI. Versions published less than five days ago
+  were left for the next batch (Remotion 4.0.535, google-genai 2.30). The major
+  upgrades stay out, each with its own demand: Vite 8 (D-826), ESLint 10
+  (D-825, D-765), lucide-react 1.x (D-831) and wavesurfer.js 8 (D-830)
+  (D-914).
+- **Faster CI.** The backend and Windows test suites run in parallel
+  (`pytest -n auto`), the Windows job keeps the pip and npm downloads in cache,
+  and the renderer card contracts bundle once and render the stills in parallel
+  tabs of a single browser, instead of one `remotion still` per scenario
+  (D-917).
+- **The stage is now set per cut or project, with separate settings for horizontal and short.**
+  The global style stays in Canais → Palco do canal and is the default for
+  everything new. In the post-production positioning modal and in the short's
+  stage modal, the first line now shows which style applies and where it comes
+  from (the channel, the project or the cut). Switching it there changes only
+  that cut (or that project), never the channel. Below the preview sit the
+  settings of the chosen style only, one tab per component: background,
+  header, plate and cards for the horizontal video; background, header and
+  windows/caption for the short. The horizontal modal no longer shows short
+  settings, and the other way round. Changes save only what differs from the
+  level above, and the render of that cut uses them. Presets now show as
+  one-click chips and carry their type's stage settings. Every preset list
+  (modal, layout panel, short adjustments) shows only the presets of the style
+  in effect.
+- **The header can show just the image.** Image, name and @ each have their
+  own switch, in Canais and in the modals. Name and @ left blank still use the
+  channel's identity (D-923).
+- **Only the tests are locked now.** Changing, deleting or renaming an
+  existing test (`backend/tests/`, the `__tests__/` folders and `*.test.ts(x)`
+  files) needs the owner's authorization, with an `[unlock:testes-sao-contrato]`
+  mark in the commit. Code and new tests are free. The old per-feature locks
+  were removed (D-925).
+- **Post-production positioning modal reorganized around a fixed preview.** A
+  menu in the left column switches the settings group (Presets · Telas · Fundo
+  · Cabeçalho · Placa · Cards). The settings for that group sit beside it, and
+  the preview stays still on the right, always fully visible, with no scroll
+  bar. What doesn't fit in the column, such as the list of card types, goes
+  below the preview.
+- **Move and resize with the mouse, for every component.** In the preview,
+  dragging moves the screen, the facecam, the cards zone, the header and the
+  plate. The handle in the corner resizes them: screens keep their
+  proportion, and the header and plate change size in %. Clicking the header
+  or the plate opens its group.
+- **Size from 25% to 500%** (it used to stop at 200%) for the header, the plate
+  and the cards. The number field no longer jumps to the minimum while you
+  type: the value is checked when you leave the field or press Enter (D-927).
+- **The cards zone is always visible in the positioning modal.** On the
+  shared screen, the outline of the cards zone shows up all the time: dashed
+  while automatic, solid once you set it. It can be dragged and resized even
+  when automatic; the first drag makes it manual. In the Cards group the zone
+  comes already selected.
+- **Example card.** In the Cards group, pick a card ("Definição", "Pergunta"…)
+  and see it drawn on the preview with your current customization (size,
+  mode in the space, alignment), before saving. On the full video, that card
+  can also be dragged and resized: that is how the cards' position and size are
+  set.
+- **Align objects with each other.** While dragging, edges and centers stick to
+  the edges and centers of the other objects and of the frame, and a line shows
+  where they lined up.
+- **Crop with the mouse.** In Telas, with "Desenhar" off, the crop moves by its
+  body and resizes by its handle.
+- **Presets always in view**, in the same line as the style name (they are no
+  longer a menu group). The Telas buttons no longer let text spill past the
+  edge (D-928).
+- **The TikTok cover follows the clip's stage style.** When the horizontal stage
+  is in the clean style (channel, project or clip choice), the vertical cover is
+  drawn the same way: flat background, rounded art window, the stage's font and
+  the accent color on the handle. Channels on the current style keep the same
+  cover, byte for byte (D-932).
+- **The short stage modal shows only what each style uses.** In the clean style
+  the old style's texture section is gone and the clean stage (background, channel
+  header, windows) takes its place, instead of hiding at the end; the old style
+  keeps its texture and windows sections. In the clean style the channel header
+  can now be dragged and resized on the short preview, like on the horizontal
+  one (D-937).
+- **The channel settings now only choose the style.** The "Palco do canal"
+  section keeps the style of the video (horizontal and short), the style of the
+  TikTok cover ("same as the stage", current or clean) and the header image.
+  The details — header, name plate, cards, windows and presets — are edited in
+  the same modal used in the editor, opened by "Editar o padrão do horizontal"
+  or "Editar o padrão do short", which now save to the channel. The TikTok
+  cover layout editor left the app settings: the cover is styled per channel in
+  "Estilizar capa", and the global layout already saved remains the base
+  (D-938).
+- Na tela de Canais, "Editar o padrão do short" abre o modal do palco do short no modo canal, com a faixa do estilo, o palco do estilo ativo e a prévia "como vai sair" sobre um short de exemplo (o cabeçalho se arrasta nela, no estilo limpo); o modal leve saiu. Aplicar grava no palco do canal (D-946).
+- **The full-video card stays visible and belongs to the preset.** In the
+  position modal, full mode, the example card now shows on the preview whatever
+  group is open, so moving the screen shows whether it will land on the cards.
+  Moving or resizing the cards now lights "Update preset", like the screens,
+  background and plate. In the clean style the full-screen thesis scene is gone
+  (greyed out in the card types, drawn as nothing), and the closing call sits
+  where the card sits instead of the middle of the frame (D-951).
+- **Vite 8 builds the frontend.** Vite 6.4 → 8.3 and its React plugin 4 → 6
+  (the plugin 6 requires Vite 8, so they move together), with the same vendor
+  chunks. Also brought up to date, in batch: Remotion 4.0.535 in the frontend
+  and the renderer; Radix, React Query, zod, typescript-eslint, vitest, PostCSS
+  and Prettier patches; ruff 0.17, anthropic 1.13, pydantic 2.14, scenedetect
+  0.7.2 and pre-commit 4.7 in the backend, with the locks regenerated from
+  `requirements.in`. Versions younger than five days wait for the next batch;
+  react-resizable-panels 4 and lucide-react 1.x stay for their own demands
+  (D-827, D-831) (D-961).
+- **aiohttp 3.14.5 in the diarization lock.** The optional speaker-diarization
+  lock moves aiohttp 3.14.3 → 3.14.5 (newer than the bot's 3.14.4) and, with
+  it, yarl 1.24.5 → 1.25.1, which aiohttp 3.14.5 requires. The lock is
+  regenerated from `requirements-diarizacao.in` with `--universal
+  --python-version 3.11`, so its per-Python markers stay as they were (D-978).
+- **The raw-cut evaluator now sees what comes right after the cut ends.** The
+  transcript arrives as subtitle lines (only 16% end in punctuation), so the
+  evaluator flagged "ends mid-sentence" on 175 of 231 raw cuts, unable to tell
+  a cut idea from a plain line break. The material now ends with the next 15 s
+  of the live, marked "outside the cut"; if the live ends there it says so
+  (D-996).
+- **"What you changed" replaces the quality vote.** The per-cut vote (D-419)
+  had become a rubber stamp: of 314 votes, 95% were 4 or 5, the reasons were
+  used once and the comment once, and it correlated 0.03 with views. The
+  per-live vote (D-372) was never used (0 of 202). Both are gone: generating
+  the first rough cut no longer opens a question, and their endpoints, schemas
+  and screens were removed. In their place, the editorial telemetry derives
+  what the operator did to the AI's frozen proposal — start or end stretched
+  or trimmed (by how many seconds), title changed, sections added or undone —
+  with no extra click. "Why this cut?" now shows that list for the cut, and
+  Analyses → Proposal × Final shows it per cut and summed per proposing
+  provider, together with the deleted proposals and their reasons (D-993).
+  The CSV export carries it in a `mudancas` column instead of the vote ones.
+  The vote columns stay in the database, unused, so the history is kept; no
+  migration.
+- **The live ranking compares comment sentiment within the batch.** The haiku
+  only scores lives 5 to 8, and the score went in as an absolute number
+  (score/10): every candidate got the same floor, and between a 6 and an 8 the
+  sentiment moved the ranking by about 7 of its 33 points. Measured on the 92
+  lives that came from the ranking (163 hours), sentiment is the one signal that
+  goes with both used cuts and Fire per hour within the same month, and dropping
+  it makes the ranking worse on both. It now goes through the same min-max as
+  views: the best score in the batch is worth the full weight, the worst is worth
+  zero. The weights themselves stay as each channel set them (D-1000).
+  A live with no sentiment (no comments, or the haiku failed) used to get a
+  fake 5.0; in the batch that would be the worst score. It now sits in the
+  middle of the batch and does not stretch the scale of the others; the screen
+  still shows the neutral 5.0.
+- **`app/models.py` is now the `app/models/` package.** The file sat at the
+  file-size ceiling (908 lines), so the next table had nowhere to live. The code
+  moved as it was, split into `base`, `projeto`, `shorts`, `snapshots` and `canal`;
+  `__init__` re-exports everything, so `from app.models import X` keeps working
+  and the schema is unchanged (D-1001).
+- **The "pipe exit code lies" rule now says where to write the output.** `AGENTS.md`
+  and `docs/qualidade.md` point to `.guia/tmp/<D-NNN>/` (outside git) and forbid
+  writing outside the worktree, where five orphan D-995 logs piled up in `C:\DEV` (D-1002).
+- **Two batch messages now name the right action.** With a date set, the "your
+  turn" notice says to check the date and click the final button, since it
+  is not "Publish" there. The Instagram API refusal now points to the "Now"
+  mode, which is what the screen offers, instead of "remove the date".
+- **Recorte que tira a frase de uma cena agora desfaz a marca de "cenas validadas".** O operador tinha validado aquela cena sobre aquela fala. Só mover a cena junto com a frase mantém a marca.
+- **Changing cuts no longer changes screens.** J, K, the selector arrows and the
+  side list used to open the next cut at whatever stage it had reached: K in the
+  editor of cut 5 could land on the final review of cut 6. Now the editor, the
+  post-production screen and the final review stay where they are and only the
+  cut changes. Each cut opens in a fresh instance of the screen, so a selection,
+  undo history or draft from one cut can no longer be applied to the next. As a
+  result, player speed, smart play, pointer mode, the open side tab and the
+  Remotion preview return to their defaults when you change cuts. Finishing a raw cut still leads to post-production and finishing a render
+  still leads to the final review, but only if the screen was watching that work:
+  going back with J to a cut that finished while you were away stays on the
+  screen (D-1033).
+- **The main button now names the next real step of a cut.** In the editor, an
+  approved cut showed "Approved" as its main button, and clicking it or pressing
+  Enter sent the cut back to proposed. Approval now sits apart, with a Return
+  button beside it, and the main button says "Generate raw cut" or "Go to
+  post-production". In the live's list, "Finish" always opened post-production;
+  it now says what is missing (raw cut, scenes, render, cover, metadata) and opens
+  the screen where that is done. In post-production, a cut that never had a raw
+  video no longer claims the cleanup deleted it, and its main button leads to the
+  editor (D-1041).
+- **What is still open now travels with the cut.** The action bar of the editor,
+  post-production and final review lists it (scenes to validate, items to check,
+  scene warnings, a raw cut older than its segments) without blocking anything. If
+  segments change after the raw cut was generated, the editor says so and its main
+  button offers to regenerate it. With a cut open, each step of the top trail
+  summarises that cut; the live's page keeps counting the live. In the technical
+  report, frozen images and rough splices now jump to that moment in the video.
+  "Audio normalized", always green even beside a low-volume warning, gave way to
+  "Scenes validated". Generating a raw cut with the live no longer on disk now says
+  to download it again from the Library (D-1044).
+- **Shorts now belong to the cut's journey.** The cut's row and the final review
+  link to "Shorts deste corte (5)". Both Fire screens get a step trail, Curar and
+  Prateleira, with what each one still has open, and their breadcrumb leads back to
+  the cut's row in the live, which comes into view with focus on it. In the
+  Prateleira, the button that renders a short now says "Renderizar"; "Finalizar"
+  stays only on the Fire card, where it is the operator's declaration (D-1051).
+
+### Removed
+- Saiu o endpoint `GET /api/settings/capa-tiktok/layout`, sem uso na tela desde a D-938; o layout global segue como base da capa e chega à tela pelo painel do modal Estilizar capa (D-948).
 
 ### Fixed
 - **"Informar a URL publicada" no longer disappears once the cut is on
@@ -142,6 +584,397 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered video still used the cut's base screens, so the card jumped to
   another spot. The render now uses the segment's screens too. Cuts already
   rendered this way get the new card position only if rendered again (D-907).
+- **A hook that starts with the highlighted word keeps its capital letter.**
+  The hook always opens with a capital, but when it started with the
+  highlight (`*ninguém* te conta`) the first character was the asterisk and
+  the sentence came out in lowercase. The capital now goes on the first
+  letter, skipping the highlight mark (D-919).
+- **Stable renderer card contracts.** With the stills rendered in parallel
+  tabs (D-917), Remotion sometimes reported the page ready before the
+  compositions registered, and the contract run failed with an empty
+  composition list. That one error is now retried up to three times, with a
+  warning in the log; a composition that is really missing still fails at
+  once (D-920).
+- **The post-production stage modals show and edit the channel's stage style.**
+  The positioning modal of a cut and the stage modal of a short always drew
+  the old stage (texture and chamfered chrome), even with the channel set to
+  "Limpo". Both now carry a "Palco do canal" panel — the same form as in
+  Canais: style, clean background, header, plate, short and cards — and their
+  preview draws what is being edited before it is saved. Saving there applies
+  to the whole channel, as in Canais. Stage presets remember the style they
+  were made in, and each modal lists only the presets of the chosen style;
+  presets saved before this count as the current style (D-921).
+- **Clean-style cards show up again in the editor preview and in Studio.** In
+  the "Limpo" style, cards counted their time from the start of the whole video
+  instead of from their own start. Any card starting later than its own
+  duration (in PROD, 93% of them: Definição, Pergunta, Informação…) was treated
+  as already over and drew nothing. Rendered overlays were not affected (each
+  card is a separate piece there), but the preview showed no card at all in 216
+  cuts.
+- **New: how the card sits inside the cards zone (shared screen, clean
+  style).** In Canais → Palco do canal → Cards, and in each cut's modal:
+  - "Ocupar o espaço": the card grows when the text is short and shrinks when
+    it is long, until it fits the zone (up to 2.5× its normal size).
+  - "Tamanho natural": the card keeps its size and only shrinks if it doesn't
+    fit.
+  - Vertical alignment (top, center, bottom) and horizontal alignment (left,
+    center, right) place the card in the zone. The default is to fill the
+    space, centered, so a small card no longer sticks to the top of the zone
+    (D-926).
+- **The card contract tests no longer fail at random on CI.** The test picked
+  the scene composition once per card, 80 times per run, with four tabs
+  fighting for the CPU; sometimes the composition list came back empty and the
+  run failed, freezing the merge queue. The retry added in D-920 never kicked
+  in, because Remotion prefixes the message with "Error: ". Now the composition
+  is picked once, before the parallel renders, and the retry recognizes the
+  real message. Every card image is byte-identical to before (D-930).
+- **The "número em destaque" card now goes to the cards zone.** On the shared
+  screen it appeared over the small screen instead of in its own space. It was
+  the only card type missing from the zone's list. In the zone, the old style
+  shows just the ring and the number, without the full-frame grid background
+  that would cover the screens (D-931).
+- **Horizontal videos follow the audience window too.** The bulk YouTube upload
+  now asks the backend for the schedule: the channel's blocks for long videos
+  (12:00 and 18:00, four per block, every 15 minutes, by default), the daily cap
+  and the overflow to the next day, starting after the last clip already
+  scheduled or still uploading — instead of a fixed 15-minute spacing from a
+  typed start. Each row can be adjusted, and "one date for all" is the
+  alternative. The horizontal TikTok batch spreads over the TikTok blocks, in the
+  same queue as the TikTok shorts, and sending a single clip opens with the next
+  free slot (D-934).
+- **The YouTube Studio robot now turns monetization on for the whole batch at
+  once.** It used to open each video's page, where the Studio asks for extra
+  answers, and it never finished. Now it does what you do by hand: in the
+  Content list it ticks the videos it just uploaded, then Edit → Monetization
+  (On) → Update videos, and confirms. Cuts go through the Videos tab and shorts
+  through the Shorts tab. A video that is not on the first page of the list, or
+  a batch the Studio updated only in part, shows up as a warning in the robot's
+  window. The robot also stopped missing the Studio's redirect to your channel
+  (D-935).
+- **The channel header shows up on clean-style shorts.** It only had a place in
+  the strip above the top window, so in the full-frame arrangement (the default)
+  and in the insert it disappeared without notice. With no strip, it now sits
+  inside the top window, over the video, on a dark pill that keeps it readable.
+  The short preview also draws the windows with the area the video really takes,
+  as the render does, so it no longer drifts by the letterbox (D-936).
+- **Cover references no longer overlap, and only the lead's show.** On the
+  Channels screen, a long file name (like the ones ChatGPT gives its images)
+  widened its card's column, and the picture spilled over its neighbours, in
+  both the mascot sheets and the presenter photos. The card now keeps its
+  column, and the name is cut with an ellipsis. Each grid also follows the
+  chosen lead: with the mascot, only its sheets; with the presenter, only the
+  photos. The other set stays saved, with a line saying how many there are
+  and how to bring them back (D-939).
+- **The live's transcript, and the shorts' subtitles, come in Portuguese again.**
+  When YouTube offered the subtitles in more than one language, the download
+  kept them all and the ingestion took the first file in alphabetical order,
+  so `en` beat `pt` and the cut came out in English. Now the language is picked
+  by priority (pt, pt-BR, pt-PT, then en); English is used only when it is the
+  only subtitle the video has. Projects already ingested in English are fixed
+  with "Refazer transcrição" (D-940).
+- **A busy machine no longer blocks the final render at the stage PNG.** The
+  Remotion still gives Chrome a fixed 25 s to answer; with the bundle and the
+  overlays of the same render running, Chrome took longer and the whole render
+  stopped at 12%. When Chrome does not answer, the stage generator now tries
+  again (up to three times, five seconds apart); any other failure still blocks
+  on the first attempt, with its diagnostic (D-942).
+- **A busy machine no longer fails the TikTok cover.** The cover generator runs
+  the same Remotion still as the stage PNG, which gives Chrome a fixed 25 s to
+  answer; it now tries again when Chrome does not answer, like the stage already
+  did (D-942). Two download-deadline tests also stopped mistaking the slow start
+  of their fake process for silence (D-949).
+- **A busy machine no longer leaves a short without its frame.** The short's
+  stage PNG runs the same Remotion still as the horizontal stage and the TikTok
+  cover, which gives Chrome a fixed 25 s to answer; it now tries again when
+  Chrome does not answer, like the other two already do (D-950).
+- **Gemini answers no longer time out after they are ready.** The Antigravity
+  CLI (`agy` 1.3.x) answers and then stays alive for 10-15 minutes polling in
+  the background; the app waited for it to exit, threw the finished answer away
+  at the 880 s timeout and held the Gemini queue meanwhile. It now returns as
+  soon as the `result` event arrives and ends the leftover process by its PID
+  (D-953).
+- **A stuck Gemini call no longer outlives its timeout.** The prompt (80-200k
+  characters) was written to the Antigravity CLI on the calling thread; if
+  `agy` hung without reading it, the write blocked past the timeout and held
+  the Gemini queue. The write now runs in its own thread, so the timeout covers
+  it and the process tree is killed when it expires (D-954).
+- **Covers generated in ChatGPT carry their reference photos again.** ChatGPT
+  added a "Take a photo" camera input ahead of the photo upload field, and the
+  robot handed every attachment to the first image input it found: the request
+  went out with no host frames and no photos of the people in the cover. The
+  robot now picks the field that takes several images and is not the camera,
+  and stops with a clear message instead of sending a cover without references
+  (D-955).
+- **Cover reference frames no longer pick a face on a wall poster.** In lives
+  with the camera full screen and a poster with a drawn face behind the host,
+  the robot sent ChatGPT three crops of the poster. The host was chosen by how
+  much the head-and-shoulders area changed: the poster's small area grew with
+  the host's head moving into it, and the host's large area diluted his motion.
+  The choice now measures that change on the face itself (D-956).
+- **Cover reference frames stop at the camera frame, before the live's banner.**
+  In lives with the camera in a framed window, the host's face is large and the
+  head-and-shoulders crop ran past the window: the channel bar on top and the
+  "NOVO ASSINANTE / CHAVE PIX" banner below went to ChatGPT as reference. The
+  crop now stops at the nearest horizontal edge that crosses it in every frame;
+  what sits behind the host never does, because the head covers part of it
+  (D-957).
+- **A horizontal cut no longer goes to TikTok on its own without the vertical
+  cover.** With "publicar sozinho" on, a cut that has no vertical TikTok cover
+  used to be posted with whatever frame TikTok picked. Now the robot leaves the
+  tab ready, does not press Publish, and says the cover is missing, both from
+  the batch and from the cut's own button. Shorts are unchanged (D-958).
+- **YouTube Studio monetization always takes the 3 newest videos of each tab.**
+  Now and then the Studio left a video unmonetized, and nothing went back for
+  it. The bulk edit now also checks the 3 videos at the top of the Videos and
+  Shorts tabs, so a video missed in one round is picked up in the next (D-959).
+- **The short's stage preset now follows the active style and keeps the whole
+  stage.** Creating or editing a stage from "Padrões do corte" used to show the
+  old style's texture and no header controls, and saved only the layout: the
+  preset came out without its style (so it vanished from the clean style's
+  list) and without the name, @ and header. Now that editor shows only the
+  active style's sections, the preset carries the style and the stage, and
+  choosing it as the cut's default brings that stage to the cut. The "Palco"
+  select in "Padrões do corte" lists only the active style's presets (D-960).
+- **The host's face on AI covers is human and restrained, not clickbait.**
+  The covers copied the eyebrows the host raises mid-sentence, and the image
+  generator exaggerated them into a challenging stare. The cover now takes the
+  emotion from the live frames at a natural, conversational intensity, and the
+  host photos saved in the channel settings go along with the frames on every
+  cover, so the face comes out right (D-962).
+- O PNG do palco do YouTube não reempacota mais o Remotion a cada geração: o pacote é montado uma vez por versão do renderer e o render deixa de estourar 300 s com a máquina ocupada.
+- O PNG do palco do short não reempacota mais o Remotion a cada geração: o pacote é montado uma vez por versão do renderer e o short deixa de sair sem moldura com a máquina ocupada.
+- O card de Contraponto no vídeo cheio com caixa em pé agora empilha os dois lados, um em cima do outro, como já fazia na tela compartilhada; lado a lado ele encolhia até a letra ficar ilegível.
+- O modo do corte (FULL/COMP.) agora vale quando difere do projeto: escolher FULL num projeto COMP. não volta mais sozinho, e as duas pílulas não ficam desmarcadas. Adicionar uma região manual não troca mais o modo do corte. O padrão Global volta a chegar aos projetos que não ajustaram o próprio: "Definir Global" deixou de copiar o padrão para dentro de cada projeto, e o tipo do projeto mostrado na tela passa a ser o herdado do Global. Atenção: um projeto com o tipo FULL escolhido sob um Global COMP. antes renderizava COMP.; agora renderiza FULL, como a tela já mostrava.
+- O título do YouTube no modal de metadados da Bancada não perde mais o foco enquanto se digita: o vídeo tocando ou a fila de render atualizando a tela jogavam o foco para o botão de fechar (D-967)
+- As capas novas (a do YouTube e a do TikTok) e o elenco conferido (foto trocada, pessoa tirada ou posta) não voltam mais ao que eram ao fechar e reabrir o modal de metadados — nem quando o robô termina com o modal fechado; e o Esc com a capa ampliada fecha só a capa.
+- A capa nova aparece também na miniatura da linha do corte e na consulta de metadados: a imagem não vem mais do cache do navegador quando a capa é refeita.
+- No painel de layout do corte, o corte que herda o modo agora mostra de onde ele vem de verdade (Projeto, Global ou padrão do app); antes dizia 'do Projeto' mesmo quando o projeto também herdava do Global (D-970)
+- No painel de layout do corte, o corte que troca o modo agora diz de quem ele está discordando de verdade (Projeto, Global ou padrão do app); antes dizia 'sobrescrevendo o Projeto' mesmo quando o projeto não tinha modo próprio (D-971)
+- A legenda da prévia do short passa a seguir a transcrição refeita, e o menu ⋯ da tela do short ganha 'Atualizar legendas' (D-972).
+- A legenda da prévia do short também acompanha as outras ações que ressincronizam a transcrição do corte: salvar trechos, mover início e fim, dividir, juntar, reordenar blocos, gerar trechos com a IA, diarizar, gerar o bruto e a fábrica de shorts (D-973).
+- No modo da capa "apresentador", o prompt da capa do short e da arte do TikTok que ainda descreve o mascote volta uma vez para a IA com um aviso e, se insistir, a geração falha com uma mensagem clara em vez de gravar; o bloco do modo também avisa que o personagem do prompt do YouTube não é o apresentador, e a roupa do mascote não passa para ele (D-974)
+- Na tela de Shorts, a dica de 'Gerar bruto e shorts com IA' não promete mais deixar a transcrição intocada: refazer o bruto não refaz a transcrição da live nem as cenas, mas a do corte se ajusta aos silêncios (D-975).
+- A análise da live termina gerando os trechos a remover de cada corte novo, com a mesma IA, em segundo plano: a live nova não chega mais com só 2 ou 3 trechos por corte, e não é preciso clicar em 'Gerar trechos' (D-976).
+- O preset aplicado no padrão global do pós agora leva os cards junto: antes só a posição das telas ia para o global, e o corte mostrava o preset como em uso com os cards do canal. (D-981)
+- **Pillow 13.0.0 and certifi 2026.10.19.** The backend's pip-audit gate failed
+  every PR since 21/10/2026: Pillow 12.3.0 carried two critical advisories
+  (CVE-2026-112900, Ghostscript argument injection through EPS; CVE-2026-112393,
+  TIFF encoder heap overflow) and about twenty high/moderate ones, and certifi
+  2026.7.22 still trusted the compromised `emSign ECC Root CA - G3`
+  (PYSEC-2026-4320). 13.0.0 is the only Pillow release that fixes them; its
+  breaking changes (Python 3.10 dropped, I-mode PNG, `fromarray` mode,
+  `get_child_images`, `ExifTags.IFD.Makernote`) touch no code here, and the
+  cover and thumbnail tests, including the 4:4:4 encoding (RN-23), pass on it.
+  The three locks are regenerated with `--universal --python-version 3.11`,
+  upgrading only these two packages, so the per-Python markers stay as they
+  were (D-982).
+- **TikTok scheduling works with the new date picker.** TikTok Studio replaced the two schedule inputs with comboboxes, so the robot waited 15 s for a date field that no longer exists and the rest of the batch stalled. The date and time pickers are now found by their `aria-label`, and the chosen date is checked against the text the field shows ("23 de out de 2026") (D-983).
+- Aplicar um preset pelo atalho Definir ▾ da escada agora leva os cards junto, como o modal; e um preset do Compartilhado não desarruma mais a posição dos cards dos cortes em Full. (D-985)
+- **zod 4.6.7 in the video renderer, for every Remotion package too.** The
+  renderer's `npm audit` gate failed every PR since 24/10/2026 with
+  GHSA-mrhx-c7xc-m3w5 (high: zod below 4.6.6 can exhaust memory validating
+  oversized constrained collections). The renderer pinned zod 4.5.4, and the
+  Remotion packages (studio, studio-server, studio-protocol, media,
+  elevenlabs, openai-whisper) pin 4.5.4 themselves, even in their latest
+  release, so bumping our pin alone left a vulnerable nested copy. The pin goes
+  to 4.6.7, the version the frontend already uses, and an npm `overrides`
+  entry makes Remotion share that single copy. The scene schema API is
+  unchanged: lint, the card contracts, the bundle and the frontend's preview
+  tests pass on it (D-986).
+- **Gemini (Antigravity) now tells the operator how to sign in again.** Antigravity CLI 1.4 reports a missing login with a new phrase that the app did not recognize, so the call was retried for nothing and failed with a generic status. The app now recognizes it and explains the new flow: run `agy`, sign in with the subscription's Google account and paste the generated code back into the terminal, not into CutCut, which never receives the token (D-990).
+- **The Biblioteca card counts the cuts the render already finished.** A cut
+  moves from "aprovado" to "processado" when its final render ends, but the
+  library listing only counted "aprovado" — so a live went blank on the card
+  exactly for having finished: no network chips (the D-987 ones need at least
+  one ready cut), the stage strip showing Bruto, Pós and Metadados as pending,
+  and the badge falling back to "analisado" on a live already rendered. Of the
+  186 lives with a published cut on 29/10/2026, 129 read zero. The four counts
+  (approved, with raw, with metadata, and the ready/published population behind
+  the chips) now ask for both statuses, from one rule that lives with the cut's
+  lifecycle; the project screen, which always asked for both, now reads it from
+  there instead of its own copy. Proposed and rejected cuts stay out, and the
+  raw count still depends on the file being on disk (D-992).
+- **A failed YouTube stats sync now shows on screen, and the sync runs by
+  itself.** Between 10/07 and 27/10/2026 the Desempenho YouTube sync was refused
+  (the channel token lacked `yt-analytics.readonly`) and nothing said so: the
+  error only reached the log, and the tab kept showing an old "last sync" date.
+  The status now carries the last failure; the tab shows it with the message and
+  the date of the last successful sync (or "never"), and the tab gets an alert
+  dot so it is seen without opening it. The re-authorize message no longer tells
+  you to restart the backend (the token is re-read on every sync) and says
+  `auth_youtube.py` must run inside the folder of the installation that syncs,
+  since run elsewhere it writes that folder's token. A background loop now syncs
+  once a day, starting a minute after boot, with a 10-minute cap per run, and
+  survives a failed run.
+- **The robot's Chrome no longer keeps a tab after a batch.** The robot's
+  Chrome is launched on a URL (the TikTok account check, the YouTube Studio),
+  and the script then works in a new tab; that launch tab was never closed, so
+  every TikTok batch and every Studio run left one behind. Now, when the whole
+  batch ends — the lane and every tab watch — the robot closes the tabs it left:
+  the launch tab and the ones already published (including those the robot
+  published itself). A tab still holding an upload that waits for the
+  operator's Publish stays open, and so do the Studio tabs when something
+  failed, since that is where the reason is read.
+- **The YouTube Studio robot no longer times out while turning monetization on
+  for a batch.** The wait for the "N of M videos updated" notice had 300 s on
+  paper, but each check read the notice's text with the browser's default
+  30 s wait and gave up when the notice was not on the page yet — and the
+  bigger batches since D-959 (up to 3 extra videos per tab, ~12 s each) take
+  longer than that. The robot now reads the notice only once it exists, and
+  waits up to a field's time (not 5 s) for a row's checkbox. When something
+  still fails, the message names the tab and the step ("Update videos",
+  "I understand", marking a row...) and the rest carries on: a stuck row
+  leaves only that video out, and a failure in the Videos tab no longer skips
+  the Shorts tab. The cause was inferred from the code, since production no
+  longer writes the robot's console to a log file (D-1004).
+- **The YouTube Studio robot no longer leaves a short's edit tab open when a
+  batch fails.** Any failure kept the tab, on the grounds that the reason could
+  be read there; but a failed bulk monetization (`0 of 3` on the Shorts tab) left
+  it on the edit page of an unrelated short, one tab per batch, with no reason on
+  it. Now the tab closes and the reason goes to the log, along with the Studio's
+  full notice when it updates fewer videos than asked. Only a tab asking for
+  login stays open, and it is the only batch failure that brings the window on
+  screen; a connection lost mid-batch still does too.
+- O atalho de gerar o bruto agora responde na hora: avisa que está processando, avisa quando o bruto já está em andamento, e o selo do player mostra o processamento até o fim (D-1008).
+- **O áudio do short agora sai em -14 LUFS, como o do corte horizontal.** Antes saía sem normalização (-16,2 a -19,8 LUFS, com picos clipando); a normalização roda uma vez, na composição final (D-1014).
+- **O pico do áudio final agora fica abaixo de -1 dBTP.** O AAC a 192k estourava o que o `loudnorm` entregava, chegando a +3,2 dBTP; agora o corte e o short miram -1,5 dBTP e saem em AAC 256k. Filtros de voz ficaram de fora porque o teste às cegas não mostrou diferença audível (D-1016).
+- **The horizontal cut goes to TikTok with its generated title.** The package
+  read the curation label instead of the title generated for the audience, so a
+  manual cut went out as "Corte manual #3" even with a real title saved, and AI
+  cuts went out with their curation title too. It now uses the generated title,
+  without the 🔥. A cut that only has the placeholder label is refused, with a
+  message asking to generate the metadata first (D-1021).
+Render de corte sem cenas deixou de falhar com `AttributeError`: segue sem overlays.
+- **O boletim técnico deixou de mostrar medida errada como certa.** "Medir de novo" agora apaga o boletim guardado (antes o velho voltava como pronto); FFmpeg que morre no meio vira falha, não boletim parcial; e as emendas são localizadas com os trechos com que o bruto foi realmente cortado. Se o bruto foi regerado depois do render, ou é de antes do registro dos trechos, a tela diz que as emendas não foram medidas e por quê (D-1024).
+- **Emphasis, list, lower-bar and timeline scenes in the clean style no longer
+  come out with near-invisible black text.** Only the shared `Bloco` set the text
+  colour; those four scenes do not use it and inherited the document's black, so a
+  title like "MEGAZORD" was black on the dark scrim. The colour now comes from
+  `Enquadramento`, which wraps every clean scene, and the card-contract test fails
+  if any clean scene draws near-black pixels. Videos already published keep what
+  they were rendered with.
+- **Automatic AI generation no longer inherits the owner's global instructions,
+  and a refusal now says why.** The `claude -p` the app runs read the owner's
+  personal `CLAUDE.md` even from a temp folder, so the "teacher mode" leaked
+  into scenes, excerpts and metadata and could turn the JSON into conversation.
+  The call now disables `CLAUDE.md` loading and stays on the subscription login.
+  When the AI answers with text instead of JSON, the screen shows what it said
+  instead of "Expecting value: line 1 column 1".
+- **The technical report finds each splice in the final video instead of
+  calculating it.** It added up the durations of the pieces and stretched the
+  total over the video's length, which put splices up to 1.9 s away from where
+  they are (D-1017 measured 8 cuts: 25.8% of splices looked like "sound on both
+  sides" that way, against 1.7% at the real position). Now the last second of
+  each piece is searched in the final video by correlation with the live, or
+  with the raw cut for shorts. It takes 2 to 18 s per cut on this machine. A
+  splice that cannot be found with certainty is counted as "without a certain
+  position" and left out of the count, and without the live on disk the line
+  says why. Raw cuts made before this change need to be generated again to
+  have their splices measured (D-1027).
+- **One cut failing to resync no longer takes the others down.** When saving a
+  cut's transcript hit "database is locked", the retry's rollback expired the
+  other cuts of the project that were still waiting their turn, and reading
+  their id blew up with `MissingGreenlet` — hiding the real error. The batch
+  now walks over ids, isolates each cut's failure so the rest are still
+  synchronized, and re-raises the first error at the end instead of losing it.
+- Marcar um trecho pelo atalho do bruto agora move as cenas e desfaz a marca de validadas na hora, sem esperar a próxima sincronia da transcrição (D-1031).
+- **The Workspace no longer calls a live "empty" when the cuts failed to load.**
+  With the cuts API failing, the screen said "Esta live ainda não tem cortes"
+  and offered "Analisar com a IA", which adds cuts to the existing ones and
+  spends AI. It now shows the failure with its message and "Tentar de novo",
+  and "Reanalisar" in the menu is disabled until the list loads. A refetch that
+  fails while the list is already on screen keeps the cuts visible.
+- Renderizar de novo não leva mais à Revisão assim que começa: o vídeo do render anterior no disco só conta como concluído com o backend ocioso (D-1035).
+- Na Pós, trocar de corte (J, K, setas, lista) ou sair da tela com cenas ou layout sem salvar não perde mais o ajuste: ele é salvo antes de sair, e se falhar a tela fica e avisa (D-1036).
+- **The same cut no longer pays for its scenes twice.** While the raw clip's chain
+  was generating scenes, Pós showed an empty list and a free "Gerar cenas"; after
+  switching cuts and coming back, the button was free again too, and the server
+  accepted the second request. Each generation costs about US$ 0.33 and takes 256 s
+  at the median. The server now keeps an in-memory mark per cut, taken when a raw
+  clip that will generate scenes starts, and refuses a second generation with a clear message,
+  whichever of the two sources came first. The raw clip waits too: it refuses to
+  start while scenes are being generated, and the scene route refuses while a raw
+  clip started from the screen can still rewrite the transcript, up to the shorts
+  step, because the scenes would come out of time. The raw clip the shorts factory
+  regenerates is not covered by that refusal.
+  The mark clears on error, cancellation and restart. Pós says
+  "gerando cenas" with generate and validate locked, and the cut's row and the
+  status bar say the same instead of asking to generate, validate or render,
+  including after coming back or reloading the page. The new scenes appear by
+  themselves.
+- **The live's cut list no longer says "this live has no cuts yet" while it is
+  still loading.** Right after "Try again" on a failed load (and on the very
+  first load), the screen briefly flipped to "This live has no cuts yet" with
+  the "Analyze with AI" button, and the menu's Reanalyze came back enabled,
+  even though the list had not arrived. Now it shows "Loading the cuts…" and
+  keeps Reanalyze disabled until the list is really there.
+- **The transcript routes no longer leave a project and its cuts out of step.**
+  `PATCH /transcricao` and `PUT /sincronia-legenda` kept the new text pending in
+  the session of the batch that copies it to the cuts, so the first rollback (a
+  cut with invalid data, or "database is locked") threw it away while the next
+  cuts still saved it. With the lock, the route even answered 200. The transcript
+  and the subtitle offset are now saved first; a cut that fails stays as it was,
+  and the error is still returned. `PUT /sincronia-legenda` also stopped answering
+  500 with `MissingGreenlet` after a lock, and `PATCH /transcricao` now refuses
+  with 400 a transcript that is not a list.
+- Marcar um trecho pelo atalho do bruto não responde mais 500 quando a sincronia da transcrição falha: o trecho fica gravado e aparece na lista, a tela avisa que a transcrição e as cenas não acompanharam, e repetir o mesmo intervalo refaz a sincronia em vez de gravar outro igual, dizendo que o trecho já está na lista. O botão Atualizar transcrição também avisa quando falha (D-1040).
+- **Generating metadata no longer writes over text that already exists.**
+  The "Gerar bruto" gesture now fills only what is missing, so a title written by
+  hand stays. With a title and no description, the card's button says "Completar
+  metadados"; "Regerar metadados" still replaces everything, with Desfazer. A new
+  request while a generation is running is refused instead of paying for another
+  call.
+- Cancelar uma geração pela fila agora encerra o `claude -p`, com os processos filhos, na hora. Antes ele seguia trabalhando até o timeout, e um pedido novo pagava a mesma geração de novo. O cancelamento que chega antes de o processo abrir impede que ele abra, e as cenas da geração cancelada não são gravadas, salvo se a gravação no banco já tiver começado. Vale para a geração que a fila consegue cancelar, como a da cadeia do bruto; o item de IA disparado pelo clique ainda não atende ao Cancelar (D-1045).
+- **Regenerated scenes no longer count as validated.** "Generate again" warned that
+  the validated mark would be lost, but the mark stayed on the new scenes, so the
+  Review checklist said "Cenas validadas" for scenes nobody had checked. Replacing
+  the scenes now clears the mark on all four paths: the button, the Gemini route,
+  the manual import and the raw-cut chain. A generation that fails or is refused
+  keeps the scenes and their mark, and moving scenes with a cut or filling in
+  portraits does not touch it (D-1046).
+- **Scenes no longer run alongside the raw cut of the shorts factory.** The factory
+  regenerates the raw video without marking the cut as busy, so a click on
+  "Generate scenes" went through while the silence safeguard was rewriting the
+  transcript, and the scenes could come out of sync with no warning. Every raw
+  cut now holds the existing scene mark until it reaches the shorts step, which
+  does not touch the text. The screen still says "generating scenes" only when
+  scenes really are being generated. A raw cut also marks only its own progress
+  now: the end of an older one could tick the shorts step of a newer one and let
+  the click through mid-safeguard (D-1048).
+- **Scenes stay on their phrase when the cut changes during generation, except in manual
+  mode.** The AI answers with
+  a subtitle number, and the import looked that number up in the transcript of that moment:
+  removing a stretch while the AI was working left the scene on another line, with no
+  warning (42 s against 30 s in the test). Scenes now convert against the transcript the AI
+  read and follow the words, like saved scenes do. Nothing in the editor waits for the AI,
+  except split and join, which are refused because they change which cut exists. A scene
+  whose words left the cut stays where it is and shows the warning. Gemini generation now
+  holds the same mark as the others, and manual import is refused while the mark is taken.
+  The exception: in manual mode, a scene does not follow a transcript edit made between
+  copying the prompt and pasting the answer, and lands on the wrong line with no warning
+  (D-1049).
+- **The metadata card no longer erases text you typed and have not saved.**
+  Typing during "Completar metadados" used to lose the text when the generation
+  ended, and the same happened when another field was saved or a new cover
+  arrived. An edited field now stays as it is, an untouched field receives what
+  arrived, and a draft never moves to another clip. "Regerar metadados" still
+  replaces everything, and Desfazer now brings back what you had typed as well.
+- Render que não refez o vídeo não leva mais à Revisão: "só a grade" termina como render parcial e o backend reiniciado no meio avisa na Pós, em vez de abrir o vídeo anterior como se fosse o novo (D-1057).
+- **Desfazer on the metadata card now survives leaving the screen.** Starting
+  "Regerar metadados" and then closing the modal or moving to another clip used to
+  lose the previous version for good once the generation ended. It now waits with
+  its clip and is offered there, and only there, until you choose Desfazer or
+  Manter or regenerate again. It lasts until the page is reloaded.
+- **Desfazer now wins over text typed after "Regerar metadados".** Typing right
+  after the regeneration and clicking Desfazer could leave the typed text on
+  screen, ready to overwrite the restored version on the next blur.
+- **Finding portraits no longer erases scenes that changed during the search.**
+  The search reads the scenes, spends up to tens of seconds on the network and
+  then saved what it had read, so a paid generation, an edit or a sync finished
+  in that window vanished with a success message. It now saves only if the scenes
+  are still the ones it read; otherwise it saves nothing and tells the operator to
+  search again. The Portraits item is also disabled while scenes are being
+  generated, with the reason in its tooltip.
 
 ## [0.6.0] - 2026-10-07
 
@@ -995,7 +1828,8 @@ First public release.
   chunks (see `docs/interno/historico-arquitetura-2026-05.md` §8).
 - Single-flight audio proxy with hybrid seek (I-039).
 
-[Unreleased]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.3.0...v0.4.0
