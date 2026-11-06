@@ -20,6 +20,8 @@ export const OverlaySceneV2: React.FC<OverlayProps> = ({
   estiloCenas,
 }) => {
   const { fps, durationInFrames } = useVideoConfig();
+  // D-1070: a riscada não entra no render; o overlay sai transparente.
+  if (cena.riscada) return <AbsoluteFill />;
 
   const localCena = {
     ...normalizarCenaRemotion(cena),

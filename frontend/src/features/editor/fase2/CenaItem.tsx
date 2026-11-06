@@ -23,8 +23,9 @@ import { Icon } from '@/upgrade/Icon';
 //   - Caption "Visual da cena (sobrescreve padrao do projeto)"
 //   - Grid 3 ConfigSelect: Sombra / Layout / Modelo (todos com Auto)
 //   - Se ficha_biografica: bloco retrato (avatar/status + Trocar/URL)
-//   - Acoes: Ir (outline) · spacer · Remover (ghost) · Aplicar (accent) → fecha
-// Mantem 100% da logica (onChange, onRemove, onSeek).
+//   - Acoes: Ir (outline) · spacer · Aplicar (accent) → fecha
+// D-1070: o lixo virou Riscar (a cena fica no plano, fora do render) e o selo da
+// origem vem de quem monta o plano (CenaComOrigem).
 // ─────────────────────────────────────────────────────────────
 
 type SombraOpt = NonNullable<CenaRemotion['sombra_nivel']>;
@@ -40,11 +41,13 @@ interface Props {
   ativa: boolean;
   sobreposta: boolean;
   onChange: (next: CenaRemotion) => void;
-  onRemove: () => void;
+  onRiscar: () => void;
   onSeek: (seg: number) => void;
+  /** D-1070: de onde a cena veio, ao lado do intervalo. */
+  selo?: ReactNode;
 }
 
-export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }: Props) {
+export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, selo }: Props) {
   const meta = metaCena(cena.tipo);
   const [aberto, setAberto] = useState(false);
 
@@ -77,7 +80,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
       style={containerStyle}
     >
       {/* Header — clique no card SEEKa pro inicio; chevron alterna expander.
-          Trash ghost visivel mesmo no colapsado (decisao Paulo). */}
+          Riscar visivel mesmo no colapsado (decisao Paulo, D-1070). */}
       <div className="flex items-center gap-2.5 px-2.5 py-2">
         <button
           type="button"
@@ -121,22 +124,22 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
                 o ícone à esquerda (cor + forma por tipo, tooltip com o nome)
                 já é a identificação primária, sem duplicar em texto. */}
             <div
-              className="mt-0.5 truncate font-code text-[10px] text-[var(--wb-text-dim)]"
+              className="mt-0.5 flex min-w-0 font-code text-[10px] text-[var(--wb-text-dim)]"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
-              {cena.inicio.toFixed(1)}s → {cena.fim.toFixed(1)}s ·{' '}
-              {(cena.fim - cena.inicio).toFixed(1)}s
+              <span className="truncate">{cena.inicio.toFixed(1)}s → {cena.fim.toFixed(1)}s · {(cena.fim - cena.inicio).toFixed(1)}s</span>
+              {selo}
             </div>
           </div>
         </button>
-        <Tooltip label="Remover cena" side="left">
+        <Tooltip label="Riscar: fica no plano, fora do render" side="left">
           <button
             type="button"
-            onClick={onRemove}
-            aria-label="Remover cena"
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
+            onClick={onRiscar}
+            aria-label="Riscar cena"
+            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
           >
-            <Icon name="trash-2" />
+            <Icon name="eye-off" />
           </button>
         </Tooltip>
         <Tooltip label={aberto ? 'Recolher' : 'Editar cena'} side="left">
@@ -257,7 +260,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
             <RetratoBlock cena={cena} onChange={(retratoUrl) => set({ retrato_url: retratoUrl })} />
           )}
 
-          {/* Acoes — Remover saiu daqui (esta no header colapsado agora). */}
+          {/* Acoes — Riscar mora no header colapsado. */}
           <div className="mt-3 flex items-center gap-1.5">
             <Tooltip label="Ir para essa cena no player" side="top">
               <Button type="button" variant="outline" size="sm" onClick={() => onSeek(cena.inicio)}>

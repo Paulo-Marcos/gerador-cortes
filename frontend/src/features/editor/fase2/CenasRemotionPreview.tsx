@@ -12,6 +12,7 @@ import {
   EstiloDasCenasProvider,
   renderCenaV2,
   resolverNivel,
+  tirarCenasRiscadas, // D-1070: a prévia mostra o que o render vai usar, sem a riscada.
 } from '@video-renderer/public-api';
 import type { CenaRemotion, FontePreset } from '@/types/models';
 import { aplicarLayoutCardPadrao, type LayoutCardPadrao } from './cardPreviewContracts';
@@ -113,7 +114,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
 
   const overlayCenas = (
     <FrameOffsetContext.Provider value={0}>
-      {cenas.map((cena, index) => {
+      {tirarCenasRiscadas(cenas).map((cena, index) => {
         const isActive = currentTime >= cena.inicio && currentTime <= cena.fim;
         if (!isActive) return null;
         const layoutDaCena = layoutYoutube
@@ -143,7 +144,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
 
   // Cena ativa naquele frame — define se o palco aparece, e qual nível
   // de sombra usar. Sem cena ativa, palco fica invisível (só vídeo passa).
-  const cenaAtiva = cenas.find((c) => currentTime >= c.inicio && currentTime <= c.fim);
+  const cenaAtiva = tirarCenasRiscadas(cenas).find((c) => currentTime >= c.inicio && currentTime <= c.fim);
 
   // Tipos de cena que NÃO usam o palco gradient global. São cenas
   // localizadas (card pequeno em um canto) onde escurecer a tela toda

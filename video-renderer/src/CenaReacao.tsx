@@ -5,7 +5,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { normalizarCenaRemotion, ReacaoProps } from "./schema";
+import { normalizarCenaRemotion, ReacaoProps, tirarCenasRiscadas } from "./schema";
 import { renderCenaV2 } from "./cenas-v2";
 
 export const CenaReacao: React.FC<ReacaoProps> = ({
@@ -66,7 +66,7 @@ export const CenaReacao: React.FC<ReacaoProps> = ({
 
       {/* CENAS DINÂMICAS — Nomenclatura em Português */}
       <AbsoluteFill>
-        {cenas.map((cena, index) => {
+        {tirarCenasRiscadas(cenas).map((cena, index) => {
           const cenaNormalizada = normalizarCenaRemotion(cena);
           const isActive = currentTime >= cenaNormalizada.inicio && currentTime <= cenaNormalizada.fim;
           if (!isActive) return null;

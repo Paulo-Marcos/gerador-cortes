@@ -13,12 +13,19 @@ import { useCenasEmGeracao, useGerarCenasClaude } from '@/features/editor/useGer
 import { usePreencherRetratosCenas, useValidarCenasRemotion } from '@/features/editor/useCenas';
 import type { CenaRemotion } from '@/types/models';
 import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
-import { CenaComOrigem } from './CenaComOrigem';
+import { CenaComOrigem, LegendaDaOrigem } from './CenaComOrigem';
 import { CenasManualModal } from './CenasManualModal';
 import { RendererConfigControls } from './RendererConfigControls';
 import { TIPOS_CENA } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
-import { validateSceneOverlaps } from './sceneValidation';
+import {
+  criarCenaManual,
+  marcarSeReescrita,
+  riscarCena,
+  trazerCenaDeVolta,
+  usePlanoDasCenas,
+  validarSobreposicoesDoPlano,
+} from './planoDasCenas';
 import { Icon } from '@/upgrade/Icon';
 import { mensagemErro } from '@/lib/mensagemErro';
 import { ErroDaApi } from '@/shared/api';
@@ -33,7 +40,7 @@ import { ErroDaApi } from '@/shared/api';
 //   3. Padroes do palco: so aparece quando acionado pelo ⋯ (nao e mais linha fixa)
 //   4. Stats (AUDITORIA-v4 §2): uma linha inline "Ns duracao · N cenas · N% cobertura"
 // Lista: CenaItem expansivel.
-// Footer: "Tipos disponiveis ▾" + spacer + "Marcar validadas" (ok).
+// Footer: "Tipos disponiveis ▾" + spacer + "Validar o plano (faltam N)" (D-1070).
 //
 // Mantem as acoes visiveis de IA, retratos, edicao e validacao de cenas.
 // ─────────────────────────────────────────────────────────────
@@ -97,23 +104,19 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
   const [dirty, setDirty] = useState(false);
 
   const cenasOrdenadas = useMemo(() => [...cenas].sort((a, b) => a.inicio - b.inicio), [cenas]);
+  const { cenasDoRender, riscadas, origens, faltam } = usePlanoDasCenas(corteId, cenasOrdenadas);
   const duracaoCenas = useMemo(
-    () => cenasOrdenadas.reduce((total, cena) => total + Math.max(0, cena.fim - cena.inicio), 0),
-    [cenasOrdenadas],
+    () => cenasDoRender.reduce((total, cena) => total + Math.max(0, cena.fim - cena.inicio), 0),
+    [cenasDoRender],
   );
   const fimTimeline =
-    cenasOrdenadas.length > 0 ? Math.max(...cenasOrdenadas.map((cena) => cena.fim)) : 0;
+    cenasDoRender.length > 0 ? Math.max(...cenasDoRender.map((cena) => cena.fim)) : 0;
   const cobertura = fimTimeline > 0 ? (duracaoCenas / fimTimeline) * 100 : 0;
-  const validation = useMemo(() => validateSceneOverlaps(cenasOrdenadas), [cenasOrdenadas]);
-  const totalFichas = useMemo(
-    () => cenasOrdenadas.filter((cena) => cena.tipo === 'ficha_biografica').length,
-    [cenasOrdenadas],
-  );
-  const fichasSemRetrato = useMemo(
-    () =>
-      cenasOrdenadas.filter((cena) => cena.tipo === 'ficha_biografica' && !cena.retrato_url).length,
-    [cenasOrdenadas],
-  );
+  const validation = useMemo(() => validarSobreposicoesDoPlano(cenasOrdenadas), [cenasOrdenadas]);
+  const totalFichas = cenasDoRender.filter((cena) => cena.tipo === 'ficha_biografica').length;
+  const fichasSemRetrato = cenasDoRender.filter(
+    (cena) => cena.tipo === 'ficha_biografica' && !cena.retrato_url,
+  ).length;
   const retratosDisabled = preencherRetratos.isPending || totalFichas === 0 || dirty || emGeracao;
   const retratosTooltip = emGeracao
     ? 'Espere as cenas terminarem de ser geradas'
@@ -134,7 +137,9 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     });
   };
 
-  const handleChange = (idx: number, next: CenaRemotion) => {
+  // Riscar e trazer de volta também mudam as cenas: ao salvar, o backend desfaz a
+  // marca de validadas como em qualquer mudança (D-1030, D-1046).
+  const substituirCena = (idx: number, next: CenaRemotion) => {
     const novas = [...cenas];
     const sortedToOriginal = cenas.indexOf(cenasOrdenadas[idx]);
     if (sortedToOriginal < 0) return;
@@ -143,25 +148,12 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     setDirty(true);
   };
 
-  const handleRemove = (idx: number) => {
-    const target = cenasOrdenadas[idx];
-    onCenasChange(cenas.filter((cena) => cena !== target));
-    setDirty(true);
-  };
+  // D-1070: reescrever o conteúdo de uma cena da IA a faz manual.
+  const handleChange = (idx: number, next: CenaRemotion) =>
+    substituirCena(idx, marcarSeReescrita(cenasOrdenadas[idx], next));
 
   const handleAdd = () => {
-    const ultima = cenasOrdenadas[cenasOrdenadas.length - 1];
-    const inicio = ultima ? ultima.fim : 0;
-    const nova: CenaRemotion = {
-      tipo: 'barra_inferior',
-      inicio,
-      fim: inicio + 5,
-      texto: 'Nova cena',
-      modelo_cena: 'card',
-      layout_card: 'auto',
-      sombra_nivel: 'auto',
-    };
-    onCenasChange([...cenas, nova]);
+    onCenasChange([...cenas, criarCenaManual(cenasOrdenadas)]);
     setDirty(true);
   };
 
@@ -197,22 +189,29 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     });
   };
 
-  const validarDisabled = validarCenas.isPending || dirty || cenasOrdenadas.length === 0 || emGeracao;
+  const validarDisabled = validarCenas.isPending || dirty || emGeracao;
   const validarTooltip = emGeracao
     ? 'Espere as cenas terminarem de ser geradas'
     : dirty
     ? 'Salve as cenas antes de validar'
-    : cenasOrdenadas.length === 0
-      ? 'Nenhuma cena para validar'
-      : cenasValidadas
-        ? 'Desfazer validacao'
-        : 'Marcar cenas como validadas';
+    : cenasValidadas
+      ? 'Desfazer a validação do plano'
+      : cenasDoRender.length === 0 // D-1070: validar de propósito um plano vazio libera o render sem cenas.
+        ? 'O vídeo sai sem nenhuma cena'
+        : faltam > 0
+          ? `${faltam} cena(s) pedem conferência; os avisos não impedem validar`
+          : 'Validar o plano de cenas';
+  const rotuloDoValidar = cenasValidadas
+    ? 'Plano validado'
+    : cenasDoRender.length === 0
+      ? 'Validar sem cenas'
+      : `Validar o plano${faltam > 0 ? ` (faltam ${faltam})` : ''}`;
 
   const handleValidarCenas = () => {
     validarCenas.mutate(!cenasValidadas, {
       onSuccess: (data) => {
         const validou = Boolean(data.cenas_validadas);
-        notify(validou ? 'Cenas marcadas como validadas.' : 'Validacao desfeita.', {
+        notify(validou ? 'Plano de cenas validado.' : 'Validação do plano desfeita.', {
           tone: validou ? 'success' : 'info',
         });
       },
@@ -235,7 +234,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             Cenas Remotion
           </strong>
           <span className="inline-flex items-center rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
-            {cenasOrdenadas.length}
+            {cenasDoRender.length}
           </span>
           {fichasSemRetrato > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-warn)]">
@@ -248,7 +247,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
               className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-ok)]"
               data-testid="cenas-validadas-badge"
             >
-              <Icon name="circle-check" /> validadas
+              <Icon name="circle-check" /> plano validado
             </span>
           )}
           <div className="flex-1" />
@@ -321,8 +320,9 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             ·
           </span>
           <span>
-            <b className="font-bold text-[var(--wb-text)]">{cenasOrdenadas.length}</b>{' '}
+            <b className="font-bold text-[var(--wb-text)]">{cenasDoRender.length}</b>{' '}
             <span className="text-[var(--wb-text-dim)]">cenas</span>
+            {riscadas > 0 && <span className="text-[var(--wb-text-dim)]"> · {riscadas} riscada(s) fora</span>}
           </span>
           <span aria-hidden className="text-[var(--wb-border)]">
             ·
@@ -332,6 +332,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             <span className="text-[var(--wb-text-dim)]">cobertura</span>
           </span>
         </div>
+        {cenasOrdenadas.length > 0 && <LegendaDaOrigem className="mt-2" />}
 
         {/* Botao Salvar so aparece quando dirty (mantem comportamento anterior) */}
         {dirty && (
@@ -380,10 +381,12 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
               <li key={`${cena.tipo}-${idx}-${cena.inicio}`}>
                 <CenaComOrigem corteId={corteId}
                   cena={cena}
+                  origem={origens[idx]}
                   ativa={idx === cenaAtivaIdx}
                   sobreposta={validation.overlappingIndices.has(idx)}
                   onChange={(next) => handleChange(idx, next)}
-                  onRemove={() => handleRemove(idx)}
+                  onRiscar={() => substituirCena(idx, riscarCena(cena))}
+                  onTrazerDeVolta={() => substituirCena(idx, trazerCenaDeVolta(cena))}
                   onSeek={onSeek}
                 />
               </li>
@@ -392,7 +395,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         )}
       </div>
 
-      {/* Footer — "Tipos disponiveis ▾" + spacer + "Marcar validadas" (ok) */}
+      {/* Footer — "Tipos disponiveis ▾" + spacer + "Validar o plano (faltam N)" */}
       <footer className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2.5">
         <button
           type="button"
@@ -426,7 +429,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             ) : (
               <Icon name="shield-check" />
             )}
-            {cenasValidadas ? 'Validadas' : 'Marcar validadas'}
+            {rotuloDoValidar}
           </Button>
         </Tooltip>
       </footer>
