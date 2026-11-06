@@ -228,6 +228,22 @@ async def test_o_gemini_fica_registrado_como_quem_gerou(cliente, ia):
 
 
 @pytest.mark.asyncio
+async def test_o_gemini_pelo_agy_fica_registrado_como_quem_gerou(cliente, ia):
+    """O Gemini pela assinatura (`agy -p`) entra pela rota do Claude com `provider=gemini`."""
+    await _gerar_pelo_claude(cliente, ia, "Do Claude")
+    ia.texto = "Do agy"
+
+    resposta = await _no_limite(
+        cliente.post("/api/claude/corte/c1/gerar-cenas", params={"provider": "gemini"})
+    )
+
+    assert resposta.status_code == 200, resposta.text
+    rodadas = await _rodadas(cliente)
+    assert _textos(rodadas["atual"]) == ["Do agy"]
+    assert (rodadas["atual"]["origem"], rodadas["anterior"]["origem"]) == ("gemini", "claude")
+
+
+@pytest.mark.asyncio
 async def test_guarda_uma_rodada_so(cliente, ia):
     for texto in ("Primeira", "Segunda", "Terceira"):
         await _gerar_pelo_claude(cliente, ia, texto)
