@@ -236,6 +236,22 @@ class Corte(Base):
     cenas_validadas_em: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, default=None
     )
+    # D-1071 (RN-37): quem gerou as cenas de agora e quando, e a rodada que elas
+    # substituíram, uma só, para desfazer e comparar. Origem vazia = gravada antes da D-1071.
+    # `cenas_anteriores` guarda o payload como `cenas_remotion`; NULL = não há anterior.
+    cenas_origem: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    cenas_geradas_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+    cenas_anteriores: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    cenas_anteriores_origem: Mapped[str | None] = mapped_column(
+        String(20), nullable=True, default=None
+    )
+    cenas_anteriores_geradas_em: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None
+    )
+    cenas_anteriores_validadas: Mapped[int] = mapped_column(Integer, default=0)
+    cenas_anteriores_validadas_em: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None
+    )
     is_pos_producao: Mapped[int] = mapped_column(Integer, default=0)
     # F-058: influência manual do editor sobre a thumbnail. Texto livre
     # (pessoas a destacar, relações, ênfases de tema). Quando preenchido, é
