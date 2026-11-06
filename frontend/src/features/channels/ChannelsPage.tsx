@@ -4,6 +4,7 @@
 // abrem cada seção; na aplicação, Aparência (tema+paleta) + settings globais.
 // Container: orquestra o I/O (hooks em useChannels) e delega às seções.
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
@@ -41,6 +42,15 @@ import { Icon, type IconName } from '@/upgrade/Icon';
 
 type Dialogo = { tipo: 'criar' } | { tipo: 'editar'; canal: Canal } | null;
 type Aba = 'canal' | 'aplicacao';
+
+/** D-1072: `?aba=aplicacao` abre direto na Aplicação, onde mora o filtro do canal. */
+export function abaDaBusca(busca: URLSearchParams): Aba {
+  return busca.get('aba') === 'aplicacao' ? 'aplicacao' : 'canal';
+}
+
+function useAbaInicial(): Aba {
+  return abaDaBusca(useSearchParams()[0]);
+}
 type SecaoCanal = null | 'skills' | 'scaffolds' | 'prompts' | 'pesos' | 'horarios';
 
 
@@ -151,7 +161,7 @@ export function ChannelsPage() {
 
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [selecionandoId, setSelecionandoId] = useState<string | null>(null);
-  const [aba, setAba] = useState<Aba>('canal');
+  const [aba, setAba] = useState<Aba>(useAbaInicial());
   const [secao, setSecao] = useState<SecaoCanal>(null);
 
   const fecharDialogo = () => setDialogo(null);

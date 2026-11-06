@@ -9,14 +9,15 @@ import { ComTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';
 import { CenasPanel } from './CenasPanel';
 import { SceneTimeline } from './SceneTimeline';
 import { AlertaCenasForaDoCorte } from './AlertaCenasForaDoCorte';
-import { FiltroTestePanel } from '@/features/post-production/FiltroTestePanel';
+import { FiltroDoCanal } from './FiltroDoCanal';
 import { YoutubeLayoutPanel } from './YoutubeLayoutPanel';
 import { SegmentoDetectadoPopover } from './SegmentoDetectadoPopover';
 import { PanelShell } from '@/components/workbench/PanelShell';
 import { useEditorFase2 } from './useEditorFase2';
 import { Icon } from '@/upgrade/Icon';
 
-export type AbaDireita = 'cenas' | 'layout' | 'filtros';
+// D-1072: a aba Filtros saiu: o filtro é do canal (RN-25) e aparece como linha.
+export type AbaDireita = 'cenas' | 'layout';
 
 const FONT_PRESET_OPTIONS: Array<{
   id: FontePreset;
@@ -68,7 +69,7 @@ export function EditorFase2(props: Props) {
   playbackRate,
   workbench = false,
 } = props;
-  const { abaDireita, brutoPronto, cenaAtivaIdx, cenasFora, cenasPanelRef, decidindoSegmento, decidirSegmento, detectandoSegmentos, duracaoDoCorte, fontePresetMutation, fontePresetSelecionado, handleAddRegion, handleAjustarRegiaoSelecionada, handleResizeRegion, handleSelecionarCena, handleSelecionarRegiao, handleToggleRemotion, layoutPanelRef, layoutYoutube, offsetSeg, popoverSegmento, projeto, remotionEnabled, reprocessarSegmentos, segmentosDetectados, selectedCenaIdx, selectedRegionIdx, setAbaDireita, setPopoverSegmento, timelineDuration, timelineWrapperRef } = useEditorFase2(props);
+  const { abaDireita, cenaAtivaIdx, cenasFora, cenasPanelRef, decidindoSegmento, decidirSegmento, detectandoSegmentos, duracaoDoCorte, fontePresetMutation, fontePresetSelecionado, handleAddRegion, handleAjustarRegiaoSelecionada, handleResizeRegion, handleSelecionarCena, handleSelecionarRegiao, handleToggleRemotion, layoutPanelRef, layoutYoutube, offsetSeg, popoverSegmento, projeto, remotionEnabled, reprocessarSegmentos, segmentosDetectados, selectedCenaIdx, selectedRegionIdx, setAbaDireita, setPopoverSegmento, timelineDuration, timelineWrapperRef } = useEditorFase2(props);
 
 
   // ── Shell Workbench (AUDITORIA §2b): CENAS à esquerda, preview+timeline
@@ -188,33 +189,14 @@ export function EditorFase2(props: Props) {
           id="layout"
           side="right"
           title="LAYOUT YOUTUBE"
-          headerExtra={
-            <button
-              type="button"
-              onClick={() => setAbaDireita(abaDireita === 'filtros' ? 'layout' : 'filtros')}
-              className="rounded-md bg-[var(--wb-bg-inset)] px-2 py-0.5 text-[9px] font-bold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-            >
-              {abaDireita === 'filtros' ? '← layout' : 'filtros'}
-            </button>
-          }
         >
-          <div className="min-h-0 flex-1">
-            {abaDireita === 'filtros' ? (
-              <div className="flex h-full min-h-0 flex-col bg-[var(--wb-bg-card)]">
-                <FontePresetPanel
-                  value={fontePresetSelecionado}
-                  pending={fontePresetMutation.isPending}
-                  onChange={(next) => fontePresetMutation.mutate(next)}
-                />
-                <div className="min-h-0 flex-1">
-                  <FiltroTestePanel
-                    corteId={corte.id}
-                    projetoId={corte.projeto_id}
-                    brutoPronto={brutoPronto}
-                  />
-                </div>
-              </div>
-            ) : (
+          <div className="flex h-full min-h-0 flex-col">
+            <FontePresetPanel
+              value={fontePresetSelecionado}
+              pending={fontePresetMutation.isPending}
+              onChange={(next) => fontePresetMutation.mutate(next)}
+            />
+            <div className="min-h-0 flex-1">
               <ComTempoDoPlayer relogio={relogio}>
                 {(t) => (
                   <YoutubeLayoutPanel
@@ -228,7 +210,8 @@ export function EditorFase2(props: Props) {
                   />
                 )}
               </ComTempoDoPlayer>
-            )}
+            </div>
+            <FiltroDoCanal />
           </div>
         </PanelShell>
       </div>
@@ -321,10 +304,9 @@ export function EditorFase2(props: Props) {
       <PanelResizeHandle className="w-1 bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--wb-accent)_50%,transparent)]" />
       <Panel defaultSize={30} minSize={22} order={2}>
         <div className="flex h-full min-h-0 flex-col">
-          {/* Tabs header — replica v3_pos.jsx:385-432. Select "Filtro padrao"
-              foi MOVIDO para dentro da aba Filtros (Fase 5 do hand-off):
-              o card "Padrão do projeto" + lista com "Salvar como padrão"
-              substituem o select que vivia aqui. */}
+          {/* Tabs header — replica v3_pos.jsx:385-432. D-1072: Cenas e Layout;
+              a "Fonte dos cards" foi para o Layout e o filtro virou a linha
+              do rodapé, porque ele é do canal (RN-25). */}
           <div
             role="tablist"
             aria-label="Painel lateral"
@@ -341,12 +323,6 @@ export function EditorFase2(props: Props) {
               onClick={() => setAbaDireita('layout')}
               icon={<Icon name="monitor" />}
               label="Layout"
-            />
-            <AbaButton
-              ativo={abaDireita === 'filtros'}
-              onClick={() => setAbaDireita('filtros')}
-              icon={<Icon name="sliders-horizontal" />}
-              label="Filtros"
             />
           </div>
           <div className="min-h-0 flex-1">
@@ -372,37 +348,32 @@ export function EditorFase2(props: Props) {
                   />
                 </div>
               </div>
-            ) : abaDireita === 'layout' ? (
-              <ComTempoDoPlayer relogio={relogio}>
-                {(t) => (
-                  <YoutubeLayoutPanel
-                    ref={layoutPanelRef}
-                    corteId={corte.id}
-                    projetoId={corte.projeto_id}
-                    layout={layoutYoutube}
-                    currentTime={t + offsetSeg}
-                    duration={timelineDuration}
-                    onSeek={onSeek}
-                  />
-                )}
-              </ComTempoDoPlayer>
             ) : (
-              <div className="flex h-full min-h-0 flex-col bg-[var(--wb-bg-card)]">
+              <div className="flex h-full min-h-0 flex-col">
                 <FontePresetPanel
                   value={fontePresetSelecionado}
                   pending={fontePresetMutation.isPending}
                   onChange={(next) => fontePresetMutation.mutate(next)}
                 />
                 <div className="min-h-0 flex-1">
-                  <FiltroTestePanel
-                    corteId={corte.id}
-                    projetoId={corte.projeto_id}
-                    brutoPronto={brutoPronto}
-                  />
+                  <ComTempoDoPlayer relogio={relogio}>
+                    {(t) => (
+                      <YoutubeLayoutPanel
+                        ref={layoutPanelRef}
+                        corteId={corte.id}
+                        projetoId={corte.projeto_id}
+                        layout={layoutYoutube}
+                        currentTime={t + offsetSeg}
+                        duration={timelineDuration}
+                        onSeek={onSeek}
+                      />
+                    )}
+                  </ComTempoDoPlayer>
                 </div>
               </div>
             )}
           </div>
+          <FiltroDoCanal />
         </div>
       </Panel>
     </PanelGroup>
