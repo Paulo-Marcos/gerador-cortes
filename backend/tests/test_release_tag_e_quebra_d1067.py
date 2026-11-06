@@ -26,10 +26,18 @@ PILLOW = (
 )
 
 
+def _temporarios(tmp_path: Path) -> Path:
+    pasta = tmp_path / "temporarios"
+    pasta.mkdir(exist_ok=True)
+    return pasta
+
+
 @pytest.fixture
 def repo_temporario(tmp_path, monkeypatch):
     """Um repositório de um commit só, que vira a RAIZ do script: a tag nunca
-    nasce no repositório de verdade."""
+    nasce no repositório de verdade. E o arquivo da mensagem nasce no
+    `tmp_path`: se um dia ele não for apagado, não sobra no %TEMP% real."""
+    monkeypatch.setattr(release.tempfile, "tempdir", str(_temporarios(tmp_path)))
     repo = tmp_path / "repo"
     repo.mkdir()
     comum = {"cwd": repo, "check": True, "capture_output": True}
@@ -63,35 +71,31 @@ def test_tag_com_mensagem_acima_do_teto_da_linha_de_comando(repo_temporario):
     assert mensagem.count("- Coisa nova.") == 11_000
 
 
-def test_tag_guarda_a_mensagem_sem_mudar_um_caractere(repo_temporario):
+def test_tag_guarda_a_mensagem_sem_mudar_um_byte(repo_temporario):
     # O que o `-m` gravava: título, linha em branco, notas. Com `-F` e
-    # verbatim, nem o "#" dos títulos nem os espaços somem.
+    # verbatim, nem o "#" dos títulos nem os espaços somem, e o arquivo no
+    # Windows não troca o "\n" por "\r\n". Lido em bytes, do objeto da tag.
     notas = "### Added\n- **Negrito.** Texto com acento: ação.\n\n### Fixed\n  - recuada.  "
     release.criar_tag("9.9.8", "o resumo", notas)
 
-    esperado = f"CutCut 9.9.8 — o resumo\n\n{notas}"
-    assert _mensagem_da_tag(repo_temporario, "v9.9.8").rstrip("\n") == esperado.rstrip("\n")
+    objeto = subprocess.run(
+        ["git", "cat-file", "tag", "v9.9.8"], cwd=repo_temporario, check=True, capture_output=True
+    ).stdout
+    _cabecalho, mensagem = objeto.split(b"\n\n", 1)
+    assert mensagem == f"CutCut 9.9.8 — o resumo\n\n{notas}".encode()
 
 
-def test_arquivo_da_mensagem_e_apagado_ao_final(repo_temporario, tmp_path, monkeypatch):
-    temporarios = tmp_path / "temporarios"
-    temporarios.mkdir()
-    monkeypatch.setattr(release.tempfile, "tempdir", str(temporarios))
-
+def test_arquivo_da_mensagem_e_apagado_ao_final(repo_temporario, tmp_path):
     release.criar_tag("9.9.7", "resumo", "### Added\n- Coisa.")
 
-    assert list(temporarios.iterdir()) == []
+    assert list(_temporarios(tmp_path).iterdir()) == []
 
 
-def test_arquivo_da_mensagem_e_apagado_quando_o_git_falha(repo_temporario, tmp_path, monkeypatch):
-    temporarios = tmp_path / "temporarios"
-    temporarios.mkdir()
-    monkeypatch.setattr(release.tempfile, "tempdir", str(temporarios))
-
-    with pytest.raises(release.ErroDeRelease):
+def test_arquivo_da_mensagem_e_apagado_quando_o_git_falha(repo_temporario, tmp_path):
+    with pytest.raises(release.ErroDeRelease, match="falhou: git tag"):
         release.criar_tag("9.9.6", "resumo", "### Added\n- Coisa.", sha="nao-existe")
 
-    assert list(temporarios.iterdir()) == []
+    assert list(_temporarios(tmp_path).iterdir()) == []
 
 
 def test_log_da_tag_nao_despeja_a_mensagem(repo_temporario, capsys):
@@ -120,19 +124,40 @@ def test_breaking_solto_num_fixed_sugere_patch(atual):
 @pytest.mark.parametrize(
     "texto",
     [
-        "- BREAKING: a palavra em maiúsculas, sem a marca.",
         "- Breaking change: no meio da frase.",
         "- **breaking** em minúsculas.",
+        "- A palavra BREAKING: no meio, sem abrir a entrada.",
     ],
 )
-def test_so_a_marca_exata_conta_como_quebra(texto):
+def test_so_a_marca_abrindo_a_entrada_conta_como_quebra(texto):
     assert release.nivel_sugerido({"Fixed": texto}, "1.2.0") == "patch"
 
 
+@pytest.mark.parametrize("atual", ["0.7.0", "1.2.0"])
+def test_a_entrada_que_cita_a_marca_continua_patch(atual):
+    # A entrada da própria D-1067 cita a marca para ensiná-la: não é quebra
+    # (achado da auditoria do #336, que sugeria minor e recusava a 0.7.1).
+    fragmento = (
+        "- **Tagging a release no longer breaks on long release notes.** A\n"
+        "  breaking change is now declared only by opening the entry with the\n"
+        "  `**BREAKING**` (or `BREAKING:`) marker: the word elsewhere in an entry,\n"
+        "  as in the Pillow 13 fix (D-982), no longer counts (D-1067)."
+    )
+    assert release.nivel_sugerido({"Fixed": fragmento}, atual) == "patch"
+
+
 @pytest.mark.parametrize("categoria", ["Fixed", "Changed", "Removed"])
-def test_marca_breaking_sugere_major_a_partir_da_1_0(categoria):
-    secoes = {categoria: "- **BREAKING** A rota antiga sai (D-1)."}
-    assert release.nivel_sugerido(secoes, "1.2.0") == "major"
+@pytest.mark.parametrize(
+    "entrada",
+    [
+        "- **BREAKING** A rota antiga sai (D-1).",
+        "- BREAKING: a rota antiga sai (D-1).",
+        "- Conserto.\n- **BREAKING** A rota antiga sai (D-1).",
+        "* **BREAKING** A rota antiga sai (D-1).",
+    ],
+)
+def test_marca_breaking_sugere_major_a_partir_da_1_0(categoria, entrada):
+    assert release.nivel_sugerido({categoria: entrada}, "1.2.0") == "major"
 
 
 def test_marca_breaking_antes_da_1_0_sugere_minor():
