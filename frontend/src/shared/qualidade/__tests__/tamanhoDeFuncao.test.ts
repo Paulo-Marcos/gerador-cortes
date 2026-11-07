@@ -57,7 +57,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase1/TimelinePanel.tsx::Waveform.useEffect#2": 119,
   "src/features/editor/fase2/CenaItem.tsx::CenaItem": 234,
   "src/features/editor/fase2/CenaPlayerPanel.tsx::forwardRef": 211,
-  "src/features/editor/fase2/CenasPanel.tsx::forwardRef": 388,
+  "src/features/editor/fase2/CenasPanel.tsx::forwardRef": 379,
   "src/features/editor/fase2/CenasRemotionPreview.tsx::CenasRemotionPreview": 159,
   "src/features/editor/fase2/EditorFase2.tsx::EditorFase2": 327,
   "src/features/editor/fase2/PosicionamentoModal.tsx::PosicionamentoModal": 493,
