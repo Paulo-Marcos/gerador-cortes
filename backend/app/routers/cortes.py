@@ -659,7 +659,7 @@ async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None 
         return {
             "message": f"Pipeline otimizado iniciado (filtro: {filtro_msg}, início: {body.start_from}{alcance_msg})"
         }
-    except (HTTPException, ErroDeDominio):  # RN-37: a recusa chega à tela
+    except (HTTPException, ErroDeDominio):  # RN-38: a recusa chega à tela
         raise
     except Exception as e:
         raise erro_interno(e) from e

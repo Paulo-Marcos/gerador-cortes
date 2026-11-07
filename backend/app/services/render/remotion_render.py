@@ -97,7 +97,7 @@ class RemotionRenderService:
     ):
         """O pedido de render do operador: confere o plano e só então dispara.
 
-        RN-37 (D-1072): o render final de corte com o plano de cenas não validado
+        RN-38 (D-1072): o render final de corte com o plano de cenas não validado
         é recusado aqui, antes de qualquer artefato ser tocado; a tela também
         trava o botão, mas o pedido pode chegar por outro caminho (D-1065).
         """

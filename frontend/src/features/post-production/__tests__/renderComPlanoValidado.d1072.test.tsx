@@ -10,7 +10,7 @@ import type { BancadaChromeProps } from '@/features/editor/BancadaChrome';
 import { corteKey } from '@/features/editor/useCortes';
 import { MOTIVO_PLANO_NAO_VALIDADO, montarPrimarioDaPos } from '../postProductionNavigation';
 
-// D-1072 (RN-37): "Renderizar final" só libera com o plano de cenas validado.
+// D-1072 (RN-38): "Renderizar final" só libera com o plano de cenas validado.
 // O backend recusa o mesmo pedido; aqui se fixa a tela: travado com o motivo ao
 // lado, e liberado na hora em que o plano é validado, sem recarregar.
 

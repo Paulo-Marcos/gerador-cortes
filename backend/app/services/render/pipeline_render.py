@@ -304,7 +304,7 @@ async def _preparar_contexto(
 ) -> _RenderCtx:
     """Carrega corte/projeto, monta os paths e o `event_log`; emite `pipeline_iniciado`.
 
-    RN-37 (D-1072): o plano se confere de novo após a vaga de render, que demora."""
+    RN-38 (D-1072): o plano se confere de novo após a vaga de render, que demora."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise ValueError(f"Corte '{corte_id}' não encontrado")

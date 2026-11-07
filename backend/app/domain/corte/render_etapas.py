@@ -79,7 +79,7 @@ PLANO_NAO_VALIDADO = (
 
 
 def exigir_plano_validado(parar_em: str | None, plano_validado: bool) -> None:
-    """RN-37: o render final só sai com o plano de cenas validado (D-1072).
+    """RN-38: o render final só sai com o plano de cenas validado (D-1072).
 
     O vídeo final leva as cenas para o público; sem o operador ter conferido o
     plano, sairia o que a IA propôs. O render parcial (`grade`, `overlays`) não

@@ -140,7 +140,7 @@ class CenasRemotionService:
     async def validar(corte_id: str, validado: bool) -> Corte:
         """Marca — ou desmarca — as cenas do corte como conferidas pelo editor (D-705).
 
-        D-1072 (RN-37): o plano vazio também se valida. É a decisão do operador que
+        D-1072 (RN-38): o plano vazio também se valida. É a decisão do operador que
         destrava o render final, não a existência de cenas.
         """
         async with AsyncSessionLocal() as db:

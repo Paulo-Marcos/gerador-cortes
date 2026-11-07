@@ -1,4 +1,4 @@
-"""O render final só sai com o plano de cenas validado (RN-37, D-1072).
+"""O render final só sai com o plano de cenas validado (RN-38, D-1072).
 
 Até aqui só a tela podia segurar o pedido, e a D-1065 mostrou que travar o botão
 não basta: o pedido chega pela porta HTTP de qualquer jeito. A recusa mora no
