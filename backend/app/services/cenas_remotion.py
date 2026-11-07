@@ -14,6 +14,7 @@ from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
     coalescer_chaves_mascote,
+    extrair_cenas_remotion,
 )
 from app.domain.corte.origem_da_cena import CONTRATO_DA_ORIGEM
 from app.domain.corte.rodada_das_cenas import OrigemDasCenas
