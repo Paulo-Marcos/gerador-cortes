@@ -26,6 +26,7 @@ from app.domain.corte.ajuste_da_cena import (
     ETAPA_DO_AJUSTE,
     achar_a_cena,
     bloco_do_pedido,
+    completar_com_a_enviada,
     janela_de_legendas,
     manteve_o_tempo,
     mesclar_o_ajuste,
@@ -180,6 +181,7 @@ def _cena_ajustada(lido: _PedidoLido, resposta: object) -> dict:
     devolvida = next((cena for cena in devolvidas if isinstance(cena, dict)), None)
     if devolvida is None:
         raise PedidoInvalido(AJUSTE_SEM_CENA)
+    devolvida = completar_com_a_enviada(lido.enviada, devolvida)
     try:
         [convertida] = cenas_remotion.CenasRemotionService._converter_startleg(
             [devolvida], lido.granular

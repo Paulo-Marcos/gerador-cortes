@@ -460,3 +460,89 @@ async def test_corte_que_nao_existe_responde_404(cliente, ia):
 
     assert resposta.status_code == 404
     assert ia.chamadas == []
+
+
+@pytest.mark.asyncio
+async def test_resposta_que_omite_tipo_legenda_e_duracao_mantem_os_da_cena(cliente, ia):
+    """RN-40: o que a IA omite fica como estava, também o tipo e o tempo (auditoria, rodada 1).
+
+    Antes, a conversão completava o que faltava com os padrões dela: `{"texto": "Curta"}`
+    virava `barra_inferior` em 0-5 s.
+    """
+    ia.resposta = {"texto": "Curta"}
+
+    depois = (await _pedir(cliente)).json()["depois"]
+
+    assert depois["texto"] == "Curta"
+    assert depois["tipo"] == "enfase"
+    assert (depois["inicio"], depois["fim"]) == (20.0, 24.0)
+    assert depois["layout_card"] == "horizontal"
+
+
+# ── As guardas do Aceitar, que a rota confere de novo (auditoria, rodada 1) ───
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("cena", "trecho"), [(_MANUAL, "a IA não mexe"), (_RISCADA, "riscada")])
+async def test_aceitar_recusa_cena_manual_ou_riscada_mesmo_com_a_versao_certa(
+    cliente, fabrica, cena, trecho
+):
+    """A tela não oferece o ajuste nessas cenas; o servidor também não o grava."""
+    proposta = (await _pedir(cliente)).json()
+    alvo = {**_aceite(proposta), "tipo": cena["tipo"], "inicio": cena["inicio"]}
+
+    resposta = await _no_limite(cliente.post(_ACEITAR, json=alvo))
+
+    assert resposta.status_code == 400
+    assert trecho in resposta.json()["detail"]
+    cenas, validadas = await _gravado(fabrica)
+    assert [_MANUAL, _A_AJUSTAR, _OUTRA, _RISCADA] == cenas
+    assert validadas == 1
+
+
+@pytest.mark.asyncio
+async def test_aceitar_recusa_a_cena_que_chega_fora_do_corte(cliente, fabrica):
+    proposta = (await _pedir(cliente)).json()
+    fora = {
+        **proposta["depois"],
+        "inicio": 20.0,
+        "fim": 400.0,
+        "inicio_seg": 20.0,
+        "fim_seg": 400.0,
+    }
+
+    resposta = await _no_limite(cliente.post(_ACEITAR, json={**_aceite(proposta), "depois": fora}))
+
+    assert resposta.status_code == 400
+    assert "fora do corte" in resposta.json()["detail"]
+    cenas, _ = await _gravado(fabrica)
+    assert cenas[1] == _A_AJUSTAR
+
+
+@pytest.mark.asyncio
+async def test_aceitar_recusa_se_o_plano_muda_entre_a_leitura_e_a_gravacao(
+    cliente, fabrica, monkeypatch
+):
+    """A versão bate na leitura, mas outra aba grava antes do UPDATE: a gravação é
+    condicional, recusa, e o que a outra aba gravou fica."""
+    proposta = (await _pedir(cliente)).json()
+    gravar_de_verdade = origem_das_cenas._gravar_se
+
+    async def outra_aba_grava_antes(db, corte_id, condicao, valores):
+        async with fabrica() as outra:
+            corte = await outra.get(Corte, "c1", populate_existing=True)
+            plano = json.loads(corte.cenas_remotion)
+            plano["cenas"][2] = {**_OUTRA, "texto": "Gravada por outra aba"}
+            corte.cenas_remotion = json.dumps(plano, ensure_ascii=False)
+            await outra.commit()
+        return await gravar_de_verdade(db, corte_id, condicao, valores)
+
+    monkeypatch.setattr(origem_das_cenas, "_gravar_se", outra_aba_grava_antes)
+
+    resposta = await _no_limite(cliente.post(_ACEITAR, json=_aceite(proposta)))
+
+    assert resposta.status_code == 400
+    assert "mudou" in resposta.json()["detail"]
+    cenas, _ = await _gravado(fabrica)
+    assert cenas[1] == _A_AJUSTAR
+    assert cenas[2]["texto"] == "Gravada por outra aba"

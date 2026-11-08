@@ -137,6 +137,22 @@ def mesclar_o_ajuste(
     return depois
 
 
+# O que a cena enviada já diz e a IA pode calar: sem estes, a conversão da resposta usaria
+# os padrões dela (`barra_inferior`, legenda 0, 5 s) no lugar da cena que o operador citou.
+_IDENTIDADE_E_TEMPO = ("tipo", "startLeg", "duracao_s")
+
+
+def completar_com_a_enviada(enviada: dict, devolvida: dict) -> dict:
+    """A cena devolvida com o tipo, a legenda e a duração da enviada onde a IA os omitiu.
+
+    Ausente ou nulo é omitido: o que a IA omite fica como estava (RN-40).
+    """
+    faltam = {
+        campo: enviada[campo] for campo in _IDENTIDADE_E_TEMPO if devolvida.get(campo) is None
+    }
+    return {**devolvida, **faltam}
+
+
 def manteve_o_tempo(enviada: dict, devolvida: dict) -> bool:
     """Se a IA devolveu a cena na mesma legenda e com a mesma duração que recebeu."""
     try:

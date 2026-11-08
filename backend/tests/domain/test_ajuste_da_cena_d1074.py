@@ -166,3 +166,14 @@ def test_mesclar_nao_inventa_o_visual_que_a_cena_nao_tinha():
     depois = ajuste.mesclar_o_ajuste(original, convertida, {"texto": "Curta"}, manteve_o_tempo=True)
 
     assert depois == {"tipo": "enfase", "inicio": 2.0, "fim": 7.0, "texto": "Curta"}
+
+
+def test_completar_poe_o_tipo_a_legenda_e_a_duracao_da_enviada_so_onde_a_ia_calou():
+    enviada = {"tipo": "enfase", "startLeg": 5, "duracao_s": 4.0, "texto": "Longa"}
+
+    so_texto = ajuste.completar_com_a_enviada(enviada, {"texto": "Curta", "tipo": None})
+    trocou_o_tipo = ajuste.completar_com_a_enviada(enviada, {"tipo": "card_informacao"})
+
+    assert so_texto == {"texto": "Curta", "tipo": "enfase", "startLeg": 5, "duracao_s": 4.0}
+    assert trocou_o_tipo["tipo"] == "card_informacao"
+    assert (trocou_o_tipo["startLeg"], trocou_o_tipo["duracao_s"]) == (5, 4.0)
