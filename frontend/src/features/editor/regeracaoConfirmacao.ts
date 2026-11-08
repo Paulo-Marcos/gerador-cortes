@@ -32,8 +32,8 @@ export function confirmacaoRegerarTrechos(totalDesvios: number): PedidoConfirmac
 }
 
 /**
- * Cenas SOBRESCREVEM o roteiro visual inteiro (o backend reescreve
- * `cenas_remotion`), levando junto edicoes manuais e a marca de validadas.
+ * Cenas SOBRESCREVEM as cenas da IA do roteiro visual, levando junto os retratos
+ * delas e a marca de validadas. As manuais ficam (D-1075, RN-39).
  */
 export function confirmacaoRegerarCenas(totalCenas: number): PedidoConfirmacao | null {
   if (totalCenas <= 0) return null;
@@ -41,7 +41,7 @@ export function confirmacaoRegerarCenas(totalCenas: number): PedidoConfirmacao |
     titulo: 'Gerar cenas de novo?',
     detalhe: pluralizar(totalCenas, 'cena atual', 'cenas atuais'),
     descricao:
-      'Gerar de novo SUBSTITUI todas as cenas deste corte. Edicoes manuais, retratos preenchidos e a marca de validadas serao perdidos.',
+      'Gerar de novo SUBSTITUI as cenas da IA deste corte; as manuais ficam. Os retratos das cenas da IA e a marca de validadas serao perdidos.',
     confirmLabel: 'Substituir cenas',
     tone: 'danger',
   };

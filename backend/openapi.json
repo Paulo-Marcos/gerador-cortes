@@ -10763,6 +10763,10 @@
             "title": "Cenas",
             "type": "array"
           },
+          "descartadas_pelas_manuais": {
+            "title": "Descartadas Pelas Manuais",
+            "type": "integer"
+          },
           "formato": {
             "title": "Formato",
             "type": "string"

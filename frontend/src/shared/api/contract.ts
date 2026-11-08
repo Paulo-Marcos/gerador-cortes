@@ -9417,6 +9417,8 @@ export interface components {
         RoteiroDeCenasDoCorte: {
             /** Cenas */
             cenas?: components["schemas"]["CenaDoCorte"][];
+            /** Descartadas Pelas Manuais */
+            descartadas_pelas_manuais?: number;
             /** Formato */
             formato?: string;
             /** Paleta */
