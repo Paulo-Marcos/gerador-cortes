@@ -5,6 +5,11 @@
 export const corteKey = (id: string) => ['corte', id] as const;
 export const conferenciaDaOrigemKey = (id: string, versaoDoCorte: number) =>
   ['conferencia-da-origem', id, versaoDoCorte] as const;
+/** As rodadas das cenas (D-1071): seguem a versão do corte, como a conferência. */
+export const rodadasDasCenasKey = (id: string, versaoDoCorte: number) =>
+  ['rodadas-das-cenas', id, versaoDoCorte] as const;
+/** Todas as versões das rodadas do corte, para recarregar de uma vez. */
+export const todasAsRodadasDasCenasKey = (id: string) => ['rodadas-das-cenas', id] as const;
 export const cortesProjetoKey = (id: string) => ['cortes', 'projeto', id] as const;
 export const projetoKey = (id: string) => ['projeto', id] as const;
 export const exportStatusKey = (id: string) => ['projeto', id, 'export-status'] as const;

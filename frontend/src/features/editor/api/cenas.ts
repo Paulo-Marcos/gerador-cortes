@@ -33,6 +33,16 @@ export const cenasApi = {
   conferirOrigem: (corteId: string) =>
     dados(api.GET('/api/cortes/{corte_id}/cenas-remotion/conferencia', doCorte(corteId))),
 
+  /** A rodada atual das cenas, a anterior e o que entrou, saiu e mudou (D-1071). */
+  compararRodadas: (corteId: string) =>
+    dados(api.GET('/api/cortes/{corte_id}/cenas-remotion/rodadas', doCorte(corteId))),
+
+  /** Troca as rodadas de lugar: desfaz, e de novo refaz. `versao` é a da comparação vista. */
+  desfazerRodada: (corteId: string, versao: string) =>
+    dados(
+      api.POST('/api/cortes/{corte_id}/cenas-remotion/rodadas/desfazer', { ...doCorte(corteId), body: { versao } }),
+    ),
+
   obterPromptCenasRemotion: (corteId: string) =>
     dados(api.GET('/api/cortes/{corte_id}/cenas-remotion/prompt', doCorte(corteId))),
 };

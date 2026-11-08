@@ -100,6 +100,19 @@ def _colunas_da_anterior(rodada: RodadaDasCenas | None) -> dict:
     }
 
 
+def zerar_rodadas_na_juncao(corte: Corte) -> None:
+    """Juntar cortes zera a rodada das cenas do corte que fica (D-1073, RN-37).
+
+    A junção grava as cenas dos dois cortes, deslocadas, sem passar pela geração. A
+    anterior guardada era de uma metade só, no tempo de antes: desfazer a trocaria pelo
+    plano mesclado. Decisão do Paulo em 07/11/2026: depois de juntar não há anterior, até
+    a próxima geração. A marca de validadas sai junto, como já saía (D-575).
+    """
+    valores = _colunas_da_anterior(None) | {"cenas_validadas": 0, "cenas_validadas_em": None}
+    for coluna, valor in valores.items():
+        setattr(corte, coluna, valor)
+
+
 def _levar_no_recorte(
     cenas: str | None, antiga: str | None, nova: list, da_live: list, colunas: tuple
 ) -> dict:
