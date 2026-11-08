@@ -27,19 +27,47 @@ def _texto(comando: list[str]) -> str:
     return " ".join([Path(comando[0]).stem, *comando[1:]])
 
 
+class PassoFalso:
+    """O processo de um passo: `wait` devolve o código combinado ou estoura o tempo."""
+
+    def __init__(self, comando, kwargs, codigo: int, estoura: bool):
+        self.comando, self.kwargs, self.pid = comando, kwargs, 4242
+        self.codigo, self.estoura = codigo, estoura
+        self.esperas: list[float] = []
+
+    def wait(self, timeout=None):
+        self.esperas.append(timeout)
+        if self.estoura and len(self.esperas) == 1:
+            raise subprocess.TimeoutExpired(self.comando, timeout)
+        return self.codigo
+
+
 class SubprocessDuble:
-    """Registra cada chamada e responde com o código combinado para o passo."""
+    """Faz o papel do `Popen` (registra cada passo) e do `run` (registra o taskkill)."""
 
-    def __init__(self, codigos: dict[str, int] | None = None):
-        self.codigos = codigos or {}
-        self.chamadas: list[tuple[list[str], dict]] = []
+    def __init__(self, codigos=None, estoura=(), ausente=()):
+        self.codigos, self.estoura, self.ausente = codigos or {}, estoura, ausente
+        self.passos: list[PassoFalso] = []
+        self.runs: list[list[str]] = []
 
-    def __call__(self, comando, **kwargs):
-        self.chamadas.append((list(comando), kwargs))
-        return subprocess.CompletedProcess(comando, self.codigos.get(_texto(comando), 0))
+    def popen(self, comando, **kwargs):
+        if _texto(comando) in self.ausente:
+            raise FileNotFoundError(2, "O sistema não pode encontrar o arquivo especificado")
+        passo = PassoFalso(
+            list(comando),
+            kwargs,
+            self.codigos.get(_texto(comando), 0),
+            _texto(comando) in self.estoura,
+        )
+        self.passos.append(passo)
+        return passo
+
+    def run(self, comando, **kwargs):
+        self.runs.append(list(comando))
+        return subprocess.CompletedProcess(comando, 0)
 
     def comandos(self) -> list[str]:
-        return [_texto(c) for c, _ in self.chamadas]
+        return [_texto(p.comando) for p in self.passos]
 
 
 ORDEM_DO_AGENTS_MD = [
@@ -64,30 +92,33 @@ def raiz(tmp_path, monkeypatch):
     return tmp_path
 
 
+def usar(monkeypatch, duble: SubprocessDuble) -> SubprocessDuble:
+    monkeypatch.setattr(portao.subprocess, "Popen", duble.popen)
+    monkeypatch.setattr(portao.subprocess, "run", duble.run)
+    return duble
+
+
 def test_roda_os_oito_passos_na_ordem_do_agents_md(raiz, monkeypatch):
-    duble = SubprocessDuble()
-    monkeypatch.setattr(portao.subprocess, "run", duble)
+    duble = usar(monkeypatch, SubprocessDuble())
 
     assert portao.rodar_portao(raiz) == 0
     assert duble.comandos() == ORDEM_DO_AGENTS_MD
 
 
 def test_backend_roda_pela_venv_e_frontend_pela_pasta_dele(raiz, monkeypatch):
-    duble = SubprocessDuble()
-    monkeypatch.setattr(portao.subprocess, "run", duble)
+    duble = usar(monkeypatch, SubprocessDuble())
 
     portao.rodar_portao(raiz)
 
     scripts = raiz / "backend" / ".venv" / "Scripts"
-    backend, frontend = duble.chamadas[:4], duble.chamadas[4:]
-    assert all(Path(c[0]).parent == scripts for c, _ in backend)
-    assert all(kw["cwd"] == raiz / "backend" for _, kw in backend)
-    assert all(kw["cwd"] == raiz / "frontend" for _, kw in frontend)
+    backend, frontend = duble.passos[:4], duble.passos[4:]
+    assert all(Path(p.comando[0]).parent == scripts for p in backend)
+    assert all(p.kwargs["cwd"] == raiz / "backend" for p in backend)
+    assert all(p.kwargs["cwd"] == raiz / "frontend" for p in frontend)
 
 
 def test_primeiro_passo_que_falha_encerra_com_o_codigo_dele(raiz, monkeypatch, capsys):
-    duble = SubprocessDuble({"lint-imports": 3, "npm run build": 7})
-    monkeypatch.setattr(portao.subprocess, "run", duble)
+    duble = usar(monkeypatch, SubprocessDuble({"lint-imports": 3, "npm run build": 7}))
 
     assert portao.rodar_portao(raiz) == 3
     assert duble.comandos() == ORDEM_DO_AGENTS_MD[:3]
@@ -95,57 +126,92 @@ def test_primeiro_passo_que_falha_encerra_com_o_codigo_dele(raiz, monkeypatch, c
 
 
 def test_nenhum_passo_usa_shell_e_todos_tem_timeout(raiz, monkeypatch):
-    duble = SubprocessDuble()
-    monkeypatch.setattr(portao.subprocess, "run", duble)
+    duble = usar(monkeypatch, SubprocessDuble())
 
     portao.rodar_portao(raiz)
 
-    assert len(duble.chamadas) == 8
-    for _, kwargs in duble.chamadas:
-        assert kwargs.get("shell", False) is False
-        assert kwargs["timeout"] > 0
+    assert len(duble.passos) == 8
+    for passo in duble.passos:
+        assert passo.kwargs.get("shell", False) is False
+        assert passo.esperas == [portao.TIMEOUT_DO_PASSO_S]
+    assert portao.TIMEOUT_DO_PASSO_S > 0
+
+
+def test_stderr_de_cada_passo_vai_junto_do_stdout(raiz, monkeypatch):
+    """O ship mostra só o fim da saída: a linha do passo reprovado tem de ser a última."""
+    duble = usar(monkeypatch, SubprocessDuble())
+
+    portao.rodar_portao(raiz)
+
+    assert all(p.kwargs["stderr"] is subprocess.STDOUT for p in duble.passos)
+
+
+def test_so_o_lint_imports_recebe_pythonutf8(raiz, monkeypatch):
+    """O CI Windows roda o pytest sem PYTHONUTF8: aqui também, senão o verde é falso."""
+    monkeypatch.delenv("PYTHONUTF8", raising=False)
+    duble = usar(monkeypatch, SubprocessDuble())
+
+    portao.rodar_portao(raiz)
+
+    com_a_variavel = [
+        _texto(p.comando)
+        for p in duble.passos
+        if (p.kwargs.get("env") or os.environ).get("PYTHONUTF8") == "1"
+    ]
+    assert com_a_variavel == ["lint-imports"]
 
 
 def test_npm_e_npx_saem_do_path_resolvidos(raiz, monkeypatch):
     """No Windows o npm é npm.cmd: sem shell, o nome solto não se acha."""
-    duble = SubprocessDuble()
-    monkeypatch.setattr(portao.subprocess, "run", duble)
+    duble = usar(monkeypatch, SubprocessDuble())
 
     portao.rodar_portao(raiz)
 
-    frontend = [c[0] for c, _ in duble.chamadas[4:]]
+    frontend = [p.comando[0] for p in duble.passos[4:]]
     assert frontend == ["C:/node/npm.cmd", "C:/node/npx.cmd", "C:/node/npx.cmd", "C:/node/npm.cmd"]
 
 
-def test_passo_que_estoura_o_tempo_reprova(raiz, monkeypatch, capsys):
-    def estoura(comando, **kwargs):
-        raise subprocess.TimeoutExpired(comando, kwargs["timeout"])
-
-    monkeypatch.setattr(portao.subprocess, "run", estoura)
+def test_passo_que_estoura_o_tempo_mata_a_arvore_pelo_pid_e_reprova(raiz, monkeypatch, capsys):
+    duble = usar(monkeypatch, SubprocessDuble(estoura={"npx vitest run"}))
 
     assert portao.rodar_portao(raiz) != 0
-    assert "passou de" in capsys.readouterr().out
+    assert duble.runs == [["taskkill", "/PID", "4242", "/T", "/F"]]
+    assert duble.comandos() == ORDEM_DO_AGENTS_MD[:7]
+    assert len(duble.passos[-1].esperas) == 2, "espera o processo morto antes de seguir"
+    saida = capsys.readouterr().out
+    assert "passou de" in saida
+    assert "REPROVADO no passo 7/8 (frontend): npx vitest run" in saida
+
+
+def test_executavel_ausente_reprova_e_nomeia_o_caminho(raiz, monkeypatch, capsys):
+    """Venv sem -Dev ou pacote removido: o lint-imports.exe some e o erro vem sem filename."""
+    duble = usar(monkeypatch, SubprocessDuble(ausente={"lint-imports"}))
+
+    assert portao.rodar_portao(raiz) == 1
+    assert duble.comandos() == ORDEM_DO_AGENTS_MD[:2]
+    saida = capsys.readouterr().out
+    lint_imports = raiz / "backend" / ".venv" / "Scripts" / "lint-imports.exe"
+    assert f"executável não encontrado: {lint_imports}" in saida
+    assert "REPROVADO no passo 3/8 (backend): lint-imports" in saida
 
 
 def test_venv_ausente_falha_com_mensagem_sem_rodar_nada(tmp_path, monkeypatch, capsys):
-    duble = SubprocessDuble()
-    monkeypatch.setattr(portao.subprocess, "run", duble)
+    duble = usar(monkeypatch, SubprocessDuble())
 
     assert portao.rodar_portao(tmp_path) != 0
     saida = capsys.readouterr().out
     assert "backend" in saida and ".venv" in saida
     assert "bootstrap.ps1 -Dev" in saida
-    assert duble.chamadas == []
+    assert duble.passos == []
 
 
 def test_npm_ausente_falha_com_mensagem_sem_rodar_nada(raiz, monkeypatch, capsys):
-    duble = SubprocessDuble()
-    monkeypatch.setattr(portao.subprocess, "run", duble)
+    duble = usar(monkeypatch, SubprocessDuble())
     monkeypatch.setattr(portao.shutil, "which", lambda nome: None)
 
     assert portao.rodar_portao(raiz) != 0
     assert "npm" in capsys.readouterr().out
-    assert duble.chamadas == []
+    assert duble.passos == []
 
 
 def test_a_raiz_vem_do_proprio_arquivo():

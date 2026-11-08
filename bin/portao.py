@@ -82,18 +82,41 @@ def descrever(passo: Passo) -> str:
     return " ".join([Path(passo.comando[0]).stem, *passo.comando[1:]])
 
 
+def ambiente_do(passo: Passo) -> dict[str, str] | None:
+    """Só o lint-imports ganha PYTHONUTF8: sem ele, sai com 1 no Windows ao imprimir
+    (docs/qualidade.md). No pytest a variável esconderia um `open()` sem encoding que o
+    job Windows do CI, que roda sem ela, reprova."""
+    if Path(passo.comando[0]).stem != "lint-imports":
+        return None
+    return {**os.environ, "PYTHONUTF8": "1"}
+
+
+def encerrar_arvore(processo: subprocess.Popen) -> None:
+    """Mata o passo e os netos pelo PID. O timeout do subprocess só mata o filho direto
+    (o cmd.exe do npx.cmd, o python do pytest); o node e os workers do xdist seguiriam
+    vivos, segurando o pipe que o `guia ship` lê, e o ship esperaria por eles."""
+    subprocess.run(
+        ["taskkill", "/PID", str(processo.pid), "/T", "/F"], capture_output=True, timeout=60
+    )
+    processo.wait(timeout=60)
+
+
 def executar(passo: Passo, raiz: Path) -> int:
-    # PYTHONUTF8: sem ele o lint-imports sai com 1 no Windows ao imprimir (docs/qualidade.md).
-    ambiente = {**os.environ, "PYTHONUTF8": "1"}
+    # stderr no stdout, na ordem: o ship mostra só o fim da saída, e a linha do passo
+    # reprovado tem de ser a última, mesmo quando o passo escreve no stderr.
     try:
-        return subprocess.run(
-            passo.comando, cwd=raiz / passo.pasta, env=ambiente, timeout=TIMEOUT_DO_PASSO_S
-        ).returncode
-    except subprocess.TimeoutExpired:
-        print(f"   o passo passou de {TIMEOUT_DO_PASSO_S // 60} min e foi interrompido.")
+        processo = subprocess.Popen(
+            passo.comando, cwd=raiz / passo.pasta, env=ambiente_do(passo), stderr=subprocess.STDOUT
+        )
+    except FileNotFoundError:
+        # No Windows o erro vem sem `filename`: o caminho sai do próprio comando.
+        print(f"   executável não encontrado: {passo.comando[0]}")
         return 1
-    except FileNotFoundError as erro:
-        print(f"   executável não encontrado: {erro.filename}")
+    try:
+        return processo.wait(timeout=TIMEOUT_DO_PASSO_S)
+    except subprocess.TimeoutExpired:
+        encerrar_arvore(processo)
+        print(f"   o passo passou de {TIMEOUT_DO_PASSO_S // 60} min e foi interrompido.")
         return 1
 
 
