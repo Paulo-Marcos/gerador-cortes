@@ -69,7 +69,7 @@ export function CartaoDoAjuste(props: CartaoDoAjusteProps) {
   if (props.proposta) return <PropostaDoAjuste {...props} proposta={props.proposta} />;
   if (props.pedindo) {
     return (
-      <div className="mx-2.5 mb-2 flex items-center gap-2 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1.5 text-[11.5px] text-[var(--wb-text-mute)]" role="status">
+      <div className="mx-2.5 mb-2 flex items-center gap-2 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1.5 text-[11px] text-[var(--wb-text-mute)]" role="status">
         <Icon name="loader-2" className="animate-spin" />
         <span className="flex-1">Pedindo o ajuste desta cena à IA…</span>
         <Button type="button" variant="outline" size="sm" onClick={props.cancelar} disabled={props.cancelando}>
@@ -98,7 +98,7 @@ function PedidoDoAjuste({ bloqueio, pedir }: { bloqueio: string | null; pedir: (
           maxLength={500}
           onChange={(e) => setPedido(e.target.value)}
           placeholder="ex.: encurte para caber em duas linhas"
-          className="h-8 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[12px] text-[var(--wb-text)]"
+          className="h-8 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[13px] text-[var(--wb-text)]"
         />
       </label>
       <div className="flex items-center justify-end gap-2">
@@ -123,7 +123,7 @@ function PropostaDoAjuste({
   return (
     <section
       aria-label="Proposta de ajuste da IA"
-      className="mx-2.5 mb-2 flex flex-col gap-1.5 rounded-[var(--radius-xs)] border border-[var(--wb-info)] bg-[var(--wb-info-soft)] p-2 text-[11.5px]"
+      className="mx-2.5 mb-2 flex flex-col gap-1.5 rounded-[var(--radius-xs)] border border-[var(--wb-info)] bg-[var(--wb-info-soft)] p-2 text-[11px]"
     >
       <strong className="font-semibold text-[var(--wb-text)]">Proposta do {NOME_DO_PROVEDOR[proposta.provider]}</strong>
       {mudancas.length === 0 ? (
@@ -132,7 +132,7 @@ function PropostaDoAjuste({
         <dl className="flex flex-col gap-1">
           {mudancas.map((m) => (
             <div key={m.campo}>
-              <dt className="font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">{m.rotulo}</dt>
+              <dt className="font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">{m.rotulo}</dt>
               <dd className="text-[var(--wb-text-mute)]">
                 <span className="sr-only">Antes: </span>
                 <s>{m.antes}</s>
