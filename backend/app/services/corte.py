@@ -1074,8 +1074,8 @@ class CorteService:
             # provavam "pronto" acabaram de ser invalidados pelo novo span.
             primeiro.arquivo_clip_path = ""
             primeiro.duracao_clip_seg = 0.0
-            primeiro.cenas_validadas = 0
-            primeiro.cenas_validadas_em = None
+            # A validação sai, e a rodada anterior também: era de uma metade só (D-1073).
+            origem_das_cenas.zerar_rodadas_na_juncao(primeiro)
 
             projeto_id = primeiro.projeto_id
             sobrevivente_id = primeiro.id

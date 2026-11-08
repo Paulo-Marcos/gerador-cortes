@@ -48,17 +48,19 @@ export function RodadaDoPlano({ corteId, projetoId, dirty }: { corteId: string; 
       </p>
       <div className="flex flex-wrap gap-1.5">
         <BotaoDesfazer botao={botao} onClick={desfazer} idDoMotivo={`motivo-da-rodada-${corteId}`} />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={!rodadas.anterior}
-          onClick={() => setComparando(true)}
-          data-testid="comparar-rodadas"
-        >
-          <Icon name="git-compare-arrows" />
-          Comparar com a rodada anterior
-        </Button>
+        {/* Sem anterior não há com o que comparar: o botão some (depois de juntar, também). */}
+        {rodadas.anterior && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setComparando(true)}
+            data-testid="comparar-rodadas"
+          >
+            <Icon name="git-compare-arrows" />
+            Comparar com a rodada anterior
+          </Button>
+        )}
       </div>
       {botao.motivo && (
         <p id={`motivo-da-rodada-${corteId}`} className="text-[11px] text-[var(--wb-text-mute)]">

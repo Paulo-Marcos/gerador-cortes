@@ -178,8 +178,10 @@ describe('D-1073 · o Desfazer rodada', () => {
 });
 
 describe('D-1073 · Comparar com a rodada anterior', () => {
-  it('desabilitado sem rodada anterior', () => {
-    expect(botao(painel(SO_A_ATUAL), 'comparar-rodadas')).toContain('disabled');
+  it('some sem rodada anterior (plano novo ou depois de juntar cortes); com ela, habilitado', () => {
+    const semAnterior = painel(SO_A_ATUAL);
+    expect(semAnterior).not.toContain('comparar-rodadas');
+    expect(semAnterior).not.toContain('Comparar com a rodada anterior');
     expect(botao(painel(DUAS), 'comparar-rodadas')).not.toContain('disabled');
   });
 
