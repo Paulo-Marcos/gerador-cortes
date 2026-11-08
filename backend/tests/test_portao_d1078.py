@@ -8,7 +8,10 @@ roda dentro do pytest.
 """
 
 import importlib.util
+import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -148,3 +151,20 @@ def test_npm_ausente_falha_com_mensagem_sem_rodar_nada(raiz, monkeypatch, capsys
 def test_a_raiz_vem_do_proprio_arquivo():
     """Rodado de qualquer worktree, o portão confere aquele worktree."""
     assert _SCRIPT.parents[1] == portao.RAIZ
+
+
+def test_rodado_de_verdade_sem_venv_sai_com_2_e_mensagem_em_utf8(tmp_path):
+    """De ponta a ponta, sem rodar passo nenhum: a venv falta na raiz copiada."""
+    (tmp_path / "bin").mkdir()
+    shutil.copy(_SCRIPT, tmp_path / "bin" / "portao.py")
+    ambiente = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
+
+    feito = subprocess.run(
+        [sys.executable, str(tmp_path / "bin" / "portao.py")],
+        capture_output=True,
+        env=ambiente,
+        timeout=60,
+    )
+
+    assert feito.returncode == 2
+    assert "Portão NÃO rodou" in feito.stdout.decode("utf-8")

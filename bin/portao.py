@@ -116,4 +116,6 @@ def rodar_portao(raiz: Path = RAIZ) -> int:
 
 
 if __name__ == "__main__":
+    # Redirecionado no Windows, o stdout seria cp1252 no meio da saída UTF-8 dos passos.
+    sys.stdout.reconfigure(encoding="utf-8")
     sys.exit(rodar_portao())
