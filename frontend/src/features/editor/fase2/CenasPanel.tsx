@@ -28,6 +28,9 @@ import {
   usePlanoDasCenas,
   validarSobreposicoesDoPlano,
 } from './planoDasCenas';
+import { AjusteDaCena } from './AjusteDaCena';
+import { aceitaAjuste } from './regrasDoAjuste';
+import { useAjusteDaCena } from './useAjusteDaCena';
 import { Icon } from '@/upgrade/Icon';
 import { mensagemErro } from '@/lib/mensagemErro';
 import { ErroDaApi } from '@/shared/api';
@@ -127,6 +130,8 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       : totalFichas === 0
         ? 'Nenhuma ficha biografica para buscar'
         : 'Buscar retratos das fichas biograficas';
+
+  const ajuste = useAjusteDaCena(corteId, projetoId);
 
   const ultimaCenas = useUltimaGeracao('cenas-expert', { corteId });
   const cenasGeradasPor = ultimaCenas.data?.provider ?? null;
@@ -258,6 +263,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             destaque
             emVoo={providerEmVoo}
             rotuloEmVoo="gerando cenas…"
+            desabilitado={ajuste.pedindo}
             onGerar={handleGerarCenas}
             className="h-[34px] flex-1"
           />
@@ -363,16 +369,13 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         )}
 
         {cenasOrdenadas.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-            <Icon name="film" ilustracao={30} className="text-[var(--wb-text-dim)]" />
-            <p className="text-sm font-medium text-[var(--wb-text)]">{(emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS).titulo}</p>
-            <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">{(emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS).dica}</p>
-          </div>
+          <ListaSemCenas emGeracao={emGeracao} />
         ) : (
           <ul role="list" className="flex flex-col gap-1.5">
             {cenasOrdenadas.map((cena, idx) => (
               <li key={`${cena.tipo}-${idx}-${cena.inicio}`}>
                 <CenaComOrigem corteId={corteId}
+                  ajuste={aceitaAjuste(origens[idx]) && <AjusteDaCena ajuste={ajuste} cena={cena} ativa={idx === cenaAtivaIdx} dirty={dirty} emGeracao={emGeracao} />}
                   cena={cena}
                   origem={origens[idx]}
                   ativa={idx === cenaAtivaIdx}
@@ -458,6 +461,17 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     </section>
   );
 });
+
+function ListaSemCenas({ emGeracao }: { emGeracao: boolean }) {
+  const { titulo, dica } = emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS;
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+      <Icon name="film" ilustracao={30} className="text-[var(--wb-text-dim)]" />
+      <p className="text-sm font-medium text-[var(--wb-text)]">{titulo}</p>
+      <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">{dica}</p>
+    </div>
+  );
+}
 
 // SceneStat (3 cards Duração/Densidade/Cobertura) saiu na AUDITORIA-v4 §2 —
 // os mesmos números agora vivem numa linha inline no header do painel.

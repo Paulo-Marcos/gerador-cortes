@@ -4,6 +4,7 @@ Endpoints:
   GET  /{corte_id}/cenas-remotion/conferencia — os avisos de origem de cada cena
   GET  /{corte_id}/cenas-remotion/rodadas — a rodada atual, a anterior e o diff entre elas
   POST /{corte_id}/cenas-remotion/rodadas/desfazer — volta à anterior (de novo, refaz)
+  POST /{corte_id}/cenas-remotion/ajuste/aceitar — grava a cena ajustada pela IA (D-1074)
 
 A conferência só avisa: nada aqui altera a cena nem bloqueia a validação. O desfazer segura
 a marca das cenas, como a geração: não troca de rodada com uma geração em curso.
@@ -62,6 +63,18 @@ class RodadasDasCenasResponse(RespostaApi):
     diferencas: DiferencasDasRodadasResponse
 
 
+class AceitarAjusteRequest(BaseModel):
+    # A `versao` que o pedido de ajuste devolveu e a cena do plano pela identidade.
+    versao: str
+    tipo: str
+    inicio: float
+    depois: dict[str, Any]
+
+
+class CenasAjustadasResponse(RespostaApi):
+    cenas: list[dict[str, Any]]
+
+
 class DesfazerRodadaRequest(BaseModel):
     # A `versao` da comparação que a tela mostrou: diferente da de agora, o desfazer recusa.
     versao: str | None = None
@@ -87,3 +100,16 @@ async def desfazer_rodada_das_cenas(
 ):
     """Volta à rodada anterior e guarda a atual no lugar dela; devolve a comparação nova."""
     return await servico.desfazer_rodada(corte_id, body.versao if body else None)
+
+
+@router.post("/{corte_id}/cenas-remotion/ajuste/aceitar", response_model=CenasAjustadasResponse)
+async def aceitar_ajuste_da_cena(
+    corte_id: str,
+    body: AceitarAjusteRequest,
+    _marca: None = Depends(com_a_marca_das_cenas),
+):
+    """Grava a cena ajustada pela IA no lugar dela; recusa se o plano mudou desde o pedido."""
+    cenas = await servico.aceitar_cena_ajustada(
+        corte_id, body.versao, body.tipo, body.inicio, body.depois
+    )
+    return {"cenas": cenas}

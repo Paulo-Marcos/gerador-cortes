@@ -43,6 +43,10 @@ export const cenasApi = {
       api.POST('/api/cortes/{corte_id}/cenas-remotion/rodadas/desfazer', { ...doCorte(corteId), body: { versao } }),
     ),
 
+  /** D-1074: grava a cena ajustada pela IA; recusa se o plano mudou desde o pedido. */
+  aceitarAjuste: (corteId: string, body: Schema<'AceitarAjusteRequest'>) =>
+    dados(api.POST('/api/cortes/{corte_id}/cenas-remotion/ajuste/aceitar', { ...doCorte(corteId), body })),
+
   obterPromptCenasRemotion: (corteId: string) =>
     dados(api.GET('/api/cortes/{corte_id}/cenas-remotion/prompt', doCorte(corteId))),
 };

@@ -1,4 +1,4 @@
-import { api, dados } from '@/shared/api';
+import { api, dados, type Schema } from '@/shared/api';
 import type { ProviderIA } from '@/lib/providerIa';
 
 // As gerações que chamam a IA pela assinatura do operador (Claude CLI ou
@@ -33,6 +33,16 @@ export const geracaoIaApi = {
     dados(
       api.GET('/api/claude/corte/{corte_id}/cenas-em-geracao', {
         params: { path: { corte_id: corteId } },
+      }),
+    ),
+
+  // D-1074: o ajuste de uma cena só. Devolve a proposta (antes/depois), sem gravar; o
+  // provedor é o que gerou o plano atual, e quem decide é o servidor.
+  ajustarCena: (corteId: string, body: Schema<'AjustarCenaRequest'>) =>
+    dados(
+      api.POST('/api/claude/corte/{corte_id}/ajustar-cena', {
+        params: { path: { corte_id: corteId } },
+        body,
       }),
     ),
 
