@@ -123,12 +123,12 @@ describe('riscar em vez de excluir', () => {
 });
 
 describe('o que a tela promete', () => {
-  it('o rótulo da manual diz só "manual": a IA ainda regera o plano inteiro até a D-1075', () => {
-    expect(ORIGENS.manual.rotulo).toBe('manual');
-    expect(JSON.stringify(ORIGENS)).not.toContain('não mexe');
+  it('o rótulo da manual diz "manual · a IA não mexe": desde a D-1075 a regeração mantém a manual', () => {
+    expect(ORIGENS.manual.rotulo).toBe('manual · a IA não mexe');
+    expect(JSON.stringify(ORIGENS)).toContain('não mexe');
   });
 
   it('as quatro origens têm rótulo e legenda', () => {
-    expect(Object.values(ORIGENS).map((o) => o.legenda)).toEqual(['da IA, conferida', 'pede conferência', 'manual', 'riscada']);
+    expect(Object.values(ORIGENS).map((o) => o.legenda)).toEqual(['da IA, conferida', 'pede conferência', 'manual, a IA não mexe', 'riscada']);
   });
 });
