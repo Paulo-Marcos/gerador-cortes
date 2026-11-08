@@ -127,8 +127,6 @@ describe('Validar o plano (faltam N)', () => {
   });
 });
 
-// O plano vazio fica como na main: o "Validar sem cenas" sobe com a D-1072, junto com a
-// liberação do backend. Aqui o botão só valida um plano que tem cenas.
 describe('o botão de validar', () => {
   const validarDoPainel = () => h.botoes.find((b) => b['data-testid'] === 'botao-validar-cenas')!;
 
@@ -139,10 +137,12 @@ describe('o botão de validar', () => {
     expect(h.validar).toHaveBeenCalledWith(true, expect.anything());
   });
 
-  it('com zero cenas, segue travado como na main e não oferece validar sem cenas', () => {
+  it('com zero cenas, oferece validar sem cenas e o clique valida o plano vazio (RN-38)', () => {
     const html = painel({ cenas: [], avisos: [] });
-    expect(validarDoPainel().disabled).toBe(true);
-    expect(botaoValidar(html)).not.toContain('sem cenas');
+    expect(validarDoPainel().disabled).toBe(false);
+    expect(botaoValidar(html)).toContain('Validar sem cenas');
+    (validarDoPainel().onClick as () => void)();
+    expect(h.validar).toHaveBeenCalledWith(true, expect.anything());
   });
 
   it('durante a geração, fica travado', () => {

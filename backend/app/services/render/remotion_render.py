@@ -12,7 +12,8 @@ from contextlib import asynccontextmanager
 from app.core.channel_paths import projetos_dir
 from app.core.por_loop import PorLoop
 from app.database import AsyncSessionLocal
-from app.domain.corte.render_etapas import eh_render_parcial
+from app.domain.compartilhado.erros import NaoEncontrado
+from app.domain.corte.render_etapas import eh_render_parcial, exigir_plano_validado
 from app.models import Corte
 from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.render.finalizacao_do_corte import finalizar_corte_com_sucesso
@@ -86,6 +87,29 @@ async def vaga_de_render(avisar: Callable[[str], None]) -> AsyncIterator[None]:
 
 
 class RemotionRenderService:
+    @staticmethod
+    async def renderizar_corte(
+        corte_id: str,
+        filtro: str | None = None,
+        continuar: bool = True,
+        start_from: str = "auto",
+        parar_em: str | None = None,
+    ):
+        """O pedido de render do operador: confere o plano e só então dispara.
+
+        RN-38 (D-1072): o render final de corte com o plano de cenas não validado
+        é recusado aqui, antes de qualquer artefato ser tocado; a tela também
+        trava o botão, mas o pedido pode chegar por outro caminho (D-1065).
+        """
+        async with AsyncSessionLocal() as db:
+            corte = await db.get(Corte, corte_id)
+            if corte is None:
+                raise NaoEncontrado("Corte não encontrado")
+            exigir_plano_validado(parar_em, plano_validado=bool(corte.cenas_validadas))
+        return RemotionRenderService.iniciar_render_background(
+            corte_id, filtro=filtro, continuar=continuar, start_from=start_from, parar_em=parar_em
+        )
+
     @staticmethod
     def iniciar_render_background(
         corte_id: str,

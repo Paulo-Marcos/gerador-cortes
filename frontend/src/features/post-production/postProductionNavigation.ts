@@ -67,8 +67,12 @@ export function nuncaGerouBruto(
 /**
  * D-1041: o principal da Pós sem bruto dizia "a limpeza apagou" até em corte que
  * nunca teve bruto. `arquivos_limpos` só distingue a limpeza completa: fora dela, o
- * texto não culpa a limpeza. Render é GPU: o Enter não dispara, como já era (D-746).
+ * texto não culpa a limpeza. Render é GPU: o Enter não dispara, como já era (D-746). *
+ * D-1072 (RN-38): o render final só libera com o plano de cenas validado; o backend
+ * recusa o mesmo pedido. Falta de bruto vem antes, porque sem ele nem validar adianta.
  */
+export const MOTIVO_PLANO_NAO_VALIDADO = 'Renderizar libera quando o plano estiver validado';
+
 export function montarPrimarioDaPos(p: {
   rodando: boolean;
   progresso: number;
@@ -77,6 +81,7 @@ export function montarPrimarioDaPos(p: {
   arquivosLimpos: boolean;
   nuncaGerou: boolean;
   gerandoBruto: boolean;
+  planoValidado: boolean;
   onRenderizar: () => void;
   onIrAoEditor: () => void;
 }) {
@@ -105,12 +110,14 @@ export function montarPrimarioDaPos(p: {
         : 'Renderizar final',
     icone: p.rodando ? ('loader' as const) : ('clapperboard' as const),
     onClick: p.onRenderizar,
-    desabilitado: p.rodando || p.brutoAusente,
+    desabilitado: p.rodando || p.brutoAusente || !p.planoValidado,
     motivo: p.brutoAusente
       ? p.arquivosLimpos
         ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
         : 'Sem o vídeo bruto: regere o bruto antes de renderizar.'
-      : undefined,
+      : p.planoValidado || p.rodando
+        ? undefined
+        : MOTIVO_PLANO_NAO_VALIDADO,
     semEnter: true,
   };
 }

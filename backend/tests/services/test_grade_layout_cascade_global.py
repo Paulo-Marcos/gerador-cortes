@@ -42,6 +42,7 @@ class _FakeDB:
                 id="corteY",
                 projeto_id="projX",
                 arquivo_clip_path=None,
+                cenas_validadas=1,
                 layout_youtube=None,
                 cenas_remotion=None,
                 duracao_clip_seg=10.0,

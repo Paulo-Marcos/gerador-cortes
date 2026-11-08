@@ -4,6 +4,7 @@ from typing import Any
 
 from app.core.channel_paths import projetos_dir
 from app.database import get_db
+from app.domain.compartilhado.erros import ErroDeDominio
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.models import Corte
 from app.routers import projetos_schemas
@@ -631,8 +632,7 @@ async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None 
 
     Usa composição por camadas (o Remotion renderiza apenas overlays transparentes curtos).
     """
-    if body is None:
-        body = RenderPipelineRequest()
+    body = body or RenderPipelineRequest()
     # D-093: single-flight. Sem este guard, um clique duplo (ou dois tabs)
     # chama iniciar_render_background concorrente; quando `continuar=False`,
     # o cleanup em _deve_limpar_artefatos zera os artefatos da run anterior
@@ -647,7 +647,7 @@ async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None 
             },
         )
     try:
-        RemotionRenderService.iniciar_render_background(
+        await RemotionRenderService.renderizar_corte(
             corte_id,
             filtro=body.filtro,
             continuar=body.continuar,
@@ -659,7 +659,7 @@ async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None 
         return {
             "message": f"Pipeline otimizado iniciado (filtro: {filtro_msg}, início: {body.start_from}{alcance_msg})"
         }
-    except HTTPException:
+    except (HTTPException, ErroDeDominio):  # RN-38: a recusa chega à tela
         raise
     except Exception as e:
         raise erro_interno(e) from e

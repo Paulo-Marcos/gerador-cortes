@@ -13,6 +13,7 @@ import { useCenasEmGeracao, useGerarCenasClaude } from '@/features/editor/useGer
 import { usePreencherRetratosCenas, useValidarCenasRemotion } from '@/features/editor/useCenas';
 import type { CenaRemotion } from '@/types/models';
 import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
+import { montarBotaoDoValidar } from './botaoDoValidar';
 import { CenaComOrigem, LegendaDaOrigem } from './CenaComOrigem';
 import { CenasManualModal } from './CenasManualModal';
 import { RendererConfigControls } from './RendererConfigControls';
@@ -189,23 +190,14 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     });
   };
 
-  const validarDisabled = validarCenas.isPending || dirty || cenasOrdenadas.length === 0 || emGeracao;
-  const validarTooltip = emGeracao
-    ? 'Espere as cenas terminarem de ser geradas'
-    : dirty
-    ? 'Salve as cenas antes de validar'
-    : cenasOrdenadas.length === 0
-      ? 'Nenhuma cena para validar'
-      : cenasValidadas
-        ? 'Desfazer a validação do plano'
-        : faltam > 0
-          ? `${faltam} cena(s) pedem conferência; os avisos não impedem validar`
-          : 'Validar o plano de cenas';
-  const rotuloDoValidar = cenasValidadas
-    ? 'Plano validado'
-    : faltam > 0
-      ? `Validar o plano (faltam ${faltam})`
-      : 'Validar o plano';
+  const validar = montarBotaoDoValidar({
+    cenasValidadas,
+    faltam,
+    totalDeCenas: cenasOrdenadas.length,
+    dirty,
+    emGeracao,
+    validando: validarCenas.isPending,
+  });
 
   const handleValidarCenas = () => {
     validarCenas.mutate(!cenasValidadas, {
@@ -395,7 +387,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         )}
       </div>
 
-      {/* Footer — "Tipos disponiveis ▾" + spacer + "Validar o plano (faltam N)" */}
+      {/* Footer — "Tipos disponiveis ▾" + spacer + o Validar (botaoDoValidar.ts) */}
       <footer className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2.5">
         <button
           type="button"
@@ -411,13 +403,13 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <Icon name="chevron-down" className="transition-transform" style={{ transform: showTypes ? 'rotate(180deg)' : 'none' }} />
         </button>
         <div className="flex-1" />
-        <Tooltip label={validarTooltip} side="top">
+        <Tooltip label={validar.dica} side="top">
           <Button
             type="button"
             variant="default"
             size="sm"
             onClick={handleValidarCenas}
-            disabled={validarDisabled}
+            disabled={validar.desabilitado}
             data-testid="botao-validar-cenas"
             aria-pressed={cenasValidadas}
             className={cenasValidadas ? 'bg-[var(--wb-ok)] hover:opacity-90' : ''}
@@ -429,7 +421,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             ) : (
               <Icon name="shield-check" />
             )}
-            {rotuloDoValidar}
+            {validar.rotulo}
           </Button>
         </Tooltip>
       </footer>

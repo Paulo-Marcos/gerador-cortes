@@ -25,13 +25,13 @@ def _reset_store():
 async def test_renderizar_pipeline_dispara_quando_ocioso(monkeypatch):
     chamada = {}
 
-    def fake_iniciar(corte_id, **kwargs):
+    async def fake_iniciar(corte_id, **kwargs):
         chamada["corte_id"] = corte_id
         chamada.update(kwargs)
 
     monkeypatch.setattr(
         cortes_router.RemotionRenderService,
-        "iniciar_render_background",
+        "renderizar_corte",
         fake_iniciar,
     )
 
@@ -50,7 +50,7 @@ async def test_renderizar_pipeline_rejeita_409_se_ja_rodando(monkeypatch):
 
     monkeypatch.setattr(
         cortes_router.RemotionRenderService,
-        "iniciar_render_background",
+        "renderizar_corte",
         fake_iniciar,
     )
     RenderProgressStore.start("corte-x", stage="Fase 2/4")
