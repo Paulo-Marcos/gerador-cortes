@@ -325,7 +325,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             <span className="text-[var(--wb-text-dim)]">cobertura</span>
           </span>
         </div>
-        <LegendaDoPlano corteId={corteId} temCenas={cenasOrdenadas.length > 0} />
+        <LegendaDoPlano corteId={corteId} projetoId={projetoId} temCenas={cenasOrdenadas.length > 0} dirty={dirty} />
 
         {/* Botao Salvar so aparece quando dirty (mantem comportamento anterior) */}
         {dirty && (

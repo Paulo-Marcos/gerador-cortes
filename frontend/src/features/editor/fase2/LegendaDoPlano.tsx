@@ -2,10 +2,11 @@ import { useCorte } from '@/features/editor/useCortes';
 import type { Corte } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 import { LegendaDaOrigem } from './CenaComOrigem';
+import { RodadaDoPlano } from './RodadaDoPlano';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// O pé do cabeçalho do plano: a legenda das origens (D-1070) e, logo abaixo, o que a
-// última geração deixou de fora. D-1075 (RN-39): gerar de novo mantém as cenas manuais
+// O pé do cabeçalho do plano: a rodada com o Desfazer e o Comparar (D-1073), a legenda
+// das origens (D-1070) e, logo abaixo, o que a última geração deixou de fora. D-1075 (RN-39): gerar de novo mantém as cenas manuais
 // e descarta a cena da IA que cai em cima de uma delas. O plano gravado diz quantas; a
 // Pós conta numa frase, sem modal. O plano que o operador salva não traz a contagem, e
 // a frase sai junto.
@@ -35,11 +36,20 @@ export function AvisoDasDescartadas({ quantas }: { quantas: number }) {
   );
 }
 
+interface Props {
+  corteId: string;
+  projetoId: string;
+  temCenas: boolean;
+  /** Há cenas editadas sem salvar: trocar de rodada as jogaria fora. */
+  dirty: boolean;
+}
+
 /** Lê o corte em cache: o aviso chega por qualquer caminho de geração, até a cadeia do bruto. */
-export function LegendaDoPlano({ corteId, temCenas }: { corteId: string; temCenas: boolean }) {
+export function LegendaDoPlano({ corteId, projetoId, temCenas, dirty }: Props) {
   const { data: corte } = useCorte(corteId);
   return (
     <>
+      <RodadaDoPlano corteId={corteId} projetoId={projetoId} dirty={dirty} />
       {temCenas && <LegendaDaOrigem className="mt-2" />}
       <AvisoDasDescartadas quantas={contarDescartadas(corte?.cenas_remotion)} />
     </>
