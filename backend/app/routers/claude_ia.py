@@ -6,13 +6,14 @@ Mantidas num router próprio para não tocar nos routers de domínio existentes
 """
 
 import logging
+from typing import Any
 
 from app.database import get_db
 from app.domain.compartilhado.erros import ErroDeDominio
 from app.domain.compartilhado.provider_ia import provider_do_modelo
 from app.models import Corte, Projeto
 from app.routers.resposta_api import RespostaApi
-from app.services import telemetria_ia
+from app.services import ajuste_da_cena, telemetria_ia
 from app.services.analise import AnaliseService
 from app.services.bruto_do_corte import recusar_cenas_com_bruto_em_andamento
 from app.services.cenas_em_geracao import esta_gerando
@@ -21,6 +22,7 @@ from app.services.claude_ia import ProviderIA
 from app.services.corte import CorteService
 from app.services.metadados import MetadadosService
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -77,6 +79,21 @@ class GeracaoConcluidaResponse(GeracaoDoCorteResponse):
 class CenasEmGeracaoResponse(RespostaApi):
     corte_id: str
     em_geracao: bool
+
+
+class AjustarCenaRequest(BaseModel):
+    # A cena pela identidade do plano (`tipo` + início), como a conferência a identifica.
+    tipo: str
+    inicio: float
+    pedido: str = Field(min_length=1, max_length=500)
+
+
+class PropostaDeAjusteResponse(RespostaApi):
+    # A `versao` do plano que a IA leu: o Aceitar a devolve, e recusa se o plano mudou.
+    versao: str
+    provider: ProviderIA
+    antes: dict[str, Any]
+    depois: dict[str, Any]
 
 
 @router.post("/projeto/{projeto_id}/analisar", response_model=AnaliseViaIaResponse)
@@ -181,6 +198,24 @@ async def gerar_cenas_via_claude(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("Erro ao gerar cenas via Claude/Gemini")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/corte/{corte_id}/ajustar-cena", response_model=PropostaDeAjusteResponse)
+async def ajustar_cena_via_ia(corte_id: str, body: AjustarCenaRequest):
+    """Pede à IA o ajuste de uma cena só e devolve a proposta, sem gravar (D-1074, RN-40).
+
+    O provedor é o que gerou o plano atual. Cancelável pela fila global com o id
+    `ajuste:<corte_id>`; aceitar é `POST /api/cortes/{id}/cenas-remotion/ajuste/aceitar`.
+    Sem sessão aqui: o serviço lê o corte (404 se não existe) e a solta antes da IA.
+    """
+    recusar_cenas_com_bruto_em_andamento(corte_id)
+    try:
+        return await ajuste_da_cena.pedir_ajuste(corte_id, body.tipo, body.inicio, body.pedido)
+    except ErroDeDominio:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Erro ao ajustar a cena via Claude/Gemini")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

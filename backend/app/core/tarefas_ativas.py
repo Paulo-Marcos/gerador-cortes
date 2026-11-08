@@ -68,6 +68,7 @@ ETAPAS_IA: dict[str, tuple[str, str]] = {
     "desvios": ("trechos", "Detectando desvios"),
     "thumbnail-imagem": ("thumbnail", "Gerando imagem da capa"),
     "cenas-gemini": ("cenas", "Gerando cenas"),
+    "ajuste-de-cena": ("cenas", "Ajustando uma cena"),
 }
 
 # Nome da background task → (tipo, escopo do sufixo, etapa). A ORDEM importa:

@@ -793,6 +793,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/claude/corte/{corte_id}/ajustar-cena": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajustar Cena Via Ia
+         * @description Pede à IA o ajuste de uma cena só e devolve a proposta, sem gravar (D-1074, RN-40).
+         *
+         *     O provedor é o que gerou o plano atual. Cancelável pela fila global com o id
+         *     `ajuste:<corte_id>`; aceitar é `POST /api/cortes/{id}/cenas-remotion/ajuste/aceitar`.
+         *     Sem sessão aqui: o serviço lê o corte (404 se não existe) e a solta antes da IA.
+         */
+        post: operations["ajustar_cena_via_ia_api_claude_corte__corte_id__ajustar_cena_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/claude/corte/{corte_id}/cenas-em-geracao": {
         parameters: {
             query?: never;
@@ -1357,6 +1381,26 @@ export interface paths {
         get: operations["obter_caminho_pasta_api_cortes__corte_id__caminho_pasta_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cortes/{corte_id}/cenas-remotion/ajuste/aceitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceitar Ajuste Da Cena
+         * @description Grava a cena ajustada pela IA no lugar dela; recusa se o plano mudou desde o pedido.
+         */
+        post: operations["aceitar_ajuste_da_cena_api_cortes__corte_id__cenas_remotion_ajuste_aceitar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5237,6 +5281,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AceitarAjusteRequest */
+        AceitarAjusteRequest: {
+            /** Depois */
+            depois: {
+                [key: string]: unknown;
+            };
+            /** Inicio */
+            inicio: number;
+            /** Tipo */
+            tipo: string;
+            /** Versao */
+            versao: string;
+        };
         /** AdicionarDesvioRequest */
         AdicionarDesvioRequest: {
             /** Fim Hms */
@@ -5260,6 +5317,15 @@ export interface components {
         AgendaPrevistaResponse: {
             /** Itens */
             itens: components["schemas"]["LinhaDaAgenda"][];
+        };
+        /** AjustarCenaRequest */
+        AjustarCenaRequest: {
+            /** Inicio */
+            inicio: number;
+            /** Pedido */
+            pedido: string;
+            /** Tipo */
+            tipo: string;
         };
         /**
          * AlertaConferirDoCorte
@@ -6174,6 +6240,13 @@ export interface components {
             };
             /** Campos */
             campos: string[];
+        };
+        /** CenasAjustadasResponse */
+        CenasAjustadasResponse: {
+            /** Cenas */
+            cenas: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * CenasDoCorteResponse
@@ -8974,6 +9047,24 @@ export interface components {
         ProntosResponse: {
             /** Shorts */
             shorts: components["schemas"]["ShortProntoResponse"][];
+        };
+        /** PropostaDeAjusteResponse */
+        PropostaDeAjusteResponse: {
+            /** Antes */
+            antes: {
+                [key: string]: unknown;
+            };
+            /** Depois */
+            depois: {
+                [key: string]: unknown;
+            };
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "claude" | "gemini";
+            /** Versao */
+            versao: string;
         };
         /** PublicacaoRegistrada */
         PublicacaoRegistrada: {
@@ -12263,6 +12354,41 @@ export interface operations {
             };
         };
     };
+    ajustar_cena_via_ia_api_claude_corte__corte_id__ajustar_cena_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AjustarCenaRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropostaDeAjusteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     consultar_cenas_em_geracao_api_claude_corte__corte_id__cenas_em_geracao_get: {
         parameters: {
             query?: never;
@@ -13194,6 +13320,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaminhoDaPastaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    aceitar_ajuste_da_cena_api_cortes__corte_id__cenas_remotion_ajuste_aceitar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AceitarAjusteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CenasAjustadasResponse"];
                 };
             };
             /** @description Validation Error */

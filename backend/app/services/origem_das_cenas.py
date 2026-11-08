@@ -1,6 +1,7 @@
 """A origem das cenas de um corte: a conferência só lê e avisa (D-1018, RN-35); o recorte
 leva as cenas junto e, se tirar a frase de alguma, desfaz a validação (D-1030, RN-36); a
-geração guarda a rodada que substituiu, para desfazer e comparar (D-1071, RN-37)."""
+geração guarda a rodada que substituiu, para desfazer e comparar (D-1071, RN-37); o ajuste
+de uma cena aceito troca só ela, sobre o plano que o pedido leu (D-1074, RN-40)."""
 
 import json
 from datetime import datetime
@@ -8,9 +9,16 @@ from typing import cast
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
+from app.domain.corte.ajuste_da_cena import (
+    AJUSTE_FORA_DO_CORTE,
+    PLANO_MUDOU_NO_AJUSTE,
+    achar_a_cena,
+    plano_com_a_cena_trocada,
+    recusa_do_ajuste,
+)
 from app.domain.corte.ancora_da_cena import levar_cenas_geradas, perdeu_frase, seguir_recorte
 from app.domain.corte.cenas_manuais import encaixar_em_volta_das_manuais, ler_as_manuais
-from app.domain.corte.corte_mapper import extrair_cenas_remotion
+from app.domain.corte.corte_mapper import cenas_fora_do_corte, extrair_cenas_remotion
 from app.domain.corte.origem_da_cena import conferir_cenas
 from app.domain.corte.rodada_das_cenas import (
     OrigemDasCenas,
@@ -289,6 +297,44 @@ async def desfazer_rodada(corte_id: str, versao: str | None = None) -> dict:
             await _corte(db, corte_id)
             raise PedidoInvalido(CENAS_MUDARAM_AO_DESFAZER)
     return await comparar(corte_id)
+
+
+async def aceitar_cena_ajustada(
+    corte_id: str, versao: str, tipo: str, inicio: float, depois: dict
+) -> list[dict]:
+    """Troca a cena `tipo` + `inicio` pela ajustada que o operador aceitou (D-1074, RN-40).
+
+    Só aquela cena muda, e a marca de validadas sai, como em qualquer mudança do plano
+    (D-1030, D-1046). Recusa sem gravar se o plano não é o da `versao` do pedido (uma
+    edição, uma geração, um desfazer ou um recorte no meio) ou se mudou entre a leitura e a
+    gravação logo abaixo: a proposta valia sobre o plano que a IA leu. A rodada não muda:
+    o ajuste não é uma geração, e desfazer continua voltando à anterior. O aviso das cenas
+    descartadas pelas manuais sai junto, como ao salvar o plano (RN-39).
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await _corte(db, corte_id)
+        payload = json.loads(corte.cenas_remotion or "[]")
+        cenas = extrair_cenas_remotion(payload)
+        indice = achar_a_cena(cenas, tipo, inicio)
+        lida = versao_das_rodadas(corte.cenas_remotion, corte.cenas_anteriores)
+        if indice is None or versao != lida:
+            raise PedidoInvalido(PLANO_MUDOU_NO_AJUSTE)
+        recusa = recusa_do_ajuste(cenas[indice])
+        if recusa:
+            raise PedidoInvalido(recusa)
+        if cenas_fora_do_corte([depois], (corte.fim_seg or 0) - (corte.inicio_seg or 0)):
+            raise PedidoInvalido(AJUSTE_FORA_DO_CORTE)
+        plano = plano_com_a_cena_trocada(payload, indice, depois)
+        if isinstance(plano, dict):
+            plano.pop(DESCARTADAS_PELAS_MANUAIS, None)
+        valores = {
+            "cenas_remotion": json.dumps(plano, ensure_ascii=False),
+            "cenas_validadas": 0,
+            "cenas_validadas_em": None,
+        }
+        if not await _gravar_se(db, corte_id, _rodadas_seguem_as_lidas(corte), valores):
+            raise PedidoInvalido(PLANO_MUDOU_NO_AJUSTE)
+    return extrair_cenas_remotion(plano)
 
 
 async def conferir(corte_id: str) -> list[dict]:

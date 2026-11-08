@@ -32,14 +32,17 @@ type Props = Omit<ComponentProps<typeof CenaItem>, 'selo'> & {
   corteId: string;
   origem: OrigemNoPlano;
   onTrazerDeVolta: () => void;
+  /** D-1074: o cartão do ajuste pela IA, quando esta cena o recebe. */
+  ajuste?: ReactNode;
 };
 
-export function CenaComOrigem({ corteId, origem, onTrazerDeVolta, ...props }: Props) {
+export function CenaComOrigem({ corteId, origem, onTrazerDeVolta, ajuste, ...props }: Props) {
   const avisos = useAvisosDaCena(corteId, props.cena);
   return (
     <PlanoDaCena origem={origem} cena={props.cena} onSeek={props.onSeek} onTrazerDeVolta={onTrazerDeVolta}>
       <CenaItem {...props} selo={<SeloDaOrigem origem={origem} />} />
       <OrigemDaCena cena={props.cena} avisos={avisos} onChange={props.onChange} />
+      {ajuste}
     </PlanoDaCena>
   );
 }

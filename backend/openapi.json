@@ -1,6 +1,35 @@
 {
   "components": {
     "schemas": {
+      "AceitarAjusteRequest": {
+        "properties": {
+          "depois": {
+            "additionalProperties": true,
+            "title": "Depois",
+            "type": "object"
+          },
+          "inicio": {
+            "title": "Inicio",
+            "type": "number"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          },
+          "versao": {
+            "title": "Versao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "versao",
+          "tipo",
+          "inicio",
+          "depois"
+        ],
+        "title": "AceitarAjusteRequest",
+        "type": "object"
+      },
       "AdicionarDesvioRequest": {
         "properties": {
           "fim_hms": {
@@ -63,6 +92,31 @@
           "itens"
         ],
         "title": "AgendaPrevistaResponse",
+        "type": "object"
+      },
+      "AjustarCenaRequest": {
+        "properties": {
+          "inicio": {
+            "title": "Inicio",
+            "type": "number"
+          },
+          "pedido": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Pedido",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "inicio",
+          "pedido"
+        ],
+        "title": "AjustarCenaRequest",
         "type": "object"
       },
       "AlertaConferirDoCorte": {
@@ -2801,6 +2855,23 @@
           "campos"
         ],
         "title": "CenaQueMudouResponse",
+        "type": "object"
+      },
+      "CenasAjustadasResponse": {
+        "properties": {
+          "cenas": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cenas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cenas"
+        ],
+        "title": "CenasAjustadasResponse",
         "type": "object"
       },
       "CenasDoCorteResponse": {
@@ -9642,6 +9713,40 @@
         "title": "ProntosResponse",
         "type": "object"
       },
+      "PropostaDeAjusteResponse": {
+        "properties": {
+          "antes": {
+            "additionalProperties": true,
+            "title": "Antes",
+            "type": "object"
+          },
+          "depois": {
+            "additionalProperties": true,
+            "title": "Depois",
+            "type": "object"
+          },
+          "provider": {
+            "enum": [
+              "claude",
+              "gemini"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "versao": {
+            "title": "Versao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "versao",
+          "provider",
+          "antes",
+          "depois"
+        ],
+        "title": "PropostaDeAjusteResponse",
+        "type": "object"
+      },
       "PublicacaoRegistrada": {
         "properties": {
           "alvo_id": {
@@ -16138,6 +16243,59 @@
         ]
       }
     },
+    "/api/claude/corte/{corte_id}/ajustar-cena": {
+      "post": {
+        "description": "Pede à IA o ajuste de uma cena só e devolve a proposta, sem gravar (D-1074, RN-40).\n\nO provedor é o que gerou o plano atual. Cancelável pela fila global com o id\n`ajuste:<corte_id>`; aceitar é `POST /api/cortes/{id}/cenas-remotion/ajuste/aceitar`.\nSem sessão aqui: o serviço lê o corte (404 se não existe) e a solta antes da IA.",
+        "operationId": "ajustar_cena_via_ia_api_claude_corte__corte_id__ajustar_cena_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AjustarCenaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropostaDeAjusteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ajustar Cena Via Ia",
+        "tags": [
+          "Claude IA"
+        ]
+      }
+    },
     "/api/claude/corte/{corte_id}/cenas-em-geracao": {
       "get": {
         "description": "Se as cenas deste corte estão sendo geradas agora, pelo clique ou pela cadeia do bruto.\n\nRota própria porque o status do projeto só lista os cortes aprovados, e a Pós abre\ntambém os outros. Lê só memória: a tela pode repetir à vontade.",
@@ -17663,6 +17821,59 @@
           }
         },
         "summary": "Obter Caminho Pasta",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/cenas-remotion/ajuste/aceitar": {
+      "post": {
+        "description": "Grava a cena ajustada pela IA no lugar dela; recusa se o plano mudou desde o pedido.",
+        "operationId": "aceitar_ajuste_da_cena_api_cortes__corte_id__cenas_remotion_ajuste_aceitar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AceitarAjusteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CenasAjustadasResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aceitar Ajuste Da Cena",
         "tags": [
           "Cortes"
         ]
