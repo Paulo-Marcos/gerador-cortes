@@ -17,6 +17,7 @@ ruff check . && ruff format --check . && lint-imports && pytest
 npm run lint && npx tsc --noEmit && npx vitest run && npm run build
 ```
 
+- **O portão num comando só: `python bin/portao.py`** (da raiz de qualquer worktree, que ele confere). Roda os oito passos acima pelo `backend/.venv`, com o pytest no nível antes do commit (`-m "not integration" -n 6`), para no primeiro que falhar e sai com o código dele; é o comando feito para o `delivery.gate.full` do `.guia/process.json`, que o `guia ship` roda sobre a árvore já commitada (D-1078).
 - **Não rode `npm run format`** (prettier `--write`): o CI não usa prettier e o comando reescreve o repositório inteiro.
 - **Nunca declare verde pelo código de saída de um pipe** (`cmd | tail; echo $?` mostra o código do `tail`). Grave a saída num arquivo e leia, em `.guia/tmp/<D-NNN>/` (fora do git), nunca fora do worktree: o log fica órfão quando ele some (já sobraram 5 em `C:\DEV`).
 - No Windows, `lint-imports > NUL` sai com 1 mesmo com todos os contratos KEPT (a impressão do `rich` em cp1252). Rode com `PYTHONUTF8=1` ou grave a saída em arquivo (em `.guia/tmp/<D-NNN>/`).
