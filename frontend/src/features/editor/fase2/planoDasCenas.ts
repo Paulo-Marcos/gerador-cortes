@@ -81,11 +81,10 @@ export const ORIGENS: Record<
     border: 'var(--wb-warn)',
     color: 'var(--wb-warn-ink)',
   },
-  // Até a D-1075 a regeração ainda substitui o plano inteiro: o rótulo diz só "manual"
-  // e não promete que a IA deixa a cena em paz.
+  // D-1075 (RN-39): gerar de novo mantém a manual e descarta a cena da IA que cai em cima.
   manual: {
-    rotulo: 'manual',
-    legenda: 'manual',
+    rotulo: 'manual · a IA não mexe',
+    legenda: 'manual, a IA não mexe',
     icone: 'pen',
     soft: 'var(--wb-ok-soft)',
     border: 'var(--wb-ok)',

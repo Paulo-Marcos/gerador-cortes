@@ -14,7 +14,8 @@ import { usePreencherRetratosCenas, useValidarCenasRemotion } from '@/features/e
 import type { CenaRemotion } from '@/types/models';
 import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
 import { montarBotaoDoValidar } from './botaoDoValidar';
-import { CenaComOrigem, LegendaDaOrigem } from './CenaComOrigem';
+import { CenaComOrigem } from './CenaComOrigem';
+import { LegendaDoPlano } from './LegendaDoPlano';
 import { CenasManualModal } from './CenasManualModal';
 import { RendererConfigControls } from './RendererConfigControls';
 import { TIPOS_CENA } from './sceneTypes';
@@ -324,7 +325,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             <span className="text-[var(--wb-text-dim)]">cobertura</span>
           </span>
         </div>
-        {cenasOrdenadas.length > 0 && <LegendaDaOrigem className="mt-2" />}
+        <LegendaDoPlano corteId={corteId} temCenas={cenasOrdenadas.length > 0} />
 
         {/* Botao Salvar so aparece quando dirty (mantem comportamento anterior) */}
         {dirty && (

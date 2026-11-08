@@ -9,6 +9,7 @@ from typing import cast
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.corte.ancora_da_cena import levar_cenas_geradas, perdeu_frase, seguir_recorte
+from app.domain.corte.cenas_manuais import encaixar_em_volta_das_manuais, ler_as_manuais
 from app.domain.corte.corte_mapper import extrair_cenas_remotion
 from app.domain.corte.origem_da_cena import conferir_cenas
 from app.domain.corte.rodada_das_cenas import (
@@ -22,6 +23,9 @@ from app.models import Corte
 from sqlalchemy import CursorResult, and_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Quantas cenas da última geração ficaram de fora por cair em cima de uma manual (RN-39). A
+# Pós diz isso ao operador; o plano que ele salva não traz a chave, e o aviso sai junto.
+DESCARTADAS_PELAS_MANUAIS = "descartadas_pelas_manuais"
 SEM_RODADA_ANTERIOR = "Não há rodada anterior das cenas para voltar."
 CENAS_MUDARAM_AO_DESFAZER = (
     "As cenas mudaram desde a comparação e a rodada não foi desfeita. Confira de novo."
@@ -166,11 +170,16 @@ async def gravar_cenas_geradas(
     D-1071, RN-37: a rodada que sai fica guardada como a anterior, com quem a gerou, quando
     e se estava validada. O `where` também confere as rodadas lidas: uma edição gravada no
     meio entra na anterior, em vez de a anterior guardar o que não existe mais.
+
+    D-1075, RN-39: as cenas manuais do plano lido ficam, e as da IA que caem em cima delas
+    saem. Lidas a cada volta do laço, sob o mesmo `where`: a manual salva no meio entra.
     """
     while True:
         corte = await _corte(db, corte_id)
         atual = corte.transcricao_final
-        cenas = levar_cenas_geradas(resultado, transcricao_lida, atual)
+        cenas = _encaixar_as_manuais(
+            levar_cenas_geradas(resultado, transcricao_lida, atual), corte.cenas_remotion
+        )
         nova = RodadaDasCenas(
             cenas=json.dumps(cenas, ensure_ascii=False),
             origem=origem,
@@ -183,6 +192,21 @@ async def gravar_cenas_geradas(
         condicao = and_(Corte.transcricao_final == atual, _rodadas_seguem_as_lidas(corte))
         if await _gravar_se(db, corte_id, condicao, valores):
             return cenas
+
+
+def _encaixar_as_manuais(geradas: dict, cenas_gravadas: str | None) -> dict:
+    """O payload da geração com as manuais do plano gravado encaixadas (RN-39).
+
+    Um payload novo, e não o recebido alterado: o laço de quem chama pode voltar e encaixar
+    de novo, e a manual da volta anterior passaria por cena da IA.
+    """
+    plano = encaixar_em_volta_das_manuais(
+        extrair_cenas_remotion(geradas), ler_as_manuais(cenas_gravadas)
+    )
+    payload = {**geradas, "cenas": plano.cenas}
+    if plano.descartadas:
+        payload[DESCARTADAS_PELAS_MANUAIS] = plano.descartadas
+    return payload
 
 
 async def gravar_retratos(

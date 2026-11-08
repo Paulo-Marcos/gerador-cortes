@@ -160,6 +160,7 @@ class RoteiroDeCenasDoCorte(ItemDoCorte):
     formato: str | Ausente = None
     paleta: dict[str, Any] | Ausente = None
     retratos: dict[str, Any] | Ausente = None
+    descartadas_pelas_manuais: int | Ausente = None  # D-1075: caíam sobre manual (RN-39)
 
 
 class LayoutDoCorte(ItemDoCorte):
