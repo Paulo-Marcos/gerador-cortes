@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 from fnmatch import fnmatchcase
+import os
 import re
 import subprocess
 import sys
@@ -53,7 +54,48 @@ REGISTRY_HEADER = (
 # ----- registry I/O --------------------------------------------------------
 
 def _norm(path: str) -> str:
-    return path.replace("\\", "/").lstrip("./").strip()
+    # Tira o prefixo "./", nunca caracteres soltos: lstrip("./") fazia
+    # ".guia/x" virar "guia/x" e "../x" virar "x" (D-1079).
+    normalized = path.replace("\\", "/").strip()
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+class CaminhoForaDoRepo(ValueError):
+    pass
+
+
+def _resolver_no_repo(path: str) -> str:
+    """Caminho dado na linha de comando -> caminho relativo a raiz do repo.
+
+    Relativo se le a partir da pasta atual (como em qualquer CLI); absoluto
+    fica como esta. Sem isso, `src/x.test.ts` chamado de `frontend/` nao
+    casava com `frontend/...` e dava OK falso (D-1079). Caminhos vindos do
+    git (hook e CI) ja sao relativos a raiz e nao passam por aqui.
+    """
+    if _norm(path) == "*":
+        return "*"
+    absolute = Path(os.path.abspath(Path.cwd() / path))
+    # REPO_ROOT e resolvido; uma pasta atual alcancada por junction ou link
+    # so casa com ele depois de resolvida tambem.
+    for candidate in (absolute, absolute.resolve()):
+        try:
+            return candidate.relative_to(REPO_ROOT).as_posix()
+        except ValueError:
+            continue
+    raise CaminhoForaDoRepo(path)
+
+
+def _resolver_argumentos(paths: list[str]) -> list[str] | None:
+    resolved: list[str] = []
+    for path in paths:
+        try:
+            resolved.append(_resolver_no_repo(path))
+        except CaminhoForaDoRepo:
+            print(f"Erro: caminho fora do repositorio ({REPO_ROOT.as_posix()}): {path}", file=sys.stderr)
+            return None
+    return resolved
 
 
 def _matches_pattern(pattern: str, path: str) -> bool:
@@ -203,9 +245,12 @@ def cmd_list(_args: argparse.Namespace) -> int:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    blocked = _blocked(_events_from_paths(args.files, args.operation))
+    files = _resolver_argumentos(args.files)
+    if files is None:
+        return 2
+    blocked = _blocked(_events_from_paths(files, args.operation))
     if not blocked:
-        print(f"OK: {len(args.files)} arquivo(s), nenhum travado.")
+        print(f"OK: {len(files)} arquivo(s), nenhum travado.")
         return 0
     _print_block(blocked, sys.stderr)
     return 1
@@ -216,7 +261,10 @@ def cmd_lock(args: argparse.Namespace) -> int:
     if any(lk.get("id") == args.id for lk in locks):
         print(f"Erro: feature '{args.id}' ja existe no registry.", file=sys.stderr)
         return 1
-    for f in args.files:
+    files = _resolver_argumentos(args.files)
+    if files is None:
+        return 2
+    for f in files:
         if f != "*" and _is_ignored_path(f):
             print(f"Erro: arquivo nao pode ser travado por .guia/locks/lock-ignore.txt: {f}", file=sys.stderr)
             return 1
@@ -227,11 +275,11 @@ def cmd_lock(args: argparse.Namespace) -> int:
         "description": args.description or "",
         "locked_at": date.today().isoformat(),
         "operations": args.operations,
-        "files": [_norm(f) for f in args.files],
+        "files": files,
     }
     locks.append(new_lock)
     _save_locks(locks)
-    print(f"Trava criada: {args.id}  ({len(args.files)} arquivo(s))")
+    print(f"Trava criada: {args.id}  ({len(files)} arquivo(s))")
     return 0
 
 
@@ -345,7 +393,7 @@ def main(argv: list[str] | None = None) -> int:
     p_lock.add_argument("id", help="Identificador da feature (kebab-case)")
     p_lock.add_argument("--description", "-d", default="", help="Descricao curta")
     p_lock.add_argument("--operations", nargs="+", choices=ALL_OPERATIONS, default=list(ALL_OPERATIONS), help="Operacoes bloqueadas")
-    p_lock.add_argument("files", nargs="+", help="Arquivos a travar (paths relativos ao repo)")
+    p_lock.add_argument("files", nargs="+", help="Arquivos a travar (relativos a pasta atual ou absolutos, dentro do repo)")
     p_lock.set_defaults(func=cmd_lock)
 
     p_unlock = sub.add_parser("unlock", help="Remove trava de uma feature (permanente)")
