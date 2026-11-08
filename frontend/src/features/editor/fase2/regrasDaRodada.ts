@@ -55,13 +55,15 @@ export const temRodada = (rodadas: RodadasDasCenas | undefined): rodadas is Roda
   Boolean(rodadas && (rodadas.atual.cenas.length > 0 || rodadas.anterior));
 
 /**
- * A anterior é a mais nova: o operador já desfez, e o botão agora refaz. Sem as duas
- * horas (rodada de antes da D-1071) não se sabe, e o botão diz desfazer.
+ * A anterior é a mais nova: o operador já desfez, e o botão agora refaz. A rodada sem
+ * hora é de antes da D-1071, que passou a gravá-la, e por isso é sempre a mais velha:
+ * na tela, com a anterior datada, o operador já desfez. Sem hora nenhuma, desfazer.
  */
 export function jaDesfez(rodadas: RodadasDasCenas): boolean {
   const atual = rodadas.atual.gerada_em;
   const anterior = rodadas.anterior?.gerada_em;
-  return Boolean(atual && anterior && lerHoraDoServidor(anterior) > lerHoraDoServidor(atual));
+  if (!anterior) return false;
+  return !atual || lerHoraDoServidor(anterior) > lerHoraDoServidor(atual);
 }
 
 const comoVolta = (rodada: Rodada) =>

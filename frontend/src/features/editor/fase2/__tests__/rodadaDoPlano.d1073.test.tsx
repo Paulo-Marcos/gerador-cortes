@@ -9,6 +9,7 @@ import { CenasPanel } from '../CenasPanel';
 import { ComparacaoDasRodadas } from '../RodadaDoPlano';
 import {
   descreverCampo,
+  fraseDepoisDeTrocar,
   haQuantoTempo,
   jaDesfez,
   linhaDaRodada,
@@ -152,8 +153,21 @@ describe('D-1073 · o Desfazer rodada', () => {
     expect(montar({ rodadas: desfeita }).dica).toMatch(/^Traz de volta o plano mais novo \(Claude · há 4 min\)\./);
   });
 
-  it('sem as horas (rodada antiga) não se sabe se já desfez: o botão diz desfazer', () => {
-    expect(jaDesfez({ ...DUAS, atual: rodada(null, null) })).toBe(false);
+  // Auditoria da D-1073: toda rodada de antes da D-1071 não tem hora, e é sempre a mais
+  // velha. Gerar de novo num corte da PROD e desfazer deixa a sem hora na tela.
+  it('a rodada sem hora (de antes da D-1071) é a mais velha: voltar a ela é desfazer', () => {
+    const naAntiga = { ...DUAS, atual: rodada('claude', null), anterior: rodada('claude', '2026-11-07T11:56:00') };
+    expect(jaDesfez(naAntiga)).toBe(true);
+    expect(montar({ rodadas: naAntiga })).toMatchObject({ rotulo: 'Refazer rodada', icone: 'redo-2' });
+    expect(montar({ rodadas: naAntiga }).dica).toMatch(/^Traz de volta o plano mais novo \(Claude · há 4 min\)\./);
+    expect(fraseDepoisDeTrocar(naAntiga, AGORA)).toMatch(/^Rodada desfeita: /);
+  });
+
+  it('a nova na tela e a sem hora guardada: o botão desfaz; sem nenhuma hora, também', () => {
+    const naNova = { ...DUAS, atual: rodada('claude', '2026-11-07T11:56:00'), anterior: rodada('claude', null) };
+    expect(jaDesfez(naNova)).toBe(false);
+    expect(fraseDepoisDeTrocar(naNova, AGORA)).toMatch(/^Rodada refeita: /);
+    expect(jaDesfez({ ...DUAS, atual: rodada(null, null), anterior: rodada(null, null) })).toBe(false);
   });
 
   it('desabilitado sem rodada anterior, durante a geração, com cenas sem salvar e enquanto troca', () => {
