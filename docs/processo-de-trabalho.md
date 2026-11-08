@@ -107,7 +107,7 @@ paralelo, a menor entra primeiro e a maior se atualiza sobre ela.
 2. Se aparecer, **o arquivo está travado**: pode ler, mas não pode editar, apagar, renomear, mover nem recriar em outro caminho.
 3. Antes de pedir desbloqueio, explique: o `id` da trava, o que ela protege, por que a mudança toca nela, o impacto esperado, o risco de regressão e a alternativa sem mexer no arquivo.
 4. **Peça autorização explícita ao desenvolvedor.** Não decida sozinho e não contorne (renomear, refazer noutro lugar, dividir em vários).
-5. Criar arquivo novo também é trava (`adicoes-exigem-autorizacao`).
+5. Criar arquivo novo, inclusive teste, é livre. Desde a D-925 a trava `testes-sao-contrato` cobre só modificar, apagar ou renomear teste existente.
 
 As travas protegem **funcionalidades homologadas**, não contextos de arquitetura: um arquivo pode estar em várias, um contexto inteiro pode não ter nenhuma.
 
