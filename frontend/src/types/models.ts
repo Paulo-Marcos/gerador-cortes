@@ -95,6 +95,10 @@ export interface Desvio {
   fim_texto?: string;
   /** RN-35: só no riscado, por que o app recusou a marca da IA. */
   recusa?: string;
+  /** RN-36: o carimbo da rodada da IA que marcou o trecho, e as bordas que ela
+   *  deu (`domain/corte/riscados.py:carimbar_rodada`). Borda mexida deixa de ser da IA. */
+  rodada?: number;
+  borda_da_rodada?: [number, number];
 }
 
 /** D-998: trecho que FICA no corte e a IA pede para conferir o fato. Não é desvio. */

@@ -4,7 +4,8 @@ import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
-import { legendaEm } from './legendaDoTrecho';
+import { avisoDoTrechoEm } from './avisoDoTrecho';
+import { OuvirEmenda } from './OuvirEmenda';
 import type { Desvio } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 
@@ -204,7 +205,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   // chip anunciava 1,50x com o video rodando em 1,00x. Agora o estado do
   // D-511: recalculada a cada `timeupdate`. Barato: uma varredura sobre uma
   // lista de trechos que raramente passa de uma dezena.
-  const legenda = legendaEm(desvios ?? [], segundoNaTela);
+  const aviso = avisoDoTrechoEm(desvios ?? [], segundoNaTela);
 
   // React e a fonte unica: o <video> segue a prop.
   useVelocidadeNoVideo(videoRef, playbackRate, src);
@@ -291,10 +292,9 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
             </span>
           ) : null}
 
-          {/* D-511 preservado: o que está sendo dito no trecho marcado para
-              SAIR. Ver o que se perde no instante em que se perde é o que
-              permite discordar do corte. */}
-          {legenda ? (
+          {/* D-511/D-1091: o que sai, por quê e onde emenda. Ver o que se perde no
+              instante em que se perde é o que permite discordar do corte. */}
+          {aviso ? (
             <div
               style={{
                 position: 'absolute',
@@ -319,7 +319,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
                   letterSpacing: '.08em',
                 }}
               >
-                sai do bruto{legenda.rotulo ? ` · ${legenda.rotulo}` : ''}
+                {aviso.titulo}
               </span>
               <p
                 style={{
@@ -336,8 +336,9 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
                   textShadow: '0 2px 0 #000',
                 }}
               >
-                {legenda.texto}
+                {aviso.justificativa}
               </p>
+              <OuvirEmenda aviso={aviso} videoRef={videoRef} />
             </div>
           ) : null}
         </div>

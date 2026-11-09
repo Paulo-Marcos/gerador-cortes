@@ -15,6 +15,7 @@ import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import type { AlertaConferir, Desvio } from '@/types/models';
 import { drawRegions, type RegionsInstance } from './regioesDaOnda';
 import { AlertasConferir } from './AlertasConferir';
+import { LegendaDaTimeline } from './LegendaDaTimeline';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
 import { Tooltip } from '@/components/ui/tooltip';
 import { fetchWaveformPeaks } from '@/lib/api';
@@ -104,9 +105,8 @@ const ZOOM_MAX = 20;
 const ZOOM_STEP_WHEEL = 1.1;
 // AUDITORIA-v2 §7 (CP7): opcoes de velocidade do menu ⚙ do Workbench.
 const SPEED_OPTIONS = [0.5, 1, 1.5, 2] as const;
-// WaveSurfer aceita 'auto' para preencher o container — necessario para que
-// o waveform ocupe toda a altura disponivel do painel (sem deixar grande
-// faixa cinza embaixo). Container precisa ter altura definida via flex.
+// WaveSurfer aceita 'auto' para preencher o container, e a onda ocupa a altura
+// do painel sem faixa cinza embaixo. O container precisa de altura pelo flex.
 
 function queryShadow(container: HTMLElement | null, selector: string): HTMLElement | null {
   const host = container?.firstElementChild as HTMLElement | undefined;
@@ -1347,7 +1347,6 @@ export function TimelinePanel({
 
       {corteId && <AlertasConferir corteId={corteId} alertas={alertas} onSeek={handleSeek} />}
 
-      {/* Waveform — corpo */}
       <div className="flex flex-1 flex-col p-3" style={{ minHeight: 0 }}>
         <Waveform
           audioSrc={audioSrc}
@@ -1371,6 +1370,7 @@ export function TimelinePanel({
           proximoInicioSeg={proximoInicioSeg}
           proximoNumero={proximoNumero}
         />
+        <LegendaDaTimeline corDoCorte={COR_DO_CORTE} />
       </div>
     </section>
   );
