@@ -8,6 +8,7 @@ import { CenaPlayerPanel } from './CenaPlayerPanel';
 import { ComTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';
 import { CenasPanel } from './CenasPanel';
 import { SceneTimeline } from './SceneTimeline';
+import { AberturaEditorial } from './AberturaEditorial';
 import { AlertaCenasForaDoCorte } from './AlertaCenasForaDoCorte';
 import { FiltroDoCanal } from './FiltroDoCanal';
 import { YoutubeLayoutPanel } from './YoutubeLayoutPanel';
@@ -189,6 +190,7 @@ export function EditorFase2(props: Props) {
           id="layout"
           side="right"
           title="LAYOUT YOUTUBE"
+          headerExtra={<FiltroDoCanal />}
         >
           <div className="flex h-full min-h-0 flex-col">
             <FontePresetPanel
@@ -211,7 +213,6 @@ export function EditorFase2(props: Props) {
                 )}
               </ComTempoDoPlayer>
             </div>
-            <FiltroDoCanal />
           </div>
         </PanelShell>
       </div>
@@ -304,26 +305,27 @@ export function EditorFase2(props: Props) {
       <PanelResizeHandle className="w-1 bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--wb-accent)_50%,transparent)]" />
       <Panel defaultSize={30} minSize={22} order={2}>
         <div className="flex h-full min-h-0 flex-col">
-          {/* Tabs header — replica v3_pos.jsx:385-432. D-1072: Cenas e Layout;
-              a "Fonte dos cards" foi para o Layout e o filtro virou a linha
-              do rodapé, porque ele é do canal (RN-25). */}
+          {/* Tabs header — replica v3_pos.jsx:385-432. D-1072: Cenas e Layout. D-1086: o filtro do canal (RN-25)
+              é um chip nesta linha, FORA do tablist (o ARIA só admite abas nele), não uma faixa fixa. */}
           <div
-            role="tablist"
-            aria-label="Painel lateral"
+            data-testid="linha-das-abas"
             className="flex shrink-0 items-center gap-1 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2"
           >
-            <AbaButton
-              ativo={abaDireita === 'cenas'}
-              onClick={() => setAbaDireita('cenas')}
-              icon={<Icon name="film" />}
-              label="Cenas Remotion"
-            />
-            <AbaButton
-              ativo={abaDireita === 'layout'}
-              onClick={() => setAbaDireita('layout')}
-              icon={<Icon name="monitor" />}
-              label="Layout"
-            />
+            <div role="tablist" aria-label="Painel lateral" className="flex items-center gap-1">
+              <AbaButton
+                ativo={abaDireita === 'cenas'}
+                onClick={() => setAbaDireita('cenas')}
+                icon={<Icon name="film" />}
+                label="Cenas Remotion"
+              />
+              <AbaButton
+                ativo={abaDireita === 'layout'}
+                onClick={() => setAbaDireita('layout')}
+                icon={<Icon name="monitor" />}
+                label="Layout"
+              />
+            </div>
+            <FiltroDoCanal className="ml-auto" />
           </div>
           <div className="min-h-0 flex-1">
             {abaDireita === 'cenas' ? (
@@ -373,7 +375,6 @@ export function EditorFase2(props: Props) {
               </div>
             )}
           </div>
-          <FiltroDoCanal />
         </div>
       </Panel>
     </PanelGroup>
@@ -451,69 +452,6 @@ function FontePresetPanel({ value, pending, onChange }: FontePresetPanelProps) {
   );
 }
 
-// D-314: abertura editorial do corte — contextualização (frase que situa o
-// assunto, que a D-295 leva para a 1ª cena) + frase-gancho (ponto de entrada
-// mais forte, com o timestamp na live). Fica no topo do painel de Cenas, junto
-// de onde a 1ª cena é editada. Só renderiza o que tem conteúdo; nada preenchido
-// (corte antigo/manual) → não ocupa espaço.
-export interface AberturaEditorialProps {
-  fraseGancho?: string;
-  fraseGanchoHms?: string;
-  contextualizacao?: string;
-}
-
-function AberturaEditorial({
-  fraseGancho,
-  fraseGanchoHms,
-  contextualizacao,
-}: AberturaEditorialProps) {
-  const contexto = contextualizacao?.trim();
-  const gancho = fraseGancho?.trim();
-  const ganchoHms = fraseGanchoHms?.trim();
-  if (!contexto && !gancho) return null;
-
-  return (
-    <section
-      className="shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2.5"
-      aria-label="Abertura editorial do corte"
-    >
-      {contexto && (
-        <div className="flex items-start gap-2">
-          <Icon name="sparkles" className="mt-0.5 shrink-0 text-[var(--wb-accent)]" />
-          <div className="min-w-0">
-            <div className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-              Contextualização · 1ª cena
-            </div>
-            <p className="mt-0.5 font-editorial text-[12.5px] leading-snug text-[var(--wb-text)]">
-              {contexto}
-            </p>
-          </div>
-        </div>
-      )}
-      {gancho && (
-        <div className={cn('flex items-start gap-2', contexto && 'mt-2')}>
-          <Icon name="quote" className="mt-0.5 shrink-0 text-[var(--wb-text-mute)]" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                Gancho
-              </span>
-              {ganchoHms && (
-                <span className="font-code text-[9px] tabular-nums text-[var(--wb-text-dim)]">
-                  {ganchoHms}
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 text-[12px] italic leading-snug text-[var(--wb-text-mute)]">
-              “{gancho}”
-            </p>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
 export interface AbaButtonProps {
   ativo: boolean;
   onClick: () => void;
@@ -529,7 +467,7 @@ function AbaButton({ ativo, onClick, icon, label }: AbaButtonProps) {
       aria-selected={ativo}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[var(--radius-xs)] border px-2.5 py-1 text-[11px] uppercase tracking-[0.04em] transition-colors',
+        'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-xs)] border px-2.5 py-1 text-[11px] uppercase tracking-[0.04em] transition-colors',
         ativo
           ? 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] font-bold text-[var(--wb-ink)] shadow-sm'
           : 'border-transparent font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',

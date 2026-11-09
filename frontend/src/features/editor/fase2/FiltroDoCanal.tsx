@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { filtrosApi } from '@/features/post-production/api/filtros';
 import { settingsApi } from '@/features/settings/api';
 import { Icon } from '@/upgrade/Icon';
@@ -20,26 +21,32 @@ export function nomeDoFiltroDoCanal(
   return catalogo?.find((f) => f.id === filtroId)?.nome ?? filtroId;
 }
 
-export function FiltroDoCanal() {
+/**
+ * D-1086: um chip na linha que já existe (as abas, o cabeçalho do painel), não uma
+ * faixa fixa no pé da coluna: a faixa quebrava em duas linhas e tirava ~57 px da
+ * lista de cenas. O nome do filtro fica à vista; o rótulo inteiro vai ao leitor de
+ * tela e ao hover; o clique leva a quem edita.
+ */
+export function FiltroDoCanal({ className }: { className?: string }) {
   // As mesmas chaves das configurações e da Revisão: o cache é um só.
   const settings = useQuery({ queryKey: ['app-settings'], queryFn: settingsApi.obterSettings });
   const filtros = useQuery({ queryKey: ['export-filtros'], queryFn: () => filtrosApi.listarFiltros() });
-  const nome = nomeDoFiltroDoCanal(settings.data?.filtro_global_padrao, filtros.data?.filtros);
+  const nome = nomeDoFiltroDoCanal(settings.data?.filtro_global_padrao, filtros.data?.filtros) ?? 'carregando…';
 
   return (
-    <p
+    <Link
+      to={CAMINHO_DO_FILTRO_DO_CANAL}
       data-testid="filtro-do-canal"
-      className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2 text-[12px] text-[var(--wb-text-mute)]"
+      title={`Filtro do canal (global): ${nome}. Alterar em Canais → Aplicação`}
+      className={cn(
+        'inline-flex min-w-0 max-w-[50%] items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-0.5 text-[11px] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)]',
+        className,
+      )}
     >
-      <Icon name="sliders-horizontal" />
-      <span>Filtro do canal (global):</span>
-      <strong className="font-semibold text-[var(--wb-text)]">{nome ?? 'carregando…'}</strong>
-      <Link
-        to={CAMINHO_DO_FILTRO_DO_CANAL}
-        className="ml-auto text-[var(--wb-accent)] underline-offset-2 hover:underline"
-      >
-        Alterar em Canais → Aplicação
-      </Link>
-    </p>
+      <Icon name="sliders-horizontal" className="shrink-0" />
+      <span className="sr-only">Filtro do canal (global):</span>
+      <span aria-hidden className="shrink-0">filtro</span>
+      <strong className="truncate font-semibold text-[var(--wb-text)]">{nome}</strong>
+    </Link>
   );
 }

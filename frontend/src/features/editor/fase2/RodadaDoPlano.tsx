@@ -40,27 +40,34 @@ export function RodadaDoPlano({ corteId, projetoId, dirty }: { corteId: string; 
     );
   }
   if (!temRodada(rodadas)) return null;
+  const linha = linhaDaRodada(rodadas, agora);
   return (
-    <div className="mt-2 flex flex-col gap-1.5" data-testid="rodada-do-plano">
-      <p className="flex items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
-        <Icon name="history" />
-        {linhaDaRodada(rodadas, agora)}
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        <BotaoDesfazer botao={botao} onClick={desfazer} idDoMotivo={`motivo-da-rodada-${corteId}`} />
-        {/* Sem anterior não há com o que comparar: o botão some (depois de juntar, também). */}
-        {rodadas.anterior && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setComparando(true)}
-            data-testid="comparar-rodadas"
-          >
-            <Icon name="git-compare-arrows" />
-            Comparar com a rodada anterior
-          </Button>
-        )}
+    // D-1086: uma linha só: quem gerou à esquerda (encurta com reticências), os botões
+    // compactos à direita. O motivo do Desfazer desligado segue à vista, logo abaixo (D-1073).
+    <div className="mt-1.5 flex flex-col gap-1" data-testid="rodada-do-plano">
+      <div className="flex items-center gap-2">
+        <p className="flex min-w-0 flex-1 items-center gap-1 text-[11px] text-[var(--wb-text-mute)]" title={linha}>
+          <Icon name="history" className="shrink-0" />
+          <span className="truncate">{linha}</span>
+        </p>
+        <div className="flex shrink-0 gap-1">
+          <BotaoDesfazer botao={botao} onClick={desfazer} idDoMotivo={`motivo-da-rodada-${corteId}`} compacto />
+          {/* Sem anterior não há com o que comparar: o botão some (depois de juntar, também). */}
+          {rodadas.anterior && (
+            <Tooltip label="Comparar com a rodada anterior" side="top">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onClick={() => setComparando(true)}
+                aria-label="Comparar com a rodada anterior"
+                data-testid="comparar-rodadas"
+              >
+                <Icon name="git-compare-arrows" />
+              </Button>
+            </Tooltip>
+          )}
+        </div>
       </div>
       {botao.motivo && (
         <p id={`motivo-da-rodada-${corteId}`} className="text-[11px] text-[var(--wb-text-mute)]">
@@ -93,7 +100,18 @@ const descreverAsDuas = (rodadas: RodadasDasCenas, agora: number) =>
     ? `Atual: ${descreverRodada(rodadas.atual, agora)} · Anterior: ${descreverRodada(rodadas.anterior, agora)}`
     : undefined;
 
-function BotaoDesfazer({ botao, onClick, idDoMotivo }: { botao: BotaoDoDesfazer; onClick: () => void; idDoMotivo?: string }) {
+/** `compacto` (o cabeçalho, D-1086): o verbo só, "Desfazer"/"Refazer"; o rótulo inteiro fica no `aria-label`. */
+function BotaoDesfazer({
+  botao,
+  onClick,
+  idDoMotivo,
+  compacto = false,
+}: {
+  botao: BotaoDoDesfazer;
+  onClick: () => void;
+  idDoMotivo?: string;
+  compacto?: boolean;
+}) {
   return (
     <Tooltip label={botao.dica} side="top">
       <Button
@@ -107,7 +125,7 @@ function BotaoDesfazer({ botao, onClick, idDoMotivo }: { botao: BotaoDoDesfazer;
         data-testid="desfazer-rodada"
       >
         <Icon name={botao.trocando ? 'loader-2' : botao.icone} className={botao.trocando ? 'animate-spin' : undefined} />
-        {botao.rotulo}
+        {compacto ? botao.rotulo.replace(' rodada', '') : botao.rotulo}
       </Button>
     </Tooltip>
   );

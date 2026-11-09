@@ -16,6 +16,7 @@ import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
 import { montarBotaoDoValidar } from './botaoDoValidar';
 import { CenaComOrigem } from './CenaComOrigem';
 import { LegendaDoPlano } from './LegendaDoPlano';
+import { NumerosDoPlano } from './NumerosDoPlano';
 import { CenasManualModal } from './CenasManualModal';
 import { RendererConfigControls } from './RendererConfigControls';
 import { TIPOS_CENA } from './sceneTypes';
@@ -43,7 +44,9 @@ import { ErroDaApi } from '@/shared/api';
 //   2. Acao primaria (AUDITORIA-v4 §1): UMA linha — "Gerar cenas" (accent) +
 //      menu ⋯ com Retratos / Manual / Studio / Padroes do palco
 //   3. Padroes do palco: so aparece quando acionado pelo ⋯ (nao e mais linha fixa)
-//   4. Stats (AUDITORIA-v4 §2): uma linha inline "Ns duracao · N cenas · N% cobertura"
+//   4. Stats (AUDITORIA-v4 §2): uma linha inline "Ns duracao · N cenas · N% cobertura",
+//      com a legenda das origens recolhida na ponta (D-1086, NumerosDoPlano)
+//   5. A rodada numa linha, com o Desfazer e o Comparar ao lado (D-1073, D-1086)
 // Lista: CenaItem expansivel.
 // Footer: "Tipos disponiveis ▾" + spacer + "Validar o plano (faltam N)" (D-1070).
 //
@@ -226,7 +229,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       {/* Header — v3_pos.jsx:454-585 */}
       <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
         {/* L1: titulo + chips + caption */}
-        <div className="mb-2.5 flex items-center gap-2">
+        <div className="mb-2 flex items-center gap-2">
           <Icon name="film" className="text-[var(--wb-text-mute)]" />
           <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
             Cenas Remotion
@@ -308,30 +311,9 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           </div>
         )}
 
-        {/* L4: stats numa linha (AUDITORIA-v4 §2) — eram 3 cards com borda e
-            fundo, um bloco alto só para 3 números. Mesmos dados, uma linha. */}
-        <div className="flex flex-wrap items-center gap-2 font-code text-[10.5px] tabular-nums">
-          <span>
-            <b className="font-bold text-[var(--wb-text)]">{duracaoCenas.toFixed(0)}s</b>{' '}
-            <span className="text-[var(--wb-text-dim)]">duração</span>
-          </span>
-          <span aria-hidden className="text-[var(--wb-border)]">
-            ·
-          </span>
-          <span>
-            <b className="font-bold text-[var(--wb-text)]">{cenasDoRender.length}</b>{' '}
-            <span className="text-[var(--wb-text-dim)]">cenas</span>
-            {riscadas > 0 && <span className="text-[var(--wb-text-dim)]"> · {riscadas} riscada(s) fora</span>}
-          </span>
-          <span aria-hidden className="text-[var(--wb-border)]">
-            ·
-          </span>
-          <span>
-            <b className="font-bold text-[var(--wb-text)]">{cobertura.toFixed(0)}%</b>{' '}
-            <span className="text-[var(--wb-text-dim)]">cobertura</span>
-          </span>
-        </div>
-        <LegendaDoPlano corteId={corteId} projetoId={projetoId} temCenas={cenasOrdenadas.length > 0} dirty={dirty} />
+        {/* L4: os números do plano numa linha, com a legenda recolhida na ponta (D-1086). */}
+        <NumerosDoPlano duracao={duracaoCenas} cenas={cenasDoRender.length} riscadas={riscadas} cobertura={cobertura} temCenas={cenasOrdenadas.length > 0} />
+        <LegendaDoPlano corteId={corteId} projetoId={projetoId} dirty={dirty} />
 
         {/* Botao Salvar so aparece quando dirty (mantem comportamento anterior) */}
         {dirty && (
@@ -396,11 +378,11 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         <button
           type="button"
           onClick={() => setShowTypes((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded text-[11px] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
+          className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap rounded text-[11px] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
           aria-expanded={showTypes}
           title={`${Object.keys(TIPOS_CENA).length} tipos de cena disponiveis`}
         >
-          <span>Tipos disponiveis</span>
+          <span className="truncate">Tipos disponiveis</span>
           <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
             {Object.keys(TIPOS_CENA).length}
           </span>

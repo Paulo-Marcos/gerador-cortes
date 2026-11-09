@@ -77,7 +77,8 @@ function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['ve
 /**
  * Por que o principal está desligado, escrito ao lado (D-746). D-870: no
  * máximo duas linhas, com o texto inteiro no hover — a lista de pendências
- * de uma live grande fazia a barra crescer a 90 px.
+ * de uma live grande fazia a barra crescer a 90 px. D-1086: as duas linhas
+ * cabem na altura do botão; ele encolhe antes de a barra quebrar em duas fileiras.
  */
 function MotivoDoPrimario({ motivo }: { motivo: string }) {
   return (
@@ -88,7 +89,12 @@ function MotivoDoPrimario({ motivo }: { motivo: string }) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 5,
-        maxWidth: 320,
+        // D-1086: a quebra de linha conta só o mínimo legível (96 px), não o texto
+        // inteiro; com folga, o motivo cresce até o próprio tamanho (max-content). O
+        // crescimento alto vence o espaçador (flex 1), que só fica com o resto.
+        minWidth: 96,
+        flex: '1000 1 0',
+        maxWidth: 'max-content', // o teto de 320 px fica no texto, logo abaixo
         fontSize: 11.5,
         color: 'var(--warn)',
       }}
@@ -100,6 +106,7 @@ function MotivoDoPrimario({ motivo }: { motivo: string }) {
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
+          maxWidth: 320,
         }}
       >
         {motivo}
@@ -124,7 +131,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       className="gl"
       style={{
         display: 'flex',
-        flexWrap: 'wrap',
+        flexWrap: 'wrap', // D-1086: rede de segurança; antes de quebrar, os textos (base 0) cedem
         alignItems: 'center',
         gap: 8,
         flex: 'none',
@@ -140,7 +147,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            fontSize: 11.5,
+            fontSize: 11.5, flex: 'none', whiteSpace: 'nowrap',
             color: 'var(--mute)',
           }}
         >
