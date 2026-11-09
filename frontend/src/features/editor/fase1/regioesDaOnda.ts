@@ -2,6 +2,7 @@ import type RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import type { AlertaConferir, Desvio } from '@/types/models';
 import { corDoSegmento } from './trechoBadge';
 import { hmsParaSeg } from '../timeUtils';
+import { classificarTrechos, ESTILO_DO_TRECHO, ROTULO_DO_TRECHO, type ClasseDoTrecho } from './origemDaBorda';
 
 // As regiões pintadas na onda da timeline: o corte, os trechos a remover e os
 // alertas para conferir (D-998). Saiu do TimelinePanel, que está no teto da
@@ -38,6 +39,7 @@ export function drawRegions(
     regionEl.style.overflow = 'visible';
     regionEl.style.pointerEvents = 'none';
   }
+  const classes = classificarTrechos(desvios);
   desvios.forEach((d, idx) => {
     try {
       const start = hmsParaSeg(d.inicio_hms) - offset;
@@ -54,15 +56,21 @@ export function drawRegions(
         drag: canMove,
         resize: canMove,
       });
-      if (!canMove) {
-        const el = elementoDa(region);
-        if (el) el.style.pointerEvents = 'none';
-      }
+      const el = elementoDa(region);
+      if (el) marcarOrigem(el, classes[idx]);
+      if (!canMove && el) el.style.pointerEvents = 'none';
     } catch {
       // skip malformed desvio
     }
   });
   alertas.filter((a) => !a.conferido).forEach((a) => desenharAlerta(regions, a, offset));
+}
+
+/** D-1091: a borda diz de quem é o trecho (IA ou você); o de dentro de outro é uma faixa. */
+function marcarOrigem(el: HTMLElement, classe: ClasseDoTrecho) {
+  el.setAttribute('data-trecho', classe);
+  el.title = ROTULO_DO_TRECHO[classe];
+  Object.assign(el.style, ESTILO_DO_TRECHO[classe]);
 }
 
 /**
