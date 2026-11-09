@@ -129,7 +129,16 @@ def _diffs(cortes: list[Corte], snapshots: dict[str, CorteSnapshot]) -> list[dic
             projeto_tem_snapshots=projeto_tem_snapshots,
         )
         for corte in cortes
+        if not _riscado(snapshots.get(corte.id))
     ]
+
+
+def _riscado(snapshot: CorteSnapshot | None) -> bool:
+    """D-1088: o corte riscado fica no banco, mas conta como apagado (`_apagados`).
+
+    Contá-lo também aqui somaria a proposta duas vezes, e como corte mantido.
+    """
+    return snapshot is not None and snapshot.apagado_em is not None
 
 
 def _json_lista(raw: str | None) -> list:

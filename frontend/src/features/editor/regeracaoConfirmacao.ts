@@ -81,9 +81,11 @@ export function confirmacaoRegerarBruto(
 }
 
 /**
- * D-842: excluir o corte (R no editor e na linha do Workspace) confirma SEMPRE.
+ * D-842: excluir o corte (R na linha do Workspace) confirma SEMPRE.
  * Apaga o corte e os arquivos dele do disco, sem volta; a tecla sozinha nunca
  * pode bastar. Quem so' queria tirar a aprovacao tem o A, que alterna.
+ * D-1088: o editor deixou de excluir (R risca, sem dialogo); o Workspace segue
+ * aqui ate a D-1096 leva-lo ao riscar tambem.
  */
 export function confirmacaoExcluirCorte(
   numero: number,

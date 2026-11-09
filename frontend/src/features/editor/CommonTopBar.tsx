@@ -376,12 +376,12 @@ export function StatusToggleRow({
       />
       <StatusToggleCompact
         icon="x"
-        label="R · Rejeitar"
+        label="R · Riscar"
         active={rejeitado}
         color="var(--wb-err)"
         onClick={onRejeitar}
         disabled={pendingFlags.rejeitando}
-        title="Excluir (R)"
+        title="Riscar corte (R)"
         iconOnly={iconOnly}
         // Rejeitado precisa gritar mais que o `err-outline` de antes: com o
         // fundo agora carregando o estado, o outline era indistinguivel do

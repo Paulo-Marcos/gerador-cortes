@@ -3454,6 +3454,57 @@
         "title": "CorteResponse",
         "type": "object"
       },
+      "CorteRiscadoResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "liberado_mb": {
+            "title": "Liberado Mb",
+            "type": "number"
+          },
+          "retido_mb": {
+            "title": "Retido Mb",
+            "type": "number"
+          },
+          "status_anterior": {
+            "title": "Status Anterior",
+            "type": "string"
+          }
+        },
+        "required": [
+          "corte_id",
+          "status_anterior",
+          "liberado_mb",
+          "retido_mb"
+        ],
+        "title": "CorteRiscadoResponse",
+        "type": "object"
+      },
+      "CorteTrazidoDeVoltaResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "gerando_bruto": {
+            "title": "Gerando Bruto",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "corte_id",
+          "status",
+          "gerando_bruto"
+        ],
+        "title": "CorteTrazidoDeVoltaResponse",
+        "type": "object"
+      },
       "CriarCanalRequest": {
         "properties": {
           "credito": {
@@ -10745,6 +10796,23 @@
           "versao"
         ],
         "title": "ReverterSkillRequest",
+        "type": "object"
+      },
+      "RiscarCorteRequest": {
+        "properties": {
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          }
+        },
+        "title": "RiscarCorteRequest",
         "type": "object"
       },
       "RoboDoStudio": {
@@ -18954,6 +19022,66 @@
         ]
       }
     },
+    "/api/cortes/{corte_id}/riscar": {
+      "post": {
+        "description": "Risca o corte: fica no banco como rejeitado, com a mídia solta como no Limpar.",
+        "operationId": "riscar_api_cortes__corte_id__riscar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RiscarCorteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteRiscadoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Riscar",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
     "/api/cortes/{corte_id}/segmentos-detectados/{indice}": {
       "patch": {
         "description": "F-054: aplica decisão (rejeitar/full/compartilhada) a um segmento sugerido.\n\nAceitar (full/compartilhada) também materializa uma região correspondente\nem `layout_youtube.regioes`. Rejeitar só atualiza o status do segmento.",
@@ -19097,6 +19225,49 @@
           }
         },
         "summary": "Sincronizar Transcricao",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/trazer-de-volta": {
+      "post": {
+        "description": "Traz o corte riscado de volta e gera o bruto de novo. É a volta do Desfazer do\naviso do editor e da seção Riscados (D-1092): as duas telas chamam esta rota.",
+        "operationId": "trazer_de_volta_api_cortes__corte_id__trazer_de_volta_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteTrazidoDeVoltaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trazer De Volta",
         "tags": [
           "Cortes"
         ]

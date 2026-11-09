@@ -128,6 +128,11 @@ class Corte(Base):
     contextualizacao: Mapped[str] = mapped_column(Text, default="")
     score_json: Mapped[str] = mapped_column(Text, default="{}")
     status: Mapped[str] = mapped_column(String(50), default=StatusCorte.PROPOSTO)
+    # D-1088: a etapa de onde o corte foi riscado ("" = nunca riscado, ou riscado
+    # antes da D-1088) e se riscar soltou um bruto que existia. É o que o "Trazer
+    # de volta" lê: devolve a etapa e gera o bruto de novo sem pedir o clique.
+    status_antes_de_riscar: Mapped[str] = mapped_column(String(50), default="")
+    bruto_solto_ao_riscar: Mapped[bool] = mapped_column(Integer, default=0)
     arquivo_clip_path: Mapped[str] = mapped_column(String(1000), default="")
     # Duração real (s) do `arquivo_clip_path`, pelo ffprobe a cada bruto: a tela a
     # usa no lugar da soma dos segmentos, que acumula drift. 0.0 = sem clip.

@@ -16,16 +16,22 @@ const AP_TOM: Record<ToastTone, string> = {
 
 export type ToastTone = 'success' | 'info' | 'warning' | 'error';
 
-interface Toast {
+export interface Toast {
   id: string;
   title?: string;
   message: string;
   tone: ToastTone;
+  conteudo?: ReactNode;
 }
 
 interface NotifyOptions {
   title?: string;
   tone?: ToastTone;
+  /** D-1088: botões do próprio aviso (o motivo e o Desfazer do corte riscado).
+   *  O aviso mora acima do QueryClient: o conteúdo recebe as ações prontas. */
+  conteudo?: ReactNode;
+  /** Quanto tempo o aviso fica; o padrão é curto, para quem só lê. */
+  duracaoMs?: number;
 }
 
 interface ToastContextValue {
@@ -57,10 +63,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         message,
         title: options.title,
         tone: options.tone ?? 'success',
+        conteudo: options.conteudo,
       };
 
       setToasts((current) => [...current, toast]);
-      window.setTimeout(() => dismiss(id), 3200);
+      window.setTimeout(() => dismiss(id), options.duracaoMs ?? 3200);
       return id;
     },
     [dismiss],
@@ -84,11 +91,12 @@ export function useToast() {
   return context;
 }
 
-function ToastViewport({
+/** Exportado para o teste: o aviso desenha o conteúdo que a tela mandou (D-1088). */
+export function ToastViewport({
   toasts,
   onDismiss,
 }: {
-  toasts: Toast[];
+  toasts: readonly Toast[];
   onDismiss: (id: string) => void;
 }) {
   return (
@@ -114,6 +122,7 @@ function ToastViewport({
             <span className="min-w-0 flex-1 text-[12px] leading-[1.45]">
               {toast.title ? <b>{toast.title} </b> : null}
               <span style={{ color: 'var(--mute)' }}>{toast.message}</span>
+              {toast.conteudo ? <span className="pointer-events-auto mt-[6px] block">{toast.conteudo}</span> : null}
             </span>
             <button
               type="button"
