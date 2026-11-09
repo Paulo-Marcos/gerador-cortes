@@ -18,6 +18,7 @@
  */
 
 import type { ShortcutBinding } from './shortcuts';
+import { ATALHOS_DAS_MARCAS_DO_CORTE } from './atalhosDasMarcasDoCorte';
 import { ATALHOS_DOS_SHORTS } from './atalhosDosShorts';
 
 export type ShortcutScreen =
@@ -85,6 +86,7 @@ export type ShortcutId =
   | 'bruto.rejeitar'
   | 'bruto.fire'
   | 'bruto.leitura'
+  | 'bruto.modoFoco'
   | 'bruto.travarTrecho'
   | 'bruto.modoPonteiro'
   | 'bruto.adicionarTrecho'
@@ -388,20 +390,7 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     description: 'Excluir corte (pede confirmação)',
     group: 'edicao',
   },
-  {
-    id: 'bruto.fire',
-    screen: 'bruto',
-    key: 'f',
-    description: 'Alternar Fire',
-    group: 'edicao',
-  },
-  {
-    id: 'bruto.leitura',
-    screen: 'bruto',
-    key: 'l',
-    description: 'Alternar leitura',
-    group: 'edicao',
-  },
+  ...ATALHOS_DAS_MARCAS_DO_CORTE,
   {
     id: 'bruto.travarTrecho',
     screen: 'bruto',

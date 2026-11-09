@@ -7,6 +7,8 @@ import { seloDoPlayer } from '../useBruto';
 import { RightTabsPanel } from './RightTabsPanel';
 import type { TrechosRiscados } from '../useTrechosRiscados';
 import { Icon } from '@/upgrade/Icon';
+import { trechosNoFoco } from '@/upgrade/modoFoco';
+import { useModoFocoAtivo } from '@/upgrade/useModoFoco';
 
 // ─────────────────────────────────────────────────────────────
 // EditorFase1 — layout do Bruto (`01_BRUTO.md > Layout geral`)
@@ -30,7 +32,9 @@ const PANEL_PERSIST_AP = 'editor-fase1-panels-ap';
 const TRECHOS_RECOLHIDOS_KEY = 'editor-trechos-recolhidos';
 
 /** D-610: a coluna de trechos pode sair do caminho; a escolha é lembrada. */
-function useTrechosRecolhidos(): [boolean, () => void] {
+function useTrechosRecolhidos(): [boolean, () => void, boolean] {
+  // D-1085: no foco a coluna (partesDoEditor.colunaDeTrechos) some SEM mexer na escolha lembrada abaixo.
+  const foco = useModoFocoAtivo();
   const [recolhidos, setRecolhidos] = useState(() => {
     try {
       return window.localStorage.getItem(TRECHOS_RECOLHIDOS_KEY) === '1';
@@ -48,7 +52,8 @@ function useTrechosRecolhidos(): [boolean, () => void] {
       return !atual;
     });
   }, []);
-  return [recolhidos, alternar];
+  const { recolhidos: efetivo, mostrarReabrir } = trechosNoFoco(recolhidos, foco);
+  return [efetivo, alternar, mostrarReabrir];
 }
 
 interface Props {
@@ -157,7 +162,7 @@ export function EditorFase1({
   const brutoPronto = brutoProntoProp ?? !!brutoStatus?.clip_gerado;
   const statusBruto =
     (brutoStatus?.status as 'idle' | 'processando' | 'concluido' | 'erro') ?? 'idle';
-  const [trechosRecolhidos, alternarTrechos] = useTrechosRecolhidos();
+  const [trechosRecolhidos, alternarTrechos, mostrarReabrir] = useTrechosRecolhidos();
 
   return (
     <div className="flex h-full min-w-0">
@@ -274,7 +279,7 @@ export function EditorFase1({
           </Panel>
         )}
       </PanelGroup>
-      {trechosRecolhidos ? (
+      {mostrarReabrir ? (
         <div className="flex flex-none flex-col items-center py-2 pl-2">
           <button
             type="button"

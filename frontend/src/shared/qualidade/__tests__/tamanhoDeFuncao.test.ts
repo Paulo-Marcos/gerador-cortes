@@ -137,7 +137,7 @@ const EXCECOES: Record<string, number> = {
   "src/upgrade/PaletaDeComandos.tsx::PaletaDeComandos": 351,
   "src/upgrade/TopBar.tsx::Seletor": 190,
   "src/upgrade/UpgradeModal.tsx::UpgradeModal": 158,
-  "src/upgrade/UpgradeShell.tsx::Casca": 188,
+  "src/upgrade/UpgradeShell.tsx::Casca": 181,
 };
 
 function nomeDaFuncao(no: ts.SignatureDeclaration): string {

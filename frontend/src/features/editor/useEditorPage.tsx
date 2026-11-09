@@ -27,6 +27,7 @@ import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { applyDesvioChange, desfechoDaFalhaAoSalvar, mensagemDaFalhaDoBruto, mergeDirtyPatch, salvarAntesDe, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
 import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
+import { ACOES_FIXAS, ATALHOS_FIXOS } from './atalhosFixosDoEditor';
 import { pedirMetadadosSeFaltam } from './pedirMetadadosSeFaltam';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
@@ -62,7 +63,6 @@ export const VELOCIDADE_NORMAL = 1;
 // Semente para quem nunca saiu do 1x: o pedido nasceu de precisar ouvir
 // DEVAGAR para acertar a borda do corte, entao o primeiro toque desacelera.
 export const VELOCIDADE_TRABALHO_INICIAL = 0.75;
-
 
 // D-394: os ids do registro central — todo atalho do editor pode ser
 // reatribuído na página Atalhos.
@@ -629,7 +629,7 @@ export function useEditorPage() {
   });
   const bindings: ShortcutBinding[] = useMemo(
     () =>
-      ATALHOS_DO_EDITOR.map((id) => shortcutFromRegistry(id, () => acoesDosAtalhos.current[id]?.())),
+      [...ATALHOS_DO_EDITOR, ...ATALHOS_FIXOS].map((id) => shortcutFromRegistry(id, () => (acoesDosAtalhos.current[id] ?? ACOES_FIXAS[id])?.())),
     [],
   );
 

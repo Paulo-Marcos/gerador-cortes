@@ -34,6 +34,8 @@ import { barraComTeclas, useAtalhosDaCasca } from './useAtalhosDaCasca';
 import { TrilhaDeEtapas } from './TrilhaDeEtapas';
 import { dentroDeUmaLive } from './trilhaDaLive';
 import { useGavetaDaFila } from './useGavetaDaFila';
+import { alternarTrilhoForaDoFoco, partesDaCasca } from './modoFoco';
+import { useModoFocoDaCasca } from './useModoFoco';
 import { useTrilho } from './useTrilho';
 import { useTrilhaDaTela } from './useTrilhaDoFire';
 import {
@@ -109,6 +111,27 @@ const TIPO_DA_TELA: Partial<Record<TelaId, string>> = {
   fire: 'short',
 };
 
+/** O que a barra superior sabe do histórico (← →), pronto para navegar. */
+function historicoDaBarra(
+  h: ReturnType<typeof useHistoricoDaCasca>,
+  navigate: (to: string) => void,
+) {
+  return {
+    podeVoltar: h.podeVoltar,
+    podeAvancar: h.podeAvancar,
+    anterior: h.anterior?.rotulo,
+    proximo: h.proximo?.rotulo,
+    onVoltar: () => {
+      const l = h.voltar();
+      if (l) navigate(l.to);
+    },
+    onAvancar: () => {
+      const l = h.avancar();
+      if (l) navigate(l.to);
+    },
+  };
+}
+
 const COLUNA_KEY = 'upgrade-coluna-recolhida';
 
 /** Um liga/desliga lembrado entre visitas (localStorage, com tolerância). */
@@ -155,6 +178,8 @@ function Casca({ children, fila }: CascaProps) {
   const tela = telaDaRota(pathname);
   const projetoId = projetoDaRota(pathname);
   const { expandido, alternar } = useTrilho(dentroDeUmaLive(tela) ? projetoId : null);
+  // D-1085: no foco a casca some, sem tocar nas escolhas de coluna.
+  const parte = partesDaCasca(useModoFocoDaCasca(tela === 'cortes'));
   const chrome = useChrome();
   const filaGlobal = useWorkbenchQueueOptional();
   const janelaLarga = useJanelaMin(CONTEXTO_MIN_PX);
@@ -168,7 +193,7 @@ function Casca({ children, fila }: CascaProps) {
 
   const gaveta = useGavetaDaFila(pathname);
   const lote = useLoteDaFila();
-  useAtalhosDaCasca(alternar, abrirBusca, gaveta.abrir, chrome);
+  useAtalhosDaCasca(alternarTrilhoForaDoFoco(parte.trilho, alternar), abrirBusca, gaveta.abrir, chrome);
   const jobsRodando = (filaGlobal?.jobs ?? []).filter((j) => j.estado === 'rodando').length;
   const canais = useCanais();
   const canalAtivo = canais.data?.canais.find((c) => c.ativo);
@@ -222,12 +247,13 @@ function Casca({ children, fila }: CascaProps) {
       data-glass={glass ? '1' : '0'}
       style={{
         display: 'grid',
-        gridTemplateColumns: `${expandido ? TRILHO_LARGO : TRILHO_ESTREITO} 1fr`,
+        gridTemplateColumns: parte.trilho ? `${expandido ? TRILHO_LARGO : TRILHO_ESTREITO} 1fr` : '1fr',
         height: '100%', // D-879: o que o App lhe dá; o aviso de sincronia pode estar acima
         minHeight: 0,
         overflow: 'hidden',
       }}
     >
+      {parte.trilho ? (
       <TrilhoComAvisos
         expandido={expandido}
         onAlternar={alternar}
@@ -237,8 +263,10 @@ function Casca({ children, fila }: CascaProps) {
         filaAtiva={tela === 'fila'}
         lugares={lugaresAnteriores}
       />
+      ) : null}
 
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
+        {parte.barraSuperior ? (
         <TopBar
           trilha={trilha}
           atual={atual}
@@ -254,33 +282,21 @@ function Casca({ children, fila }: CascaProps) {
           avisosAtivos={jobsRodando}
           avisoDeErro={jobComErro}
           canal={canalAtivo ? { nome: canalAtivo.nome, handle: canalAtivo.handle } : undefined}
-          historico={{
-            podeVoltar: historico.podeVoltar,
-            podeAvancar: historico.podeAvancar,
-            anterior: historico.anterior?.rotulo,
-            proximo: historico.proximo?.rotulo,
-            onVoltar: () => {
-              const l = historico.voltar();
-              if (l) navigate(l.to);
-            },
-            onAvancar: () => {
-              const l = historico.avancar();
-              if (l) navigate(l.to);
-            },
-          }}
+          historico={historicoDaBarra(historico, navigate)}
         />
+        ) : null}
         <PaletaDeComandos aberta={buscaAberta} onFechar={() => setBuscaAberta(false)} />
         {filaGlobal ? (
           <GavetaDaFila aberta={gaveta.aberta} aoFechar={gaveta.fechar} aoAbrirTelaCheia={gaveta.telaCheia} />
         ) : null}
 
-        <TrilhaDeEtapas etapas={etapasDaLive} />
+        {parte.trilhaDeEtapas ? <TrilhaDeEtapas etapas={etapasDaLive} /> : null}
 
         <div style={{ display: 'flex', minHeight: 0, flex: 1 }}>
-          {listaNaColuna && lista ? (
+          {parte.colunaDeContexto && listaNaColuna && lista ? (
             <ContextColumn lista={lista} onRecolher={alternarColuna} />
           ) : null}
-          {lista && janelaLarga && colunaRecolhida ? (
+          {parte.colunaDeContexto && lista && janelaLarga && colunaRecolhida ? (
             <ColunaRecolhida titulo={lista.titulo} onAbrir={alternarColuna} />
           ) : null}
 
@@ -293,7 +309,7 @@ function Casca({ children, fila }: CascaProps) {
               minHeight: 0,
             }}
           >
-            {denso ? null : (
+            {denso || !parte.cabecalho ? null : (
               <ScreenHeader
                 icone={cab.icone}
                 titulo={chrome.titulo ?? cab.titulo}
@@ -328,7 +344,7 @@ function Casca({ children, fila }: CascaProps) {
               </Suspense>
             </div>
 
-            {chrome.barra ? (
+            {chrome.barra && parte.barraDeAcoes ? (
               <ActionBar barra={barraComTeclas(chrome.barra, Boolean(atual))} />
             ) : null}
           </main>
