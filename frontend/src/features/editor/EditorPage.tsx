@@ -167,7 +167,7 @@ export function EditorPage() {
       />
 
       <div
-        className="flex h-full min-h-0 flex-col overflow-hidden"
+        className="relative flex h-full min-h-0 flex-col overflow-hidden"
       >
 
         <BrutoContextStrip

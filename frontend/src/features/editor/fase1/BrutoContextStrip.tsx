@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useModoFocoAtivo } from '@/upgrade/useModoFoco';
+import { BotaoModoFoco } from '../BotaoModoFoco';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { segParaHms, segParaMmSs, validarHms } from '../timeUtils';
@@ -58,6 +60,8 @@ export function BrutoContextStrip({
   onToggleIntervalo,
   onAplicarIntervalo,
 }: BrutoContextStripProps) {
+  // D-1085: no foco a faixa some; fica só o botão de sair, solto no canto.
+  if (useModoFocoAtivo()) return <BotaoModoFoco ativo flutuante />;
   return (
     <div className="flex flex-shrink-0 items-center gap-3 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-4 py-2.5">
       {/* Card "FIM ANTERIOR #N" — v2_bruto.jsx:31-51 */}
@@ -117,6 +121,7 @@ export function BrutoContextStrip({
 
       {/* Card "INICIO PROX #N" — v2_bruto.jsx:179-200 */}
       <NextCard next={next} />
+      <BotaoModoFoco ativo={false} />
     </div>
   );
 }

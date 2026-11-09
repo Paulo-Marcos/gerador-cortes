@@ -85,6 +85,7 @@ export type ShortcutId =
   | 'bruto.rejeitar'
   | 'bruto.fire'
   | 'bruto.leitura'
+  | 'bruto.modoFoco'
   | 'bruto.travarTrecho'
   | 'bruto.modoPonteiro'
   | 'bruto.adicionarTrecho'
@@ -400,6 +401,15 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     screen: 'bruto',
     key: 'l',
     description: 'Alternar leitura',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.modoFoco',
+    screen: 'bruto',
+    key: 'f',
+    mod: 'shift',
+    // D-1085: esconde a casca e põe o navegador em tela cheia; o mesmo atalho (ou Esc) sai.
+    description: 'Modo foco (player e onda em tela cheia)',
     group: 'edicao',
   },
   {
