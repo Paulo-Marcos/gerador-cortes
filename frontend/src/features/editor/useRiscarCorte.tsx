@@ -74,7 +74,10 @@ export function useRiscarCorte(
       onSuccess: (resultado) => {
         invalidaCorte(qc, alvo.id, projetoId);
         avisar(alvo, resultado.status_anterior === 'rejeitado', resultado.liberado_mb);
-        // Como no excluir de antes: segue para o próximo corte (D-883).
+        // Segue para o próximo corte, como o excluir fazia. O ajuste não salvo NÃO
+        // é descartado: a saída o grava no corte riscado, como em qualquer troca de
+        // corte. A D-883 descartava porque o corte excluído sumia e o salvar dava
+        // 404; o riscado continua no banco e guarda o trabalho do operador.
         seguir(indiceDoProximo);
       },
       onError: (erro) => notify(mensagemErro(erro, 'Não deu para riscar o corte.'), { tone: 'error' }),
