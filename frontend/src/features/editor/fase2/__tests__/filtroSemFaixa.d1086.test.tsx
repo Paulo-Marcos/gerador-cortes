@@ -72,10 +72,19 @@ function desenhar(workbench: boolean, aba: 'cenas' | 'layout') {
 }
 
 describe('D-1086 · o filtro do canal sem faixa fixa', () => {
-  it.each<'cenas' | 'layout'>(['cenas', 'layout'])('aba %s: o chip mora na linha das abas', (aba) => {
+  it.each<'cenas' | 'layout'>(['cenas', 'layout'])('aba %s: o chip mora na linha das abas, fora do tablist', (aba) => {
     const html = desenhar(false, aba);
-    const abas = html.slice(html.indexOf('role="tablist"'), html.indexOf('</div>', html.indexOf('role="tablist"')));
-    expect(abas).toContain('data-testid="filtro-do-canal"');
+    const linha = html.indexOf('data-testid="linha-das-abas"');
+    const tablist = html.indexOf('role="tablist"', linha);
+    const fimDoTablist = html.indexOf('</div>', tablist);
+    const chip = html.indexOf('data-testid="filtro-do-canal"');
+    // Na mesma linha: depois da abertura da linha das abas e antes do conteúdo da aba.
+    expect(linha).toBeGreaterThan(-1);
+    expect(chip).toBeGreaterThan(linha);
+    expect(chip).toBeLessThan(html.indexOf('PAINEL DE', linha));
+    // Fora do tablist: o ARIA só admite abas nele (auditoria do #349).
+    expect(chip).toBeGreaterThan(fimDoTablist);
+    expect(html.slice(tablist, fimDoTablist).match(/role="tab"/g)).toHaveLength(2);
     expect(html.match(/data-testid="filtro-do-canal"/g)).toHaveLength(1);
   });
 

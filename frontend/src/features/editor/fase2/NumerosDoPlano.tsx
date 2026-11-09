@@ -28,7 +28,7 @@ const Separador = () => (
 
 export function NumerosDoPlano({ duracao, cenas, riscadas, cobertura, temCenas }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2 font-code text-[11px] tabular-nums">
+    <div className="flex flex-wrap items-center gap-2 font-code text-[11px] tabular-nums" data-testid="numeros-do-plano">
       <span>
         <b className="font-bold text-[var(--wb-text)]">{duracao.toFixed(0)}s</b>{' '}
         <span className="text-[var(--wb-text-dim)]">duração</span>

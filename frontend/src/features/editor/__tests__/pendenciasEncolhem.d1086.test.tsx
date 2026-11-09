@@ -3,9 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { Corte } from '@/types/models';
 
-// D-1086: a barra de ações é uma fileira só. Sem largura, a lista de pendências encolhe
-// com reticências em vez de empurrar o botão principal para uma segunda fileira; o
-// texto inteiro fica no hover (D-1044).
+// D-1086: sem largura, a lista de pendências encolhe com reticências antes de a barra
+// de ações quebrar em duas fileiras; o texto inteiro fica no hover (D-1044).
 
 vi.mock('../useBruto', () => ({ useStatusBruto: () => ({ data: { bruto_defasado: true } }) }));
 vi.mock('../useCortes', () => ({ useCorte: () => ({ dataUpdatedAt: 1 }) }));
@@ -31,10 +30,11 @@ const html = renderToStaticMarkup(
 );
 
 describe('D-1086 · as pendências cedem largura na barra', () => {
-  it('o bloco encolhe (min-width 0, flex 0 1 auto)', () => {
+  it('entra na conta da quebra da barra só com o mínimo legível e cresce até o próprio tamanho', () => {
     const raiz = html.match(/^<span[^>]*>/)?.[0] ?? '';
-    expect(raiz).toContain('min-width:0');
-    expect(raiz).toContain('flex:0 1 auto');
+    expect(raiz).toContain('min-width:64px');
+    expect(raiz).toContain('flex:1000 1 0');
+    expect(raiz).toContain('max-width:max-content');
   });
 
   it('o texto vira reticências numa linha; o inteiro fica no hover', () => {

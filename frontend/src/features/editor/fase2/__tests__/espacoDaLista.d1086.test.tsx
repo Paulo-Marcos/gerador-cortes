@@ -87,10 +87,16 @@ describe('D-1086 · a legenda das origens recolhida', () => {
     }
   });
 
-  it('fica na linha dos números, não numa linha própria', () => {
+  it('fica dentro da linha dos números, não numa linha própria', () => {
     const html = painel();
-    const numeros = html.slice(html.indexOf('cobertura'), html.indexOf('data-testid="rodada-do-plano"'));
-    expect(numeros).toContain('data-testid="legenda-do-plano"');
+    // Da abertura da linha dos números até o primeiro `</div>`: a linha só tem spans e o
+    // `<details>`, então o primeiro `</div>` é o do popover da legenda, se ela estiver
+    // dentro; com a legenda como irmã, é o fechamento da própria linha.
+    const inicio = html.search(/<div[^>]*data-testid="numeros-do-plano"/);
+    const numeros = html.slice(inicio, html.indexOf('</div>', inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(numeros).toContain('cobertura');
+    expect(numeros).toMatch(/<details[^>]*data-testid="legenda-do-plano"/);
   });
 
   it('sem cenas, não há origem para explicar', () => {

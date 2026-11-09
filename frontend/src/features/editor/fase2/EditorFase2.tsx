@@ -305,26 +305,26 @@ export function EditorFase2(props: Props) {
       <PanelResizeHandle className="w-1 bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--wb-accent)_50%,transparent)]" />
       <Panel defaultSize={30} minSize={22} order={2}>
         <div className="flex h-full min-h-0 flex-col">
-          {/* Tabs header — replica v3_pos.jsx:385-432. D-1072: Cenas e Layout;
-              a "Fonte dos cards" foi para o Layout. D-1086: o filtro do canal
-              (RN-25) é um chip nesta linha, não uma faixa que rouba a altura. */}
+          {/* Tabs header — replica v3_pos.jsx:385-432. D-1072: Cenas e Layout. D-1086: o filtro do canal (RN-25)
+              é um chip nesta linha, FORA do tablist (o ARIA só admite abas nele), não uma faixa fixa. */}
           <div
-            role="tablist"
-            aria-label="Painel lateral"
+            data-testid="linha-das-abas"
             className="flex shrink-0 items-center gap-1 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2"
           >
-            <AbaButton
-              ativo={abaDireita === 'cenas'}
-              onClick={() => setAbaDireita('cenas')}
-              icon={<Icon name="film" />}
-              label="Cenas Remotion"
-            />
-            <AbaButton
-              ativo={abaDireita === 'layout'}
-              onClick={() => setAbaDireita('layout')}
-              icon={<Icon name="monitor" />}
-              label="Layout"
-            />
+            <div role="tablist" aria-label="Painel lateral" className="flex items-center gap-1">
+              <AbaButton
+                ativo={abaDireita === 'cenas'}
+                onClick={() => setAbaDireita('cenas')}
+                icon={<Icon name="film" />}
+                label="Cenas Remotion"
+              />
+              <AbaButton
+                ativo={abaDireita === 'layout'}
+                onClick={() => setAbaDireita('layout')}
+                icon={<Icon name="monitor" />}
+                label="Layout"
+              />
+            </div>
             <FiltroDoCanal className="ml-auto" />
           </div>
           <div className="min-h-0 flex-1">
