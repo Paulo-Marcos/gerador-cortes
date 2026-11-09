@@ -1,17 +1,11 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { overlayAberto } from '@/shared/atalhos/shortcuts';
-import {
-  aoMudarTelaCheia,
-  emTelaCheia,
-  escSaiDoFoco,
-  focoVale,
-  sairDoModoFoco,
-  storeDoFoco,
-} from './modoFoco';
+import { aoSairDoEditor, focoVale, ligarFocoAoNavegador, storeDoFoco } from './modoFoco';
 
 /** O foco está valendo? (o editor lê isto para esconder a coluna de trechos) */
 export function useModoFocoAtivo(): boolean {
-  return useSyncExternalStore(storeDoFoco.assinar, () => storeDoFoco.ler().ativo, () => false);
+  const ativo = () => storeDoFoco.ler().ativo;
+  return useSyncExternalStore(storeDoFoco.assinar, ativo, ativo);
 }
 
 /**
@@ -23,23 +17,8 @@ export function useModoFocoAtivo(): boolean {
 export function useModoFocoDaCasca(noEditor: boolean): boolean {
   const ativo = useModoFocoAtivo();
 
-  useEffect(() => {
-    const aoMudar = () => storeDoFoco.aplicar((e) => aoMudarTelaCheia(e, emTelaCheia()));
-    const aoTeclar = (ev: KeyboardEvent) => {
-      if (ev.key !== 'Escape' || ev.defaultPrevented || overlayAberto()) return;
-      if (escSaiDoFoco(storeDoFoco.ler(), emTelaCheia())) sairDoModoFoco();
-    };
-    document.addEventListener('fullscreenchange', aoMudar);
-    window.addEventListener('keydown', aoTeclar);
-    return () => {
-      document.removeEventListener('fullscreenchange', aoMudar);
-      window.removeEventListener('keydown', aoTeclar);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!noEditor) sairDoModoFoco();
-  }, [noEditor]);
+  useEffect(() => ligarFocoAoNavegador(document, window, overlayAberto), []);
+  useEffect(() => aoSairDoEditor(noEditor), [noEditor]);
 
   return focoVale(storeDoFoco.ler(), noEditor) && ativo;
 }

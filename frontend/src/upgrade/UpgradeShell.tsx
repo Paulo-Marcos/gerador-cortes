@@ -34,7 +34,7 @@ import { barraComTeclas, useAtalhosDaCasca } from './useAtalhosDaCasca';
 import { TrilhaDeEtapas } from './TrilhaDeEtapas';
 import { dentroDeUmaLive } from './trilhaDaLive';
 import { useGavetaDaFila } from './useGavetaDaFila';
-import { partesDaCasca } from './modoFoco';
+import { alternarTrilhoForaDoFoco, partesDaCasca } from './modoFoco';
 import { useModoFocoDaCasca } from './useModoFoco';
 import { useTrilho } from './useTrilho';
 import { useTrilhaDaTela } from './useTrilhaDoFire';
@@ -193,7 +193,7 @@ function Casca({ children, fila }: CascaProps) {
 
   const gaveta = useGavetaDaFila(pathname);
   const lote = useLoteDaFila();
-  useAtalhosDaCasca(parte.trilho ? alternar : () => undefined, abrirBusca, gaveta.abrir, chrome);
+  useAtalhosDaCasca(alternarTrilhoForaDoFoco(parte.trilho, alternar), abrirBusca, gaveta.abrir, chrome);
   const jobsRodando = (filaGlobal?.jobs ?? []).filter((j) => j.estado === 'rodando').length;
   const canais = useCanais();
   const canalAtivo = canais.data?.canais.find((c) => c.ativo);

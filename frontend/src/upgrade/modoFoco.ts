@@ -60,6 +60,15 @@ export function partesDaCasca(foco: boolean) {
   };
 }
 
+/** A coluna de trechos: o foco a esconde sem tocar na escolha lembrada (D-610),
+ *  e o botão de reabri-la também some enquanto ele vale. */
+export function trechosNoFoco(escolhaRecolhida: boolean, foco: boolean) {
+  return {
+    recolhidos: escolhaRecolhida || !partesDoEditor(foco).colunaDeTrechos,
+    mostrarReabrir: escolhaRecolhida && !foco,
+  };
+}
+
 /** O que o editor desenha: só o player e a onda. */
 export function partesDoEditor(foco: boolean) {
   return { faixaDeTempos: !foco, colunaDeTrechos: !foco };
@@ -115,4 +124,34 @@ export function sairDoModoFoco() {
   }
 }
 
-export { emTelaCheia };
+/** Liga o foco ao navegador: `fullscreenchange` (Esc/F11 nativos tiram o foco)
+ *  e o Esc da página quando a tela cheia foi recusada. Devolve o desligar. */
+export function ligarFocoAoNavegador(
+  doc: Pick<Document, 'addEventListener' | 'removeEventListener' | 'fullscreenElement'>,
+  win: Pick<Window, 'addEventListener' | 'removeEventListener'>,
+  overlayAberto: () => boolean,
+): () => void {
+  const aoMudar = () =>
+    storeDoFoco.aplicar((e) => aoMudarTelaCheia(e, doc.fullscreenElement != null));
+  const aoTeclar = (ev: KeyboardEvent) => {
+    if (ev.key !== 'Escape' || ev.defaultPrevented || overlayAberto()) return;
+    if (escSaiDoFoco(estado, doc.fullscreenElement != null)) sairDoModoFoco();
+  };
+  doc.addEventListener('fullscreenchange', aoMudar);
+  win.addEventListener('keydown', aoTeclar);
+  return () => {
+    doc.removeEventListener('fullscreenchange', aoMudar);
+    win.removeEventListener('keydown', aoTeclar);
+  };
+}
+
+/** Ao sair da tela do editor o foco acaba (e a tela cheia com ele). */
+export function aoSairDoEditor(noEditor: boolean): void {
+  if (!noEditor) sairDoModoFoco();
+}
+
+/** Ctrl+B: no foco o trilho está escondido, então a tecla não pode mudar a
+ *  escolha da D-869 sem ninguém ver. */
+export function alternarTrilhoForaDoFoco(trilhoVisivel: boolean, alternar: () => void) {
+  return trilhoVisivel ? alternar : () => undefined;
+}

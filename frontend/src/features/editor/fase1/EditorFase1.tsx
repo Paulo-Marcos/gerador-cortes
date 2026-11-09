@@ -7,7 +7,7 @@ import { seloDoPlayer } from '../useBruto';
 import { RightTabsPanel } from './RightTabsPanel';
 import type { TrechosRiscados } from '../useTrechosRiscados';
 import { Icon } from '@/upgrade/Icon';
-import { partesDoEditor } from '@/upgrade/modoFoco';
+import { trechosNoFoco } from '@/upgrade/modoFoco';
 import { useModoFocoAtivo } from '@/upgrade/useModoFoco';
 
 // ─────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ const TRECHOS_RECOLHIDOS_KEY = 'editor-trechos-recolhidos';
 
 /** D-610: a coluna de trechos pode sair do caminho; a escolha é lembrada. */
 function useTrechosRecolhidos(): [boolean, () => void, boolean] {
-  // D-1085: no foco a coluna some SEM mexer na escolha lembrada abaixo.
+  // D-1085: no foco a coluna (partesDoEditor.colunaDeTrechos) some SEM mexer na escolha lembrada abaixo.
   const foco = useModoFocoAtivo();
   const [recolhidos, setRecolhidos] = useState(() => {
     try {
@@ -52,7 +52,8 @@ function useTrechosRecolhidos(): [boolean, () => void, boolean] {
       return !atual;
     });
   }, []);
-  return [recolhidos || !partesDoEditor(foco).colunaDeTrechos, alternar, recolhidos && !foco];
+  const { recolhidos: efetivo, mostrarReabrir } = trechosNoFoco(recolhidos, foco);
+  return [efetivo, alternar, mostrarReabrir];
 }
 
 interface Props {
