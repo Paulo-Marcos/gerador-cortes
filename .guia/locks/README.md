@@ -77,7 +77,7 @@ Operacoes aceitas:
 
 Locks antigos sem `operations` continuam como lock total.
 
-Arquivos em `.guia/locks/lock-ignore.txt` nunca devem ser travados. O projeto tambem tem o lock global `adicoes-exigem-autorizacao`, que bloqueia `add` em `*` para que toda adicao nova seja autorizada explicitamente.
+Arquivos em `.guia/locks/lock-ignore.txt` nunca devem ser travados. Desde a D-925 o projeto tem uma trava so, a `testes-sao-contrato`, com `operations: [modify, delete, rename]`: modificar, apagar ou renomear teste existente pede `[unlock:testes-sao-contrato]`; criar arquivo novo, inclusive teste, e livre.
 
 ## Setup inicial (uma vez)
 

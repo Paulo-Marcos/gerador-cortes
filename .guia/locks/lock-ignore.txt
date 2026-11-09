@@ -6,7 +6,8 @@
 backend/app/models.py
 
 # Relatorios do Guia Fluxo: estado puro de bookkeeping, nunca produto.
-# Isenta-os do lock-curinga `adicoes-exigem-autorizacao` (files: '*', op: add),
-# que antes marcava todo commit de `guia:ready/finish` (git add -A varre novos
-# .guia/reports/*.md) como violacao. Ver D-263.
+# A entrada nasceu na D-263 para isenta-los do antigo lock-curinga de adicao
+# (files: '*', op: add), que marcava todo commit de `guia:ready/finish` como
+# violacao. A D-925 removeu esse lock; a entrada fica para nenhuma trava pegar
+# os relatorios.
 .guia/reports/*

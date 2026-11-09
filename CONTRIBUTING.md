@@ -8,9 +8,10 @@ ideias e perguntas são bem-vindos; o código é escrito pelo mantenedor.
 Boa parte do app é protegida por **travas de funcionalidade**
 (`.guia/locks/registry.yaml`): comportamentos já validados que não podem mudar
 sem a autorização do mantenedor, registrada no commit com uma marca `[unlock:<id>]`.
-Criar qualquer arquivo novo também é travado. Um PR de fora quase sempre esbarra
-numa trava, e o CI (`lock-check`) o reprova — não por ser ruim, mas porque só o
-mantenedor pode liberar. Em vez de você fazer o trabalho e ele ficar parado, a
+Os testes existentes são o contrato desses comportamentos e ficam travados; criar
+arquivo novo é livre. Um PR de fora quase sempre esbarra numa trava, e o CI
+(`lock-check`) o reprova — não por ser ruim, mas porque só o mantenedor pode
+liberar. Em vez de você fazer o trabalho e ele ficar parado, a
 issue leva a ideia até quem pode aplicá-la.
 
 **Pull requests só a convite.** Se uma issue virar um PR combinado, o mantenedor
