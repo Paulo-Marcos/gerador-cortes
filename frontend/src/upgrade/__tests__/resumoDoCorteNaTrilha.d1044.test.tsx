@@ -40,7 +40,7 @@ describe('D-1044 · o resumo do corte', () => {
   });
 
   it('trecho de menos de meio segundo não some da conta', () => {
-    expect(queSai([{ inicio_hms: '00:02:00.000', fim_hms: '00:02:00.300' }])).toBe('fica 1:40 · sai 0:01');
+    expect(queSai([{ inicio_hms: '00:02:00.000', fim_hms: '00:02:00.300' }])).toBe('fica 1:39 · sai 0:01');
   });
 
   it('diz o que sai, o conferir, as cenas, a capa e a revisão', () => {

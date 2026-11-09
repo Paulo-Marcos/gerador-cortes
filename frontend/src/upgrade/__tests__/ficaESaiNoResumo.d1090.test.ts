@@ -46,7 +46,7 @@ describe('D-1090 · fica e sai no resumo da etapa Cortes', () => {
 
   it('trecho de menos de meio segundo ainda aparece no que sai', () => {
     expect(resumoDosCortes(0, 100, [{ inicio_hms: '00:00:10.000', fim_hms: '00:00:10.300' }])).toBe(
-      'fica 1:40 · sai 0:01',
+      'fica 1:39 · sai 0:01',
     );
   });
 

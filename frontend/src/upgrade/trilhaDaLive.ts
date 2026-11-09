@@ -228,13 +228,17 @@ export function resumirCorte(
   // D-1090: "fica 17:43 · sai 2:28". A líquida já junta trecho dentro de outro (D-362).
   const fica = calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios ?? []);
   const sai = corte.fim_seg - corte.inicio_seg - fica;
-  // Trecho de menos de meio segundo ainda sai: arredondar para 0:00 o esconderia.
-  const saiSeg = sai > 0.05 ? Math.max(1, Math.round(sai)) : 0;
+  // Corta a fração como o topo do editor ("líquido", segParaMmSs): a mesma tela não
+  // pode dar dois números. O sai fecha a conta com o bruto exibido, e trecho de menos
+  // de um segundo ainda aparece (0:01), em vez de sumir.
+  const ficaSeg = Math.floor(fica);
+  const saiSeg = sai > 0.05 ? Math.max(1, Math.floor(corte.fim_seg - corte.inicio_seg) - ficaSeg) : 0;
+  const oQueSai = saiSeg > 0 ? `sai ${formatarDuracao(saiSeg)}` : 'nada sai';
   const abertos = (corte.alertas_conferir ?? []).filter((a) => !a.conferido).length;
   const bruto = corte.cenas_remotion as unknown[] | { cenas?: unknown[] } | null | undefined;
   const cenas = Array.isArray(bruto) ? bruto.length : (bruto?.cenas?.length ?? 0);
   return {
-    cortes: [`fica ${formatarDuracao(Math.round(fica))} · ${saiSeg > 0 ? `sai ${formatarDuracao(saiSeg)}` : 'nada sai'}`, ...(abertos > 0 ? [`${abertos} conferir`] : [])].join(', '),
+    cortes: [`fica ${formatarDuracao(ficaSeg)} · ${oQueSai}`, ...(abertos > 0 ? [`${abertos} conferir`] : [])].join(', '),
     pos: cenas === 0 ? 'sem cenas' : `${cenas} ${cenas === 1 ? 'cena' : 'cenas'}${corte.cenas_validadas ? '' : ', por validar'}`,
     ...(status
       ? {
