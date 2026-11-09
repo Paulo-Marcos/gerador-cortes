@@ -134,8 +134,9 @@ describe('o atalho', () => {
 
   it('o editor liga o atalho do registro à ação', () => {
     const hook = readFileSync(resolve(__dirname, '../../features/editor/useEditorPage.tsx'), 'utf8');
-    expect(hook).toContain("'bruto.modoFoco'");
-    expect(hook).toContain('alternarModoFoco');
+    expect(hook).toContain('ATALHOS_FIXOS');
+    const fixos = readFileSync(resolve(__dirname, '../../features/editor/atalhosFixosDoEditor.ts'), 'utf8');
+    expect(fixos).toContain("'bruto.modoFoco': alternarModoFoco");
   });
 
   it('o botão leva o atalho no title e diz o estado', () => {

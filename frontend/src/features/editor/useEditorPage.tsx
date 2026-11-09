@@ -27,7 +27,7 @@ import { calcularDuracaoLiquida, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { applyDesvioChange, desfechoDaFalhaAoSalvar, mensagemDaFalhaDoBruto, mergeDirtyPatch, salvarAntesDe, viuRodarNestaVisita, type WaveformWindow } from './editorEditState';
 import { postProductionPath, rawEditorPath } from '@/features/post-production/postProductionNavigation';
-import { alternarModoFoco } from '@/upgrade/modoFoco';
+import { ACOES_FIXAS, ATALHOS_FIXOS } from './atalhosFixosDoEditor';
 import { pedirMetadadosSeFaltam } from './pedirMetadadosSeFaltam';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
@@ -64,7 +64,6 @@ export const VELOCIDADE_NORMAL = 1;
 // DEVAGAR para acertar a borda do corte, entao o primeiro toque desacelera.
 export const VELOCIDADE_TRABALHO_INICIAL = 0.75;
 
-
 // D-394: os ids do registro central — todo atalho do editor pode ser
 // reatribuído na página Atalhos.
 export const ATALHOS_DO_EDITOR = [
@@ -83,7 +82,6 @@ export const ATALHOS_DO_EDITOR = [
   'bruto.rejeitar',
   'bruto.fire',
   'bruto.leitura',
-  'bruto.modoFoco',
   'bruto.travarTrecho',
   'bruto.modoPonteiro',
   'bruto.adicionarTrecho',
@@ -101,9 +99,6 @@ export const ATALHOS_DO_EDITOR = [
   'bruto.abrirPasta',
   'bruto.mostrarAtalhos',
 ] as const;
-
-// D-1085: ações que não dependem do estado do editor (o foco é da casca).
-const ACOES_FIXAS: Record<string, () => void> = { 'bruto.modoFoco': alternarModoFoco };
 
 // D-729: o container de EditorPage — estado, efeitos e ações. A view, em
 // EditorPage.tsx, só desenha o que este hook devolve.
@@ -634,7 +629,7 @@ export function useEditorPage() {
   });
   const bindings: ShortcutBinding[] = useMemo(
     () =>
-      ATALHOS_DO_EDITOR.map((id) => shortcutFromRegistry(id, () => (acoesDosAtalhos.current[id] ?? ACOES_FIXAS[id])?.())),
+      [...ATALHOS_DO_EDITOR, ...ATALHOS_FIXOS].map((id) => shortcutFromRegistry(id, () => (acoesDosAtalhos.current[id] ?? ACOES_FIXAS[id])?.())),
     [],
   );
 
