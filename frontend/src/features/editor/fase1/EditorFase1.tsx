@@ -90,7 +90,6 @@ interface Props {
   onGerarBruto: () => void;
   onAtualizarTranscricao: () => void;
   onChangeDesvio: (idx: number, novoInicio: string, novoFim: string) => void;
-  onAdicionarDesvio: (d: { inicio_hms: string; fim_hms: string; motivo: string }) => void;
   riscados: TrechosRiscados;
   onCriarCorteDaSelecao: (inicioHms: string, fimHms: string, titulo: string) => void;
   onDividirCorteAqui: () => void;
@@ -145,7 +144,6 @@ export function EditorFase1({
   onGerarBruto,
   onAtualizarTranscricao,
   onChangeDesvio,
-  onAdicionarDesvio,
   riscados,
   onCriarCorteDaSelecao,
   onDividirCorteAqui,
@@ -262,7 +260,7 @@ export function EditorFase1({
               desvios={corte.desvios ?? []}
               selectedDesvioIdx={selectedDesvioIdx}
               onSeek={onSeek}
-              onAdicionarDesvio={onAdicionarDesvio}
+              onAdicionarTrechoAqui={onAdicionarTrechoAqui}
               riscados={riscados}
               onGerarManual={onGerarManual}
               onGerarTrechosIA={onGerarTrechosIA}

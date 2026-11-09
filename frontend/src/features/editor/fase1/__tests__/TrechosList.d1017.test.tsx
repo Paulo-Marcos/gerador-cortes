@@ -31,7 +31,7 @@ function render(props: Partial<Parameters<typeof TrechosList>[0]> = {}) {
             desvios={[]}
             selectedDesvioIdx={null}
             onSeek={noop}
-            onAdicionarDesvio={noop}
+            onAdicionarTrechoNoCursor={noop}
             onRemoverDesvio={noop}
             onGerarManual={noop}
             onGerarTrechosIA={noop}
@@ -59,7 +59,7 @@ function arvoreDaLista(props: Partial<TrechosListProps>): Elemento[] {
   const Lista = TrechosList as unknown as { type: (p: unknown) => ReactNode };
   function Sonda() {
     arvore = elementos(
-      Lista.type({ desvios: [], selectedDesvioIdx: null, pending: {}, onSeek: noop, onAdicionarDesvio: noop, onRemoverDesvio: noop, onGerarManual: noop, onGerarTrechosIA: noop, ...props }),
+      Lista.type({ desvios: [], selectedDesvioIdx: null, pending: {}, onSeek: noop, onAdicionarTrechoNoCursor: noop, onRemoverDesvio: noop, onGerarManual: noop, onGerarTrechosIA: noop, ...props }),
     );
     return null;
   }
@@ -135,7 +135,7 @@ describe('TrechosList (D-1017)', () => {
   it('oferece desfazer a rodada dizendo quantos trechos saem', () => {
     const html = render({ desvios: [CITADO], trechosDaUltimaRodada: 7, onDesfazerRodada: noop });
 
-    expect(html).toContain('Desfazer a última rodada da IA');
+    expect(html).toContain('Desfazer rodada');
     expect(html).toContain('7 trechos');
   });
 

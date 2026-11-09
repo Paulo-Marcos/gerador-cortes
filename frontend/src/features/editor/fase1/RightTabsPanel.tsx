@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
 import { BlocosTab } from './BlocosTab';
+import { DecisoesDoCorte, PerguntaDosDesvios } from './DecisoesDoCorte';
 import { TrechosList, usePendenciasDosTrechos } from './TrechosList';
 import type { TrechosRiscados } from '../useTrechosRiscados';
 import { useCorte } from '@/features/editor/useCortes';
@@ -41,7 +42,8 @@ interface RightTabsPanelProps {
   desvios: Desvio[];
   selectedDesvioIdx: number | null;
   onSeek: (seg: number) => void;
-  onAdicionarDesvio: (d: Desvio) => void;
+  /** D-1089: "+ Trecho no cursor" — o mesmo "trecho aqui" da timeline e do atalho. */
+  onAdicionarTrechoAqui?: () => void;
   /** D-1017 (RN-36): riscar, restaurar e desfazer a rodada. */
   riscados?: TrechosRiscados;
   onGerarManual: () => void;
@@ -67,7 +69,8 @@ interface RightTabsPanelProps {
 // respondem perguntas vizinhas sobre o MESMO material — o que sai e em que
 // ordem entra o que ficou. Separadas para o editor não confundir remover com
 // mover; vizinhas para ele não ter de trocar de tela entre as duas.
-type TabId = 'trechos' | 'ordem' | 'transcricao' | 'avaliacao';
+// D-1089: "Trechos" virou "Decisões" — as perguntas do corte (silêncio, desvios, som).
+type TabId = 'decisoes' | 'ordem' | 'transcricao' | 'avaliacao';
 
 // D-599: na casca nova o painel e o `.card` de vidro do handoff e as abas seguem
 // a gramatica dele — 30 px, 12.5/600, a ativa em ACENTO com sublinhado. A cor na
@@ -79,7 +82,7 @@ export function RightTabsPanel({
   desvios,
   selectedDesvioIdx,
   onSeek,
-  onAdicionarDesvio,
+  onAdicionarTrechoAqui,
   riscados,
   onGerarManual,
   onGerarTrechosIA,
@@ -90,100 +93,45 @@ export function RightTabsPanel({
   transcricaoAtualizando,
   onRecolher,
 }: RightTabsPanelProps) {
-  const [tab, setTab] = useState<TabId>('trechos');
+  const [tab, setTab] = useState<TabId>('decisoes');
 
   // D-360: diarização por corte. projetoId sai do corte já em cache; o mapa de
   // falantes resolve SPEAKER_xx → nome/canal na etiqueta inline da transcrição.
   // D-740: a lista de trechos é o maior custo do tique de 4 Hz do player e não
   // depende do tempo. Com props estáveis o memo dela segura a redesenhada.
   const aoIrPara = useFuncaoEstavel(onSeek);
-  const aoAdicionarDesvio = useFuncaoEstavel(onAdicionarDesvio);
+  const aoAdicionarNoCursor = useFuncaoEstavel(() => onAdicionarTrechoAqui?.());
   const aoRemoverDesvio = useFuncaoEstavel((indice: number) => riscados?.riscar(indice));
   const aoGerarManual = useFuncaoEstavel(onGerarManual);
   const aoGerarTrechosIA = useFuncaoEstavel(onGerarTrechosIA);
   const aoRestaurarDesvio = useFuncaoEstavel((indice: number) => riscados?.restaurar(indice));
   const aoDesfazerRodada = useFuncaoEstavel(() => riscados?.desfazerRodada());
+  const aoVoltarABordaDaIa = useFuncaoEstavel((indice: number) => riscados?.voltarABordaDaIa(indice));
   const pendenteDosTrechos = usePendenciasDosTrechos(pendingTrechos, riscados?.ocupado);
   const corteAtual = useCorte(corteId).data;
   const projetoId = corteAtual?.projeto_id;
   const falantes = useFalantes(projetoId, tab === 'transcricao').data?.falantes;
   const diarizar = useDiarizarCorte(corteId, projetoId);
 
-  // Decisao Paulo: refresh do header SEMPRE atualiza a transcricao,
-  // independente da aba ativa. "Reanalisar trechos" continua via o botao
-  // "IA" na sub-barra dentro da aba Trechos.
-  const refreshTitle = 'Atualizar transcricao';
-  const refreshPending = transcricaoAtualizando;
-  const onRefresh = onAtualizarTranscricao;
-
   return (
     <section
       className="card flex h-full flex-col overflow-hidden"
     >
-      {/* D-871: as quatro abas num seletor só — numa coluna de 360 px, a
-          faixa rolável deixava Transcrição e Avaliação fora da tela. Os
-          respiros são os mínimos para caberem numa fileira, com até 99
-          trechos, a partir de 344 px (a coluna numa tela de 1440); mais
-          estreita, quebram em duas fileiras, legíveis — reticências viravam
-          quatro "Tr…". Os dois ícones ficam: 26 px é o piso da casca. */}
-      <header
-        className="flex flex-shrink-0 items-center gap-0.5 border-b border-[var(--line2)] px-2 py-2"
+      <CabecalhoDoPainel
+        onRecolher={onRecolher}
+        onAtualizarTranscricao={onAtualizarTranscricao}
+        transcricaoAtualizando={transcricaoAtualizando}
       >
-        {/* Primeiro da faixa: com quatro abas numa coluna estreita, no fim ele
-            ficava fora de vista. */}
-        {onRecolher ? (
-          <Tooltip label="Recolher a coluna" side="bottom">
-            <IconButton
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onRecolher}
-              aria-label="Recolher a coluna de trechos"
-            >
-              <Icon name="panel-right-close" size={16} />
-            </IconButton>
-          </Tooltip>
-        ) : null}
-        <div
-          role="tablist"
-          aria-label="Painel do corte"
-          style={{
-            flex: '1 1 0',
-            minWidth: 0,
-            display: 'flex',
-            flexWrap: 'wrap',
-            padding: 2,
-            borderRadius: 6,
-            background: 'var(--wb-bg-inset)',
-          }}
-        >
-          <TabButton
-            active={tab === 'trechos'}
-            onClick={() => setTab('trechos')}
-            label="Trechos"
-            count={desvios.length}
-          />
-          <TabButton active={tab === 'ordem'} onClick={() => setTab('ordem')} label="Ordem" />
-          <TabButton
-            active={tab === 'transcricao'}
-            onClick={() => setTab('transcricao')}
-            label="Transcrição"
-          />
-          <TabButton active={tab === 'avaliacao'} onClick={() => setTab('avaliacao')} label="Avaliação" />
-        </div>
-        <Tooltip label={refreshTitle} side="bottom">
-          <IconButton
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            disabled={refreshPending}
-            aria-label={refreshTitle}
-          >
-            <Icon name={refreshPending ? 'loader-2' : 'rotate-cw'} size={16} className={cn(refreshPending && 'animate-spin')} />
-          </IconButton>
-        </Tooltip>
-      </header>
+        {/* D-1089: sem contador, como no canvas — cada pergunta diz no título quanto sai. */}
+        <TabButton active={tab === 'decisoes'} onClick={() => setTab('decisoes')} label="Decisões" />
+        <TabButton active={tab === 'ordem'} onClick={() => setTab('ordem')} label="Ordem" />
+        <TabButton
+          active={tab === 'transcricao'}
+          onClick={() => setTab('transcricao')}
+          label="Transcrição"
+        />
+        <TabButton active={tab === 'avaliacao'} onClick={() => setTab('avaliacao')} label="Avaliação" />
+      </CabecalhoDoPainel>
 
       {tab === 'avaliacao' ? (
         <AvaliacaoBrutoPanel corteId={corteId} />
@@ -194,22 +142,29 @@ export function RightTabsPanel({
           pontoSeg={currentTime}
           onSeek={onSeek}
         />
-      ) : tab === 'trechos' ? (
-        <TrechosList
-          desvios={desvios}
-          selectedDesvioIdx={selectedDesvioIdx}
-          onSeek={aoIrPara}
-          onAdicionarDesvio={aoAdicionarDesvio}
-          onRemoverDesvio={aoRemoverDesvio}
-          onGerarManual={aoGerarManual}
-          onGerarTrechosIA={aoGerarTrechosIA}
-          pending={pendenteDosTrechos}
-          linhas={transcricao}
-          riscados={corteAtual?.desvios_riscados}
-          trechosDaUltimaRodada={corteAtual?.trechos_da_ultima_rodada}
-          onRestaurarDesvio={aoRestaurarDesvio}
-          onDesfazerRodada={aoDesfazerRodada}
-        />
+      ) : tab === 'decisoes' ? (
+        <DecisoesDoCorte>
+          {/* 1 · o silêncio (D-1093) entra aqui, antes dos desvios. */}
+          <PerguntaDosDesvios desvios={desvios}>
+            <TrechosList
+              desvios={desvios}
+              selectedDesvioIdx={selectedDesvioIdx}
+              onSeek={aoIrPara}
+              onAdicionarTrechoNoCursor={onAdicionarTrechoAqui ? aoAdicionarNoCursor : undefined}
+              onRemoverDesvio={aoRemoverDesvio}
+              onGerarManual={aoGerarManual}
+              onGerarTrechosIA={aoGerarTrechosIA}
+              pending={pendenteDosTrechos}
+              linhas={transcricao}
+              riscados={corteAtual?.desvios_riscados}
+              trechosDaUltimaRodada={corteAtual?.trechos_da_ultima_rodada}
+              onRestaurarDesvio={aoRestaurarDesvio}
+              onDesfazerRodada={aoDesfazerRodada}
+              onVoltarABordaDaIa={aoVoltarABordaDaIa}
+            />
+          </PerguntaDosDesvios>
+          {/* 3 · o som (D-1095) entra aqui, depois dos desvios. */}
+        </DecisoesDoCorte>
       ) : (
         <TranscriptList
           linhas={transcricao ?? []}
@@ -226,31 +181,95 @@ export function RightTabsPanel({
 }
 
 /**
- * Uma aba do seletor (D-871, canvas "Painel que cabe"): a ativa é a peça
- * clara sobre o fundo `inset`. O contador dos trechos vai no rótulo
- * ("Trechos · 7"), sem pílula vermelha — cor fica para estado, e ter trechos
- * a remover não é um problema.
+ * O cabeçalho do painel: recolher, o seletor de abas (os `children`) e o refresh.
+ * D-1089: saiu do `RightTabsPanel`, que estava no teto da catraca de função.
  */
-function TabButton({
-  active,
-  onClick,
-  label,
-  count,
+function CabecalhoDoPainel({
+  onRecolher,
+  onAtualizarTranscricao,
+  transcricaoAtualizando,
+  children,
 }: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  /** Ausente = aba sem contador. */
-  count?: number;
+  onRecolher?: () => void;
+  onAtualizarTranscricao: () => void;
+  transcricaoAtualizando: boolean;
+  children: ReactNode;
 }) {
-  const texto = count === undefined ? label : `${label} · ${count}`;
+  // Decisao Paulo: refresh do header SEMPRE atualiza a transcricao,
+  // independente da aba ativa. "Reanalisar trechos" continua via o botao
+  // "IA" na sub-barra dentro da aba Decisões.
+  const refreshTitle = 'Atualizar transcricao';
+  return (
+    // D-871: as quatro abas num seletor só — numa coluna de 360 px, a faixa
+    // rolável deixava Transcrição e Avaliação fora da tela. Os respiros são os
+    // mínimos para caberem numa fileira, com até 99 trechos, a partir de 344 px
+    // (a coluna numa tela de 1440); mais estreita, quebram em duas fileiras,
+    // legíveis — reticências viravam quatro "Tr…". Os dois ícones ficam: 26 px
+    // é o piso da casca.
+    <header className="flex flex-shrink-0 items-center gap-0.5 border-b border-[var(--line2)] px-2 py-2">
+      {/* Primeiro da faixa: com quatro abas numa coluna estreita, no fim ele
+          ficava fora de vista. */}
+      {onRecolher ? (
+        <Tooltip label="Recolher a coluna" side="bottom">
+          <IconButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRecolher}
+            aria-label="Recolher a coluna de trechos"
+          >
+            <Icon name="panel-right-close" size={16} />
+          </IconButton>
+        </Tooltip>
+      ) : null}
+      <div
+        role="tablist"
+        aria-label="Painel do corte"
+        style={{
+          flex: '1 1 0',
+          minWidth: 0,
+          display: 'flex',
+          flexWrap: 'wrap',
+          padding: 2,
+          borderRadius: 6,
+          background: 'var(--wb-bg-inset)',
+        }}
+      >
+        {children}
+      </div>
+      <Tooltip label={refreshTitle} side="bottom">
+        <IconButton
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onAtualizarTranscricao}
+          disabled={transcricaoAtualizando}
+          aria-label={refreshTitle}
+        >
+          <Icon
+            name={transcricaoAtualizando ? 'loader-2' : 'rotate-cw'}
+            size={16}
+            className={cn(transcricaoAtualizando && 'animate-spin')}
+          />
+        </IconButton>
+      </Tooltip>
+    </header>
+  );
+}
+
+/**
+ * Uma aba do seletor (D-871, canvas "Painel que cabe"): a ativa é a peça
+ * clara sobre o fundo `inset`. D-1089: nenhuma aba tem contador — o da antiga
+ * "Trechos" saiu quando ela virou "Decisões".
+ */
+function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      title={texto}
+      title={label}
       style={{
         maxWidth: '100%',
         height: 28,
@@ -268,7 +287,7 @@ function TabButton({
         cursor: 'pointer',
       }}
     >
-      {texto}
+      {label}
     </button>
   );
 }

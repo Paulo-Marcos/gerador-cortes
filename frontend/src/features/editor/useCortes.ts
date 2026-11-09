@@ -292,6 +292,18 @@ export function useDesfazerRodada(corteId: string) {
   });
 }
 
+// D-1089 (P10): mexe na borda, então o líquido e as legendas mudam como no desfazer.
+export function useVoltarABordaDaIa(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (indice: number) => cortesApi.voltarABordaDaIa(corteId, indice),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
+  });
+}
+
 // D-998: dispensa o alerta "conferir". Desvios e líquido não mudam, então as
 // legendas do corte não precisam ser refeitas.
 export function useMarcarAlertaConferido(corteId: string) {

@@ -1943,6 +1943,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cortes/{corte_id}/voltar-a-borda-da-ia": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voltar A Borda Da Ia
+         * @description Devolve ao trecho ajustado à mão a borda que a IA deu: ele volta para a rodada.
+         */
+        post: operations["voltar_a_borda_da_ia_api_cortes__corte_id__voltar_a_borda_da_ia_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cortes/{corte_id}/waveform-peaks": {
         parameters: {
             query?: never;
@@ -10505,6 +10525,11 @@ export interface components {
             /** Versoes */
             versoes: components["schemas"]["VersaoExport"][];
         };
+        /** VoltarABordaDaIaRequest */
+        VoltarABordaDaIaRequest: {
+            /** Desvio Index */
+            desvio_index: number;
+        };
         /** VolumeResponse */
         VolumeResponse: {
             /** Avisos */
@@ -14180,6 +14205,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voltar_a_borda_da_ia_api_cortes__corte_id__voltar_a_borda_da_ia_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoltarABordaDaIaRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

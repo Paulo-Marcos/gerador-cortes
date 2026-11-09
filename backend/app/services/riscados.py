@@ -1,4 +1,5 @@
-"""As ações do operador sobre os trechos riscados: restaurar e desfazer (RN-36, D-1017)."""
+"""As ações do operador sobre os trechos riscados: restaurar, desfazer e voltar à borda
+da IA (RN-36, D-1017, D-1089)."""
 
 from __future__ import annotations
 
@@ -55,4 +56,14 @@ async def desfazer_rodada(corte_id: str) -> Corte:
         )
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
         corte.desvios_riscados = json.dumps(riscados, ensure_ascii=False)
+    return await _depois_de_mudar_os_desvios(corte_id)
+
+
+async def voltar_a_borda_da_ia(corte_id: str, indice: int) -> Corte:
+    """Devolve ao trecho ajustado à mão a borda da rodada, e o trecho volta a ser da
+    rodada (P10, D-1089). RN-36."""
+    async with AsyncSessionLocal() as db, db.begin():
+        corte = await _corte_para_resposta(db, corte_id)
+        desvios = dominio.voltar_a_borda_da_ia(json.loads(corte.desvios or "[]"), indice)
+        corte.desvios = json.dumps(desvios, ensure_ascii=False)
     return await _depois_de_mudar_os_desvios(corte_id)

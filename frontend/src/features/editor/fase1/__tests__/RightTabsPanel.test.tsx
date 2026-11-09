@@ -88,7 +88,7 @@ describe('RightTabsPanel — as quatro abas cabem (D-871)', () => {
 
   it('um seletor com as quatro, na ordem, e o contador no rótulo dos trechos', () => {
     const html = render(desvios);
-    expect(abas(html).map((a) => a[1])).toEqual(['Trechos · 2', 'Ordem', 'Transcrição', 'Avaliação']);
+    expect(abas(html).map((a) => a[1])).toEqual(['Decisões', 'Ordem', 'Transcrição', 'Avaliação']);
     for (const [aba] of abas(html)) {
       expect(aba).toContain('role="tab"');
       expect(aba).toContain('white-space:nowrap');
@@ -222,7 +222,7 @@ function renderSonda(Sonda: () => null) {
 
 describe('RightTabsPanel — os controles fazem o que dizem (D-871)', () => {
   it.each([
-    ['Trechos', 'TrechosList'],
+    ['Decisões', 'TrechosList'],
     ['Ordem', 'BlocosTab'],
     ['Transcrição', 'TranscriptList'],
     ['Avaliação', 'AvaliacaoBrutoPanel'],
