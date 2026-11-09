@@ -70,6 +70,8 @@ export function PendenciasDoCorte({ corte }: { corte: Corte }) {
   );
   if (pendencias.length === 0) return null;
   const texto = pendencias.join(', ');
+  // D-1086: a barra de ações é uma linha só; sem largura, a lista encolhe com
+  // reticências (o texto inteiro fica no hover) em vez de empurrar o botão principal.
   return (
     <span
       title={`Em aberto, sem bloquear: ${texto}`}
@@ -78,15 +80,13 @@ export function PendenciasDoCorte({ corte }: { corte: Corte }) {
         alignItems: 'center',
         gap: 5,
         minWidth: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        flex: '0 1 auto',
         fontSize: 12,
         color: 'var(--warn)',
       }}
     >
       <Icon name="triangle-alert" />
-      {texto}
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{texto}</span>
     </span>
   );
 }

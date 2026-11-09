@@ -77,7 +77,8 @@ function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['ve
 /**
  * Por que o principal está desligado, escrito ao lado (D-746). D-870: no
  * máximo duas linhas, com o texto inteiro no hover — a lista de pendências
- * de uma live grande fazia a barra crescer a 90 px.
+ * de uma live grande fazia a barra crescer a 90 px. D-1086: as duas linhas
+ * cabem na altura do botão; o que não pode é a barra quebrar em duas fileiras.
  */
 function MotivoDoPrimario({ motivo }: { motivo: string }) {
   return (
@@ -89,6 +90,9 @@ function MotivoDoPrimario({ motivo }: { motivo: string }) {
         alignItems: 'center',
         gap: 5,
         maxWidth: 320,
+        // D-1086: na barra de uma linha, o motivo cede largura antes dos botões.
+        minWidth: 0,
+        flex: '0 1 auto',
         fontSize: 11.5,
         color: 'var(--warn)',
       }}
@@ -124,7 +128,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       className="gl"
       style={{
         display: 'flex',
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap', // D-1086: uma linha; quem encolhe são os textos (pendências, motivo)
         alignItems: 'center',
         gap: 8,
         flex: 'none',
@@ -140,7 +144,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            fontSize: 11.5,
+            fontSize: 11.5, flex: 'none', whiteSpace: 'nowrap',
             color: 'var(--mute)',
           }}
         >
