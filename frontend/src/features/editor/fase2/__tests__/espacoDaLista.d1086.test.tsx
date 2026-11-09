@@ -123,13 +123,15 @@ describe('D-1086 · a rodada numa linha', () => {
   it('o Desfazer mostra só o verbo; o rótulo inteiro fica para o leitor de tela', () => {
     const botao = bloco(painel(), 'desfazer-rodada', 'button');
     expect(botao).toMatch(/aria-label="Desfazer rodada\. /);
-    expect(botao.replace(/<[^>]+>/g, '')).toBe('Desfazer');
+    // O conteúdo inteiro do botão: o ícone e, depois dele, só o verbo.
+    expect(botao).toMatch(/^<button[^>]*><svg[^>]*>.*<\/svg>Desfazer<\/button>$/s);
   });
 
   it('o Comparar vira ícone com nome acessível', () => {
     const botao = bloco(painel(), 'comparar-rodadas', 'button');
     expect(botao).toContain('aria-label="Comparar com a rodada anterior"');
-    expect(botao.replace(/<[^>]+>/g, '')).toBe('');
+    // O conteúdo inteiro do botão é o ícone: nenhum texto antes ou depois dele.
+    expect(botao).toMatch(/^<button[^>]*><svg[^>]*>.*<\/svg><\/button>$/s);
   });
 
   it('o motivo do Desfazer desligado segue à vista, logo abaixo da linha', () => {
