@@ -1,5 +1,6 @@
 import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
 import { estaAprovado } from '@/lib/statusDoCorte';
+import { formatarDuracao } from '@/lib/utils';
 import type { StatusCorte, StatusExportCorte } from '@/types/models';
 import { TELAS, type TelaId } from './upgradeRoutes';
 
@@ -224,12 +225,16 @@ export function resumirCorte(
   },
   status: { thumbnail_pronta?: boolean; metadados_completos?: boolean; pronto_publicar?: boolean } | undefined,
 ): ResumoDoCorte {
-  const sai = corte.fim_seg - corte.inicio_seg - calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios ?? []);
+  // D-1090: "fica 17:43 · sai 2:28". A líquida já junta trecho dentro de outro (D-362).
+  const fica = calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios ?? []);
+  const sai = corte.fim_seg - corte.inicio_seg - fica;
+  // Trecho de menos de meio segundo ainda sai: arredondar para 0:00 o esconderia.
+  const saiSeg = sai > 0.05 ? Math.max(1, Math.round(sai)) : 0;
   const abertos = (corte.alertas_conferir ?? []).filter((a) => !a.conferido).length;
   const bruto = corte.cenas_remotion as unknown[] | { cenas?: unknown[] } | null | undefined;
   const cenas = Array.isArray(bruto) ? bruto.length : (bruto?.cenas?.length ?? 0);
   return {
-    cortes: [sai > 0.05 ? `sai ${Math.max(1, Math.round(sai))} s` : 'sem trechos', ...(abertos > 0 ? [`${abertos} conferir`] : [])].join(', '),
+    cortes: [`fica ${formatarDuracao(Math.round(fica))} · ${saiSeg > 0 ? `sai ${formatarDuracao(saiSeg)}` : 'nada sai'}`, ...(abertos > 0 ? [`${abertos} conferir`] : [])].join(', '),
     pos: cenas === 0 ? 'sem cenas' : `${cenas} ${cenas === 1 ? 'cena' : 'cenas'}${corte.cenas_validadas ? '' : ', por validar'}`,
     ...(status
       ? {
