@@ -89,7 +89,7 @@ async def _ate(condicao, falha: str) -> None:
     for _ in range(400):
         if condicao():
             # O rastro vai para o banco por trás: espera o banco alcançar a fila.
-            await pedidos_capa_chatgpt.gravacoes_em_dia()
+            await pedidos_capa_chatgpt.esperar_gravacoes()
             return
         await asyncio.sleep(0)
     raise AssertionError(falha)
