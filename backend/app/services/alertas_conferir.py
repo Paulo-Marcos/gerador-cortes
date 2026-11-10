@@ -33,7 +33,7 @@ def dividir_alertas(corte: Corte, ponto_seg: float) -> str:
 
 
 def juntar_alertas_dos_cortes(primeiro: Corte, segundo: Corte) -> None:
-    """O corte que sobrevive à junção leva os alertas do que é apagado."""
+    """O corte que sobrevive à junção leva os alertas do que fica riscado (D-1097)."""
     juntos = juntar_alertas(
         alertas_gravados(primeiro.alertas_conferir), alertas_gravados(segundo.alertas_conferir)
     )

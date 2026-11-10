@@ -89,7 +89,7 @@ def dividir_riscados(corte: Corte, ponto_seg: float) -> str:
 
 
 def juntar_riscados(primeiro: Corte, segundo: Corte) -> None:
-    """O corte que sobrevive à junção leva os riscados do que é apagado."""
+    """O corte que sobrevive à junção leva os riscados do que fica riscado (D-1097)."""
     primeiro.desvios_riscados = json.dumps(
         [
             *dominio.riscados_gravados(primeiro.desvios_riscados),

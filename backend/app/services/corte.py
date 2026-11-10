@@ -190,18 +190,18 @@ async def _adotar_filhos_do_corte(
 ) -> None:
     """Move shorts (e o metadado órfão) do corte absorvido para o sobrevivente.
 
-    Sem isto o `cascade="all, delete-orphan"` apagaria os shorts junto com o
-    corte — trechos já curados a mão, que ninguém pediu para perder. Os tempos
-    do short são do BRUTO (invariante declarada no modelo), então andam pelo
-    mesmo offset das cenas.
+    O absorvido fica riscado (D-1097), e os shorts dele, trechos já curados a
+    mão que ninguém pediu para perder, passam ao corte que entra no vídeo. Os
+    tempos do short são do BRUTO (invariante declarada no modelo), então andam
+    pelo mesmo offset das cenas.
 
     O metadado só é adotado quando o sobrevivente ainda não tem um: título,
     descrição e capa são uma escolha só por corte, e a do primeiro prevalece.
 
-    A adoção termina com `flush` + `expire`: sem isso o `delete` do corte
-    absorvido recarrega as relações dele, ainda vê os filhos que acabamos de
-    remarcar e os apaga pelo cascade — o metadado sumia mesmo depois de já
-    pertencer ao sobrevivente.
+    A adoção termina com `flush` + `expire`: sem isso a sessão continuaria
+    mostrando, no corte riscado, filhos que já são do sobrevivente. Antes da
+    D-1097 o juntar apagava o absorvido, e esse `delete` levava pelo cascade o
+    metadado já remarcado.
     """
     shorts = (await db.execute(select(Short).where(Short.corte_id == segundo.id))).scalars().all()
     for short in shorts:
