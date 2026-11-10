@@ -17,6 +17,7 @@ from app.models.canal import (
     LiveCandidata,
     YoutubeVideoStat,
 )
+from app.models.capas import UltimoPedidoDeCapa
 from app.models.projeto import Corte, MetadadoCorte, Projeto
 from app.models.shorts import MetadadoShort, PublicacaoShort, Short
 from app.models.snapshots import CorteSnapshot, ShortSnapshot
@@ -39,5 +40,6 @@ __all__ = [
     "StatusLiveCandidata",
     "StatusProjeto",
     "StatusShort",
+    "UltimoPedidoDeCapa",
     "YoutubeVideoStat",
 ]

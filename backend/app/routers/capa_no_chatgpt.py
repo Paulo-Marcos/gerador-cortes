@@ -119,7 +119,7 @@ async def pedir_capa(pedido: PedirCapaChatgptRequest):
 @router.get("/pedidos/{destino}/{alvo_id}", response_model=PedidoDaCapaResponse)
 async def pedido_da_capa(destino: DestinoDaCapa, alvo_id: str):
     """O último pedido desta capa: em que passo está, ou por que parou."""
-    pedido = pedidos_capa_chatgpt.pedido_da_capa(destino, alvo_id)
+    pedido = await pedidos_capa_chatgpt.pedido_lido(destino, alvo_id)
     return {"pedido": pedido.to_dict() if pedido else None}
 
 
