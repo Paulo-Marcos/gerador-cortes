@@ -32,20 +32,20 @@ describe('D-1044 · o resumo do corte', () => {
         { inicio_hms: '00:02:00.000', fim_hms: '00:02:10.000' },
         { inicio_hms: '00:02:05.000', fim_hms: '00:02:15.000' },
       ]),
-    ).toBe('sai 15 s');
+    ).toBe('fica 1:25 · sai 0:15');
   });
 
   it('trecho fora do intervalo do corte não conta', () => {
-    expect(queSai([{ inicio_hms: '00:10:00.000', fim_hms: '00:10:30.000' }])).toBe('sem trechos');
+    expect(queSai([{ inicio_hms: '00:10:00.000', fim_hms: '00:10:30.000' }])).toBe('fica 1:40 · nada sai');
   });
 
   it('trecho de menos de meio segundo não some da conta', () => {
-    expect(queSai([{ inicio_hms: '00:02:00.000', fim_hms: '00:02:00.300' }])).toBe('sai 1 s');
+    expect(queSai([{ inicio_hms: '00:02:00.000', fim_hms: '00:02:00.300' }])).toBe('fica 1:39 · sai 0:01');
   });
 
   it('diz o que sai, o conferir, as cenas, a capa e a revisão', () => {
     expect(resumirCorte(CORTE, { thumbnail_pronta: false, metadados_completos: false, pronto_publicar: false })).toEqual({
-      cortes: 'sai 12 s, 1 conferir',
+      cortes: 'fica 1:28 · sai 0:12, 1 conferir',
       pos: '2 cenas, por validar',
       metadados: 'falta capa',
       revisao: 'falta algo',
@@ -57,7 +57,7 @@ describe('D-1044 · o resumo do corte', () => {
       { inicio_seg: 0, fim_seg: 100, desvios: [], cenas_remotion: { cenas: [{}] }, cenas_validadas: 1 },
       { thumbnail_pronta: true, metadados_completos: true, pronto_publicar: true },
     );
-    expect(r).toEqual({ cortes: 'sem trechos', pos: '1 cena', metadados: 'ok', revisao: 'pronto' });
+    expect(r).toEqual({ cortes: 'fica 1:40 · nada sai', pos: '1 cena', metadados: 'ok', revisao: 'pronto' });
   });
 
   it('falta metadado com a capa pronta', () => {
@@ -66,7 +66,7 @@ describe('D-1044 · o resumo do corte', () => {
 
   it('sem status no export, as casas de publicação não inventam nada', () => {
     const r = resumirCorte({ inicio_seg: 0, fim_seg: 100, cenas_remotion: [] }, undefined);
-    expect(r).toEqual({ cortes: 'sem trechos', pos: 'sem cenas' });
+    expect(r).toEqual({ cortes: 'fica 1:40 · nada sai', pos: 'sem cenas' });
   });
 });
 

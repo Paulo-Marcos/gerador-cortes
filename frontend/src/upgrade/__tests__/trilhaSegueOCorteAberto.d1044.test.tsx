@@ -74,7 +74,7 @@ afterEach(async () => {
 describe('D-1044 · a trilha segue o corte aberto', () => {
   it('com um corte aberto, a casa resume ele', async () => {
     await abrir();
-    expect(casaDosCortes()).toBe('sai 6 s, 1 conferir');
+    expect(casaDosCortes()).toBe('fica 1:34 · sai 0:06, 1 conferir');
   });
 
   it('riscar o trecho muda a casa, sem a lista da live se reler', async () => {
@@ -82,7 +82,7 @@ describe('D-1044 · a trilha segue o corte aberto', () => {
     h.removerDesvio.mockResolvedValue(corte({ desvios: [] }));
     remover.mutate(0);
     await assentar();
-    expect(casaDosCortes()).toBe('sem trechos, 1 conferir');
+    expect(casaDosCortes()).toBe('fica 1:40 · nada sai, 1 conferir');
     expect(h.listarCortes).toHaveBeenCalledTimes(1);
   });
 
@@ -91,13 +91,13 @@ describe('D-1044 · a trilha segue o corte aberto', () => {
     h.marcarAlertaConferido.mockResolvedValue(corte({ alertas_conferir: [{ id: 'a1', conferido: true }] }));
     conferir.mutate('a1');
     await assentar();
-    expect(casaDosCortes()).toBe('sai 6 s');
+    expect(casaDosCortes()).toBe('fica 1:34 · sai 0:06');
   });
 
   it('enquanto o corte aberto carrega, a lista da live responde', async () => {
     h.obterCorte.mockReturnValue(new Promise(() => undefined));
     await abrir();
-    expect(casaDosCortes()).toBe('sai 6 s, 1 conferir');
+    expect(casaDosCortes()).toBe('fica 1:34 · sai 0:06, 1 conferir');
   });
 
   it('sem corte aberto na rota, não busca corte nenhum', async () => {
