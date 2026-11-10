@@ -18,6 +18,7 @@ import {
   type RegerarBrutoOpcoes,
 } from './regerarBrutoPlan';
 import { confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
+import { corteVizinho } from './riscarCorte';
 import { useRiscarCorte } from './useRiscarCorte';
 import { useShortcuts, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
@@ -370,13 +371,11 @@ export function useEditorPage() {
     navigate(`/projetos/${projetoId}/cortes/${escolhido.id}`, { replace: true });
   }, [corteId, cortes, navigate, projetoId]);
 
+  // D-1033: trocar de corte não troca de tela. D-1092: o J/K pula os riscados.
   function navegarCorte(direcao: -1 | 1) {
-    if (!corte || cortes.length === 0) return;
-    const index = cortes.findIndex((item) => item.id === corte.id);
-    if (index < 0) return;
-    const next = (index + direcao + cortes.length) % cortes.length;
-    // D-1033: trocar de corte não troca de tela.
-    navigate(rawEditorPath(projetoId, cortes[next].id));
+    const alvo = corte ? corteVizinho(cortes, corte.id, direcao) : null;
+    const next = alvo ? cortes.indexOf(alvo) : -1;
+    if (next >= 0) navigate(rawEditorPath(projetoId, cortes[next].id));
   }
 
   function patchDirty(patch: Partial<Corte>) {

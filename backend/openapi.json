@@ -3335,6 +3335,14 @@
             "$ref": "#/components/schemas/LayoutDoCorte",
             "default": {}
           },
+          "motivo_riscado": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Motivo Riscado",
+            "type": "array"
+          },
           "numero": {
             "title": "Numero",
             "type": "integer"

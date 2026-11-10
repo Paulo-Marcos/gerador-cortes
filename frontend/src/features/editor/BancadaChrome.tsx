@@ -20,6 +20,8 @@ import {
 } from '@/upgrade/UpgradeChrome';
 import { PorQueNaBancada } from '@/features/porque-do-corte/PorQueNaBancada';
 import { PendenciasDoCorte } from './PendenciasDoCorte';
+import { corteVizinho, separarRiscados } from './riscarCorte';
+import { RiscadosDaLista } from './RiscadosDaLista';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Etapa 4 · a Bancada conversa com a casca.
@@ -142,12 +144,10 @@ export function BancadaChrome({
   const [metaDoCorte, setMetaDoCorte] = useState<Corte | null>(null);
   const statusDe = (c: Corte) => exportStatus.find((s) => s.corte_id === c.id);
 
-  const indice = cortes.findIndex((c) => c.id === corte.id);
-  const irPara = (delta: -1 | 1) => {
-    if (cortes.length === 0) return;
-    const alvo = cortes[(indice + delta + cortes.length) % cortes.length];
-    navigate(caminhoDoCorte(alvo));
-  };
+  // D-1092: o riscado sai da lista e do J/K e fica na seção do fim (RiscadosDaLista).
+  const { vivos, riscados } = separarRiscados(cortes);
+  const irPara = (delta: -1 | 1) =>
+    navigate(caminhoDoCorte(corteVizinho(cortes, corte.id, delta) ?? corte));
 
   const prontos = exportStatus.filter((s) => s.pronto_publicar).length;
 
@@ -160,7 +160,7 @@ export function BancadaChrome({
   const capaDoCorte = (c: Corte) =>
     capaDoCorteOuExport(c, projetoId, exportStatus, thumbDoCorte);
 
-  const itens: ItemDeLista[] = cortes.map((c) => ({
+  const itens: ItemDeLista[] = vivos.map((c) => ({
     id: c.id,
     num: String(c.numero),
     titulo: c.titulo_proposto,
@@ -193,10 +193,11 @@ export function BancadaChrome({
       acoes: acoesDoEditor({ brutoPronto, brutoOcupado, onGerarBruto }),
       estado: estadoDoSalvar(salvando, sujo),
       lista: {
-        cabecalho: { titulo: tituloLive, sub: `${cortes.length} cortes · ${prontos} prontos`, thumb: capaDaLive },
+        cabecalho: { titulo: tituloLive, sub: `${vivos.length} cortes · ${prontos} prontos`, thumb: capaDaLive },
         titulo: 'Cortes da live',
-        resumo: `${cortes.length} · ${prontos} prontos`,
+        resumo: `${vivos.length} · ${prontos} prontos`,
         itens,
+        rodape: <RiscadosDaLista projetoId={projetoId} riscados={riscados} />,
         acao: onNovoTrecho ? { texto: 'Novo trecho', onClick: onNovoTrecho } : undefined,
       },
       atual: {

@@ -19,6 +19,7 @@ from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.alerta_conferir import alertas_gravados
 from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, score_do_corte
 from app.domain.corte.desvio_categoria import classificar_desvio
+from app.domain.corte.motivo_apagado import motivos_gravados
 from app.domain.corte.riscados import riscados_gravados, trechos_da_ultima_rodada
 from app.models import Corte
 from app.services.bruto_do_corte import reservar_cenas_do_operador
@@ -76,6 +77,18 @@ def _origem_da_analise(corte: Corte) -> str | None:
     return getattr(snapshot, "origem_analise", None)
 
 
+def _motivo_do_riscado(corte: Corte) -> list[str]:
+    """D-1092: por que o corte foi riscado, os slugs gravados no snapshot (D-1088).
+
+    O corte feito na mão não tem snapshot e fica sem motivo. Lê só o que já veio
+    carregado, pela mesma razão de `_origem_da_analise`.
+    """
+    snapshot = inspect(corte).attrs.snapshot.loaded_value
+    if getattr(snapshot, "apagado_em", None) is None:
+        return []
+    return motivos_gravados(getattr(snapshot, "motivo_apagado", ""))
+
+
 def _trechos_do_corte(corte) -> dict:
     """RN-36: o que sai do corte, o que foi riscado e o que desfazer a rodada leva."""
     desvios = [classificar_desvio(x) for x in json.loads(corte.desvios or "[]")]
@@ -108,7 +121,7 @@ def _corte_to_dict(corte: Corte) -> dict:
     d["score"] = score_do_corte(getattr(corte, "score_json", None))
     # D-713: o Fire é coluna do corte agora; a API sempre o entregou booleano.
     d["is_fire"] = bool(getattr(corte, "is_fire", False))
-    d["origem_analise"] = _origem_da_analise(corte)
+    d.update(origem_analise=_origem_da_analise(corte), motivo_riscado=_motivo_do_riscado(corte))
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""

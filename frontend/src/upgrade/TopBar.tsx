@@ -169,6 +169,27 @@ function RotuloDoSeletor({ atual }: { atual: ChromeAtual }) {
   );
 }
 
+/** As linhas do painel e o rodapé (D-1092: os riscados). Exportado para o teste. */
+export function ItensDoPainel({ lista, fechar }: { lista: ChromeLista; fechar: () => void }) {
+  return (
+    <div style={{ maxHeight: 300, overflow: 'auto', padding: '0 7px 7px' }}>
+      {lista.itens.map((item) => (
+        <LinhaDeLista
+          key={item.id}
+          item={{
+            ...item,
+            onClick: () => {
+              item.onClick?.();
+              fechar();
+            },
+          }}
+        />
+      ))}
+      {lista.rodape}
+    </div>
+  );
+}
+
 function Seletor({
   atual,
   compacto,
@@ -314,20 +335,7 @@ function Seletor({
 
           {/* A linha do painel é a MESMA da coluna de contexto — um
               componente, dois lugares que nunca aparecem juntos. */}
-          <div style={{ maxHeight: 300, overflow: 'auto', padding: '0 7px 7px' }}>
-            {lista.itens.map((item) => (
-              <LinhaDeLista
-                key={item.id}
-                item={{
-                  ...item,
-                  onClick: () => {
-                    item.onClick?.();
-                    setAberto(false);
-                  },
-                }}
-              />
-            ))}
-          </div>
+          <ItensDoPainel lista={lista} fechar={() => setAberto(false)} />
 
           {atual.onVerTodos ? (
             <div

@@ -73,6 +73,8 @@ export type ChromeLista = {
   resumo?: string;
   filtros?: Array<{ texto: string; n: number; ativo?: boolean; onClick?: () => void }>;
   itens: ItemDeLista[];
+  /** D-1092: o que fica no fim da lista, depois dos itens (os cortes riscados). */
+  rodape?: ReactNode;
   acao?: { texto: string; onClick?: () => void };
 };
 

@@ -17,15 +17,36 @@ export function bloqueioDoRiscar(corte: Pick<Corte, 'youtube_video_id'>): string
   return corte.youtube_video_id ? DICA_NO_YOUTUBE : null;
 }
 
+export const estaRiscado = (corte: Pick<Corte, 'status'>) => corte.status === 'rejeitado';
+
+/** D-1092: a lista "Cortes da live" mostra os vivos; os riscados vão para a seção do fim. */
+export function separarRiscados(cortes: readonly Corte[]) {
+  return {
+    vivos: cortes.filter((corte) => !estaRiscado(corte)),
+    riscados: cortes.filter(estaRiscado),
+  };
+}
+
+/** O vizinho do corte na ordem (`delta` 1 = próximo, -1 = anterior), em volta,
+ *  pulando os riscados — é o J/K da bancada (D-1092). Vale também quando o corte
+ *  aberto é um riscado. `null` quando não sobra nenhum outro. */
+export function corteVizinho(cortes: readonly Corte[], corteId: string, delta: -1 | 1): Corte | null {
+  const indice = cortes.findIndex((corte) => corte.id === corteId);
+  const n = cortes.length;
+  // Fora da lista, o ponto de partida fica antes do primeiro (ou depois do último).
+  let partida = indice;
+  if (partida < 0) partida = delta > 0 ? -1 : n;
+  for (let passo = 1; passo <= n; passo += 1) {
+    const candidato = cortes[(((partida + delta * passo) % n) + n) % n];
+    if (candidato.id !== corteId && !estaRiscado(candidato)) return candidato;
+  }
+  return null;
+}
+
 /** O corte para onde o editor segue depois de riscar: o próximo na ordem,
  *  pulando os já riscados. `null` quando não sobra nenhum. */
 export function proximoDepoisDeRiscar(cortes: readonly Corte[], corteId: string): Corte | null {
-  const indice = cortes.findIndex((corte) => corte.id === corteId);
-  for (let passo = 1; passo <= cortes.length; passo += 1) {
-    const candidato = cortes[(indice + passo + cortes.length) % cortes.length];
-    if (candidato.id !== corteId && candidato.status !== 'rejeitado') return candidato;
-  }
-  return null;
+  return corteVizinho(cortes, corteId, 1);
 }
 
 /** A linha do aviso: qual corte saiu, quanto disco voltou e o que ficou nele.

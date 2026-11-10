@@ -6576,6 +6576,11 @@ export interface components {
             justificativa: string;
             /** @default {} */
             layout_youtube: components["schemas"]["LayoutDoCorte"];
+            /**
+             * Motivo Riscado
+             * @default []
+             */
+            motivo_riscado: string[];
             /** Numero */
             numero: number;
             /** Origem Analise */

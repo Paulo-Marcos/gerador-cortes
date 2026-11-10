@@ -378,6 +378,7 @@ export function ContextColumn({
         {lista.itens.map((c) => (
           <LinhaDeLista key={c.id} item={c} />
         ))}
+        {lista.rodape}
       </div>
 
       {lista.acao ? (
