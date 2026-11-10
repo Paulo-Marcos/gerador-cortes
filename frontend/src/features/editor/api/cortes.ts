@@ -153,6 +153,13 @@ export const cortesApi = {
       }),
     ),
 
+  // D-1093 (P9): o silêncio do app decidido de uma vez — risca todos ou devolve todos.
+  manterSilencios: (corteId: string) =>
+    dados(api.POST('/api/cortes/{corte_id}/manter-silencios', doCorte(corteId))),
+
+  tirarSilencios: (corteId: string) =>
+    dados(api.POST('/api/cortes/{corte_id}/tirar-silencios', doCorte(corteId))),
+
   // D-998: o editor conferiu o fato; o trecho segue no corte e o alerta sai da timeline.
   marcarAlertaConferido: (corteId: string, alertaId: string) =>
     dados(

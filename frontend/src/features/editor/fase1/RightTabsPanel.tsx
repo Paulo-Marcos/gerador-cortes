@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
 import { BlocosTab } from './BlocosTab';
-import { DecisoesDoCorte, PerguntaDosDesvios } from './DecisoesDoCorte';
-import { TrechosList, usePendenciasDosTrechos } from './TrechosList';
+import { conteudoDaAbaDecisoes, useAcoesDasDecisoes } from './AbaDasDecisoes';
 import type { TrechosRiscados } from '../useTrechosRiscados';
 import { useCorte } from '@/features/editor/useCortes';
 import { useDiarizarCorte, useFalantes } from '@/features/diarizacao/useDiarizacao';
@@ -97,17 +95,15 @@ export function RightTabsPanel({
 
   // D-360: diarização por corte. projetoId sai do corte já em cache; o mapa de
   // falantes resolve SPEAKER_xx → nome/canal na etiqueta inline da transcrição.
-  // D-740: a lista de trechos é o maior custo do tique de 4 Hz do player e não
-  // depende do tempo. Com props estáveis o memo dela segura a redesenhada.
-  const aoIrPara = useFuncaoEstavel(onSeek);
-  const aoAdicionarNoCursor = useFuncaoEstavel(() => onAdicionarTrechoAqui?.());
-  const aoRemoverDesvio = useFuncaoEstavel((indice: number) => riscados?.riscar(indice));
-  const aoGerarManual = useFuncaoEstavel(onGerarManual);
-  const aoGerarTrechosIA = useFuncaoEstavel(onGerarTrechosIA);
-  const aoRestaurarDesvio = useFuncaoEstavel((indice: number) => riscados?.restaurar(indice));
-  const aoDesfazerRodada = useFuncaoEstavel(() => riscados?.desfazerRodada());
-  const aoVoltarABordaDaIa = useFuncaoEstavel((indice: number) => riscados?.voltarABordaDaIa(indice));
-  const pendenteDosTrechos = usePendenciasDosTrechos(pendingTrechos, riscados?.ocupado);
+  // D-740: os callbacks da aba Decisões são estáveis (useAcoesDasDecisoes).
+  const acoes = useAcoesDasDecisoes({
+    onSeek,
+    onAdicionarTrechoAqui,
+    riscados,
+    onGerarManual,
+    onGerarTrechosIA,
+    pendingTrechos,
+  });
   const corteAtual = useCorte(corteId).data;
   const projetoId = corteAtual?.projeto_id;
   const falantes = useFalantes(projetoId, tab === 'transcricao').data?.falantes;
@@ -143,28 +139,14 @@ export function RightTabsPanel({
           onSeek={onSeek}
         />
       ) : tab === 'decisoes' ? (
-        <DecisoesDoCorte>
-          {/* 1 · o silêncio (D-1093) entra aqui, antes dos desvios. */}
-          <PerguntaDosDesvios desvios={desvios}>
-            <TrechosList
-              desvios={desvios}
-              selectedDesvioIdx={selectedDesvioIdx}
-              onSeek={aoIrPara}
-              onAdicionarTrechoNoCursor={onAdicionarTrechoAqui ? aoAdicionarNoCursor : undefined}
-              onRemoverDesvio={aoRemoverDesvio}
-              onGerarManual={aoGerarManual}
-              onGerarTrechosIA={aoGerarTrechosIA}
-              pending={pendenteDosTrechos}
-              linhas={transcricao}
-              riscados={corteAtual?.desvios_riscados}
-              trechosDaUltimaRodada={corteAtual?.trechos_da_ultima_rodada}
-              onRestaurarDesvio={aoRestaurarDesvio}
-              onDesfazerRodada={aoDesfazerRodada}
-              onVoltarABordaDaIa={aoVoltarABordaDaIa}
-            />
-          </PerguntaDosDesvios>
-          {/* 3 · o som (D-1095) entra aqui, depois dos desvios. */}
-        </DecisoesDoCorte>
+        conteudoDaAbaDecisoes({
+          corteId,
+          desvios,
+          selectedDesvioIdx,
+          transcricao,
+          corte: corteAtual,
+          acoes,
+        })
       ) : (
         <TranscriptList
           linhas={transcricao ?? []}

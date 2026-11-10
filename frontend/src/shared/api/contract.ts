@@ -1749,6 +1749,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cortes/{corte_id}/manter-silencios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Manter Silencios
+         * @description Manter todos (P9, D-1093): risca todo silêncio do app. O bruto seguinte não o traz.
+         */
+        post: operations["manter_silencios_api_cortes__corte_id__manter_silencios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cortes/{corte_id}/pipeline-status": {
         parameters: {
             query?: never;
@@ -1932,6 +1952,26 @@ export interface paths {
          * @description Força o recálculo da transcrição final (limpa) com base nos cortes atuais.
          */
         post: operations["sincronizar_transcricao_api_cortes__corte_id__sincronizar_transcricao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cortes/{corte_id}/tirar-silencios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tirar Silencios
+         * @description Tirar todos (P9, D-1093): devolve ao corte todo silêncio riscado.
+         */
+        post: operations["tirar_silencios_api_cortes__corte_id__tirar_silencios_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13995,6 +14035,37 @@ export interface operations {
             };
         };
     };
+    manter_silencios_api_cortes__corte_id__manter_silencios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     obter_pipeline_status_api_cortes__corte_id__pipeline_status_get: {
         parameters: {
             query?: never;
@@ -14265,6 +14336,37 @@ export interface operations {
         };
     };
     sincronizar_transcricao_api_cortes__corte_id__sincronizar_transcricao_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tirar_silencios_api_cortes__corte_id__tirar_silencios_post: {
         parameters: {
             query?: never;
             header?: never;

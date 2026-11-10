@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toaster';
 import {
+  useDecidirOsSilencios,
   useDesfazerRodada,
   useRemoverDesvio,
   useRestaurarDesvio,
   useVoltarABordaDaIa,
+  type DecisaoDoSilencio,
 } from '@/features/editor/useCortes';
 import type { Corte, Desvio } from '@/types/models';
 import type { EditHistory } from './useEditHistory';
@@ -55,6 +57,8 @@ export interface TrechosRiscados {
   desfazerRodada: () => void;
   /** D-1089 (P10): o trecho `indice` volta à borda da IA, e à rodada. */
   voltarABordaDaIa: (indice: number) => void;
+  /** D-1093 (P9): tirar ou manter todos os silêncios do app, de uma vez. */
+  decidirOsSilencios: (decisao: DecisaoDoSilencio) => void;
 }
 
 export function useTrechosRiscados(
@@ -68,6 +72,7 @@ export function useTrechosRiscados(
   const restaurar = useRestaurarDesvio(corteId);
   const desfazer = useDesfazerRodada(corteId);
   const voltar = useVoltarABordaDaIa(corteId);
+  const silencios = useDecidirOsSilencios(corteId);
   const [ocupado, setOcupado] = useState(false);
   const fila = useRef(umaDeCadaVez(setOcupado));
 
@@ -93,5 +98,7 @@ export function useTrechosRiscados(
       executar(() => desfazer.mutateAsync(), 'Não foi possível desfazer a rodada.'),
     voltarABordaDaIa: (indice: number) =>
       executar(() => voltar.mutateAsync(indice), 'Não foi possível voltar à borda da IA.'),
+    decidirOsSilencios: (decisao: DecisaoDoSilencio) =>
+      executar(() => silencios.mutateAsync(decisao), 'Não foi possível mudar os silêncios.'),
   };
 }

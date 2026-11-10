@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 import { hmsParaSeg } from '../timeUtils';
-import { falaDoTrecho } from './falaDoTrecho';
+import { falaDoSilencio, falaDoTrecho } from './falaDoTrecho';
 import { classificarBorda, podeVoltarABordaDaIa, type BordaDoTrecho } from './perguntaDosDesvios';
 import { resolverBadgeTrecho } from './trechoBadge';
 
@@ -79,9 +79,20 @@ function RotuloDaFala({ children }: { children: ReactNode }) {
   );
 }
 
+interface FalaQueSaiProps {
+  desvio: Desvio;
+  linhas: TranscricaoLinha[];
+  riscada?: boolean;
+  /** D-1093: o silêncio mostra a emenda mesmo sem fala dentro. */
+  silencio?: boolean;
+}
+
 /** A fala que sai e as palavras que ficam vizinhas. A marca `▸◂` é onde o corte encosta. */
-export function FalaQueSai({ desvio, linhas, riscada }: { desvio: Desvio; linhas: TranscricaoLinha[]; riscada?: boolean }) {
-  const fala = useMemo(() => falaDoTrecho(desvio, linhas), [desvio, linhas]);
+export function FalaQueSai({ desvio, linhas, riscada, silencio }: FalaQueSaiProps) {
+  const fala = useMemo(
+    () => (silencio ? falaDoSilencio : falaDoTrecho)(desvio, linhas),
+    [desvio, linhas, silencio],
+  );
   if (!fala) return null;
   const semCitacao =
     (desvio.origem === 'claude' || desvio.origem === 'gemini') && !desvio.inicio_texto && !desvio.fim_texto;
@@ -95,7 +106,7 @@ export function FalaQueSai({ desvio, linhas, riscada }: { desvio: Desvio; linhas
       <div className="flex items-baseline gap-1.5">
         {riscada ? null : <RotuloDaFala>Sai</RotuloDaFala>}
         <div className={cn('min-w-0 break-words text-[12px] leading-[1.4] text-[var(--wb-text)]', riscada && 'line-through')}>
-          {fala.sai}
+          {fala.sai || <span className="text-[var(--wb-text-mute)]">pausa, sem fala</span>}
         </div>
       </div>
       {riscada ? null : (
@@ -143,6 +154,8 @@ interface LinhaDoTrechoProps {
   onSeek: (seg: number) => void;
   onRiscar: () => void;
   onVoltarABordaDaIa?: () => void;
+  /** D-1093: o bloco é de um silêncio do app (a pergunta 1). */
+  silencio?: boolean;
 }
 
 const BOTAO_DO_TRECHO =
@@ -156,6 +169,7 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
   onSeek,
   onRiscar,
   onVoltarABordaDaIa,
+  silencio,
 }: LinhaDoTrechoProps) {
   const borda = classificarBorda(desvio);
   const podeVoltar = podeVoltarABordaDaIa(desvio);
@@ -183,7 +197,7 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
           <div className="whitespace-pre-wrap break-words text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
             {desvio.motivo || '—'}
           </div>
-          <FalaQueSai desvio={desvio} linhas={linhas} />
+          <FalaQueSai desvio={desvio} linhas={linhas} silencio={silencio} />
           {podeVoltar ? (
             <div className="mt-1 text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
               Desfazer a rodada não leva este trecho. "Voltar à borda da IA" o devolve à rodada.

@@ -81,7 +81,7 @@ EXCECOES = {
     "app/services/cenas_remotion.py::reportReturnType": 1,
     "app/services/claude_ia.py::reportArgumentType": 1,
     "app/services/corte.py::reportArgumentType": 4,
-    "app/services/corte.py::reportOptionalMemberAccess": 14,
+    "app/services/corte.py::reportOptionalMemberAccess": 2,
     "app/services/desvios.py::reportArgumentType": 1,
     "app/services/desvios.py::reportReturnType": 1,
     "app/services/deteccao_segmentos.py::reportReturnType": 1,

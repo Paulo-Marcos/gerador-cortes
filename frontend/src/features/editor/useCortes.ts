@@ -304,6 +304,22 @@ export function useVoltarABordaDaIa(corteId: string) {
   });
 }
 
+/** D-1093 (P9): "Tirar todos" ou "Manter todos" os silêncios do app. */
+export type DecisaoDoSilencio = 'tirar' | 'manter';
+
+// Muda o que sai do corte, então o líquido e as legendas mudam como no desfazer.
+export function useDecidirOsSilencios(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (decisao: DecisaoDoSilencio) =>
+      decisao === 'tirar' ? cortesApi.tirarSilencios(corteId) : cortesApi.manterSilencios(corteId),
+    onSuccess: (data) => {
+      qc.setQueryData(corteKey(corteId), data);
+      void atualizarLegendasDoCorte(qc, corteId);
+    },
+  });
+}
+
 // D-998: dispensa o alerta "conferir". Desvios e líquido não mudam, então as
 // legendas do corte não precisam ser refeitas.
 export function useMarcarAlertaConferido(corteId: string) {

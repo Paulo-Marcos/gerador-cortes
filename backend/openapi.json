@@ -18800,6 +18800,49 @@
         ]
       }
     },
+    "/api/cortes/{corte_id}/manter-silencios": {
+      "post": {
+        "description": "Manter todos (P9, D-1093): risca todo silêncio do app. O bruto seguinte não o traz.",
+        "operationId": "manter_silencios_api_cortes__corte_id__manter_silencios_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Manter Silencios",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
     "/api/cortes/{corte_id}/pipeline-status": {
       "get": {
         "description": "Até onde o render do corte já chegou — as fases com artefato e o progresso.",
@@ -19255,6 +19298,49 @@
           }
         },
         "summary": "Sincronizar Transcricao",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/tirar-silencios": {
+      "post": {
+        "description": "Tirar todos (P9, D-1093): devolve ao corte todo silêncio riscado.",
+        "operationId": "tirar_silencios_api_cortes__corte_id__tirar_silencios_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tirar Silencios",
         "tags": [
           "Cortes"
         ]

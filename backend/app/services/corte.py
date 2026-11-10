@@ -47,6 +47,7 @@ from app.domain.corte.segment_calculator import (
     duracao_liquida,
     normalizar_desvio,
 )
+from app.domain.corte.silencios import silencios_a_gravar
 from app.domain.corte.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
 from app.domain.corte.youtube_layout import mesclar_no_layout_do_corte, normalizar_layout_youtube
 from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
@@ -79,8 +80,6 @@ from sqlalchemy.orm import selectinload
 _TENTATIVAS_DE_GRAVACAO = 5
 # Silêncio mais curto que isso é respiração, não pausa que valha virar desvio.
 _PAUSA_MINIMA_SEG = 0.6
-# Dois desvios que começam a menos disso um do outro são o mesmo desvio.
-_DISTANCIA_DE_DUPLICATA_SEG = 0.5
 
 logger = logging.getLogger(__name__)
 
@@ -1408,7 +1407,7 @@ class CorteService:
         import re
 
         async with AsyncSessionLocal() as db:
-            corte = await db.get(Corte, corte_id)
+            corte = await db.get_one(Corte, corte_id)  # sem o corte, NoResultFound
             projeto = await db.get(Projeto, corte.projeto_id)
 
             from app.core.channel_paths import resolver_do_projeto
@@ -1514,18 +1513,9 @@ class CorteService:
             else:
                 desvios_atuais = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
 
-            # Deduplicação por proximidade de tempo (tolerância 0.5s) em vez de string
-            # HMS, que tinha precisão de apenas 1 segundo e gerava duplicatas falsas.
-            def _ja_existe(nd: dict, existentes: list) -> bool:
-                nd_inicio = float(nd.get("inicio_seg", 0))
-                return any(
-                    abs(float(d.get("inicio_seg", 0)) - nd_inicio) < _DISTANCIA_DE_DUPLICATA_SEG
-                    for d in existentes
-                )
-
-            for nd in novos_desvios:
-                if not _ja_existe(nd, desvios_atuais):
-                    desvios_atuais.append(nd)
+            # Deduplica a 0,5 s; o silêncio que você riscou não volta (P9, D-1093).
+            riscados = riscados_gravados(corte.desvios_riscados)
+            desvios_atuais += silencios_a_gravar(novos_desvios, desvios_atuais, riscados)
 
             desvios_atuais.sort(key=lambda x: float(x.get("inicio_seg", 0)))
             corte.desvios = json.dumps(desvios_atuais, ensure_ascii=False)
