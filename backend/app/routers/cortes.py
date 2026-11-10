@@ -7,11 +7,10 @@ from app.database import get_db
 from app.domain.compartilhado.erros import ErroDeDominio
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.models import Corte
-from app.routers import projetos_schemas
+from app.routers import arranjo_schemas, projetos_schemas
 from app.routers.cortes_helpers import _corte_to_dict, _hms_to_seg, com_a_marca_das_cenas
 from app.routers.cortes_schemas import (
     AdicionarDesvioRequest,
-    ArranjoResponse,
     AtualizarCorteRequest,
     CaminhoDaPastaResponse,
     CenasDoCorteResponse,
@@ -20,14 +19,11 @@ from app.routers.cortes_schemas import (
     CriarCorteManualRequest,
     DecisaoSegmentoRequest,
     DeteccaoIniciadaResponse,
-    DividirBlocoRequest,
     DividirCorteRequest,
-    FundirBlocoRequest,
     GerarBrutoRequest,
     ImportarCenasRequest,
     ImportarDesviosRequest,
     JuntarCortesRequest,
-    MoverBlocoRequest,
     PicosDaOndaResponse,
     ProgressoDoBrutoResponse,
     PromptDasCenasResponse,
@@ -326,7 +322,7 @@ def _erro_de_arranjo(e: ValueError) -> HTTPException:
     return HTTPException(status_code=400, detail=f"Arranjo inválido: {msg}")
 
 
-@router.get("/{corte_id}/arranjo", response_model=ArranjoResponse)
+@router.get("/{corte_id}/arranjo", response_model=arranjo_schemas.ArranjoResponse)
 async def obter_arranjo(corte_id: str):
     """A fila de blocos do corte. Corte nunca reordenado devolve um bloco só."""
     try:
@@ -335,8 +331,8 @@ async def obter_arranjo(corte_id: str):
         raise _erro_de_arranjo(e) from e
 
 
-@router.post("/{corte_id}/arranjo/dividir", response_model=ArranjoResponse)
-async def dividir_bloco(corte_id: str, body: DividirBlocoRequest):
+@router.post("/{corte_id}/arranjo/dividir", response_model=arranjo_schemas.ArranjoResponse)
+async def dividir_bloco(corte_id: str, body: arranjo_schemas.DividirBlocoRequest):
     """Passa a lâmina no instante absoluto informado, criando uma junta.
 
     Não confundir com `POST /{corte_id}/dividir` (F-061), que parte o CORTE em
@@ -349,8 +345,8 @@ async def dividir_bloco(corte_id: str, body: DividirBlocoRequest):
         raise _erro_de_arranjo(e) from e
 
 
-@router.post("/{corte_id}/arranjo/mover", response_model=ArranjoResponse)
-async def mover_bloco(corte_id: str, body: MoverBlocoRequest):
+@router.post("/{corte_id}/arranjo/mover", response_model=arranjo_schemas.ArranjoResponse)
+async def mover_bloco(corte_id: str, body: arranjo_schemas.MoverBlocoRequest):
     """Move o bloco de uma posição da fila para outra."""
     try:
         return await arranjo_service.mover(corte_id, body.de_indice, body.para_indice)
@@ -358,8 +354,8 @@ async def mover_bloco(corte_id: str, body: MoverBlocoRequest):
         raise _erro_de_arranjo(e) from e
 
 
-@router.post("/{corte_id}/arranjo/fundir", response_model=ArranjoResponse)
-async def fundir_bloco(corte_id: str, body: FundirBlocoRequest):
+@router.post("/{corte_id}/arranjo/fundir", response_model=arranjo_schemas.ArranjoResponse)
+async def fundir_bloco(corte_id: str, body: arranjo_schemas.FundirBlocoRequest):
     """Desfaz a junta entre o bloco e o vizinho seguinte NA LIVE."""
     try:
         return await arranjo_service.fundir(corte_id, body.indice)
@@ -367,7 +363,7 @@ async def fundir_bloco(corte_id: str, body: FundirBlocoRequest):
         raise _erro_de_arranjo(e) from e
 
 
-@router.post("/{corte_id}/arranjo/restaurar", response_model=ArranjoResponse)
+@router.post("/{corte_id}/arranjo/restaurar", response_model=arranjo_schemas.ArranjoResponse)
 async def restaurar_arranjo(corte_id: str):
     """Esquece blocos e ordem: o corte volta a tocar como foi falado."""
     try:

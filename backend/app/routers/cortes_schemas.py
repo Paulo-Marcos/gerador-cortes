@@ -227,6 +227,8 @@ class CorteResponse(BaseModel):
     # D-988: a IA que propôs o corte ("claude", "gemini" ou "manual"); None no
     # corte criado na mão, que não tem proposta congelada (D-303).
     origem_analise: str | None = None
+    # D-1092: os slugs do motivo de um corte riscado ([] sem motivo ou não riscado).
+    motivo_riscado: list[str] = []
     # A publicação no YouTube, gravada no corte.
     youtube_video_id: str = ""
     youtube_url_publicado: str = ""
@@ -255,42 +257,6 @@ class AtualizarCorteRequest(BaseModel):
     hints_thumbnail: str | None = None
     # F-063: offset fino de áudio (lip-sync) por corte, em milissegundos.
     audio_offset_ms: int | None = None
-
-
-class BlocoArranjoSchema(BaseModel):
-    """Um bloco na fila de exibição do corte (D-576)."""
-
-    posicao: int
-    inicio_seg: float
-    fim_seg: float
-    duracao_seg: float
-    # Duração já descontados os desvios DESTE bloco — é a que o editor vê.
-    duracao_liquida_seg: float
-
-
-class ArranjoResponse(BaseModel):
-    corte_id: str
-    inicio_seg: float
-    fim_seg: float
-    blocos: list[BlocoArranjoSchema]
-    # True quando a ordem é a da live — inclusive num corte fatiado e não movido.
-    cronologico: bool
-    # A ordem mudou e já existe bruto gerado: ele está velho. Aviso, não ação —
-    # nenhum artefato é apagado pelas costas do editor.
-    bruto_desatualizado: bool
-
-
-class DividirBlocoRequest(BaseModel):
-    ponto_seg: float
-
-
-class MoverBlocoRequest(BaseModel):
-    de_indice: int
-    para_indice: int
-
-
-class FundirBlocoRequest(BaseModel):
-    indice: int
 
 
 class RemoverDesvioRequest(BaseModel):

@@ -59,7 +59,10 @@ export function useRiscarCorte(
         <AvisoDoRiscado
           // D-993: só a proposta da IA tem motivo a medir; o corte feito na mão não.
           motivos={alvo.origem_analise ? motivosDoCanal : []}
-          onMotivos={(slugs) => void cortesApi.riscarCorte(alvo.id, slugs).catch(() => undefined)}
+          // D-1092: o motivo aparece no chip da seção Riscados, então a lista relê o corte.
+          onMotivos={(slugs) =>
+            void cortesApi.riscarCorte(alvo.id, slugs).then(atualizar, () => undefined)
+          }
           onDesfazer={jaEstavaRiscado ? undefined : () => void desfazer()}
         />
       ),

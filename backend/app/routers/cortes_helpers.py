@@ -19,6 +19,7 @@ from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.alerta_conferir import alertas_gravados
 from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, score_do_corte
 from app.domain.corte.desvio_categoria import classificar_desvio
+from app.domain.corte.motivo_apagado import ler_motivos_gravados
 from app.domain.corte.riscados import riscados_gravados, trechos_da_ultima_rodada
 from app.models import Corte
 from app.services.bruto_do_corte import reservar_cenas_do_operador
@@ -76,6 +77,18 @@ def _origem_da_analise(corte: Corte) -> str | None:
     return getattr(snapshot, "origem_analise", None)
 
 
+def _ler_motivo_do_riscado(corte: Corte) -> list[str]:
+    """D-1092: por que o corte foi riscado, os slugs gravados no snapshot (D-1088).
+
+    O corte feito na mão não tem snapshot e fica sem motivo. Lê só o que já veio
+    carregado, pela mesma razão de `_origem_da_analise`.
+    """
+    snapshot = inspect(corte).attrs.snapshot.loaded_value
+    if getattr(snapshot, "apagado_em", None) is None:
+        return []
+    return ler_motivos_gravados(getattr(snapshot, "motivo_apagado", ""))
+
+
 def _trechos_do_corte(corte) -> dict:
     """RN-36: o que sai do corte, o que foi riscado e o que desfazer a rodada leva."""
     desvios = [classificar_desvio(x) for x in json.loads(corte.desvios or "[]")]
@@ -86,6 +99,19 @@ def _trechos_do_corte(corte) -> dict:
         ],
         "trechos_da_ultima_rodada": trechos_da_ultima_rodada(desvios),
     }
+
+
+def _ler_layout_youtube(corte: Corte) -> dict:
+    """O layout do YouTube do corte: o JSON gravado, o dict já lido ou {}.
+
+    Saiu do `_corte_to_dict` (D-1092), que estava no teto de instruções da D-772.
+    """
+    layout_val = getattr(corte, "layout_youtube", None)
+    if isinstance(layout_val, str) and layout_val.strip():
+        return json.loads(layout_val)
+    if isinstance(layout_val, dict):
+        return layout_val
+    return {}
 
 
 def _corte_to_dict(corte: Corte) -> dict:
@@ -109,19 +135,14 @@ def _corte_to_dict(corte: Corte) -> dict:
     # D-713: o Fire é coluna do corte agora; a API sempre o entregou booleano.
     d["is_fire"] = bool(getattr(corte, "is_fire", False))
     d["origem_analise"] = _origem_da_analise(corte)
+    d["motivo_riscado"] = _ler_motivo_do_riscado(corte)
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""
     d["cenas_remotion"] = normalizar_cenas_remotion_payload(
         json.loads(corte.cenas_remotion or "[]")
     )
-    layout_val = getattr(corte, "layout_youtube", None)
-    if isinstance(layout_val, str) and layout_val.strip():
-        d["layout_youtube"] = json.loads(layout_val)
-    elif isinstance(layout_val, dict):
-        d["layout_youtube"] = layout_val
-    else:
-        d["layout_youtube"] = {}
+    d["layout_youtube"] = _ler_layout_youtube(corte)
     d["cenas_validadas"] = int(getattr(corte, "cenas_validadas", 0) or 0)
     d["cenas_validadas_em"] = getattr(corte, "cenas_validadas_em", None)
     # F-054: lista pode estar vazia (corte ainda não rodou detecção) ou

@@ -55,6 +55,15 @@ def motivos_apagado(bruto: str | None, slugs: Iterable[str] = SLUGS_MOTIVOS_APAG
     return [slug for slug in slugs if slug in informados]
 
 
+def ler_motivos_gravados(bruto: str | None) -> list[str]:
+    """Os slugs como foram gravados, na ordem gravada (D-1092).
+
+    É a leitura para a tela do corte riscado: não filtra pelo vocabulário do
+    canal, porque o motivo escondido depois do riscar continua sendo o motivo.
+    """
+    return [slug for slug in (s.strip() for s in (bruto or "").split(SEPARADOR)) if slug]
+
+
 def normalizar_motivo_apagado(
     motivo: str | None, slugs: Iterable[str] = SLUGS_MOTIVOS_APAGADO
 ) -> str:
