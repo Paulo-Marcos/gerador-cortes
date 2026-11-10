@@ -18,7 +18,7 @@ import {
   type RegerarBrutoOpcoes,
 } from './regerarBrutoPlan';
 import { confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
-import { corteVizinho } from './riscarCorte';
+import { corteVizinho, estaRiscado } from './riscarCorte';
 import { useRiscarCorte } from './useRiscarCorte';
 import { useShortcuts, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
@@ -51,7 +51,7 @@ export function findPreviousApprovedCorte(cortes: Corte[], corte: Corte): Corte 
 export function findNextCorte(cortes: Corte[], corte: Corte): Corte | null {
   return (
     cortes
-      .filter((item) => item.id !== corte.id && item.numero > corte.numero)
+      .filter((item) => item.id !== corte.id && item.numero > corte.numero && !estaRiscado(item))
       .sort((a, b) => a.numero - b.numero)[0] ?? null
   );
 }
