@@ -132,7 +132,7 @@ def _zona(valor: Any, atual: tuple[int, int, int, int] | None) -> tuple[int, int
         return atual
     try:
         x, y, w, h = (int(round(float(valor[k]))) for k in ("x", "y", "w", "h"))
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, OverflowError):  # inf: round() estoura
         return atual
     if w <= 0 or h <= 0:
         return None
@@ -154,7 +154,7 @@ def _largura_do_texto(valor: Any, atual: int) -> int:
         return atual
     try:
         largura = int(round(float(valor)))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):  # inf: round() estoura
         return atual
     if largura <= 0:
         return 0
