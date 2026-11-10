@@ -16,6 +16,7 @@ import pytest_asyncio
 from app import database
 from app.domain.corte.silencios import manter_silencios, silencios_a_gravar, tirar_silencios
 from app.models import Base, Corte, Projeto, StatusCorte
+from app.routers import cortes as rota_cortes
 from app.routers import riscados as rota_riscados
 from app.routers.errors import registrar_tratadores
 from app.services.corte import CorteService
@@ -164,6 +165,7 @@ async def test_o_trecho_manual_riscado_nao_segura_o_silencio(fabrica, ffmpeg_fix
 def cliente(fabrica, ffmpeg_fixo):
     app = FastAPI()
     registrar_tratadores(app)
+    app.include_router(rota_cortes.router, prefix="/api/cortes")
     app.include_router(rota_riscados.router, prefix="/api/cortes")
     return TestClient(app)
 
@@ -219,6 +221,32 @@ async def test_a_deteccao_de_corte_que_nao_existe_falha_logo(fabrica, ffmpeg_fix
 
     with pytest.raises(NoResultFound):
         await CorteService.detectar_silencios_tecnico("nao-existe", limpar_anteriores=True)
+
+
+@pytest.mark.asyncio
+async def test_o_botao_silencios_nao_recoloca_o_silencio_riscado(fabrica, cliente):
+    """O botão (analisar-desvios, sem limpar) segue o P9: o riscado fica riscado."""
+    await _gravar(fabrica, [_MANUAL], [_silencio(10.1, 11.9)])
+
+    resposta = cliente.post("/api/cortes/c1/analisar-desvios")
+
+    assert resposta.status_code == 200, resposta.text
+    desvios, riscados = await _ler(fabrica)
+    assert _inicios(desvios) == [30.1, 45.0], "o botão recolocou o silêncio riscado"
+    assert _inicios(riscados) == [10.1]
+
+
+@pytest.mark.asyncio
+async def test_o_botao_silencios_continua_gravando_os_nao_riscados(fabrica, cliente):
+    """Grava todos os detectados, com a deduplicação de 0,5 s contra o que já está."""
+    await _gravar(fabrica, [_silencio(30.3, 32.9), _MANUAL], [])
+
+    resposta = cliente.post("/api/cortes/c1/analisar-desvios")
+
+    assert resposta.status_code == 200, resposta.text
+    desvios, riscados = await _ler(fabrica)
+    assert _inicios(desvios) == [10.1, 30.3, 45.0]
+    assert riscados == []
 
 
 # ── domínio ──

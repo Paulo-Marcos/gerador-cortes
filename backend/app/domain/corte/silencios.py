@@ -2,8 +2,9 @@
 
 O silêncio é a pausa que o FFmpeg acha no áudio do corte (`origem: tecnico`). A
 pergunta 1 da aba Decisões responde por todos: tirar todos ou manter todos. A
-exceção se risca como qualquer trecho, e o riscado vale: a salvaguarda do bruto,
-que procura os silêncios de novo a cada geração, não recoloca o que você riscou.
+exceção se risca como qualquer trecho, e o riscado vale: nem a salvaguarda do
+bruto, que procura os silêncios de novo a cada geração, nem o botão Silêncios
+recolocam o que você riscou. Os dois seguem gravando todos os outros.
 
 Puro: sem banco e sem I/O.
 """

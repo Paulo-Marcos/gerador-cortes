@@ -49,7 +49,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase1/BlocosPanel.tsx::BlocosPanel": 175,
   "src/features/editor/fase1/EditorFase1.tsx::EditorFase1": 182,
   "src/features/editor/fase1/PlayerPanel.tsx::forwardRef": 289,
-  "src/features/editor/fase1/RightTabsPanel.tsx::RightTabsPanel": 102,
   "src/features/editor/fase1/RightTabsPanel.tsx::TranscriptList": 129,
   "src/features/editor/fase1/TimelinePanel.tsx::AdvancedMenu": 322,
   "src/features/editor/fase1/TimelinePanel.tsx::TimelinePanel": 229,
