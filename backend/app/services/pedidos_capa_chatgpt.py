@@ -21,11 +21,11 @@ import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import ErroDeDominio, NaoEncontrado, PedidoInvalido
-from app.models import MetadadoCorte, Short
+from app.models import MetadadoCorte, Short, UltimoPedidoDeCapa
 from app.services import capa_no_chatgpt, capa_short, capa_tiktok, quadros_da_capa
 from app.services.canal import capa_do_canal
 from app.services.tasks import fire_and_forget
@@ -45,6 +45,13 @@ ETAPA_NA_FILA = "Na fila do ChatGPT"
 ETAPA_QUADROS = "Tirando quadros do apresentador no vídeo"
 ETAPA_SALVANDO = "Salvando na capa"
 ETAPA_PRONTA = "Capa pronta"
+
+# D-1100: o pedido gravado como ativo e ausente da memória é de um processo que
+# já não existe. Ninguém vai terminá-lo, e a tela não pode seguir dizendo que está
+# gerando.
+MOTIVO_DO_REINICIO = (
+    "O app reiniciou antes de a capa ficar pronta, e o pedido se perdeu. Peça de novo."
+)
 
 
 # O robô não sabe quanto falta: na Fila, o progresso é só o estado.
@@ -109,6 +116,9 @@ _pedidos: dict[tuple[Destino, str], PedidoDeCapa] = {}
 # A vez no robô. O estado "aguardando" só é verdade se a espera for aqui, e não
 # dentro da thread do navegador.
 _vez = asyncio.Lock()
+# D-1100: o rastro de cada passo no banco, na ordem dos passos.
+_uma_escrita_por_vez = asyncio.Lock()
+_gravacoes: set[asyncio.Task] = set()
 
 
 def listar() -> list[PedidoDeCapa]:
@@ -117,6 +127,84 @@ def listar() -> list[PedidoDeCapa]:
 
 def pedido_da_capa(destino: Destino, alvo_id: str) -> PedidoDeCapa | None:
     return _pedidos.get((destino, alvo_id))
+
+
+async def pedido_lido(destino: Destino, alvo_id: str) -> PedidoDeCapa | None:
+    """O que a tela mostra desta capa: a fila viva, ou o rastro gravado (D-1100).
+
+    Na PROD, em 09/11/2026, o ChatGPT recusou uma capa vertical, e o backend
+    reiniciou horas depois. A recusa morreu com a memória, a capa ficou faltando
+    sem explicação, e a RN-26 segurou o TikTok em silêncio.
+    """
+    return pedido_da_capa(destino, alvo_id) or await _ler_gravado(destino, alvo_id)
+
+
+def _gravar(pedido: PedidoDeCapa) -> None:
+    """Deixa no banco do canal, por trás, o passo e o motivo deste pedido.
+
+    Por trás porque a fila não pode esperar o disco entre um passo e outro do
+    robô: o rastro é para a tela, e a capa vale mais que ele. A foto do pedido é
+    tirada AGORA, e as escritas entram no banco na ordem em que foram pedidas.
+    Só o pedido que ainda é o da capa grava; o substituído escreveria por cima
+    do novo.
+    """
+    if _pedidos.get((pedido.destino, pedido.alvo_id)) is not pedido:
+        return
+    foto = UltimoPedidoDeCapa(
+        destino=pedido.destino,
+        alvo_id=pedido.alvo_id,
+        pedido_id=pedido.id,
+        corte_id=pedido.corte_id,
+        estado=pedido.estado,
+        etapa=pedido.etapa,
+        erro=pedido.erro,
+    )
+    _gravacoes.add(fire_and_forget(_escrever(foto), name=f"rastro-da-capa-{pedido.id}"))
+
+
+async def _escrever(foto: UltimoPedidoDeCapa) -> None:
+    async with _uma_escrita_por_vez:
+        try:
+            async with AsyncSessionLocal() as db:
+                await db.merge(foto)
+                await db.commit()
+        except Exception as exc:  # noqa: BLE001 — falhar aqui não pode parar o robô
+            logger.warning(
+                "[ChatGPT] não gravei o andamento da capa %s de %s: %s",
+                foto.destino,
+                foto.alvo_id[:8],
+                exc,
+            )
+
+
+async def gravacoes_em_dia() -> None:
+    """Espera o banco alcançar a fila (quem lê o rastro logo depois de um passo)."""
+    while pendentes := [t for t in _gravacoes if not t.done()]:
+        await asyncio.gather(*pendentes, return_exceptions=True)
+    _gravacoes.clear()
+
+
+async def _ler_gravado(destino: Destino, alvo_id: str) -> PedidoDeCapa | None:
+    try:
+        async with AsyncSessionLocal() as db:
+            linha = await db.get(UltimoPedidoDeCapa, (destino, alvo_id))
+    except Exception as exc:  # noqa: BLE001 — sem rastro, a tela fica como antes
+        logger.warning("[ChatGPT] não li o pedido da capa %s de %s: %s", destino, alvo_id[:8], exc)
+        return None
+    if linha is None:
+        return None
+    pedido = PedidoDeCapa(
+        id=linha.pedido_id,
+        destino=destino,
+        alvo_id=alvo_id,
+        corte_id=linha.corte_id,
+        estado=cast(EstadoDoPedido, linha.estado),
+        etapa=linha.etapa,
+        erro=linha.erro,
+    )
+    if pedido.ativo:
+        pedido.estado, pedido.erro = "erro", MOTIVO_DO_REINICIO
+    return pedido
 
 
 async def enfileirar(
@@ -218,6 +306,7 @@ def cancelar(pedido_id: str) -> EstadoDoPedido | None:
 
 
 async def _atender(pedido: PedidoDeCapa) -> None:
+    _gravar(pedido)
     async with _vez:
         await _desenhar(pedido)
     if pedido.depois is not None:
@@ -231,8 +320,10 @@ async def _atender(pedido: PedidoDeCapa) -> None:
 
 async def _desenhar(pedido: PedidoDeCapa) -> None:
     if pedido.estado == "cancelado":
+        _gravar(pedido)
         return
     pedido.estado = "rodando"
+    _gravar(pedido)
 
     def anunciar(etapa: str) -> None:
         # Chega da thread do navegador; trocar um str é atômico sob o GIL.
@@ -245,6 +336,7 @@ async def _desenhar(pedido: PedidoDeCapa) -> None:
     except Exception as exc:  # noqa: BLE001 — o motivo vai para a Fila, não para o log só
         pedido.estado = "erro"
         pedido.erro = _motivo(exc)
+        _gravar(pedido)
         logger.warning(
             "[ChatGPT] capa %s de %s parou em '%s': %s",
             pedido.destino,
@@ -255,6 +347,7 @@ async def _desenhar(pedido: PedidoDeCapa) -> None:
         return
     pedido.estado = "concluido"
     pedido.etapa = ETAPA_PRONTA
+    _gravar(pedido)
     logger.info("[ChatGPT] capa %s de %s pronta", pedido.destino, pedido.alvo_id[:8])
 
 
@@ -303,6 +396,8 @@ async def _entregar(pedido: PedidoDeCapa, imagem: bytes, nome: str) -> None:
 
 def resetar() -> None:
     """Esvazia a fila e solta a vez (teste: cada `asyncio.run` é um loop novo)."""
-    global _vez
+    global _vez, _uma_escrita_por_vez
     _pedidos.clear()
     _vez = asyncio.Lock()
+    _uma_escrita_por_vez = asyncio.Lock()
+    _gravacoes.clear()
