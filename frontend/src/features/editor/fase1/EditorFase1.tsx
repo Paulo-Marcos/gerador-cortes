@@ -6,6 +6,7 @@ import { TimelinePanel } from './TimelinePanel';
 import { PainelComFaixaDoBruto } from './FaixaDoBruto';
 import { seloDoPlayer } from '../useBruto';
 import { RightTabsPanel } from './RightTabsPanel';
+import { useSomDoCorte } from './useSomDoCorte';
 import type { TrechosRiscados } from '../useTrechosRiscados';
 import { Icon } from '@/upgrade/Icon';
 import { trechosNoFoco } from '@/upgrade/modoFoco';
@@ -72,7 +73,7 @@ interface Props {
   audioPreviewSrc?: string;
   audioPreviewStartSec?: number;
   audioOffsetMs?: number;
-  onAudioOffsetChange?: (ms: number) => void;
+  onAudioOffsetChange: (ms: number) => void;
   onTimeUpdate: (t: number) => void;
   onSeek: (seg: number) => void;
   onChangeSpeed: (delta: number) => void;
@@ -162,6 +163,7 @@ export function EditorFase1({
   const statusBruto =
     (brutoStatus?.status as 'idle' | 'processando' | 'concluido' | 'erro') ?? 'idle';
   const [trechosRecolhidos, alternarTrechos, mostrarReabrir] = useTrechosRecolhidos();
+  const { som, noPlayer } = useSomDoCorte({ corteId: corte.id, audioPreviewSrc, audioPreviewStartSec, audioOffsetMs, onAudioOffsetChange });
 
   return (
     <div className="flex h-full min-w-0">
@@ -191,10 +193,7 @@ export function EditorFase1({
                 playbackRate={playbackRate}
                 smartPlay={smartPlay}
                 onTimeUpdate={onTimeUpdate}
-                audioPreviewSrc={audioPreviewSrc}
-                audioPreviewStartSec={audioPreviewStartSec}
-                audioOffsetMs={audioOffsetMs}
-                onAudioOffsetChange={onAudioOffsetChange}
+                {...noPlayer}
               />
             </Panel>
             <PanelResizeHandle className="h-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
@@ -274,6 +273,7 @@ export function EditorFase1({
               currentTime={currentTime}
               onAtualizarTranscricao={onAtualizarTranscricao}
               transcricaoAtualizando={!!pending.transcricao}
+              som={som}
             />
           </Panel>
         )}

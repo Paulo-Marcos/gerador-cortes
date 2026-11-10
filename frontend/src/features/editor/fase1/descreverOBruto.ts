@@ -29,7 +29,7 @@ function contarTrechos(desvios: Desvio[]): string {
 }
 
 /** O sinal como na Sincronia do áudio (AudioSyncControl): +40, 0, -40. */
-function formatarComSinal(ms: number): string {
+export function formatarComSinal(ms: number): string {
   return ms > 0 ? `+${ms}` : String(ms);
 }
 

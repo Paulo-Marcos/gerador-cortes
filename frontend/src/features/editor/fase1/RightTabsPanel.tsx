@@ -7,6 +7,7 @@ import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
 import { BlocosTab } from './BlocosTab';
 import { conteudoDaAbaDecisoes, useAcoesDasDecisoes } from './AbaDasDecisoes';
 import type { TrechosRiscados } from '../useTrechosRiscados';
+import type { SomDoCorte } from './useSomDoCorte';
 import { useCorte } from '@/features/editor/useCortes';
 import { useDiarizarCorte, useFalantes } from '@/features/diarizacao/useDiarizacao';
 import type { FalantesMap } from '@/features/diarizacao/api';
@@ -58,6 +59,8 @@ interface RightTabsPanelProps {
   transcricaoAtualizando: boolean;
   /** D-610 (casca nova): recolhe a coluna inteira — nem sempre se precisa dela. */
   onRecolher?: () => void;
+  /** D-1095: a pergunta 3 da aba Decisões, a sincronia do áudio. */
+  som?: SomDoCorte;
 }
 
 // D-447: a aba "Avaliação" mora aqui, e não numa tela nova, porque a
@@ -90,6 +93,7 @@ export function RightTabsPanel({
   onAtualizarTranscricao,
   transcricaoAtualizando,
   onRecolher,
+  som,
 }: RightTabsPanelProps) {
   const [tab, setTab] = useState<TabId>('decisoes');
 
@@ -146,6 +150,7 @@ export function RightTabsPanel({
           transcricao,
           corte: corteAtual,
           acoes,
+          som,
         })
       ) : (
         <TranscriptList

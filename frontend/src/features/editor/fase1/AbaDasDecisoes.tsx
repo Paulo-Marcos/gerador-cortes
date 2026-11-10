@@ -4,9 +4,11 @@ import type { Corte, Desvio, TranscricaoLinha } from '@/types/models';
 import type { TrechosRiscados } from '../useTrechosRiscados';
 import { DecisoesDoCorte, PerguntaDosDesvios } from './DecisoesDoCorte';
 import { PerguntaDoSilencio } from './PerguntaDoSilencio';
+import { PerguntaDoSom } from './PerguntaDoSom';
+import type { SomDoCorte } from './useSomDoCorte';
 import { TrechosList, usePendenciasDosTrechos, type TrechosListProps } from './TrechosList';
 
-// A aba Decisões do painel direito (D-1089, D-1093): as perguntas do corte, uma sob a
+// A aba Decisões do painel direito (D-1089, D-1093, D-1095): as perguntas do corte, uma sob a
 // outra. Saiu do RightTabsPanel, que estava no teto da catraca de função.
 
 interface EntradaDasAcoes {
@@ -56,6 +58,8 @@ interface ConteudoDaAbaDecisoesProps {
   transcricao?: TranscricaoLinha[];
   corte?: Pick<Corte, 'desvios_riscados' | 'trechos_da_ultima_rodada'>;
   acoes: AcoesDasDecisoes;
+  /** D-1095: sem ele (fora do editor) a pergunta do som não aparece. */
+  som?: SomDoCorte;
 }
 
 /**
@@ -69,6 +73,7 @@ export function conteudoDaAbaDecisoes({
   transcricao,
   corte,
   acoes,
+  som,
 }: ConteudoDaAbaDecisoesProps) {
   return (
     <DecisoesDoCorte>
@@ -102,7 +107,8 @@ export function conteudoDaAbaDecisoes({
           onVoltarABordaDaIa={acoes.voltarABordaDaIa}
         />
       </PerguntaDosDesvios>
-      {/* 3 · o som (D-1095) entra aqui, depois dos desvios. */}
+      {/* D-1095: 3 · o som, que só mexe no áudio. */}
+      {som ? <PerguntaDoSom som={som} /> : null}
     </DecisoesDoCorte>
   );
 }
