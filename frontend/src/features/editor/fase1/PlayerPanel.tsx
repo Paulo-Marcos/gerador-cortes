@@ -2,8 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { hmsParaSeg } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
-import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
-import { AudioSyncControl } from './AudioSyncControl';
+import { useLipSyncPreview, type EstadoLipSync } from '@/hooks/useLipSyncPreview';
 import { avisoDoTrechoEm } from './avisoDoTrecho';
 import { OuvirEmenda } from './OuvirEmenda';
 import type { Desvio } from '@/types/models';
@@ -88,9 +87,12 @@ interface Props {
   audioPreviewSrc?: string;
   /** Tempo de vídeo (s) correspondente ao início do proxy de áudio. */
   audioPreviewStartSec?: number;
-  /** Offset atual (ms). Quando `onAudioOffsetChange` é dado, mostra o controle. */
+  /** Offset atual (ms), aplicado ao áudio do preview. */
   audioOffsetMs?: number;
-  onAudioOffsetChange?: (ms: number) => void;
+  /** D-1095: o fone da pergunta do som (aba Decisões) liga o preview aqui. */
+  ouvirSincronia?: boolean;
+  /** Em que pé o preview está, para a pergunta do som mostrar. */
+  onEstadoDaSincronia?: (estado: EstadoLipSync) => void;
   /** Proporção do palco ('16/9' no bruto, '9/16' no short). */
   proporcao?: string;
   /** Selo do canto superior esquerdo: "BRUTO · 1080p", "FINAL · grade". */
@@ -112,7 +114,8 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     audioPreviewSrc,
     audioPreviewStartSec = 0,
     audioOffsetMs = 0,
-    onAudioOffsetChange,
+    ouvirSincronia = false,
+    onEstadoDaSincronia,
     proporcao = '16/9',
     selo,
     posicaoKey,
@@ -132,16 +135,17 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   const onTimeUpdateRef = useRef(onTimeUpdate);
   onTimeUpdateRef.current = onTimeUpdate;
 
-  const [previewSync, setPreviewSync] = useState(false);
-  // D-610 (casca nova): a sincronia se ajusta uma vez por vídeo, não por
-  // corte. Fica recolhida num botão e só vira faixa quando pedida.
-  const [sincroniaAberta, setSincroniaAberta] = useState(false);
+  // D-1095: a Sincronia do áudio virou a pergunta 3 da aba Decisões. Aqui fica
+  // só o preview, porque ele precisa deste <video>.
   const podePreview = !!audioPreviewSrc;
   const estadoPreview = useLipSyncPreview(videoRef, audioRef, {
-    enabled: previewSync && podePreview,
+    enabled: ouvirSincronia && podePreview,
     proxyStartSec: audioPreviewStartSec,
     offsetMs: audioOffsetMs,
   });
+  const onEstadoRef = useRef(onEstadoDaSincronia);
+  onEstadoRef.current = onEstadoDaSincronia;
+  useEffect(() => onEstadoRef.current?.(estadoPreview), [estadoPreview]);
 
   // D-409: ultimo segundo ja persistido, para nao escrever no localStorage a
   // cada `timeupdate` (o evento dispara ~4x/s).
@@ -352,39 +356,6 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           crossOrigin="anonymous"
           className="hidden"
         />
-      ) : null}
-
-      {onAudioOffsetChange ? (
-        sincroniaAberta ? (
-          <AudioSyncControl
-            offsetMs={audioOffsetMs}
-            onChange={onAudioOffsetChange}
-            previewEnabled={previewSync}
-            onTogglePreview={() => setPreviewSync((v) => !v)}
-            previewEstado={estadoPreview}
-            canPreview={podePreview}
-            // Fechar desliga o fone junto: vídeo mudo com o interruptor fora
-            // de vista foi exatamente a armadilha da D-601.
-            onClose={() => {
-              setSincroniaAberta(false);
-              setPreviewSync(false);
-            }}
-          />
-        ) : (
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            onClick={() => setSincroniaAberta(true)}
-            title="Ajustar a sincronia entre áudio e vídeo"
-            style={{ alignSelf: 'flex-start', color: 'var(--mute)' }}
-          >
-            <Icon name="volume-2" />
-            Sincronia do áudio
-            <span style={{ fontFamily: 'var(--mono)', color: audioOffsetMs ? 'var(--accent)' : 'var(--dim)' }}>
-              {audioOffsetMs > 0 ? `+${audioOffsetMs}` : audioOffsetMs} ms
-            </span>
-          </button>
-        )
       ) : null}
     </section>
   );

@@ -28,8 +28,8 @@ function contarTrechos(desvios: Desvio[]): string {
   return `${trechos} (${dentro} dentro de ${dentro === 1 ? 'outro' : 'outros'})`;
 }
 
-/** O sinal como na Sincronia do áudio (AudioSyncControl): +40, 0, -40. */
-function formatarComSinal(ms: number): string {
+/** O sinal da faixa O bruto vai ter e do cabeçalho da pergunta do som: +40, 0, -40. */
+export function formatarComSinal(ms: number): string {
   return ms > 0 ? `+${ms}` : String(ms);
 }
 
