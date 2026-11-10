@@ -3,6 +3,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import type { Corte, StatusBrutoResponse } from '@/types/models';
 import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
 import { TimelinePanel } from './TimelinePanel';
+import { PainelComFaixaDoBruto } from './FaixaDoBruto';
 import { seloDoPlayer } from '../useBruto';
 import { RightTabsPanel } from './RightTabsPanel';
 import type { TrechosRiscados } from '../useTrechosRiscados';
@@ -197,7 +198,7 @@ export function EditorFase1({
               />
             </Panel>
             <PanelResizeHandle className="h-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
-            <Panel defaultSize={35} minSize={15} order={2}>
+            <PainelComFaixaDoBruto defaultSize={35} minSize={15} order={2} corte={corte} audioOffsetMs={audioOffsetMs ?? 0}>
               <TimelinePanel
                 audioSrc={audioSrc}
                 waveformPeaksSrc={waveformPeaksSrc}
@@ -236,7 +237,7 @@ export function EditorFase1({
                 brutoPronto={brutoPronto}
                 brutoStatus={statusBruto}
               />
-            </Panel>
+            </PainelComFaixaDoBruto>
           </PanelGroup>
         </Panel>
 

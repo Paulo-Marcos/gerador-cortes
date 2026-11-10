@@ -106,3 +106,30 @@ export function segParaMmSs(seg: number, comDecimal = false): string {
   }
   return `${String(m).padStart(2, '0')}:${String(Math.floor(s)).padStart(2, '0')}`;
 }
+
+/** Quanto do bruto fica e quanto sai, em segundos inteiros. */
+export interface FicaESai {
+  brutoSeg: number;
+  ficaSeg: number;
+  saiSeg: number;
+}
+
+/**
+ * D-1090/D-1094: a conta do "fica" e do "sai", uma só para o resumo da etapa e
+ * a faixa "O bruto vai ter". A líquida já junta trecho dentro de outro (D-362).
+ * O fica corta a fração como o topo do editor ("líquido", segParaMmSs): a mesma
+ * tela não pode dar dois números. O sai fecha a conta com o bruto exibido, e
+ * trecho de menos de um segundo ainda aparece (0:01), em vez de sumir.
+ */
+export function medirFicaESai(
+  inicioSeg: number,
+  fimSeg: number,
+  desvios?: { inicio_hms: string; fim_hms: string }[],
+): FicaESai {
+  const fica = calcularDuracaoLiquida(inicioSeg, fimSeg, desvios ?? []);
+  const sai = fimSeg - inicioSeg - fica;
+  const brutoSeg = Math.floor(fimSeg - inicioSeg);
+  const ficaSeg = Math.floor(fica);
+  const saiSeg = sai > 0.05 ? Math.max(1, brutoSeg - ficaSeg) : 0;
+  return { brutoSeg, ficaSeg, saiSeg };
+}
