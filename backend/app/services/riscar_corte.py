@@ -97,7 +97,8 @@ async def trazer_de_volta(corte_id: str) -> CorteTrazidoDeVolta:
     e o bruto gerado de novo, sem pedir o clique (D-1088, RN-04).
 
     É a volta dos dois lugares: o Desfazer do aviso do editor e a seção Riscados
-    da lista de cortes (D-1092). O bruto só se gera se o riscar o soltou; a
+    da lista de cortes (D-1092). Não pede status: herda a etapa de antes (o PATCH
+    e o /aprovar, em `pedidos_de_status`, ficam com o status que pedem). O bruto só se gera se o riscar o soltou; a
     geração preserva as cenas já feitas (`bruto_do_corte.iniciar_geracao`, D-160).
     """
     async with AsyncSessionLocal() as db, db.begin():

@@ -8,7 +8,8 @@ riscar soltou precisa ser gerado de novo.
 
 Módulo à parte, sem gerar o bruto: `services/corte.py` o importa, e a geração
 (`bruto_do_corte` → `export`) alcança `corte` de volta, o que fecharia um ciclo de
-import (D-695). Quem gera é quem chama, depois do commit (ADR-0016).
+import (D-695). Quem gera é `pedidos_de_status` (PATCH, /aprovar) ou
+`riscar_corte.trazer_de_volta`, depois do commit (ADR-0016).
 """
 
 from __future__ import annotations
@@ -21,9 +22,11 @@ from app.services import proposta_apagada
 def voltar_se_riscado(corte: Corte, pedido: str) -> bool:
     """O PATCH e o /aprovar que tiram o corte do riscado passam pela volta única.
 
-    Chamar na transação do pedido, depois de validá-lo; o status pedido vale (o A
-    pede aprovado, o "Voltar" do Workspace pede proposto). Devolve se o bruto que o
-    riscar soltou precisa ser gerado. Corte que não está riscado não muda.
+    Chamar na transação do pedido, depois de validá-lo. O status pedido vale: o
+    "Voltar" do Workspace pede proposto e fica proposto; o A pede aprovado e fica
+    aprovado. Só o "Trazer de volta", que não pede status, herda a etapa de antes
+    (`desfazer_o_riscar`). Devolve se o bruto que o riscar soltou precisa ser
+    gerado. Corte que não está riscado não muda.
     """
     if getattr(corte.status, "value", corte.status) != ciclo_corte.REJEITADO:
         return False

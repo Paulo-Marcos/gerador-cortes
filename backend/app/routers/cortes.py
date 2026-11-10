@@ -46,7 +46,7 @@ from app.routers.resposta_api import (
     MensagemResponse,
     PromptEmPartesResponse,
 )
-from app.services import abrir_no_sistema, bruto_do_corte, remotion_studio, riscar_corte
+from app.services import abrir_no_sistema, bruto_do_corte, pedidos_de_status, remotion_studio
 from app.services import arranjo as arranjo_service
 from app.services.cenas_em_geracao import recusar_dividir_ou_juntar
 from app.services.cenas_remotion import CenasRemotionService
@@ -175,17 +175,17 @@ async def atualizar_corte(
 ):
     dados = AtualizarCorteDTO(**body.model_dump())
     try:
-        corte = await CorteService.atualizar(db, corte_id, dados)
+        corte = await pedidos_de_status.atualizar(db, corte_id, dados)
     except ValueError as e:
-        status = 404 if "não encontrado" in str(e) else 400
-        raise HTTPException(status_code=status, detail=str(e)) from e
-    await riscar_corte.gerar_o_bruto_se_solto(corte_id, corte.bruto_a_regerar)  # D-1088
+        msg = str(e)
+        status = 404 if "não encontrado" in msg else 400
+        raise HTTPException(status_code=status, detail=msg) from e
     return _corte_to_dict(corte)
 
 
 @router.post("/{corte_id}/aprovar", response_model=MensagemDoCorteResponse)
 async def aprovar_corte(corte_id: str):
-    await riscar_corte.gerar_o_bruto_se_solto(corte_id, await CorteService.aprovar(corte_id))
+    await pedidos_de_status.aprovar(corte_id)
     return {"message": "Corte aprovado", "corte_id": corte_id}
 
 

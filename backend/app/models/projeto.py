@@ -87,8 +87,8 @@ class Corte(Base):
     __tablename__ = "cortes"
     # D-1040: não é coluna. Vale na instância da requisição, para a resposta avisar a tela.
     sincronia_falhou = False
-    # D-1088: também não é coluna. O PATCH que tirou o corte do riscado diz ao router
-    # que o bruto solto se gera de novo (o service não alcança o bruto: D-695).
+    # D-1088: também não é coluna. O PATCH que tirou o corte do riscado diz que o bruto
+    # solto se gera de novo; quem gera é `pedidos_de_status` (o corte.py não alcança o bruto).
     bruto_a_regerar = False
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
