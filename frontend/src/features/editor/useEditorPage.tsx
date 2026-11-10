@@ -10,7 +10,7 @@ import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaud
 import { useToast } from '@/components/ui/toaster';
 import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { estaAprovado, statusAoAlternarVeredito } from '@/lib/statusDoCorte';
-import type { Corte, Desvio } from '@/types/models';
+import type { Corte } from '@/types/models';
 import { type PlayerHandle } from './fase1/PlayerPanel';
 import { MAX_MS, MIN_MS, STEP_FINO } from './fase1/AudioSyncControl';
 import {
@@ -419,10 +419,6 @@ export function useEditorPage() {
     editHistory.set(next);
   }
 
-  function onAdicionarDesvio(desvio: Desvio) {
-    adicionarDesvio.mutate(desvio);
-  }
-
   function onRemoverTrechoSelecionado() {
     const idx = selectedDesvioIdxRef.current;
     if (idx == null) return;
@@ -635,5 +631,5 @@ export function useEditorPage() {
 
   useShortcuts(bindings, !!corte);
 
-  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, irParaPos, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onAdicionarDesvio, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
+  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, irParaPos, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
 }
