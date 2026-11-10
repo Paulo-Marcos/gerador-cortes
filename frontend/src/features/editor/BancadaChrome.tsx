@@ -80,10 +80,9 @@ export type BancadaChromeProps = {
     onAtualizar: (patch: ReadingPatch) => void;
   };
   onAprovar: () => void;
-  /** Sem ele a barra não mostra Rejeitar. */
-  onRejeitar?: () => void;
-  /** D-746: excluir o corte de vez (a tela confirma antes). Fica no topo. */
-  onExcluir?: () => void;
+  /** D-1088: riscar o corte (R), sem diálogo. Sem ele a barra não o mostra.
+   *  `bloqueio` apaga o botão e diz por quê (corte já no YouTube). */
+  riscar?: { onRiscar: () => void; bloqueio?: string | null };
   onNovoTrecho?: () => void;
   /** D-746: a tela troca peças da barra padrão. A Pós e o editor usam para dizer
    *  a verdade: primário com o próximo passo, veredito à parte.
@@ -134,8 +133,7 @@ export function BancadaChrome({
   fireOcupado,
   leitura,
   onAprovar,
-  onRejeitar,
-  onExcluir,
+  riscar,
   onNovoTrecho,
   barra,
 }: BancadaChromeProps) {
@@ -191,8 +189,8 @@ export function BancadaChrome({
       sub,
       rotulos: [tituloLive, `#${corte.numero}`],
       // D-610: Fire e Salvar desceram para a barra de ações. D-870: o que
-      // sobrava no topo (gerar bruto, excluir) foi para o Mais.
-      acoes: acoesDoEditor({ brutoPronto, brutoOcupado, onGerarBruto, onExcluir }),
+      // sobrava no topo (gerar bruto) foi para o Mais.
+      acoes: acoesDoEditor({ brutoPronto, brutoOcupado, onGerarBruto }),
       estado: estadoDoSalvar(salvando, sujo),
       lista: {
         cabecalho: { titulo: tituloLive, sub: `${cortes.length} cortes · ${prontos} prontos`, thumb: capaDaLive },
@@ -250,7 +248,7 @@ export function BancadaChrome({
               ]
             : []),
         ],
-        secundario: onRejeitar ? { texto: 'Rejeitar', icone: 'x', onClick: onRejeitar } : undefined,
+        secundario: botaoDeRiscar(riscar),
         terciario: onSalvar
           ? {
               titulo: sujo ? 'Salvar (Ctrl+S) — há mudanças' : 'Salvar (Ctrl+S)',
@@ -287,6 +285,7 @@ export function BancadaChrome({
       barra?.primario?.motivo,
       barra?.veredito?.aprovado,
       barra?.veredito?.ocupado,
+      riscar?.bloqueio,
     ],
   );
 
@@ -320,6 +319,20 @@ export function BancadaChrome({
       ) : null}
     </>
   );
+}
+
+/** D-1088: o "Riscar corte" da barra, ao lado do Aprovar. Sem diálogo: o
+ *  riscado guarda a proposta e o trabalho. Apagado, diz por quê. */
+function botaoDeRiscar(riscar: BancadaChromeProps['riscar']): ChromeBarra['secundario'] {
+  if (!riscar) return undefined;
+  return {
+    texto: 'Riscar corte',
+    icone: 'x',
+    tecla: 'R',
+    desabilitado: Boolean(riscar.bloqueio),
+    titulo: riscar.bloqueio ?? 'Riscar corte (R): guarda a proposta e o trabalho, e solta a mídia',
+    onClick: riscar.onRiscar,
+  };
 }
 
 /** O chip de estado da barra superior é o que responde "perdi alguma coisa?"

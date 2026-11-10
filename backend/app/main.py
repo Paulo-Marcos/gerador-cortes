@@ -25,6 +25,7 @@ from app.routers import (
     capa_tiktok_estilo,
     channels,
     claude_ia,
+    corte_riscado,
     cortes,
     diarizacao,
     editorial_skills,
@@ -141,6 +142,7 @@ app.include_router(projetos.router, prefix="/api/projetos", tags=["Projetos"])
 app.include_router(cortes.router, prefix="/api/cortes", tags=["Cortes"])
 app.include_router(origem_das_cenas.router, prefix="/api/cortes", tags=["Cortes"])
 app.include_router(riscados.router, prefix="/api/cortes", tags=["Cortes"])
+app.include_router(corte_riscado.router, prefix="/api/cortes", tags=["Cortes"])
 app.include_router(
     alertas_conferir.router, prefix="/api/alertas-conferir", tags=["Alertas para conferir"]
 )

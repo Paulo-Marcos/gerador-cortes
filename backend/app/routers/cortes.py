@@ -46,7 +46,7 @@ from app.routers.resposta_api import (
     MensagemResponse,
     PromptEmPartesResponse,
 )
-from app.services import abrir_no_sistema, bruto_do_corte, remotion_studio
+from app.services import abrir_no_sistema, bruto_do_corte, pedidos_de_status, remotion_studio
 from app.services import arranjo as arranjo_service
 from app.services.cenas_em_geracao import recusar_dividir_ou_juntar
 from app.services.cenas_remotion import CenasRemotionService
@@ -175,7 +175,7 @@ async def atualizar_corte(
 ):
     dados = AtualizarCorteDTO(**body.model_dump())
     try:
-        corte = await CorteService.atualizar(db, corte_id, dados)
+        corte = await pedidos_de_status.atualizar(db, corte_id, dados)
     except ValueError as e:
         msg = str(e)
         status = 404 if "não encontrado" in msg else 400
@@ -185,7 +185,7 @@ async def atualizar_corte(
 
 @router.post("/{corte_id}/aprovar", response_model=MensagemDoCorteResponse)
 async def aprovar_corte(corte_id: str):
-    await CorteService.aprovar(corte_id)
+    await pedidos_de_status.aprovar(corte_id)
     return {"message": "Corte aprovado", "corte_id": corte_id}
 
 

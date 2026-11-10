@@ -125,6 +125,19 @@ function EstadoDoCorte({ barra }: { barra: ChromeBarra }) {
   );
 }
 
+/** D-1088: a dica, a tecla e o apagado do botão secundário (Riscar corte).
+ *  `aria-disabled`, e não `disabled`: o botão desabilitado engole o passar do
+ *  mouse, e a dica é o que explica por que não dá. */
+function atributosDoSecundario(botao: NonNullable<ChromeBarra['secundario']>) {
+  return {
+    style: { color: 'var(--mute)', opacity: botao.desabilitado ? 0.5 : undefined },
+    title: botao.titulo,
+    'aria-disabled': botao.desabilitado || undefined,
+    'aria-keyshortcuts': botao.tecla,
+    onClick: botao.desabilitado ? undefined : botao.onClick,
+  };
+}
+
 export function ActionBar({ barra }: { barra: ChromeBarra }) {
   return (
     <div
@@ -203,11 +216,11 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
           type="button"
           className="btn"
           data-decisao
-          style={{ color: 'var(--mute)' }}
-          onClick={barra.secundario.onClick}
+          {...atributosDoSecundario(barra.secundario)}
         >
           <Icon name={barra.secundario.icone} />
           {barra.secundario.texto}
+          {barra.secundario.tecla ? <kbd>{barra.secundario.tecla}</kbd> : null}
         </button>
       ) : null}
 

@@ -61,12 +61,12 @@ describe('shortcutsRegistry', () => {
     expect(posShortcuts.some((s) => s.id === 'pos.save')).toBe(true);
   });
 
-  // D-842: A alterna (aprova / devolve a proposto) e R exclui com confirmação.
+  // D-842: A alterna (aprova / devolve a proposto). D-1088: R risca, sem diálogo.
   // O id `bruto.rejeitar` fica: é a chave do overlay gravado no navegador.
-  it('descreve A como alternar e R como excluir com confirmação', () => {
+  it('descreve A como alternar e R como riscar', () => {
     const descricao = (id: string) => SHORTCUTS_REGISTRY.find((s) => s.id === id)?.description;
     expect(descricao('bruto.aprovar')).toBe('Aprovar / devolver a proposto');
-    expect(descricao('bruto.rejeitar')).toBe('Excluir corte (pede confirmação)');
+    expect(descricao('bruto.rejeitar')).toBe('Riscar corte');
   });
 
   // D-886: W abre o porquê da IA em toda tela de um corte, sem modificador.

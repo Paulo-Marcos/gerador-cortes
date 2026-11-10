@@ -1851,6 +1851,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cortes/{corte_id}/riscar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Riscar
+         * @description Risca o corte: fica no banco como rejeitado, com a mídia solta como no Limpar.
+         */
+        post: operations["riscar_api_cortes__corte_id__riscar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cortes/{corte_id}/segmentos-detectados/{indice}": {
         parameters: {
             query?: never;
@@ -1912,6 +1932,27 @@ export interface paths {
          * @description Força o recálculo da transcrição final (limpa) com base nos cortes atuais.
          */
         post: operations["sincronizar_transcricao_api_cortes__corte_id__sincronizar_transcricao_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cortes/{corte_id}/trazer-de-volta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trazer De Volta
+         * @description Traz o corte riscado de volta e gera o bruto de novo. É a volta do Desfazer do
+         *     aviso do editor e da seção Riscados (D-1092): as duas telas chamam esta rota.
+         */
+        post: operations["trazer_de_volta_api_cortes__corte_id__trazer_de_volta_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6564,6 +6605,28 @@ export interface components {
              */
             youtube_video_id: string;
         };
+        /** CorteRiscadoResponse */
+        CorteRiscadoResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Liberado Mb */
+            liberado_mb: number;
+            /** Nao Removidos */
+            nao_removidos: string[];
+            /** Retido Mb */
+            retido_mb: number;
+            /** Status Anterior */
+            status_anterior: string;
+        };
+        /** CorteTrazidoDeVoltaResponse */
+        CorteTrazidoDeVoltaResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Gerando Bruto */
+            gerando_bruto: boolean;
+            /** Status */
+            status: string;
+        };
         /** CriarCanalRequest */
         CriarCanalRequest: {
             /** Credito */
@@ -9490,6 +9553,11 @@ export interface components {
         ReverterSkillRequest: {
             /** Versao */
             versao: number;
+        };
+        /** RiscarCorteRequest */
+        RiscarCorteRequest: {
+            /** Motivo */
+            motivo?: string | null;
         };
         /** RoboDoStudio */
         RoboDoStudio: {
@@ -14090,6 +14158,41 @@ export interface operations {
             };
         };
     };
+    riscar_api_cortes__corte_id__riscar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RiscarCorteRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteRiscadoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     decidir_segmento_api_cortes__corte_id__segmentos_detectados__indice__patch: {
         parameters: {
             query?: never;
@@ -14175,6 +14278,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CorteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trazer_de_volta_api_cortes__corte_id__trazer_de_volta_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                corte_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorteTrazidoDeVoltaResponse"];
                 };
             };
             /** @description Validation Error */

@@ -23,11 +23,14 @@ STATUS_DO_CORTE = frozenset({PROPOSTO, APROVADO, REJEITADO, PROCESSADO})
 #   proposto   -> aprovado   aprovar (editor, Revisão Final)
 #   aprovado   -> proposto   o botão de aprovar é liga/desliga
 #   processado -> proposto   desaprovar um corte que já foi renderizado
-#   rejeitado  -> proposto   "Voltar". Rejeitado é legado: hoje "Rejeitar"
-#                            EXCLUI o corte, e nada mais grava esse status.
+#   rejeitado  -> proposto   "Voltar" um corte riscado.
 #   rejeitado  -> aprovado   o botão de aprovar manda "aprovado" para tudo que
-#                            não está aprovado/processado — um rejeitado antigo
-#                            aberto no editor é aprovado direto.
+#                            não está aprovado/processado — um riscado aberto
+#                            no editor é aprovado direto.
+#
+# Levar A `rejeitado` não passa por esta tabela: é o gesto "riscar o corte"
+# (`validar_riscar`, D-1088), que também solta a mídia. Um PATCH que gravasse
+# o status deixaria a mídia pesada no disco de um corte que ninguém vai usar.
 _PELO_OPERADOR: dict[str, frozenset[str]] = {
     PROPOSTO: frozenset({APROVADO}),
     APROVADO: frozenset({PROPOSTO}),
@@ -49,10 +52,16 @@ _PELO_SISTEMA: dict[str, frozenset[str]] = {
 # terminada zerava — o corte saía da conta justamente por ter acabado.
 #
 # `proposto` fica fora porque ainda espera curadoria; `rejeitado` fica fora
-# porque é legado (hoje "Rejeitar" exclui o corte, e nada mais grava o status).
+# porque é o corte riscado (D-1088): o operador o tirou da live.
 #
 # Tupla, e não frozenset, para o `IN` do SQL sair sempre na mesma ordem.
 CONTAM_NA_PUBLICACAO: tuple[str, ...] = (APROVADO, PROCESSADO)
+
+
+# D-1088: riscar o corte é o "Rejeitar" de agora. Antes ele excluía o corte, e
+# a proposta da IA e o trabalho do operador iam junto; riscado, o corte fica,
+# com a mídia solta como no Limpar. Vale de qualquer etapa do operador.
+RISCAVEIS = frozenset({PROPOSTO, APROVADO, PROCESSADO})
 
 
 class TransicaoDeCorteInvalida(PedidoInvalido, ValueError):
@@ -60,6 +69,14 @@ class TransicaoDeCorteInvalida(PedidoInvalido, ValueError):
 
     É `PedidoInvalido` (o tratador global responde 400) e continua `ValueError`,
     para quem já a tratava assim (D-705).
+    """
+
+
+class CorteNoYouTube(PedidoInvalido):
+    """Riscar um corte que já subiu ao YouTube (D-1088).
+
+    O vídeo no ar continua contando como entregue (`CONTAM_NA_PUBLICACAO`); riscar
+    o tiraria da conta e soltaria a mídia de um corte publicado.
     """
 
 
@@ -76,6 +93,30 @@ def validar_pedido_do_operador(atual: str, novo: str) -> None:
         return
     if novo not in _PELO_OPERADOR.get(atual, frozenset()):
         raise TransicaoDeCorteInvalida(f"Um corte '{atual}' não pode passar para '{novo}'.")
+
+
+def validar_riscar(atual: str, *, no_youtube: bool) -> None:
+    """Levanta erro se o operador não pode riscar este corte (D-1088, RN-04).
+
+    Riscar de novo um corte já riscado é permitido, como repetir um clique.
+    """
+    if no_youtube:
+        raise CorteNoYouTube("Já está no YouTube: um corte publicado não se risca.")
+    if atual != REJEITADO and atual not in RISCAVEIS:
+        raise TransicaoDeCorteInvalida(f"Um corte '{atual}' não pode ser riscado.")
+
+
+def status_ao_trazer_de_volta(atual: str, anterior: str) -> str:
+    """O status que o "Trazer de volta" devolve ao corte riscado (D-1088, RN-04).
+
+    Volta a aprovado o corte que era aprovado ou processado: riscar soltou o vídeo
+    final, e sem ele o processado é um aprovado que precisa renderizar de novo.
+    Qualquer outro (proposto, ou riscado antes de o app guardar a etapa) volta a
+    proposto, para a curadoria.
+    """
+    if atual != REJEITADO:
+        raise TransicaoDeCorteInvalida("O corte não está riscado.")
+    return APROVADO if anterior in (APROVADO, PROCESSADO) else PROPOSTO
 
 
 def sistema_pode_marcar(atual: str, novo: str) -> bool:

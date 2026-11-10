@@ -60,6 +60,21 @@ export const cortesApi = {
       }),
     ),
 
+  // D-1088: riscar fica no lugar do excluir. O corte continua no banco como
+  // rejeitado e a mídia sai; riscar de novo com o motivo é como o chip o grava.
+  riscarCorte: (corteId: string, motivos?: readonly string[]) =>
+    dados(
+      api.POST('/api/cortes/{corte_id}/riscar', {
+        ...doCorte(corteId),
+        body: { motivo: motivos?.length ? motivos.join('|') : null },
+      }),
+    ),
+
+  // A volta do riscado: a etapa de antes e o bruto gerado de novo pelo app. O
+  // Desfazer do aviso e a seção Riscados (D-1092) chamam esta mesma rota.
+  trazerDeVolta: (corteId: string) =>
+    dados(api.POST('/api/cortes/{corte_id}/trazer-de-volta', doCorte(corteId))),
+
   abrirPastaCorte: (corteId: string) =>
     dados(api.POST('/api/cortes/{corte_id}/abrir-pasta', doCorte(corteId))),
 

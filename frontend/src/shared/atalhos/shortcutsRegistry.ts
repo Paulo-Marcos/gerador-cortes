@@ -386,8 +386,8 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     id: 'bruto.rejeitar',
     screen: 'bruto',
     key: 'r',
-    // D-842: exclui com confirmação (o A alterna); o id fica pelo overlay gravado.
-    description: 'Excluir corte (pede confirmação)',
+    // D-1088: risca sem diálogo (o A alterna); o id fica pelo overlay gravado.
+    description: 'Riscar corte',
     group: 'edicao',
   },
   ...ATALHOS_DAS_MARCAS_DO_CORTE,

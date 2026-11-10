@@ -222,6 +222,38 @@ class MediaRetentionService:
         return report
 
     @classmethod
+    def limpar_corte(cls, corte: Corte) -> RetentionReport:
+        """A limpeza terminal de UM corte: o que o Limpar faria nele (D-1088).
+
+        Riscar o corte solta a mídia dele com a mesma regra de `limpar_projeto`:
+        sai toda mídia pesada e o scratch da pasta do corte; ficam metadados,
+        legendas, capas e logs. O Fire com shorts pendentes guarda o que ainda vai
+        publicar (RN-15). Só a pasta do corte: a live e os outros cortes ficam.
+        """
+        report = RetentionReport()
+        if not corte.id or not corte.projeto_id:
+            report.erros.append("corte sem id: limpeza abortada")
+            return report
+
+        corte_dir = cls.corte_dir(corte)
+        if not corte_dir.is_dir():
+            return report
+
+        protegidos = cls._midia_de_fire_pendente([corte])
+        for padrao in ("tmp_rerender_*", "versoes"):
+            for scratch in corte_dir.glob(padrao):
+                if scratch.is_dir():
+                    cls._remover_diretorio(scratch, report)
+        for arquivo in cls._midia_pesada(corte_dir, protegidos):
+            cls._remover_arquivo(arquivo, report)
+
+        cls._registrar_preservados(protegidos, report)
+        if not cls._arquivo_clip_existente(corte):
+            corte.arquivo_clip_path = ""
+        cls._registrar_residuo(corte_dir, report, protegidos)
+        return report
+
+    @classmethod
     def descartar_bruto(cls, corte: Corte) -> RetentionReport:
         """Remove o `clip_raw*` de UM corte, a pedido explicito do operador (D-460).
 

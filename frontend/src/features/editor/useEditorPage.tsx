@@ -3,8 +3,7 @@ import { useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useContextoCorte, useVelocidadePlayerPadrao } from '@/features/settings';
-import { useMotivosVisiveis } from '@/features/channels/useMotivosDeExclusao';
-import { corteKey, useAdicionarDesvio, useAtualizarCorte, useCorte, useCortesProjeto, useDeletarCorte, useDividirCorte, useJuntarCortes, useSincronizarTranscricao, useToggleFire, useToggleLeitura } from '@/features/editor/useCortes';
+import { corteKey, useAdicionarDesvio, useAtualizarCorte, useCorte, useCortesProjeto, useDividirCorte, useJuntarCortes, useSincronizarTranscricao, useToggleFire, useToggleLeitura } from '@/features/editor/useCortes';
 import { avisarSeBrutoOcupado, useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaude, useTrechosClaudeEmAndamento } from '@/features/editor/useGeracoesDaIa';
 import { useToast } from '@/components/ui/toaster';
@@ -18,7 +17,8 @@ import {
   planejarRegeracaoBruto,
   type RegerarBrutoOpcoes,
 } from './regerarBrutoPlan';
-import { confirmacaoExcluirCorte, confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
+import { confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
+import { useRiscarCorte } from './useRiscarCorte';
 import { useShortcuts, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
@@ -548,37 +548,13 @@ export function useEditorPage() {
     atualizarCorte.mutate({ status: statusAoAlternarVeredito(corteUI.status) });
   }
 
-  const deletarCorte = useDeletarCorte(corteId, projetoId);
-  const motivosDoCanal = useMotivosVisiveis(); // D-1006: os chips do excluir
-  // D-842: R exclui, e o A alterna aprovado ↔ proposto. Na D-746 o R só
-  // devolvia a proposto — o mesmo que o A já fazia. Excluir é irreversível,
-  // então a tecla sozinha nunca basta: o diálogo do shell (não o confirm do
-  // navegador, que um Enter atravessava) é quem decide.
-  function excluirCorte() {
-    if (!corteUI) return;
-    confirmacao.executarOuPedir(
-      confirmacaoExcluirCorte(corteUI.numero, corteUI.titulo_proposto, corteUI.origem_analise, motivosDoCanal),
-      excluirConfirmado,
-    );
-  }
-
-  function excluirConfirmado(motivos?: readonly string[]) {
-    deletarCorte.mutate(motivos, {
-      onSuccess: () => {
-        // D-883: o ajuste morre com o corte — a saída o salvaria no excluído (404).
-        editHistory.reset({});
-        if (cortes.length > 1) {
-          const index = cortes.findIndex((item) => item.id === corteId);
-          const next = (index + 1) % cortes.length;
-          if (cortes[next].id !== corteId) {
-            navigate(rawEditorPath(projetoId, cortes[next].id));
-            return;
-          }
-        }
-        navigate(`/projetos/${projetoId}`);
-      },
-    });
-  }
+  // D-1088: R risca o corte direto, sem diálogo, e segue para o próximo; o
+  // aviso oferece o motivo e o Desfazer. Antes excluía (D-842), e a proposta
+  // da IA e o trabalho do operador iam junto com o corte.
+  const riscar = useRiscarCorte(corte, cortes, projetoId, (next) => {
+    if (next < 0) navigate(`/projetos/${projetoId}`);
+    else navigate(rawEditorPath(projetoId, cortes[next].id));
+  });
 
   // D-394: bindings vêm do registro central (ids bruto.*) — assim TODA
   // funcionalidade do editor pode ter o atalho reatribuído pelo usuário
@@ -602,7 +578,7 @@ export function useEditorPage() {
       'bruto.inAqui': setInicioAtual,
       'bruto.outAqui': setFimAtual,
       'bruto.aprovar': toggleAprovado,
-      'bruto.rejeitar': excluirCorte,
+      'bruto.rejeitar': riscar.riscarCorte,
       'bruto.fire': () => toggleFire.mutate(),
       'bruto.leitura': () => corte && toggleLeitura.mutate(corte),
       'bruto.travarTrecho': () => setTrechoLocked((v) => !v),
@@ -631,5 +607,5 @@ export function useEditorPage() {
 
   useShortcuts(bindings, !!corte);
 
-  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, excluirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, irParaPos, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
+  return { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, irParaPos, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, riscar, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef };
 }
