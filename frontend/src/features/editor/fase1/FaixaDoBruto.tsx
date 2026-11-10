@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Panel, type PanelProps } from 'react-resizable-panels';
 import type { Desvio } from '@/types/models';
-import { oQueOBrutoTem } from './oQueOBrutoTem';
+import { descreverOBruto } from './descreverOBruto';
 
 // D-1094 (E4 da D-1082): abaixo da linha do tempo, o que o bruto vai ter quando
 // for gerado: quanto fica, quanto sai e a sincronia do áudio. Só leitura: a
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function FaixaDoBruto({ corte, audioOffsetMs }: Props) {
-  const { fica, bruto, sai, sincronia } = oQueOBrutoTem(corte, audioOffsetMs);
+  const { fica, bruto, sai, sincronia } = descreverOBruto(corte, audioOffsetMs);
   return (
     <section
       aria-label="O bruto vai ter"

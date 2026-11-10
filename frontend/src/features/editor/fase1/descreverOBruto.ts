@@ -9,7 +9,7 @@ import { classificarTrechos } from './origemDaBorda';
 // D-1090) e o "dentro de outro" é a classe da linha do tempo (classificarTrechos,
 // D-1091). Assim a faixa, a trilha e a onda nunca dão números diferentes.
 
-export interface OQueOBrutoTem {
+export interface DescricaoDoBruto {
   /** "17:43" */
   fica: string;
   /** "20:11" */
@@ -29,20 +29,20 @@ function contarTrechos(desvios: Desvio[]): string {
 }
 
 /** O sinal como na Sincronia do áudio (AudioSyncControl): +40, 0, -40. */
-function comSinal(ms: number): string {
+function formatarComSinal(ms: number): string {
   return ms > 0 ? `+${ms}` : String(ms);
 }
 
-export function oQueOBrutoTem(
+export function descreverOBruto(
   corte: { inicio_seg: number; fim_seg: number; desvios?: Desvio[] | null },
   audioOffsetMs: number,
-): OQueOBrutoTem {
+): DescricaoDoBruto {
   const desvios = corte.desvios ?? [];
   const { brutoSeg, ficaSeg, saiSeg } = medirFicaESai(corte.inicio_seg, corte.fim_seg, desvios);
   return {
     fica: formatarDuracao(ficaSeg),
     bruto: formatarDuracao(brutoSeg),
     sai: saiSeg > 0 ? `sai ${formatarDuracao(saiSeg)} em ${contarTrechos(desvios)}` : 'nada sai',
-    sincronia: `sincronia do áudio ${comSinal(audioOffsetMs)} ms`,
+    sincronia: `sincronia do áudio ${formatarComSinal(audioOffsetMs)} ms`,
   };
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Desvio } from '@/types/models';
 import { resumirCorte } from '@/upgrade/trilhaDaLive';
 import { classificarTrechos } from '../origemDaBorda';
-import { oQueOBrutoTem } from '../oQueOBrutoTem';
+import { descreverOBruto } from '../descreverOBruto';
 
 // D-1094 (E4 da D-1082): a faixa "O bruto vai ter" — fica, sai e sincronia.
 
@@ -16,7 +16,7 @@ const DO_BOARD: Desvio[] = [
 ];
 
 const faixa = (inicio_seg: number, fim_seg: number, desvios: Desvio[], ms = 0) =>
-  oQueOBrutoTem({ inicio_seg, fim_seg, desvios }, ms);
+  descreverOBruto({ inicio_seg, fim_seg, desvios }, ms);
 
 describe('D-1094 · o que o bruto vai ter', () => {
   it('o exemplo do board: fica 17:43 de 20:11 e sai 2:28 em 3 trechos (1 dentro de outro)', () => {
