@@ -1407,7 +1407,7 @@ class CorteService:
         import re
 
         async with AsyncSessionLocal() as db:
-            corte = await db.get(Corte, corte_id)
+            corte = await db.get_one(Corte, corte_id)  # sem o corte, NoResultFound
             projeto = await db.get(Projeto, corte.projeto_id)
 
             from app.core.channel_paths import resolver_do_projeto

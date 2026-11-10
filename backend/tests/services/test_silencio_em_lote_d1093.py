@@ -212,6 +212,15 @@ async def test_rota_de_corte_que_nao_existe_e_404(cliente):
     assert cliente.post("/api/cortes/nao-existe/tirar-silencios").status_code == 404
 
 
+@pytest.mark.asyncio
+async def test_a_deteccao_de_corte_que_nao_existe_falha_logo(fabrica, ffmpeg_fixo):
+    """O corte lido é garantido (o riscado é lido dele): sem corte, NoResultFound."""
+    from sqlalchemy.exc import NoResultFound
+
+    with pytest.raises(NoResultFound):
+        await CorteService.detectar_silencios_tecnico("nao-existe", limpar_anteriores=True)
+
+
 # ── domínio ──
 
 
