@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MOTIVOS_APAGADO } from '../motivoApagado';
-import { confirmacaoExcluirCorte } from '../regeracaoConfirmacao';
 
 // D-993: o motivo de apagar uma proposta da IA, do lado da tela.
 
@@ -17,19 +16,6 @@ describe('acordo com o domínio do backend', () => {
       ([, slug, rotulo]) => ({ slug, rotulo }),
     );
     expect(noBackend).toEqual(MOTIVOS_APAGADO);
-  });
-});
-
-describe('confirmacaoExcluirCorte · motivo (D-993)', () => {
-  it('a proposta da IA oferece os motivos, sem obrigar', () => {
-    const pedido = confirmacaoExcluirCorte(7, 'O dia em que', 'claude');
-    expect(pedido.escolha?.opcoes).toEqual(MOTIVOS_APAGADO);
-    expect(pedido.escolha?.pergunta).toContain('opcional');
-  });
-
-  it('o corte criado na mão não pergunta motivo', () => {
-    expect(confirmacaoExcluirCorte(7, 'O dia em que', null).escolha).toBeUndefined();
-    expect(confirmacaoExcluirCorte(7, 'O dia em que').escolha).toBeUndefined();
   });
 });
 

@@ -1,14 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { confirmacaoExcluirCorte } from '@/features/editor/regeracaoConfirmacao';
 import { MudancasPorOrigem } from '@/features/analises/MudancasPorOrigem';
 import { MotivosDeExclusaoSection } from '../MotivosDeExclusaoSection';
-import { CHAVE_MOTIVOS_DE_EXCLUSAO, motivosVisiveis } from '../useMotivosDeExclusao';
+import { CHAVE_MOTIVOS_DE_EXCLUSAO } from '../useMotivosDeExclusao';
 
 /**
  * D-1006. Os motivos de excluir são do canal: a tela de Canais acrescenta e
- * esconde; o diálogo de excluir oferece só os visíveis; as análises nomeiam
+ * esconde; o aviso do corte riscado oferece só os visíveis (D-1096, em
+ * `riscarNaLinha.d1096` e `useRiscarCorte.d1088`); as análises nomeiam
  * todos, inclusive o escondido.
  */
 const LISTA = {
@@ -44,21 +44,6 @@ describe('a seção de motivos na tela de Canais', () => {
     expect(html).toContain('aria-label="Mostrar o motivo Repete outro corte"');
     expect(html).toMatch(/line-through[^>]*>Repete outro corte/);
     expect(html).toContain('aria-label="Nome do motivo novo"');
-  });
-});
-
-describe('o diálogo de excluir usa os motivos do canal', () => {
-  it('só os visíveis viram chip, na ordem do canal', () => {
-    const pedido = confirmacaoExcluirCorte(7, 'O dia', 'claude', motivosVisiveis(LISTA));
-
-    expect(pedido.escolha?.opcoes).toEqual([
-      { slug: 'tema_fraco', rotulo: 'Tema não rende' },
-      { slug: 'polemico', rotulo: 'Polêmico' },
-    ]);
-  });
-
-  it('canal que escondeu todos não pergunta', () => {
-    expect(confirmacaoExcluirCorte(7, 'O dia', 'claude', []).escolha).toBeUndefined();
   });
 });
 

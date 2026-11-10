@@ -19,6 +19,8 @@ const DURACAO_DO_AVISO_MS = 10_000;
  * O Desfazer é o "Trazer de volta": devolve a etapa e o app regera o bruto.
  * As ações do aviso chamam a API sem hook: quando o operador clica, o editor
  * já é o do corte seguinte.
+ * D-1096: a linha do Workspace usa o mesmo hook. Lá o Desfazer não leva ao
+ * editor: o corte volta na própria lista, e `aoDesfazer` diz o que fazer.
  */
 export function useRiscarCorte(
   corte: Corte | undefined,
@@ -26,6 +28,8 @@ export function useRiscarCorte(
   projetoId: string,
   /** Para onde a tela segue: o índice do próximo corte em `cortes`, ou -1 se não sobra nenhum. */
   seguir: (proximo: number) => void,
+  /** Depois do Desfazer; sem ele, abre o corte de volta no editor. */
+  aoDesfazer?: (alvo: Corte) => void,
 ) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -41,7 +45,8 @@ export function useRiscarCorte(
       try {
         await cortesApi.trazerDeVolta(alvo.id);
         atualizar();
-        navigate(rawEditorPath(projetoId, alvo.id));
+        if (aoDesfazer) aoDesfazer(alvo);
+        else navigate(rawEditorPath(projetoId, alvo.id));
       } catch (erro) {
         notify(mensagemErro(erro, 'Não deu para desfazer.'), { tone: 'error' });
       }

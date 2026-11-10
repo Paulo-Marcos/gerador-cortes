@@ -38,14 +38,14 @@ export function mesclarCortesComExport(
   });
 }
 
-export type AcaoDaTecla = 'aprovar' | 'devolver' | 'excluir' | 'descer' | 'subir' | 'explicar';
+export type AcaoDaTecla = 'aprovar' | 'devolver' | 'riscar' | 'descer' | 'subir' | 'explicar';
 
 /**
  * A triagem pelo teclado na linha focada do Workspace (D-746, D-842).
  *
- * A alterna: aprova o proposto e devolve a proposto o aprovado. R exclui o
- * corte de vez — quem chama pede confirmação antes, porque é a confirmação,
- * e não a tecla, que impede o irreversível num toque só. J/K andam entre as
+ * A alterna: aprova o proposto e devolve a proposto o aprovado. R risca o
+ * corte, sem diálogo (D-1096): o riscado guarda a proposta e o trabalho, e
+ * o aviso traz o Desfazer. J/K andam entre as
  * linhas. W abre o porquê da IA e a nota dela (D-886). Sem corte carregado
  * (`status` indefinido), só a navegação vale.
  */
@@ -64,7 +64,7 @@ export function acaoDaTeclaNaLinha(
       if (status && estaAprovado(status)) return 'devolver';
       return null;
     case 'r':
-      return status ? 'excluir' : null;
+      return status ? 'riscar' : null;
     case 'w':
       return status ? 'explicar' : null;
     default:
@@ -172,4 +172,16 @@ export function semFiltroNoAr(parametros: URLSearchParams): URLSearchParams {
   const resto = new URLSearchParams(parametros);
   resto.delete('filtro');
   return resto;
+}
+
+/**
+ * D-1096: "Refazer transcrição" re-sincroniza os riscados também, para o corte
+ * trazido de volta ter a legenda nova ("Gerar pula, Refazer inclui"). A conta do
+ * diálogo diz os cortes que ficam; os riscados aparecem à parte.
+ */
+export function descricaoDoRefazerTranscricao(cortes: readonly Pick<Corte, 'status'>[]): string {
+  const ficam = cortes.filter((c) => c.status !== 'rejeitado').length;
+  const sincronizados = ficam === 1 ? 'o corte é re-sincronizado' : `os ${ficam} cortes são re-sincronizados`;
+  const eOsRiscados = ficam < cortes.length ? ' Os riscados também, para voltarem com a legenda nova.' : '';
+  return `As legendas são baixadas de novo e ${sincronizados} com elas.${eOsRiscados}`;
 }

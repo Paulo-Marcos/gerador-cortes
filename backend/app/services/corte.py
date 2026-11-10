@@ -732,16 +732,15 @@ class CorteService:
 
     @staticmethod
     async def analisar_desvios_todos_impl(projeto_id: str, provider: str = "claude"):
-        import asyncio
+        """Gera os trechos de todos os cortes da live, um a um (RN-05, D-1096).
 
-        from app.database import AsyncSessionLocal
-        from app.models import Corte
-        from sqlalchemy import select
-
+        Pula os riscados: o riscado guarda a proposta, mas o lote não gasta IA nele.
+        O "Refazer transcrição" é o contrário: sincroniza os riscados também, para o
+        corte trazido de volta ter a legenda nova (`sincronizar_transcricao_do_projeto`).
+        """
         async with AsyncSessionLocal() as db:
-            result = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
-            todos = result.scalars().all()
-            corte_ids = [c.id for c in todos]
+            vivos = (Corte.projeto_id == projeto_id, Corte.status != StatusCorte.REJEITADO)
+            corte_ids = list((await db.execute(select(Corte.id).where(*vivos))).scalars())
 
         for cid in corte_ids:
             try:
@@ -1557,7 +1556,7 @@ class CorteService:
         cortes, era a mesma transcrição gigante lida e parseada 30 vezes — o
         trabalho crescia com o quadrado do tamanho do projeto.
 
-        Devolve quantos cortes foram sincronizados.
+        Os riscados entram (RN-05, D-1096). Devolve quantos cortes foram sincronizados.
         """
         projeto = await db.get(Projeto, projeto_id)
         if not projeto or not projeto.transcricao_raw:
