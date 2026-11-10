@@ -54,7 +54,8 @@ class PedidoCapaChatgpt(RespostaApi):
 
 
 class PedidoDaCapaResponse(RespostaApi):
-    # None: esta capa não foi pedida desde que o backend subiu.
+    # None: esta capa nunca foi pedida ao robô, ou o banco do canal não tem o
+    # rastro dela (o pedido é anterior à D-1100, ou a leitura falhou).
     pedido: PedidoCapaChatgpt | None
 
 
@@ -119,7 +120,7 @@ async def pedir_capa(pedido: PedirCapaChatgptRequest):
 @router.get("/pedidos/{destino}/{alvo_id}", response_model=PedidoDaCapaResponse)
 async def pedido_da_capa(destino: DestinoDaCapa, alvo_id: str):
     """O último pedido desta capa: em que passo está, ou por que parou."""
-    pedido = await pedidos_capa_chatgpt.pedido_lido(destino, alvo_id)
+    pedido = await pedidos_capa_chatgpt.ler_pedido(destino, alvo_id)
     return {"pedido": pedido.to_dict() if pedido else None}
 
 

@@ -129,7 +129,7 @@ def pedido_da_capa(destino: Destino, alvo_id: str) -> PedidoDeCapa | None:
     return _pedidos.get((destino, alvo_id))
 
 
-async def pedido_lido(destino: Destino, alvo_id: str) -> PedidoDeCapa | None:
+async def ler_pedido(destino: Destino, alvo_id: str) -> PedidoDeCapa | None:
     """O que a tela mostra desta capa: a fila viva, ou o rastro gravado (D-1100).
 
     Na PROD, em 09/11/2026, o ChatGPT recusou uma capa vertical, e o backend
@@ -159,7 +159,29 @@ def _gravar(pedido: PedidoDeCapa) -> None:
         etapa=pedido.etapa,
         erro=pedido.erro,
     )
-    _gravacoes.add(fire_and_forget(_escrever(foto), name=f"rastro-da-capa-{pedido.id}"))
+    gravacao = _GravacaoInteira(_escrever(foto), name=f"rastro-da-capa-{pedido.id}")
+    # A referência forte até o fim, que o loop só guarda a fraca; terminada, sai
+    # do conjunto, senão ele guardaria cada passo de cada pedido até o reinício.
+    _gravacoes.add(gravacao)
+    gravacao.add_done_callback(_gravacoes.discard)
+
+
+class _GravacaoInteira(asyncio.Task):
+    """Uma gravação do rastro que o fim do loop não corta no meio (D-1103).
+
+    O fim do `asyncio.run` (e o desligamento do backend) cancela toda task
+    pendente antes de fechar o loop. Cortada no `connect`, a gravação deixava a
+    thread do aiosqlite com trabalho na fila: ela respondia depois de o loop
+    fechar e caía em "Event loop is closed" (de 20 a 44 por rodada dos testes d898/d929),
+    e o último passo do pedido não chegava ao banco. Recusando o cancelamento,
+    o loop a espera: são milissegundos.
+
+    Fora do `fire_and_forget` (D-224) só por isso; o que ele dá aqui já está
+    feito: a referência forte fica em `_gravacoes`, e `_escrever` loga a falha.
+    """
+
+    def cancel(self, msg: object | None = None) -> bool:
+        return False
 
 
 async def _escrever(foto: UltimoPedidoDeCapa) -> None:
@@ -177,11 +199,10 @@ async def _escrever(foto: UltimoPedidoDeCapa) -> None:
             )
 
 
-async def gravacoes_em_dia() -> None:
+async def esperar_gravacoes() -> None:
     """Espera o banco alcançar a fila (quem lê o rastro logo depois de um passo)."""
     while pendentes := [t for t in _gravacoes if not t.done()]:
         await asyncio.gather(*pendentes, return_exceptions=True)
-    _gravacoes.clear()
 
 
 async def _ler_gravado(destino: Destino, alvo_id: str) -> PedidoDeCapa | None:
