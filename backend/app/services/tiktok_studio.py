@@ -62,7 +62,7 @@ from app.domain.publicacao.tiktok_studio import (
     leitura_do_envio,
     marco_do_envio,
 )
-from app.services import capa_no_tiktok_studio, conta_do_destino
+from app.services import capa_no_tiktok_studio, conta_do_destino, relogio_do_tiktok_studio
 from app.services.janela_do_robo import fechar_aba
 from app.services.navegador_assistido import (
     ChromeNaoAbriu,
@@ -378,7 +378,7 @@ def executar_roteiro(
     }
 
 
-def _agendar(pagina: Pagina, agendamento: Agendamento) -> None:
+def _agendar(pagina: capa_no_tiktok_studio.PaginaQueOuve, agendamento: Agendamento) -> None:
     """Liga o Programar e marca dia e hora — conferindo cada um.
 
     Conferir nao e zelo excessivo: os dois campos sao `readonly` e so mudam por
@@ -427,7 +427,7 @@ def _marcar_dia(pagina: Pagina, agendamento: Agendamento) -> None:
         )
 
 
-def _marcar_hora(pagina: Pagina, agendamento: Agendamento) -> None:
+def _marcar_hora(pagina: capa_no_tiktok_studio.PaginaQueOuve, agendamento: Agendamento) -> None:
     """Escolhe hora e minuto nas duas colunas do seletor.
 
     Reabrir o seletor entre uma coluna e outra e deliberado: escolher a hora
@@ -444,7 +444,7 @@ def _marcar_hora(pagina: Pagina, agendamento: Agendamento) -> None:
         achou = achou or (hora_ok and minuto_ok)
 
         if pagina.valor_de("campo_da_hora") == alvo:
-            return
+            return relogio_do_tiktok_studio.fechar(pagina, alvo)
 
     escrito = pagina.valor_de("campo_da_hora")
     if not achou:
