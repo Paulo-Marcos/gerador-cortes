@@ -1,7 +1,7 @@
-import type { FC } from "react";
+import { useContext, type FC, type ReactNode } from "react";
 import type { CenaRemotion } from "../schema";
 import { COR_DO_ACENTO } from "../youtube-bg/palco-limpo";
-import { Bloco, COLUNA, GIZ_35, GIZ_55, Kicker, TIPO, Traco, linhasDoBloco } from "./Bloco";
+import { Bloco, COLUNA, LarguraNaCaixaContext, GIZ_35, GIZ_55, Kicker, TIPO, Traco, linhasDoBloco } from "./Bloco";
 import { Enquadramento, estaNaZona } from "./Enquadramento";
 import { useEstiloDasCenas } from "./estilo-das-cenas";
 
@@ -40,20 +40,55 @@ export function empilharComparativo(naZona: boolean, caixa: { w: number; h: numb
   return naZona || (caixa !== null && caixa.h > caixa.w);
 }
 
+/** O "vs" entre os lados e o gap de 40 px de cada lado dele (D-1104). */
+const LARGURA_DO_VS = 28;
+const GAP_ENTRE_LADOS = 40;
+
+/**
+ * D-1104: lado a lado, a largura do contexto (caixa do cheio) é do comparativo
+ * inteiro — cada lado leva a metade do que sobra do "vs" e dos gaps. Sem contexto,
+ * ou empilhado (cada lado ocupa uma linha), vale a largura de sempre.
+ */
+export function larguraDoLado(contexto: number | null, empilhado: boolean): number | null {
+  if (contexto === null || empilhado) return null;
+  return Math.max(0, Math.floor((contexto - LARGURA_DO_VS - 2 * GAP_ENTRE_LADOS) / 2));
+}
+
 /** Comparativo: o lado A no acento, o lado B em giz a 35%, com "vs" entre eles. */
-export const CenaComparativoLimpo: FC<Cena> = ({ cena }) => {
+export const CenaComparativoLimpo: FC<Cena> = ({ cena }) => (
+  <Enquadramento cena={cena}>
+    <ComparativoDoCard cena={cena} />
+  </Enquadramento>
+);
+
+// Filho do Enquadramento: só aqui o contexto da largura da caixa existe.
+const ComparativoDoCard: FC<Cena> = ({ cena }) => {
   const empilhado = empilharComparativo(estaNaZona(cena), useEstiloDasCenas().zona_no_cheio);
+  const doLado = larguraDoLado(useContext(LarguraNaCaixaContext), empilhado);
   const rotuloA = cena.rotuloA || cena.contexto || "Lado A";
   const rotuloB = cena.rotuloB || "Lado B";
-  const vs = <div style={{ fontSize: 20, fontWeight: 800, color: GIZ_35, padding: empilhado ? "0 0 0 34px" : "60px 0 0" }}>vs</div>;
+  const vs = (
+    <div
+      style={{
+        fontSize: 20,
+        fontWeight: 800,
+        color: GIZ_35,
+        padding: empilhado ? "0 0 0 34px" : "60px 0 0",
+        ...(doLado === null ? null : { width: LARGURA_DO_VS, flex: "0 0 auto", textAlign: "center" as const }),
+      }}
+    >
+      vs
+    </div>
+  );
+  // Cada lado é um Bloco que lê o contexto; aqui o contexto vira a metade.
+  const lado = (filho: ReactNode) =>
+    doLado === null ? filho : <LarguraNaCaixaContext.Provider value={doLado}>{filho}</LarguraNaCaixaContext.Provider>;
   return (
-    <Enquadramento cena={cena}>
-      <div style={{ display: "flex", flexDirection: empilhado ? "column" : "row", gap: empilhado ? 20 : 40, alignItems: "flex-start" }}>
-        <Lado rotulo={rotuloA} texto={cena.texto} principal largura={empilhado ? COLUNA : 420} />
-        {vs}
-        <Lado rotulo={rotuloB} texto={cena.subtexto} principal={false} largura={empilhado ? COLUNA : 420} />
-      </div>
-    </Enquadramento>
+    <div style={{ display: "flex", flexDirection: empilhado ? "column" : "row", gap: empilhado ? 20 : GAP_ENTRE_LADOS, alignItems: "flex-start" }}>
+      {lado(<Lado rotulo={rotuloA} texto={cena.texto} principal largura={empilhado ? COLUNA : 420} />)}
+      {vs}
+      {lado(<Lado rotulo={rotuloB} texto={cena.subtexto} principal={false} largura={empilhado ? COLUNA : 420} />)}
+    </div>
   );
 };
 
