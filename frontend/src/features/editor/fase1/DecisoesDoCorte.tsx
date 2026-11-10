@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Desvio } from '@/types/models';
+import { naoESilencioDoApp } from './silencioDoCorte';
 import { rotuloDoTempo, tempoQueSai } from './perguntaDosDesvios';
 
 // D-1089 (E6, canvas `03-cortes-proposta`): a aba "Trechos" virou "Decisões". O
@@ -55,9 +56,13 @@ export function PerguntaDaDecisao({ numero, pergunta, resumo, assunto, children 
   );
 }
 
-/** Pergunta 2 (P10). O tempo do título conta uma vez o trecho que cai dentro de outro. */
+/**
+ * Pergunta 2 (P10). O tempo do título conta uma vez o trecho que cai dentro de outro.
+ * D-1093: o silêncio do app é da pergunta 1 e não entra aqui.
+ */
 export function PerguntaDosDesvios({ desvios, children }: { desvios: Desvio[]; children: ReactNode }) {
-  const sai = desvios.length > 0 ? `sai ${rotuloDoTempo(tempoQueSai(desvios))}` : undefined;
+  const deAssunto = desvios.filter(naoESilencioDoApp);
+  const sai = deAssunto.length > 0 ? `sai ${rotuloDoTempo(tempoQueSai(deAssunto))}` : undefined;
   return (
     <PerguntaDaDecisao numero={2} pergunta="Tirar os desvios de assunto?" resumo={sai} assunto="os desvios de assunto">
       {children}

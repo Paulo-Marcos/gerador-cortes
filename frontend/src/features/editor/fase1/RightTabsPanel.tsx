@@ -7,9 +7,10 @@ import { cn } from '@/lib/utils';
 import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
 import { BlocosTab } from './BlocosTab';
 import { DecisoesDoCorte, PerguntaDosDesvios } from './DecisoesDoCorte';
+import { PerguntaDoSilencio } from './PerguntaDoSilencio';
 import { TrechosList, usePendenciasDosTrechos } from './TrechosList';
 import type { TrechosRiscados } from '../useTrechosRiscados';
-import { useCorte } from '@/features/editor/useCortes';
+import { useCorte, type DecisaoDoSilencio } from '@/features/editor/useCortes';
 import { useDiarizarCorte, useFalantes } from '@/features/diarizacao/useDiarizacao';
 import type { FalantesMap } from '@/features/diarizacao/api';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
@@ -107,6 +108,7 @@ export function RightTabsPanel({
   const aoRestaurarDesvio = useFuncaoEstavel((indice: number) => riscados?.restaurar(indice));
   const aoDesfazerRodada = useFuncaoEstavel(() => riscados?.desfazerRodada());
   const aoVoltarABordaDaIa = useFuncaoEstavel((indice: number) => riscados?.voltarABordaDaIa(indice));
+  const aoDecidirOsSilencios = useFuncaoEstavel((decisao: DecisaoDoSilencio) => riscados?.decidirOsSilencios(decisao));
   const pendenteDosTrechos = usePendenciasDosTrechos(pendingTrechos, riscados?.ocupado);
   const corteAtual = useCorte(corteId).data;
   const projetoId = corteAtual?.projeto_id;
@@ -125,11 +127,7 @@ export function RightTabsPanel({
         {/* D-1089: sem contador, como no canvas — cada pergunta diz no título quanto sai. */}
         <TabButton active={tab === 'decisoes'} onClick={() => setTab('decisoes')} label="Decisões" />
         <TabButton active={tab === 'ordem'} onClick={() => setTab('ordem')} label="Ordem" />
-        <TabButton
-          active={tab === 'transcricao'}
-          onClick={() => setTab('transcricao')}
-          label="Transcrição"
-        />
+        <TabButton active={tab === 'transcricao'} onClick={() => setTab('transcricao')} label="Transcrição" />
         <TabButton active={tab === 'avaliacao'} onClick={() => setTab('avaliacao')} label="Avaliação" />
       </CabecalhoDoPainel>
 
@@ -144,10 +142,13 @@ export function RightTabsPanel({
         />
       ) : tab === 'decisoes' ? (
         <DecisoesDoCorte>
-          {/* 1 · o silêncio (D-1093) entra aqui, antes dos desvios. */}
+          {/* D-1093: 1 · o silêncio, decidido de uma vez (P9). */}
+          <PerguntaDoSilencio corteId={corteId} desvios={desvios} linhas={transcricao} selectedDesvioIdx={selectedDesvioIdx}
+            pendente={pendenteDosTrechos.restaurando} onSeek={aoIrPara} onRiscar={aoRemoverDesvio} onDecidir={aoDecidirOsSilencios} />
           <PerguntaDosDesvios desvios={desvios}>
             <TrechosList
               desvios={desvios}
+              semOSilencioDoApp
               selectedDesvioIdx={selectedDesvioIdx}
               onSeek={aoIrPara}
               onAdicionarTrechoNoCursor={onAdicionarTrechoAqui ? aoAdicionarNoCursor : undefined}

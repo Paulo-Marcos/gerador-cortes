@@ -99,3 +99,27 @@ export function falaDoTrecho(desvio: Desvio, linhas: TranscricaoLinha[]): FalaDo
     depois: palavras.slice(fronteira, fronteira + PALAVRAS_NA_EMENDA).map((p) => p.texto).join(' '),
   };
 }
+
+/** Até onde se procura a fala vizinha de uma pausa: a emenda pode ficar longe do texto. */
+const VIZINHANCA_DO_SILENCIO_SEG = 30;
+
+/**
+ * D-1093: o silêncio quase nunca tem fala dentro, e é a emenda que se lê para decidir.
+ * Sem fala no trecho, `sai` vem vazio e a emenda junta a última palavra antes da pausa à
+ * primeira depois dela. `null`: nem a fala vizinha a transcrição cobre.
+ */
+export function falaDoSilencio(desvio: Desvio, linhas: TranscricaoLinha[]): FalaDoTrecho | null {
+  const fala = falaDoTrecho(desvio, linhas);
+  if (fala) return fala;
+  const inicio = hmsParaSeg(desvio.inicio_hms);
+  const fim = hmsParaSeg(desvio.fim_hms);
+  const palavras = palavrasDasLinhas(linhas, inicio - VIZINHANCA_DO_SILENCIO_SEG, fim + VIZINHANCA_DO_SILENCIO_SEG);
+  const antes = palavras.filter((p) => p.tempo < inicio).slice(-PALAVRAS_NA_EMENDA);
+  const depois = palavras.filter((p) => p.tempo >= fim).slice(0, PALAVRAS_NA_EMENDA);
+  if (antes.length === 0 && depois.length === 0) return null;
+  return {
+    sai: '',
+    antes: antes.map((p) => p.texto).join(' '),
+    depois: depois.map((p) => p.texto).join(' '),
+  };
+}

@@ -7,6 +7,7 @@ import type { Desvio, TranscricaoLinha } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 import { hmsParaSeg } from '../timeUtils';
 import { CabecalhoDoTrecho, FalaQueSai, LinhaDoTrecho, TempoDoTrecho } from './LinhaDoTrecho';
+import { naoESilencioDoApp } from './silencioDoCorte';
 import { provedorDaUltimaRodada } from './perguntaDosDesvios';
 
 // ───── TrechosList — v2_bruto.jsx:484-548 ─────
@@ -178,6 +179,8 @@ export interface TrechosListProps {
   onDesfazerRodada?: () => void;
   /** D-1089 (P10): o trecho ajustado à mão volta à borda da IA, pelo índice gravado. */
   onVoltarABordaDaIa?: (indice: number) => void;
+  /** D-1093: na aba Decisões o silêncio do app é da pergunta 1; a lista mostra o resto. */
+  semOSilencioDoApp?: boolean;
 }
 
 const SEM_LINHAS: TranscricaoLinha[] = [];
@@ -222,13 +225,16 @@ export const TrechosList = memo(function TrechosList({
   onRestaurarDesvio,
   onDesfazerRodada,
   onVoltarABordaDaIa,
+  semOSilencioDoApp,
 }: TrechosListProps) {
+  // O índice `i` é o da lista inteira do corte: é por ele que se risca, mesmo filtrada.
   const sortedWithOriginalIdx = useMemo(
     () =>
       desvios
         .map((d, i) => ({ d, i }))
+        .filter(({ d }) => !semOSilencioDoApp || naoESilencioDoApp(d))
         .sort((a, b) => hmsParaSeg(a.d.inicio_hms) - hmsParaSeg(b.d.inicio_hms)),
-    [desvios],
+    [desvios, semOSilencioDoApp],
   );
   const origIdxToSortedPos = useMemo(() => {
     const map = new Map<number, number>();

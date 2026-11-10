@@ -37,3 +37,15 @@ async def desfazer_rodada(corte_id: str):
 async def voltar_a_borda_da_ia(corte_id: str, body: VoltarABordaDaIaRequest):
     """Devolve ao trecho ajustado à mão a borda que a IA deu: ele volta para a rodada."""
     return _corte_to_dict(await riscados.voltar_a_borda_da_ia(corte_id, body.desvio_index))
+
+
+@router.post("/{corte_id}/manter-silencios", response_model=CorteResponse)
+async def manter_silencios(corte_id: str):
+    """Manter todos (P9, D-1093): risca todo silêncio do app. O bruto seguinte não o traz."""
+    return _corte_to_dict(await riscados.manter_silencios(corte_id))
+
+
+@router.post("/{corte_id}/tirar-silencios", response_model=CorteResponse)
+async def tirar_silencios(corte_id: str):
+    """Tirar todos (P9, D-1093): devolve ao corte todo silêncio riscado."""
+    return _corte_to_dict(await riscados.tirar_silencios(corte_id))
