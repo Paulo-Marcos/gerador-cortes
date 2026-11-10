@@ -5,6 +5,7 @@ import type { AdicionarDesvioRequest, Corte } from '@/types/models';
 import { cortesApi, type AtualizarCorteRequest } from './api/cortes';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { atualizarLegendasDoCorte } from '@/features/shorts/legendasDoCorte';
+import { avisarDaJuncao } from './avisoDaJuncao';
 
 // O corte na edição: ler, editar, reordenar, dividir, juntar, aprovar, excluir,
 // as marcas (Fire, leitura) e os trechos a remover. D-723: saiu do useEditor.
@@ -129,18 +130,28 @@ export function useDividirCorte(corteId: string, projetoId?: string) {
 
 // D-575: funde o corte com o vizinho seguinte. O sobrevivente pode ser OUTRO
 // corte (quem comeca antes ganha), entao o cache do corte da rota tambem cai —
-// se ele foi o absorvido, ja nao existe.
+// se ele foi o absorvido, agora esta riscado (D-1097).
 export function useJuntarCortes(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
-  const { notify } = useToast();
+  const { notify, dismiss } = useToast();
   return useMutation({
     mutationFn: (body: { outro_corte_id?: string } = {}) => cortesApi.juntarCortes(corteId, body),
-    onSuccess: (corte) => {
+    onSuccess: (corte, body) => {
       qc.setQueryData(corteKey(corte.id), corte);
       invalidaCorte(qc, corteId, projetoId);
       void atualizarLegendasDoCorte(qc, corteId);
       void atualizarLegendasDoCorte(qc, corte.id);
-      notify('Cortes juntados. Gere o bruto de novo para ver o resultado.', { tone: 'success' });
+      const outro = body?.outro_corte_id;
+      const riscado = outro === corte.id ? corteId : outro;
+      avisarDaJuncao(
+        { notify, dismiss },
+        riscado
+          ? async () => {
+              await cortesApi.trazerDeVolta(riscado);
+              invalidaCorte(qc, riscado, projetoId);
+            }
+          : undefined,
+      );
     },
     onError: (error) => {
       notify(error instanceof Error ? error.message : 'Erro ao juntar cortes.', { tone: 'error' });
