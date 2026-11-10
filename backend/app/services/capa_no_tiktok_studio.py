@@ -64,13 +64,17 @@ CAPA_FORA_DO_DISCO = "A capa nao esta mais em disco; o TikTok vai congelar um fr
 
 
 class PaginaQueOuve(Pagina, Protocol):
-    """A `Pagina` que também ouve a rede — o recibo da capa não aparece no DOM."""
+    """A `Pagina` que também ouve a rede — o recibo da capa não aparece no DOM.
+
+    E que aperta uma tecla solta: o relógio do agendamento só fecha no Escape (D-1098).
+    """
 
     def escutar_resposta(self, trecho: str) -> Callable[[float], bool]: ...
+    def apertar(self, tecla: str) -> None: ...
 
 
 class PaginaNoTikTok(PaginaDoPlaywright):
-    """A `PaginaDoPlaywright` com o ouvido que só a capa do TikTok pede."""
+    """A `PaginaDoPlaywright` com o ouvido que só a capa do TikTok pede, e o teclado."""
 
     # D-958: o tamanho da última capa entregue — é por ele que o envio dela se
     # reconhece na rede. Zero: nenhuma capa entregue, e a resposta basta.
@@ -126,6 +130,10 @@ class PaginaNoTikTok(PaginaDoPlaywright):
             return chegou.is_set()
 
         return esperar
+
+    def apertar(self, tecla: str) -> None:
+        """Uma tecla solta, sem alvo: o Escape que fecha o relógio (D-1098)."""
+        self._page.keyboard.press(tecla)
 
 
 def aplicar_no_roteiro(pagina: PaginaQueOuve, capa: Path | None) -> tuple[bool, str]:

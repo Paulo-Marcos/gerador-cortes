@@ -89,10 +89,10 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
           {item.agendado_para}
         </p>
       )}
+      {/* D-1098: quebra a linha, sem cortar. O porquê de o robô não ter publicado
+          vem depois do recado, e as reticências do `truncate` comiam justamente ele. */}
       {item.detalhe && (
-        <p className="mt-0.5 truncate text-[11px] text-[var(--wb-text-mute)]" title={item.detalhe}>
-          {item.detalhe}
-        </p>
+        <p className="mt-0.5 break-words text-[11px] text-[var(--wb-text-mute)]">{item.detalhe}</p>
       )}
     </li>
   );
