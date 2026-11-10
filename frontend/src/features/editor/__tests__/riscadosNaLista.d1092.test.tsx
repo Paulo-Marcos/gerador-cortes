@@ -5,8 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Corte } from '@/types/models';
 import type { Chrome } from '@/upgrade/UpgradeChrome';
-import { corteVizinho, proximoDepoisDeRiscar, separarRiscados } from '../riscarCorte';
-import { FRASE_DO_RISCADO, rotuloDoMotivo, SecaoDosRiscados, TRAZER_DE_VOLTA } from '../RiscadosDaLista';
+import { acharCorteVizinho, proximoDepoisDeRiscar, separarRiscados } from '../riscarCorte';
+import { FRASE_DO_RISCADO, nomearMotivo, SecaoDosRiscados, TRAZER_DE_VOLTA } from '../RiscadosDaLista';
 
 // D-1092 (E2 do design da etapa Cortes, P1 a P5): o corte riscado sai da lista
 // "Cortes da live" e do J/K, e fica na seção "Riscados · N" no fim da lista, com
@@ -56,6 +56,7 @@ function publicar(aberto: Corte, cortes = CORTES): Chrome {
           brutoOcupado={false}
           onToggleFire={vi.fn()}
           onAprovar={vi.fn()}
+          riscar={{ onRiscar: vi.fn() }}
         />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -100,24 +101,24 @@ describe('a lista do editor pula os riscados', () => {
   });
 });
 
-describe('corteVizinho', () => {
+describe('acharCorteVizinho', () => {
   it('segue a ordem pulando os riscados', () => {
-    expect(corteVizinho(CORTES, 'a', 1)?.id).toBe('c');
-    expect(corteVizinho(CORTES, 'c', 1)?.id).toBe('a');
-    expect(corteVizinho(CORTES, 'c', -1)?.id).toBe('a');
-    expect(corteVizinho(CORTES, 'd', -1)?.id).toBe('c');
-    expect(corteVizinho(CORTES, 'd', 1)?.id).toBe('a');
+    expect(acharCorteVizinho(CORTES, 'a', 1)?.id).toBe('c');
+    expect(acharCorteVizinho(CORTES, 'c', 1)?.id).toBe('a');
+    expect(acharCorteVizinho(CORTES, 'c', -1)?.id).toBe('a');
+    expect(acharCorteVizinho(CORTES, 'd', -1)?.id).toBe('c');
+    expect(acharCorteVizinho(CORTES, 'd', 1)?.id).toBe('a');
   });
 
   it('sem outro vivo, não há para onde ir', () => {
-    expect(corteVizinho([corteDe('a', 1), riscadoDe('b', 2)], 'a', 1)).toBeNull();
-    expect(corteVizinho([riscadoDe('b', 2)], 'b', -1)).toBeNull();
-    expect(corteVizinho([], 'x', 1)).toBeNull();
+    expect(acharCorteVizinho([corteDe('a', 1), riscadoDe('b', 2)], 'a', 1)).toBeNull();
+    expect(acharCorteVizinho([riscadoDe('b', 2)], 'b', -1)).toBeNull();
+    expect(acharCorteVizinho([], 'x', 1)).toBeNull();
   });
 
   it('corte fora da lista começa da ponta do sentido', () => {
-    expect(corteVizinho(CORTES, 'x', 1)?.id).toBe('a');
-    expect(corteVizinho(CORTES, 'x', -1)?.id).toBe('c');
+    expect(acharCorteVizinho(CORTES, 'x', 1)?.id).toBe('a');
+    expect(acharCorteVizinho(CORTES, 'x', -1)?.id).toBe('c');
   });
 
   it('o R segue pelo mesmo caminho', () => {
@@ -181,9 +182,9 @@ describe('a seção "Riscados · N"', () => {
 
   it('o rótulo do motivo vem do canal, depois do padrão, depois do slug', () => {
     const doCanal = [{ slug: 'repetido', rotulo: 'Já tem esse' }, { slug: 'meu', rotulo: 'Motivo meu' }];
-    expect(rotuloDoMotivo('repetido', doCanal)).toBe('Já tem esse');
-    expect(rotuloDoMotivo('meu', doCanal)).toBe('Motivo meu');
-    expect(rotuloDoMotivo('tema_fraco')).toBe('Tema não rende');
-    expect(rotuloDoMotivo('sumiu')).toBe('sumiu');
+    expect(nomearMotivo('repetido', doCanal)).toBe('Já tem esse');
+    expect(nomearMotivo('meu', doCanal)).toBe('Motivo meu');
+    expect(nomearMotivo('tema_fraco')).toBe('Tema não rende');
+    expect(nomearMotivo('sumiu')).toBe('sumiu');
   });
 });

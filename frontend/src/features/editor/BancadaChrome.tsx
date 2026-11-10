@@ -20,7 +20,7 @@ import {
 } from '@/upgrade/UpgradeChrome';
 import { PorQueNaBancada } from '@/features/porque-do-corte/PorQueNaBancada';
 import { PendenciasDoCorte } from './PendenciasDoCorte';
-import { corteVizinho, separarRiscados } from './riscarCorte';
+import { acharCorteVizinho, separarRiscados } from './riscarCorte';
 import { RiscadosDaLista } from './RiscadosDaLista';
 
 // ─────────────────────────────────────────────────────────────────
@@ -83,7 +83,10 @@ export type BancadaChromeProps = {
   };
   onAprovar: () => void;
   /** D-1088: riscar o corte (R), sem diálogo. Sem ele a barra não o mostra.
-   *  `bloqueio` apaga o botão e diz por quê (corte já no YouTube). */
+   *  `bloqueio` apaga o botão e diz por quê (corte já no YouTube).
+   *  D-1092: é também o que liga a seção Riscados com o "Trazer de volta": riscar
+   *  e trazer de volta são curadoria, só da etapa Cortes. Na Pós e na Revisão o
+   *  riscado só some da lista e do J/K. */
   riscar?: { onRiscar: () => void; bloqueio?: string | null };
   onNovoTrecho?: () => void;
   /** D-746: a tela troca peças da barra padrão. A Pós e o editor usam para dizer
@@ -144,10 +147,10 @@ export function BancadaChrome({
   const [metaDoCorte, setMetaDoCorte] = useState<Corte | null>(null);
   const statusDe = (c: Corte) => exportStatus.find((s) => s.corte_id === c.id);
 
-  // D-1092: o riscado sai da lista e do J/K e fica na seção do fim (RiscadosDaLista).
+  // D-1092: o riscado sai da lista e do J/K; na etapa Cortes fica na seção do fim.
   const { vivos, riscados } = separarRiscados(cortes);
   const irPara = (delta: -1 | 1) =>
-    navigate(caminhoDoCorte(corteVizinho(cortes, corte.id, delta) ?? corte));
+    navigate(caminhoDoCorte(acharCorteVizinho(cortes, corte.id, delta) ?? corte));
 
   const prontos = exportStatus.filter((s) => s.pronto_publicar).length;
 
@@ -197,7 +200,7 @@ export function BancadaChrome({
         titulo: 'Cortes da live',
         resumo: `${vivos.length} · ${prontos} prontos`,
         itens,
-        rodape: <RiscadosDaLista projetoId={projetoId} riscados={riscados} />,
+        rodape: riscar ? <RiscadosDaLista projetoId={projetoId} riscados={riscados} /> : undefined,
         acao: onNovoTrecho ? { texto: 'Novo trecho', onClick: onNovoTrecho } : undefined,
       },
       atual: {

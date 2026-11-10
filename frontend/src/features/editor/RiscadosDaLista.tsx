@@ -18,7 +18,7 @@ export const FRASE_DO_RISCADO = 'Proposta e trabalho guardados; a mídia saiu.';
 export const TRAZER_DE_VOLTA = 'Trazer de volta (regera o bruto)';
 
 /** O rótulo do motivo: o do canal (inclusive o escondido depois), o padrão, ou o slug. */
-export function rotuloDoMotivo(slug: string, doCanal: readonly OpcaoConfirmacao[] = []): string {
+export function nomearMotivo(slug: string, doCanal: readonly OpcaoConfirmacao[] = []): string {
   return (
     doCanal.find((m) => m.slug === slug)?.rotulo ??
     MOTIVOS_APAGADO.find((m) => m.slug === slug)?.rotulo ??
@@ -66,7 +66,7 @@ export function SecaoDosRiscados({ riscados, motivos, trazendo, onTrazerDeVolta 
               <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {corte.motivo_riscado.map((slug) => (
                   <span key={slug} className="chip" style={{ background: 'var(--line2)', color: 'var(--mute)' }}>
-                    {rotuloDoMotivo(slug, motivos)}
+                    {nomearMotivo(slug, motivos)}
                   </span>
                 ))}
               </span>

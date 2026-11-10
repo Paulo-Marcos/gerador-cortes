@@ -14,7 +14,7 @@ import pytest
 import pytest_asyncio
 from app import database
 from app.database import get_db
-from app.domain.corte.motivo_apagado import motivos_gravados
+from app.domain.corte.motivo_apagado import ler_motivos_gravados
 from app.models import Base, Corte, CorteSnapshot, Projeto, StatusCorte
 from app.routers import corte_riscado
 from app.routers import cortes as rota_cortes
@@ -127,4 +127,4 @@ def test_trazer_de_volta_tira_o_motivo(cliente):
     ],
 )
 def test_motivos_gravados_le_como_foi_gravado(bruto, esperado):
-    assert motivos_gravados(bruto) == esperado
+    assert ler_motivos_gravados(bruto) == esperado

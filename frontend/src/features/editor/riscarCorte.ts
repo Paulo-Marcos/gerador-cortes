@@ -30,7 +30,11 @@ export function separarRiscados(cortes: readonly Corte[]) {
 /** O vizinho do corte na ordem (`delta` 1 = próximo, -1 = anterior), em volta,
  *  pulando os riscados — é o J/K da bancada (D-1092). Vale também quando o corte
  *  aberto é um riscado. `null` quando não sobra nenhum outro. */
-export function corteVizinho(cortes: readonly Corte[], corteId: string, delta: -1 | 1): Corte | null {
+export function acharCorteVizinho(
+  cortes: readonly Corte[],
+  corteId: string,
+  delta: -1 | 1,
+): Corte | null {
   const indice = cortes.findIndex((corte) => corte.id === corteId);
   const n = cortes.length;
   // Fora da lista, o ponto de partida fica antes do primeiro (ou depois do último).
@@ -46,7 +50,7 @@ export function corteVizinho(cortes: readonly Corte[], corteId: string, delta: -
 /** O corte para onde o editor segue depois de riscar: o próximo na ordem,
  *  pulando os já riscados. `null` quando não sobra nenhum. */
 export function proximoDepoisDeRiscar(cortes: readonly Corte[], corteId: string): Corte | null {
-  return corteVizinho(cortes, corteId, 1);
+  return acharCorteVizinho(cortes, corteId, 1);
 }
 
 /** A linha do aviso: qual corte saiu, quanto disco voltou e o que ficou nele.
