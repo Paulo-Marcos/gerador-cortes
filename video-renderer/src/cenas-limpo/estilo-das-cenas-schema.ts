@@ -28,6 +28,12 @@ export const estiloDasCenasSchema = z.object({
   alinhamento_vertical: z.enum(["centro", "topo", "base"]).default("topo"),
   alinhamento_horizontal: z.enum(["centro", "esquerda", "direita"]).default("esquerda"),
   /**
+   * D-1102: até onde vai o texto do card, em px do quadro (antes da escala). 0 =
+   * automática: a largura de cada cena. Larga, o texto quebra em menos linhas e o
+   * card cresce em vez de encolher a letra.
+   */
+  largura_do_texto: z.number().min(0).default(0),
+  /**
    * D-941: a caixa do card no layout cheio (px do quadro). Sem ela vale a
    * posição + a escala; com ela o card ocupa o retângulo pelas regras da zona
    * (ajuste e alinhamentos) — largura e altura se ajustam separadamente.

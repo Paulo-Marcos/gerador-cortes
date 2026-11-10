@@ -149,7 +149,7 @@ const CardNaZona: FC<{ zona: { x: number; y: number; w: number; h: number }; fam
   familia,
   children,
 }) => {
-  const { ajuste, alinhamento_vertical: vertical, alinhamento_horizontal: horizontal } = useEstiloDasCenas();
+  const { ajuste, alinhamento_vertical: vertical, alinhamento_horizontal: horizontal, largura_do_texto: larguraDoTexto } = useEstiloDasCenas();
   const card = useRef<HTMLDivElement>(null);
   const [escala, setEscala] = useState(1);
   useLayoutEffect(() => {
@@ -157,7 +157,7 @@ const CardNaZona: FC<{ zona: { x: number; y: number; w: number; h: number }; fam
     if (!el) return;
     // `offsetWidth/Height` ignoram o `transform`: é sempre o tamanho natural.
     setEscala(escalaNaZona({ w: el.offsetWidth, h: el.offsetHeight }, zona, ajuste));
-  }, [zona.w, zona.h, ajuste]);
+  }, [zona.w, zona.h, ajuste, larguraDoTexto]);
   return (
     <div
       data-zona-dos-cards=""
@@ -177,7 +177,8 @@ const CardNaZona: FC<{ zona: { x: number; y: number; w: number; h: number }; fam
         ref={card}
         style={{ flex: "0 0 auto", transform: `scale(${escala})`, transformOrigin: `${ORIGEM[horizontal]} ${ORIGEM[vertical]}` }}
       >
-        {children}
+        {/* D-1102: o canal pode largar o texto numa folha mais larga que a coluna de 440. */}
+        <LarguraNaCaixaContext.Provider value={larguraDoTexto > 0 ? larguraDoTexto : null}>{children}</LarguraNaCaixaContext.Provider>
       </div>
     </div>
   );
@@ -201,16 +202,17 @@ const CardNaCaixa: FC<{
   familia: string;
   children: ReactNode;
 }> = ({ caixa, escala, familia, children }) => {
-  const { ajuste, alinhamento_vertical: vertical, alinhamento_horizontal: horizontal } = useEstiloDasCenas();
+  const { ajuste, alinhamento_vertical: vertical, alinhamento_horizontal: horizontal, largura_do_texto: larguraDoTexto } = useEstiloDasCenas();
   const card = useRef<HTMLDivElement>(null);
   const [efetiva, setEfetiva] = useState(escala);
   const { w, h } = caixa;
-  const largura = ajuste === "preencher" ? Math.round((w * MARGEM_NA_ZONA) / escala) : null;
+  // D-1102: a largura pedida pelo canal manda; sem ela vale a da caixa no "ocupar o espaço".
+  const largura = larguraDoTexto > 0 ? larguraDoTexto : ajuste === "preencher" ? Math.round((w * MARGEM_NA_ZONA) / escala) : null;
   useLayoutEffect(() => {
     const el = card.current;
     if (!el) return;
     setEfetiva(escalaNaCaixa({ w: el.offsetWidth, h: el.offsetHeight }, { w, h }, escala));
-  }, [w, h, escala, ajuste]);
+  }, [w, h, escala, ajuste, larguraDoTexto]);
   return (
     <div
       // A prévia do modal acha a caixa por aqui para arrastá-la e esticá-la.

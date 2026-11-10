@@ -84,6 +84,8 @@ export interface ComponentesDoPalco {
     alinhamento_horizontal?: 'centro' | 'esquerda' | 'direita';
     /** D-941: a caixa do card no vídeo cheio (px de 1920x1080); null = posição + escala. */
     zona_no_cheio?: { x: number; y: number; w: number; h: number } | null;
+    /** D-1102: até onde vai o texto do card, em px; 0 ou ausente = automática. */
+    largura_do_texto?: number;
   };
 }
 
@@ -183,12 +185,12 @@ export function temEcoNoShort(componentes: ComponentesDoPalco): boolean {
  */
 export function estiloDasCenasDe(componentes: ComponentesDoPalco = COMPONENTES_PADRAO) {
   const { ocultos, escala, posicao } = componentes.cards;
-  const { ajuste = 'preencher', alinhamento_vertical = 'centro', alinhamento_horizontal = 'centro' } = componentes.cards;
+  const { ajuste = 'preencher', alinhamento_vertical = 'centro', alinhamento_horizontal = 'centro', largura_do_texto = 0 } = componentes.cards;
   const comApelido = ocultos.includes('comparativo_contraponto') ? [...ocultos, 'comparativo_enfase'] : ocultos;
   const base = { estilo: componentes.estilo, ocultos: comApelido, escala, posicao };
   // D-926: os modos na zona só existem no estilo limpo.
   const zona_no_cheio = componentes.cards.zona_no_cheio ?? null;
   return componentes.estilo === 'limpo'
-    ? { ...base, ajuste, alinhamento_vertical, alinhamento_horizontal, zona_no_cheio }
+    ? { ...base, ajuste, alinhamento_vertical, alinhamento_horizontal, zona_no_cheio, largura_do_texto }
     : base;
 }

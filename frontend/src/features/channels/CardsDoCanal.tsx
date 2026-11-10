@@ -31,6 +31,8 @@ export interface CardsEditaveis {
    * null = o operador pediu "sem caixa" (a edição manda a caixa vazia).
    */
   zona_no_cheio?: CaixaDoCard | null;
+  /** D-1102: até onde vai o texto do card, em px do quadro; 0 ou ausente = automática. */
+  largura_do_texto?: number;
 }
 
 /** D-941: o retângulo do card no vídeo cheio, em px do quadro de 1920x1080. */
@@ -72,6 +74,7 @@ export function cardsEditaveisDe(cards: {
   alinhamento_vertical?: string | null;
   alinhamento_horizontal?: string | null;
   zona_no_cheio?: CaixaDoCard | null;
+  largura_do_texto?: number | null;
 }): CardsEditaveis {
   const escolher = <T extends string>(valor: string | null | undefined, opcoes: { id: T }[], padrao: T): T =>
     opcoes.find((o) => o.id === valor)?.id ?? padrao;
@@ -82,6 +85,7 @@ export function cardsEditaveisDe(cards: {
     ajuste: escolher(cards.ajuste, AJUSTES, 'preencher'),
     alinhamento_vertical: escolher(cards.alinhamento_vertical, VERTICAIS, 'centro'),
     alinhamento_horizontal: escolher(cards.alinhamento_horizontal, HORIZONTAIS, 'centro'),
+    largura_do_texto: cards.largura_do_texto ?? 0,
     // O servidor manda null quando não há caixa: aqui isso é "nada a mudar".
     ...(cards.zona_no_cheio ? { zona_no_cheio: cards.zona_no_cheio } : {}),
   };
@@ -185,10 +189,19 @@ export function TiposDeCard({
 }
 
 /** Tamanho, posição no vídeo cheio e o modo na zona dos cards. */
-export function AjustesDosCards({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (valor: CardsEditaveis) => void }) {
+export function AjustesDosCards({
+  valor,
+  onMudar,
+  colunas = 'sm:grid-cols-2',
+}: {
+  valor: CardsEditaveis;
+  onMudar: (valor: CardsEditaveis) => void;
+  /** D-1102: o modal tem 300 px de coluna — duas colunas de campos não cabem e o painel rolava de lado. */
+  colunas?: string;
+}) {
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${colunas}`}>
         <CampoTamanho id="palco-cards-tamanho" escala={valor.escala} onMudar={(escala) => onMudar({ ...valor, escala })} />
         {valor.zona_no_cheio ? (
           <CaixaNoCheio caixa={valor.zona_no_cheio} onMudar={(zona_no_cheio) => onMudar({ ...valor, zona_no_cheio })} />
@@ -196,8 +209,29 @@ export function AjustesDosCards({ valor, onMudar }: { valor: CardsEditaveis; onM
           <PosicaoNoCheio valor={valor} onMudar={onMudar} />
         )}
       </div>
+      <LarguraDoTexto valor={valor} onMudar={onMudar} />
       <ModosDoCard valor={valor} onMudar={onMudar} />
     </>
+  );
+}
+
+/** D-1102: até onde vai o texto; zero é a largura de cada cena, como sempre foi. */
+function LarguraDoTexto({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (valor: CardsEditaveis) => void }) {
+  return (
+    <div className="grid gap-1.5">
+      <CampoNumero
+        id="palco-cards-largura-texto"
+        rotulo="Largura do texto"
+        valor={valor.largura_do_texto ?? 0}
+        min={0}
+        max={QUADRO.largura}
+        unidade="px, 0 = automática"
+        onMudar={(numero) => onMudar({ ...valor, largura_do_texto: Math.round(numero) })}
+      />
+      <p className="text-[11px] text-[var(--wb-text-dim)]">
+        Texto mais largo quebra em menos linhas e deixa a letra crescer em vez de encolher. Vale para os cards de texto; lista, fonte, barra inferior e ênfase mantêm a própria largura.
+      </p>
+    </div>
   );
 }
 
@@ -217,6 +251,7 @@ function PosicaoNoCheio({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (v
         type="button"
         size="sm"
         variant="outline"
+        className="!h-auto !whitespace-normal !py-1.5 text-left"
         onClick={() => onMudar({ ...valor, zona_no_cheio: CAIXA_INICIAL })}
         title="O card passa a ocupar um retângulo: largura e altura se ajustam separadamente."
       >
@@ -250,7 +285,7 @@ function CaixaNoCheio({ caixa, onMudar }: { caixa: CaixaDoCard; onMudar: (caixa:
         {campo('x', 'X', QUADRO.largura)}
         {campo('y', 'Y', QUADRO.altura)}
       </div>
-      <Button type="button" size="sm" variant="outline" onClick={() => onMudar(null)}>
+      <Button type="button" size="sm" variant="outline" className="!h-auto !whitespace-normal !py-1.5 text-left" onClick={() => onMudar(null)}>
         Sem caixa (posição e tamanho)
       </Button>
     </div>
