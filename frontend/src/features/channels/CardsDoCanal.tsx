@@ -229,7 +229,7 @@ function LarguraDoTexto({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (v
         onMudar={(numero) => onMudar({ ...valor, largura_do_texto: Math.round(numero) })}
       />
       <p className="text-[11px] text-[var(--wb-text-dim)]">
-        Texto mais largo quebra em menos linhas e deixa a letra crescer em vez de encolher.
+        Texto mais largo quebra em menos linhas e deixa a letra crescer em vez de encolher. Vale para os cards de texto; lista, fonte, barra inferior e ênfase mantêm a própria largura.
       </p>
     </div>
   );
@@ -251,7 +251,7 @@ function PosicaoNoCheio({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (v
         type="button"
         size="sm"
         variant="outline"
-        className="!h-auto !whitespace-normal py-1.5 text-left"
+        className="!h-auto !whitespace-normal !py-1.5 text-left"
         onClick={() => onMudar({ ...valor, zona_no_cheio: CAIXA_INICIAL })}
         title="O card passa a ocupar um retângulo: largura e altura se ajustam separadamente."
       >
@@ -285,7 +285,7 @@ function CaixaNoCheio({ caixa, onMudar }: { caixa: CaixaDoCard; onMudar: (caixa:
         {campo('x', 'X', QUADRO.largura)}
         {campo('y', 'Y', QUADRO.altura)}
       </div>
-      <Button type="button" size="sm" variant="outline" className="!h-auto !whitespace-normal py-1.5 text-left" onClick={() => onMudar(null)}>
+      <Button type="button" size="sm" variant="outline" className="!h-auto !whitespace-normal !py-1.5 text-left" onClick={() => onMudar(null)}>
         Sem caixa (posição e tamanho)
       </Button>
     </div>
