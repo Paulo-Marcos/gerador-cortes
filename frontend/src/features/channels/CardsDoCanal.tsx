@@ -215,6 +215,15 @@ export function AjustesDosCards({
   );
 }
 
+/** D-1107: o piso que o servidor aplica (LARGURA_MINIMA_DO_TEXTO); abaixo dele só o zero, que é automática. */
+export const LARGURA_MINIMA_DO_TEXTO = 240;
+
+/** De 1 a 239 vira o mínimo na hora, para o campo mostrar o que vai valer; zero segue automática. */
+export function larguraDoTextoConfirmada(numero: number): number {
+  const largura = Math.round(numero);
+  return largura <= 0 ? 0 : Math.max(LARGURA_MINIMA_DO_TEXTO, largura);
+}
+
 /** D-1102: até onde vai o texto; zero é a largura de cada cena, como sempre foi. */
 function LarguraDoTexto({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (valor: CardsEditaveis) => void }) {
   return (
@@ -225,8 +234,8 @@ function LarguraDoTexto({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (v
         valor={valor.largura_do_texto ?? 0}
         min={0}
         max={QUADRO.largura}
-        unidade="px, 0 = automática"
-        onMudar={(numero) => onMudar({ ...valor, largura_do_texto: Math.round(numero) })}
+        unidade={`px, 0 = automática, mínimo ${LARGURA_MINIMA_DO_TEXTO}`}
+        onMudar={(numero) => onMudar({ ...valor, largura_do_texto: larguraDoTextoConfirmada(numero) })}
       />
       <p className="text-[11px] text-[var(--wb-text-dim)]">
         Texto mais largo quebra em menos linhas e deixa a letra crescer em vez de encolher. Vale para os cards de texto; lista, fonte, barra inferior e ênfase mantêm a própria largura.
