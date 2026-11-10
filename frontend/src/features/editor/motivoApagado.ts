@@ -6,8 +6,8 @@
 // oferecer um motivo que o backend descarta.
 //
 // D-1006: a lista passou a ser de cada canal (`useMotivosVisiveis`, tela de
-// Canais); esta é o padrão de quem nunca a editou, e o que o diálogo mostra
-// enquanto a do canal não chega.
+// Canais); esta é o padrão de quem nunca a editou, e o que o aviso do riscado
+// mostra enquanto a do canal não chega.
 
 import type { OpcaoConfirmacao } from '@/components/ui/confirm-dialog';
 
