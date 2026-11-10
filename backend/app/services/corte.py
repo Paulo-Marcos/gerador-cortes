@@ -56,7 +56,7 @@ from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_video_cmd,
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
-from app.services import abrir_no_sistema, origem_das_cenas, proposta_apagada
+from app.services import abrir_no_sistema, origem_das_cenas, proposta_apagada, riscar_corte
 from app.services.alertas_conferir import dividir_alertas, juntar_alertas_dos_cortes
 from app.services.claude_ia import (
     ClaudeIaService,
@@ -347,15 +347,15 @@ class AtualizarCorteDTO:
 # ─── Os passos do PATCH do corte (D-716: saíram de `CorteService.atualizar`) ──
 
 
-def _validar_pedido_de_status(corte: Corte, dados: AtualizarCorteDTO) -> None:
-    # D-665: antes de tocar em qualquer campo — um status recusado não pode
-    # deixar a atualização pela metade. `TransicaoDeCorteInvalida` é um
-    # ValueError, e o router já a devolve como 400 com o motivo.
-    if dados.status is not None:
-        # `.value`: em memória o status pode ser o enum, e `str()` de um enum
-        # misto devolve 'StatusCorte.APROVADO' no Python 3.13, não 'aprovado'.
-        atual = getattr(corte.status, "value", corte.status)
-        ciclo_corte.validar_pedido_do_operador(atual, dados.status)
+def _validar_pedido_de_status(corte: Corte, dados: AtualizarCorteDTO) -> bool:
+    # D-665: antes de tocar em qualquer campo (400 com o motivo). D-1088: sair do
+    # riscado é a volta única (snapshot, telemetria); devolve se o bruto solto se
+    # gera de novo. `.value`: no 3.13, `str()` do enum dá 'StatusCorte.APROVADO'.
+    if dados.status is None:
+        return False
+    atual = getattr(corte.status, "value", corte.status)
+    ciclo_corte.validar_pedido_do_operador(atual, dados.status)
+    return riscar_corte.voltar_se_riscado(corte, dados.status)
 
 
 def _aplicar_titulo_e_bordas(corte: Corte, dados: AtualizarCorteDTO) -> None:
@@ -654,10 +654,9 @@ class CorteService:
             corte = await db.get(Corte, corte_id)
             if not corte:
                 raise NaoEncontrado("Corte não encontrado")
-            ciclo_corte.validar_pedido_do_operador(
-                getattr(corte.status, "value", corte.status), StatusCorte.APROVADO.value
-            )
+            regerar_bruto = _validar_pedido_de_status(corte, AtualizarCorteDTO(status="aprovado"))
             corte.status = StatusCorte.APROVADO
+        await riscar_corte.gerar_o_bruto_se_solto(corte_id, regerar_bruto)
 
     @staticmethod
     async def abrir_pasta(corte_id: str) -> str:
@@ -711,7 +710,7 @@ class CorteService:
         corte = result.scalar_one_or_none()
         if not corte:
             raise ValueError("Corte não encontrado")
-        _validar_pedido_de_status(corte, dados)
+        regerar_bruto = _validar_pedido_de_status(corte, dados)
 
         _aplicar_titulo_e_bordas(corte, dados)
         if dados.inicio_seg is not None or dados.fim_seg is not None:
@@ -727,6 +726,7 @@ class CorteService:
 
         await db.commit()
         await _depois_de_gravar(db, corte, dados)
+        await riscar_corte.gerar_o_bruto_se_solto(corte.id, regerar_bruto)
 
         await db.refresh(corte)
         return corte

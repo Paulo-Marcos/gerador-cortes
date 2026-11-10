@@ -16,7 +16,7 @@ from app.domain.corte.telemetria_cortes import (
     diff_proposta_vs_final,
     telemetria_csv,
 )
-from app.models import Corte, CorteSnapshot, Projeto
+from app.models import Corte, CorteSnapshot, Projeto, StatusCorte
 from app.services import telemetria_shorts
 from app.services.canal import motivos_de_exclusao
 from sqlalchemy import select
@@ -129,16 +129,19 @@ def _diffs(cortes: list[Corte], snapshots: dict[str, CorteSnapshot]) -> list[dic
             projeto_tem_snapshots=projeto_tem_snapshots,
         )
         for corte in cortes
-        if not _riscado(snapshots.get(corte.id))
+        if not _esta_riscado(corte, snapshots.get(corte.id))
     ]
 
 
-def _riscado(snapshot: CorteSnapshot | None) -> bool:
-    """D-1088: o corte riscado fica no banco, mas conta como apagado (`_apagados`).
+def _esta_riscado(corte: Corte, snapshot: CorteSnapshot | None) -> bool:
+    """D-1088, RN-05: o corte riscado fica no banco, mas não conta como mantido.
 
-    Contá-lo também aqui somaria a proposta duas vezes, e como corte mantido.
+    O da IA conta como apagado (`_apagados`, pelo snapshot), e contá-lo também
+    aqui somaria a proposta duas vezes. O feito na mão não tem snapshot: é o
+    status que diz que ele saiu.
     """
-    return snapshot is not None and snapshot.apagado_em is not None
+    riscado = getattr(corte.status, "value", corte.status) == StatusCorte.REJEITADO.value
+    return riscado or (snapshot is not None and snapshot.apagado_em is not None)
 
 
 def _json_lista(raw: str | None) -> list:

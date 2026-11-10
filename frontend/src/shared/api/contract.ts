@@ -6611,6 +6611,8 @@ export interface components {
             corte_id: string;
             /** Liberado Mb */
             liberado_mb: number;
+            /** Nao Removidos */
+            nao_removidos: string[];
             /** Retido Mb */
             retido_mb: number;
             /** Status Anterior */

@@ -30,6 +30,7 @@ class CorteRiscadoResponse(RespostaApi):
     status_anterior: str
     liberado_mb: float
     retido_mb: float
+    nao_removidos: list[str]
 
 
 @router.post("/{corte_id}/riscar", response_model=CorteRiscadoResponse)

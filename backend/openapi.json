@@ -3464,6 +3464,13 @@
             "title": "Liberado Mb",
             "type": "number"
           },
+          "nao_removidos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Nao Removidos",
+            "type": "array"
+          },
           "retido_mb": {
             "title": "Retido Mb",
             "type": "number"
@@ -3477,7 +3484,8 @@
           "corte_id",
           "status_anterior",
           "liberado_mb",
-          "retido_mb"
+          "retido_mb",
+          "nao_removidos"
         ],
         "title": "CorteRiscadoResponse",
         "type": "object"

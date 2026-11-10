@@ -34,7 +34,7 @@ export function useRiscarCorte(
   const riscar = useMutation({ mutationFn: (corteId: string) => cortesApi.riscarCorte(corteId) });
   const bloqueio = corte ? bloqueioDoRiscar(corte) : null;
 
-  function avisar(alvo: Corte, jaEstavaRiscado: boolean, liberadoMb: number) {
+  function avisar(alvo: Corte, jaEstavaRiscado: boolean, liberadoMb: number, naoRemovidos: number) {
     const atualizar = () => invalidaCorte(qc, alvo.id, projetoId);
     const desfazer = async () => {
       dismiss(id);
@@ -46,7 +46,7 @@ export function useRiscarCorte(
         notify(mensagemErro(erro, 'Não deu para desfazer.'), { tone: 'error' });
       }
     };
-    const id = notify(mensagemDoRiscado(alvo, liberadoMb), {
+    const id = notify(mensagemDoRiscado(alvo, liberadoMb, naoRemovidos), {
       title: 'Corte riscado.',
       tone: 'info',
       duracaoMs: DURACAO_DO_AVISO_MS,
@@ -73,7 +73,12 @@ export function useRiscarCorte(
     riscar.mutate(alvo.id, {
       onSuccess: (resultado) => {
         invalidaCorte(qc, alvo.id, projetoId);
-        avisar(alvo, resultado.status_anterior === 'rejeitado', resultado.liberado_mb);
+        avisar(
+          alvo,
+          resultado.status_anterior === 'rejeitado',
+          resultado.liberado_mb,
+          resultado.nao_removidos?.length ?? 0,
+        );
         // Segue para o próximo corte, como o excluir fazia. O ajuste não salvo NÃO
         // é descartado: a saída o grava no corte riscado, como em qualquer troca de
         // corte. A D-883 descartava porque o corte excluído sumia e o salvar dava

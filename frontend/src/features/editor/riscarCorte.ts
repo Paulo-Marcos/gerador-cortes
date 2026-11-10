@@ -28,10 +28,19 @@ export function proximoDepoisDeRiscar(cortes: readonly Corte[], corteId: string)
   return null;
 }
 
-/** A linha do aviso: qual corte saiu e quanto disco voltou. */
-export function mensagemDoRiscado(corte: Pick<Corte, 'numero' | 'titulo_proposto'>, liberadoMb: number): string {
+/** A linha do aviso: qual corte saiu, quanto disco voltou e o que ficou nele.
+ *  `naoRemovidos`: arquivos que o Windows não deixou apagar (em uso). */
+export function mensagemDoRiscado(
+  corte: Pick<Corte, 'numero' | 'titulo_proposto'>,
+  liberadoMb: number,
+  naoRemovidos = 0,
+): string {
   const disco = liberadoMb > 0 ? ` · ${formatarMb(liberadoMb)} liberados` : '';
-  return `#${corte.numero} · ${corte.titulo_proposto}${disco}`;
+  const ficou =
+    naoRemovidos > 0
+      ? ` · ${naoRemovidos} ${naoRemovidos === 1 ? 'arquivo em uso ficou' : 'arquivos em uso ficaram'} no disco`
+      : '';
+  return `#${corte.numero} · ${corte.titulo_proposto}${disco}${ficou}`;
 }
 
 function formatarMb(mb: number): string {
