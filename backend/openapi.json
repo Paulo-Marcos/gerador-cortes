@@ -2689,6 +2689,17 @@
             ],
             "title": "Escala"
           },
+          "largura_do_texto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Largura Do Texto"
+          },
           "ocultos": {
             "anyOf": [
               {
@@ -2765,6 +2776,17 @@
           "escala": {
             "title": "Escala",
             "type": "number"
+          },
+          "largura_do_texto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Largura Do Texto"
           },
           "ocultos": {
             "items": {

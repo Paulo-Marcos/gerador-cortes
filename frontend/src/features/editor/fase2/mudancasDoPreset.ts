@@ -19,6 +19,7 @@ export interface CardsComparaveis {
   alinhamento_vertical?: string | null;
   alinhamento_horizontal?: string | null;
   zona_no_cheio?: CaixaDoCard | null;
+  largura_do_texto?: number | null;
 }
 
 /** A forma comparável: a caixa vazia (o "sem caixa" da edição) vale o mesmo que nenhuma. */
@@ -31,6 +32,7 @@ function assinatura(cards: CardsComparaveis): string {
     ajuste: cards.ajuste ?? null,
     av: cards.alinhamento_vertical ?? null,
     ah: cards.alinhamento_horizontal ?? null,
+    lt: cards.largura_do_texto ?? 0,
     zona: zona && { x: zona.x, y: zona.y, w: zona.w, h: zona.h },
   });
 }

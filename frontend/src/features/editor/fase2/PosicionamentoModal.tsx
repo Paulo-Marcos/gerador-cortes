@@ -460,7 +460,7 @@ export function PosicionamentoModal({
         {/* D-927: menu de grupos | ajustes do grupo | prévia parada, que cabe inteira. */}
         <div className="grid min-h-0 flex-1 grid-cols-[84px_minmax(0,300px)_minmax(0,1fr)] overflow-hidden">
           <MenuDoModal grupos={grupos} ativo={grupoAtivo} onEscolher={setGrupo} />
-          <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto border-r border-[var(--wb-border-soft)] p-3">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto overflow-x-hidden border-r border-[var(--wb-border-soft)] p-3">
             {grupoAtivo === 'telas' ? (
               <PainelDasTelas
                 isFullMode={isFullMode}

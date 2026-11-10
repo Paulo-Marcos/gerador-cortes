@@ -6250,6 +6250,8 @@ export interface components {
             alinhamento_vertical?: ("centro" | "topo" | "base") | null;
             /** Escala */
             escala?: number | null;
+            /** Largura Do Texto */
+            largura_do_texto?: number | null;
             /** Ocultos */
             ocultos?: string[] | null;
             posicao?: components["schemas"]["PosicaoModel"] | null;
@@ -6265,6 +6267,8 @@ export interface components {
             alinhamento_vertical?: string | null;
             /** Escala */
             escala: number;
+            /** Largura Do Texto */
+            largura_do_texto?: number | null;
             /** Ocultos */
             ocultos: string[];
             posicao: components["schemas"]["PosicaoModel"];

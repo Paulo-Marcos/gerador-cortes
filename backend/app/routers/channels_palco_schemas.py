@@ -59,6 +59,8 @@ class CardsRequest(BaseModel):
     alinhamento_horizontal: Literal["centro", "esquerda", "direita"] | None = None
     # D-941: a caixa do card no vídeo cheio; largura ou altura 0 = sem caixa.
     zona_no_cheio: CaixaDoCardModel | None = None
+    # D-1102: até onde vai o texto do card, em px; 0 = automática.
+    largura_do_texto: int | None = None
 
 
 class TipoDeCenaModel(BaseModel):
@@ -76,6 +78,7 @@ class CardsResponse(BaseModel):
     alinhamento_vertical: str | None = None
     alinhamento_horizontal: str | None = None
     zona_no_cheio: CaixaDoCardModel | None = None
+    largura_do_texto: int | None = None
 
 
 class PalcoComponentesRequest(BaseModel):

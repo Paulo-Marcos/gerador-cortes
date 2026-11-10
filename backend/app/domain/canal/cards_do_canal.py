@@ -58,6 +58,10 @@ AJUSTES = ("preencher", "natural")
 LADO_MINIMO_DA_CAIXA = 80
 ALINHAMENTOS_VERTICAIS = ("centro", "topo", "base")
 ALINHAMENTOS_HORIZONTAIS = ("centro", "esquerda", "direita")
+# D-1102: até onde vai o texto do card, em px do quadro (antes da escala). 0 é
+# "automática": a largura de cada cena (440 na coluna), como sempre foi. Larga, o
+# texto quebra em menos linhas e o card pode crescer em vez de encolher a letra.
+LARGURA_MINIMA_DO_TEXTO = 240
 
 
 class TipoDeCenaInvalido(PedidoInvalido):
@@ -82,6 +86,8 @@ class Cards:
     alinhamento_horizontal: str = ALINHAMENTOS_HORIZONTAIS[0]
     zona_no_cheio: tuple[int, int, int, int] | None = None
     """D-941: a caixa (x, y, w, h) do card no vídeo cheio; None = posição + escala."""
+    largura_do_texto: int = 0
+    """D-1102: largura do texto do card em px (0 = automática, a de cada cena)."""
 
     def para_dict(self) -> dict[str, Any]:
         return {
@@ -91,6 +97,7 @@ class Cards:
             "ajuste": self.ajuste,
             "alinhamento_vertical": self.alinhamento_vertical,
             "alinhamento_horizontal": self.alinhamento_horizontal,
+            "largura_do_texto": self.largura_do_texto,
             "posicao": {
                 "automatica": self.posicao.automatica,
                 "x": self.posicao.x,
@@ -132,6 +139,26 @@ def _zona(valor: Any, atual: tuple[int, int, int, int] | None) -> tuple[int, int
     w = max(LADO_MINIMO_DA_CAIXA, min(w, QUADRO[0]))
     h = max(LADO_MINIMO_DA_CAIXA, min(h, QUADRO[1]))
     return (max(0, min(x, QUADRO[0] - w)), max(0, min(y, QUADRO[1] - h)), w, h)
+
+
+def _largura_do_texto(valor: Any, atual: int) -> int:
+    """A largura do texto: 0 segue automática; o resto fica entre o mínimo e o quadro.
+
+    Exemplos:
+        >>> _largura_do_texto(50, 0), _largura_do_texto(9000, 0), _largura_do_texto(0, 900)
+        (240, 1920, 0)
+        >>> _largura_do_texto("x", 900), _largura_do_texto(None, 900)
+        (900, 900)
+    """
+    if valor is None:
+        return atual
+    try:
+        largura = int(round(float(valor)))
+    except (TypeError, ValueError):
+        return atual
+    if largura <= 0:
+        return 0
+    return max(LARGURA_MINIMA_DO_TEXTO, min(largura, QUADRO[0]))
 
 
 def _ocultos(valor: Any, atual: tuple[str, ...], *, tolerante: bool) -> tuple[str, ...]:
@@ -226,6 +253,9 @@ def mesclar(atual: Cards, mudancas: Any, *, tolerante: bool = False) -> Cards:
             if "zona_no_cheio" in mudancas
             else atual.zona_no_cheio
         ),
+        largura_do_texto=_largura_do_texto(
+            mudancas.get("largura_do_texto"), atual.largura_do_texto
+        ),
     )
 
 
@@ -250,4 +280,5 @@ def props_para_renderer(estilo: str, cards: Cards) -> dict[str, Any]:
         "alinhamento_vertical": cards.alinhamento_vertical,
         "alinhamento_horizontal": cards.alinhamento_horizontal,
         "zona_no_cheio": _zona_como_dict(cards.zona_no_cheio),
+        "largura_do_texto": cards.largura_do_texto,
     }

@@ -61,7 +61,7 @@ export function PainelDoPalco({ grupo, ...ctx }: ContextoDoPalco & { grupo: 'fun
     return (
       <div className="grid gap-3">
         {exemplo}
-        {doCanal ?? (palco.rascunho ? <AjustesDosCards valor={palco.rascunho.cards} onMudar={(cards) => palco.mudar((r) => r && { ...r, cards })} /> : null)}
+        {doCanal ?? (palco.rascunho ? <AjustesDosCards colunas="grid-cols-1" valor={palco.rascunho.cards} onMudar={(cards) => palco.mudar((r) => r && { ...r, cards })} /> : null)}
       </div>
     );
   }
