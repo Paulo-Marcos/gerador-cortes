@@ -25,7 +25,7 @@ from app.models import Base, Corte, CorteSnapshot, Projeto, StatusCorte
 from app.routers import corte_riscado
 from app.routers import cortes as rota_cortes
 from app.routers.errors import registrar_tratadores
-from app.services import media_retention, riscar_corte
+from app.services import marca_do_riscado, media_retention, riscar_corte
 from app.services.telemetria_cortes import TelemetriaCortesService
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -265,7 +265,7 @@ async def test_so_esquece_o_bruto_se_ninguem_gravou_outro_no_meio(fabrica):
         (await db.get(Corte, "c1")).arquivo_clip_path = "cortes/c1/clip_raw_novo.mkv"
         await db.commit()
 
-    await riscar_corte._anotar_o_bruto_solto("c1", "cortes/c1/clip_raw.mkv")
+    await marca_do_riscado._anotar_o_bruto_solto("c1", "cortes/c1/clip_raw.mkv")
 
     corte = await _corte(fabrica, "c1")
     assert corte.arquivo_clip_path == "cortes/c1/clip_raw_novo.mkv"

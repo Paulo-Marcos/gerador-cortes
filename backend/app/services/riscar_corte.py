@@ -19,16 +19,13 @@ que o riscar soltou (`gerar_o_bruto_se_solto`, depois do commit).
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
-from app.domain.corte import ciclo_corte
-from app.models import Corte, StatusCorte
-from app.services import bruto_do_corte, proposta_apagada, volta_do_riscado
+from app.models import Corte
+from app.services import bruto_do_corte, marca_do_riscado, volta_do_riscado
 from app.services.export import ExportService
-from app.services.media_retention import MediaRetentionService
 from app.services.render.render_progress import RenderProgressStore
 
 
@@ -64,18 +61,9 @@ async def riscar(corte_id: str, motivo: str | None = None) -> CorteRiscado:
         corte = await db.get(Corte, corte_id)
         if corte is None:
             raise NaoEncontrado("Corte não encontrado")
-        anterior = getattr(corte.status, "value", corte.status)
-        ciclo_corte.validar_riscar(anterior, no_youtube=bool(corte.youtube_video_id))
-        if anterior != ciclo_corte.REJEITADO:
-            # Riscar de novo (o chip do motivo) não apaga a etapa de onde ele saiu.
-            corte.status_antes_de_riscar = anterior
-        corte.status = StatusCorte.REJEITADO
-        proposta_apagada.registrar_riscado(corte, motivo)
-        bruto = corte.arquivo_clip_path
+        anterior = marca_do_riscado.marcar_riscado(corte, motivo)
 
-    relatorio = await asyncio.to_thread(MediaRetentionService.limpar_corte, corte)
-    if bruto and not corte.arquivo_clip_path:
-        await _anotar_o_bruto_solto(corte_id, bruto)
+    relatorio = await marca_do_riscado.soltar_midia_do_riscado(corte)
     return CorteRiscado(
         corte_id=corte_id,
         status_anterior=anterior,
@@ -124,12 +112,3 @@ async def gerar_o_bruto_se_solto(corte_id: str, solto: bool) -> bool:
     except PedidoInvalido:
         return False
     return True
-
-
-async def _anotar_o_bruto_solto(corte_id: str, bruto: str) -> None:
-    """Esquece o caminho do bruto que saiu, se ninguém gravou outro no meio."""
-    async with AsyncSessionLocal() as db, db.begin():
-        corte = await db.get(Corte, corte_id)
-        if corte is not None and corte.arquivo_clip_path == bruto:
-            corte.arquivo_clip_path = ""
-            corte.bruto_solto_ao_riscar = True

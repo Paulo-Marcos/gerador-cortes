@@ -63,6 +63,8 @@ from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,
 )
+from app.services.juncao_recusada import recusar_juncao_invalida
+from app.services.marca_do_riscado import marcar_riscado, soltar_midia_do_riscado
 from app.services.riscados_do_corte import (
     dividir_riscados,
     juntar_riscados,
@@ -86,42 +88,6 @@ logger = logging.getLogger(__name__)
 # Margem mínima (s) que cada metade precisa ter para a divisão ser válida —
 # evita criar cortes degenerados quando o ponteiro fica colado na borda.
 _MARGEM_DIVISAO_SEG = 0.5
-
-
-async def _recusar_juncao_invalida(db: AsyncSession, primeiro: Corte, segundo: Corte) -> None:
-    """Barra as junções que produziriam um corte incoerente (D-575).
-
-    Levanta ValueError com a razão; o router traduz para 400.
-
-    - **Projetos diferentes**: os tempos medem lives distintas; somar não
-      significa nada.
-    - **Já publicado**: juntar reescreveria um vídeo que está no ar.
-    - **Corte no meio**: o vão entre os dois vira trecho removido, e esse vão
-      engoliria inteiro o corte do meio — que continuaria existindo, agora
-      sobreposto ao mesclado.
-    """
-    if primeiro.projeto_id != segundo.projeto_id:
-        raise ValueError("Só dá para juntar cortes do mesmo projeto.")
-
-    publicado = next((c for c in (primeiro, segundo) if (c.youtube_video_id or "").strip()), None)
-    if publicado is not None:
-        raise ValueError(
-            f"O corte #{publicado.numero} já foi publicado no YouTube; "
-            "juntar mudaria um vídeo que já está no ar."
-        )
-
-    entre = await db.execute(
-        select(func.count())
-        .select_from(Corte)
-        .where(
-            Corte.projeto_id == primeiro.projeto_id,
-            Corte.id.notin_([primeiro.id, segundo.id]),
-            Corte.inicio_seg >= float(primeiro.fim_seg or 0.0),
-            Corte.inicio_seg < float(segundo.inicio_seg or 0.0),
-        )
-    )
-    if entre.scalar_one() > 0:
-        raise ValueError("Há outro corte entre os dois. Junte primeiro os vizinhos imediatos.")
 
 
 def _desvios_do_corte(corte: Corte) -> list[dict]:
@@ -224,18 +190,18 @@ async def _adotar_filhos_do_corte(
 ) -> None:
     """Move shorts (e o metadado órfão) do corte absorvido para o sobrevivente.
 
-    Sem isto o `cascade="all, delete-orphan"` apagaria os shorts junto com o
-    corte — trechos já curados a mão, que ninguém pediu para perder. Os tempos
-    do short são do BRUTO (invariante declarada no modelo), então andam pelo
-    mesmo offset das cenas.
+    O absorvido fica riscado (D-1097), e os shorts dele, trechos já curados a
+    mão que ninguém pediu para perder, passam ao corte que entra no vídeo. Os
+    tempos do short são do BRUTO (invariante declarada no modelo), então andam
+    pelo mesmo offset das cenas.
 
     O metadado só é adotado quando o sobrevivente ainda não tem um: título,
     descrição e capa são uma escolha só por corte, e a do primeiro prevalece.
 
-    A adoção termina com `flush` + `expire`: sem isso o `delete` do corte
-    absorvido recarrega as relações dele, ainda vê os filhos que acabamos de
-    remarcar e os apaga pelo cascade — o metadado sumia mesmo depois de já
-    pertencer ao sobrevivente.
+    A adoção termina com `flush` + `expire`: sem isso a sessão continuaria
+    mostrando, no corte riscado, filhos que já são do sobrevivente. Antes da
+    D-1097 o juntar apagava o absorvido, e esse `delete` levava pelo cascade o
+    metadado já remarcado.
     """
     shorts = (await db.execute(select(Short).where(Short.corte_id == segundo.id))).scalars().all()
     for short in shorts:
@@ -268,13 +234,6 @@ async def _adotar_filhos_do_corte(
 
     await db.flush()
     db.expire(segundo, ["metadado", "shorts"])
-
-
-def _apagar_pasta_do_corte(projeto_id: str, corte_id: str) -> None:
-    """Remove a pasta do corte absorvido — mesmo gesto do DELETE /cortes/{id}."""
-    pasta = projetos_dir() / projeto_id / "cortes" / corte_id
-    if pasta.exists():
-        shutil.rmtree(pasta, ignore_errors=True)
 
 
 # Artefatos derivados do span do corte. Ao juntar, todos passam a cobrir só a
@@ -964,6 +923,7 @@ class CorteService:
             .where(
                 Corte.projeto_id == corte.projeto_id,
                 Corte.id != corte.id,
+                Corte.status != StatusCorte.REJEITADO,
                 Corte.inicio_seg >= float(corte.inicio_seg or 0.0),
             )
             .order_by(Corte.inicio_seg.asc(), Corte.id.asc())
@@ -981,7 +941,10 @@ class CorteService:
         shorts — por isso a junção CARREGA tudo isso em vez de recomeçar.
 
         Quem sobrevive é o corte que começa antes: ele mantém o `id`, e com ele
-        a pasta, a URL do editor e o metadado. O outro é apagado.
+        a pasta, a URL do editor e o metadado. O outro fica riscado (D-1097, RN-04):
+        guarda título, Fire, a etapa de antes e a proposta, e solta a mídia como o
+        Limpar. "Trazer de volta" o devolve e regera o bruto. A telemetria não o
+        conta como apagado: a proposta dele vive no corte que ficou.
 
         O que é feito com cada coisa:
 
@@ -1003,7 +966,7 @@ class CorteService:
 
         Retorna o id do corte sobrevivente. Levanta ValueError quando os cortes
         não existem, são o mesmo, estão em projetos diferentes, já foram
-        publicados no YouTube, ou têm outro corte entre eles.
+        publicados no YouTube, um deles está riscado, ou há outro corte entre eles.
         """
         async with AsyncSessionLocal() as db:
             resultado = await db.execute(
@@ -1022,7 +985,7 @@ class CorteService:
             primeiro, segundo = sorted(
                 por_id.values(), key=lambda c: (float(c.inicio_seg or 0.0), c.id)
             )
-            await _recusar_juncao_invalida(db, primeiro, segundo)
+            await recusar_juncao_invalida(db, primeiro, segundo)
 
             desvios_primeiro = _desvios_do_corte(primeiro)
             desvios_segundo = _desvios_do_corte(segundo)
@@ -1077,14 +1040,13 @@ class CorteService:
 
             projeto_id = primeiro.projeto_id
             sobrevivente_id = primeiro.id
-            absorvido_id = segundo.id
-            await db.delete(segundo)
+            marcar_riscado(segundo, None, conta_como_apagado=False)
             await db.commit()
 
             await CorteService.renumerar_por_tempo(db, projeto_id)
 
-        # D-645: as duas apagam pastas de vídeo — rodam fora do event loop.
-        await asyncio.to_thread(_apagar_pasta_do_corte, projeto_id, absorvido_id)
+        # D-645: as duas apagam vídeo — rodam fora do event loop.
+        await soltar_midia_do_riscado(segundo)
         await asyncio.to_thread(_apagar_artefatos_de_video, projeto_id, sobrevivente_id)
 
         await CorteService.sincronizar_transcricao_corte(sobrevivente_id)

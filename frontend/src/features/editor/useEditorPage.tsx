@@ -500,8 +500,8 @@ export function useEditorPage() {
 
   // D-575: funde este corte com o proximo. Como o dividir, exige salvar antes —
   // o backend le as bordas e os trechos PERSISTIDOS, entao edicao pendente seria
-  // ignorada em silencio. O aviso do confirm e forte de proposito: o outro corte
-  // deixa de existir e os artefatos de video sao apagados.
+  // ignorada em silencio. D-1097: sem o confirm do navegador — o outro corte fica
+  // riscado, com o trabalho, e o aviso da junção diz como trazê-lo de volta.
   function onJuntarProximoCorte() {
     if (!corteUI || juntarCortes.isPending) return;
     if (isDirty) {
@@ -510,18 +510,6 @@ export function useEditorPage() {
     }
     if (!nextCut) {
       notifyToast('Este é o último corte: não há com quem juntar.', { tone: 'error' });
-      return;
-    }
-    const rotulo = nextCut.titulo_proposto?.trim() || `corte #${nextCut.numero}`;
-    if (
-      !window.confirm(
-        `Juntar este corte com ${rotulo}?\n\n` +
-          'Trechos a remover, cenas, layout e shorts dos dois são preservados, e o ' +
-          'intervalo entre eles vira trecho removido.\n\n' +
-          'O outro corte deixa de existir, e o bruto/render já gerados são apagados ' +
-          '(precisam ser gerados de novo).',
-      )
-    ) {
       return;
     }
     juntarCortes.mutate({ outro_corte_id: nextCut.id });

@@ -121,7 +121,7 @@ async def test_corte_resultante_vai_do_inicio_do_primeiro_ao_fim_do_segundo(
     assert sobrevivente_id == "c1"
     async with session_factory() as db:
         corte = await db.get(Corte, "c1")
-        assert await db.get(Corte, "c2") is None
+        assert (await db.get(Corte, "c2")).status == "rejeitado"
 
     assert corte.inicio_seg == 0.0
     assert corte.fim_seg == 200.0
