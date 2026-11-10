@@ -1,29 +1,29 @@
 import type { Desvio } from '@/types/models';
 import { hmsParaSeg } from '../timeUtils';
+import { bordaAjustadaPorVoce } from './origemDaBorda';
 
 // D-1089 (P10, RN-36): o que a pergunta dos desvios diz de cada trecho e da rodada.
 
-/** A mesma tolerância de `_intacta` (`backend/app/domain/corte/riscados.py`): o HMS guarda ms. */
-const TOLERANCIA_BORDA_SEG = 0.002;
-
 /**
- * De quem é a borda do trecho.
- * - `ia`: segue como a rodada deu; o "Desfazer rodada" leva.
- * - `ajustada`: veio da rodada, mas a borda foi mexida; pode voltar à da IA.
- * - `manual`: sem carimbo de rodada, marcado à mão desde o começo.
- *
- * Espelha `_intacta` do backend, mas lê a borda da tela: um arraste ainda não salvo
- * já muda o rótulo, sem esperar o Ctrl+S.
+ * O selo do trecho: `ia` ("Auto · borda da IA") ou `voce` ("Manual · você ajustou").
+ * A regra é a da linha do tempo (`bordaAjustadaPorVoce`, D-1091), para a onda e o
+ * painel nunca dizerem coisas opostas do mesmo trecho: com carimbo, a borda mexida é
+ * sua; sem carimbo, só o trecho marcado à mão é seu — o silêncio do app e a análise
+ * inicial são da IA. A borda da tela vale: um arraste ainda não salvo já muda o selo.
  */
-export type BordaDoTrecho = 'ia' | 'ajustada' | 'manual';
+export type BordaDoTrecho = 'ia' | 'voce';
 
-export function bordaDoTrecho(desvio: Desvio): BordaDoTrecho {
-  const borda = desvio.borda_da_rodada;
-  if (desvio.rodada == null || !borda) return 'manual';
-  const intacta =
-    Math.abs(hmsParaSeg(desvio.inicio_hms) - borda[0]) <= TOLERANCIA_BORDA_SEG &&
-    Math.abs(hmsParaSeg(desvio.fim_hms) - borda[1]) <= TOLERANCIA_BORDA_SEG;
-  return intacta ? 'ia' : 'ajustada';
+export function classificarBorda(desvio: Desvio): BordaDoTrecho {
+  return bordaAjustadaPorVoce(desvio) ? 'voce' : 'ia';
+}
+
+/** Tem borda da IA para onde voltar? Só o trecho da rodada cuja borda você mexeu. */
+export function podeVoltarABordaDaIa(desvio: Desvio): boolean {
+  return temCarimbo(desvio) && bordaAjustadaPorVoce(desvio);
+}
+
+function temCarimbo(desvio: Desvio): boolean {
+  return desvio.rodada != null && !!desvio.borda_da_rodada;
 }
 
 /** Quanto sai do corte: trecho dentro de outro conta uma vez, como no líquido. */
@@ -53,7 +53,7 @@ const NOME_DO_PROVEDOR: Record<string, string> = { claude: 'Claude', gemini: 'Ge
 
 /** Quem fez a última rodada que ainda dá para desfazer; `null` se não for Claude nem Gemini. */
 export function provedorDaUltimaRodada(desvios: Desvio[]): string | null {
-  const intactas = desvios.filter((d) => bordaDoTrecho(d) === 'ia');
+  const intactas = desvios.filter((d) => temCarimbo(d) && !bordaAjustadaPorVoce(d));
   const rodada = Math.max(...intactas.map((d) => d.rodada ?? 0));
   const origem = intactas.find((d) => d.rodada === rodada)?.origem;
   return (origem && NOME_DO_PROVEDOR[origem]) ?? null;

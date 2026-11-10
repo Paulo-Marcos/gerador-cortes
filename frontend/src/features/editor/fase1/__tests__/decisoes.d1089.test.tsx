@@ -178,13 +178,23 @@ describe('a moldura da aba Decisões', () => {
 });
 
 describe('a pergunta 2: cada trecho diz de quem é a borda', () => {
-  it('Auto na borda da IA, Manual na que você ajustou ou marcou', () => {
+  it('dois selos só: Auto na borda da IA, Manual na sua', () => {
     const html = lista({ desvios: [DA_IA, AJUSTADA, A_MAO], onVoltarABordaDaIa: noop });
     const blocos = html.split('<article').slice(1);
 
     expect(blocos[0]).toContain('Auto · borda da IA');
     expect(blocos[1]).toContain('Manual · você ajustou');
-    expect(blocos[2]).toContain('Manual · você marcou');
+    expect(blocos[2]).toContain('Manual · você ajustou');
+    expect(html).not.toContain('você marcou');
+  });
+
+  it('o silêncio do app e a análise inicial, sem carimbo, são Auto e não têm Voltar', () => {
+    const silencio: Desvio = { inicio_hms: '00:20:00.000', fim_hms: '00:20:02.000', motivo: 'silêncio', origem: 'tecnico' };
+    const daAnalise: Desvio = { inicio_hms: '00:21:00.000', fim_hms: '00:21:09.000', motivo: 'tangente', origem: 'claude' };
+    const blocos = lista({ desvios: [silencio, daAnalise], onVoltarABordaDaIa: noop }).split('<article').slice(1);
+
+    expect(blocos.map((b) => b.includes('Auto · borda da IA'))).toEqual([true, true]);
+    expect(blocos.some((b) => b.includes('Voltar à borda da IA'))).toBe(false);
   });
 
   it('"Voltar à borda da IA" só no trecho ajustado, com o aviso de que o Desfazer não o leva', () => {

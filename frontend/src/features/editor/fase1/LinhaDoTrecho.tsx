@@ -6,7 +6,7 @@ import type { Desvio, TranscricaoLinha } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 import { hmsParaSeg } from '../timeUtils';
 import { falaDoTrecho } from './falaDoTrecho';
-import { bordaDoTrecho, type BordaDoTrecho } from './perguntaDosDesvios';
+import { classificarBorda, podeVoltarABordaDaIa, type BordaDoTrecho } from './perguntaDosDesvios';
 import { resolverBadgeTrecho } from './trechoBadge';
 
 // O bloco de um trecho na pergunta dos desvios (D-1089, P10), e as peças que o
@@ -115,8 +115,7 @@ export function FalaQueSai({ desvio, linhas, riscada }: { desvio: Desvio; linhas
 
 const ROTULO_DA_BORDA: Record<BordaDoTrecho, string> = {
   ia: 'Auto · borda da IA',
-  ajustada: 'Manual · você ajustou',
-  manual: 'Manual · você marcou',
+  voce: 'Manual · você ajustou',
 };
 
 /**
@@ -158,7 +157,8 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
   onRiscar,
   onVoltarABordaDaIa,
 }: LinhaDoTrechoProps) {
-  const borda = bordaDoTrecho(desvio);
+  const borda = classificarBorda(desvio);
+  const podeVoltar = podeVoltarABordaDaIa(desvio);
   return (
     <article
       aria-current={ativo || undefined}
@@ -184,7 +184,7 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
             {desvio.motivo || '—'}
           </div>
           <FalaQueSai desvio={desvio} linhas={linhas} />
-          {borda === 'ajustada' ? (
+          {podeVoltar ? (
             <div className="mt-1 text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
               Desfazer a rodada não leva este trecho. "Voltar à borda da IA" o devolve à rodada.
             </div>
@@ -193,7 +193,7 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
       </button>
       {/* Fora do botão da linha: botão dentro de botão não é HTML válido. */}
       <div className="flex justify-end gap-1.5 px-2.5 pb-2">
-        {borda === 'ajustada' && onVoltarABordaDaIa ? (
+        {podeVoltar && onVoltarABordaDaIa ? (
           <button type="button" onClick={onVoltarABordaDaIa} disabled={pendente} className={BOTAO_DO_TRECHO}>
             Voltar à borda da IA
           </button>
