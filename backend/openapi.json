@@ -13490,6 +13490,19 @@
         "title": "VersoesResponse",
         "type": "object"
       },
+      "VoltarABordaDaIaRequest": {
+        "properties": {
+          "desvio_index": {
+            "title": "Desvio Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "desvio_index"
+        ],
+        "title": "VoltarABordaDaIaRequest",
+        "type": "object"
+      },
       "VolumeResponse": {
         "properties": {
           "avisos": {
@@ -19120,6 +19133,59 @@
           }
         },
         "summary": "Obter Video Bruto",
+        "tags": [
+          "Cortes"
+        ]
+      }
+    },
+    "/api/cortes/{corte_id}/voltar-a-borda-da-ia": {
+      "post": {
+        "description": "Devolve ao trecho ajustado à mão a borda que a IA deu: ele volta para a rodada.",
+        "operationId": "voltar_a_borda_da_ia_api_cortes__corte_id__voltar_a_borda_da_ia_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "corte_id",
+            "required": true,
+            "schema": {
+              "title": "Corte Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoltarABordaDaIaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Voltar A Borda Da Ia",
         "tags": [
           "Cortes"
         ]

@@ -23,7 +23,17 @@ async def restaurar_desvio(corte_id: str, body: RestaurarDesvioRequest):
     return _corte_to_dict(await riscados.restaurar_desvio(corte_id, body.riscado_index))
 
 
+class VoltarABordaDaIaRequest(BaseModel):
+    desvio_index: int
+
+
 @router.post("/{corte_id}/desfazer-rodada", response_model=CorteResponse)
 async def desfazer_rodada(corte_id: str):
     """Risca a última rodada da IA. Marca feita ou ajustada à mão fica no corte."""
     return _corte_to_dict(await riscados.desfazer_rodada(corte_id))
+
+
+@router.post("/{corte_id}/voltar-a-borda-da-ia", response_model=CorteResponse)
+async def voltar_a_borda_da_ia(corte_id: str, body: VoltarABordaDaIaRequest):
+    """Devolve ao trecho ajustado à mão a borda que a IA deu: ele volta para a rodada."""
+    return _corte_to_dict(await riscados.voltar_a_borda_da_ia(corte_id, body.desvio_index))

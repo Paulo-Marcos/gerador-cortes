@@ -1,11 +1,17 @@
 import { useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toaster';
-import { useDesfazerRodada, useRemoverDesvio, useRestaurarDesvio } from '@/features/editor/useCortes';
+import {
+  useDesfazerRodada,
+  useRemoverDesvio,
+  useRestaurarDesvio,
+  useVoltarABordaDaIa,
+} from '@/features/editor/useCortes';
 import type { Corte, Desvio } from '@/types/models';
 import type { EditHistory } from './useEditHistory';
 
-// D-1017 (RN-36): riscar, restaurar e desfazer a rodada. As três gravam na hora, mas o
-// arraste de borda fica pendente até o Ctrl+S, com a lista INTEIRA de trechos. Salvar
+// D-1017 (RN-36): riscar, restaurar, desfazer a rodada e (D-1089) voltar à borda da IA
+// gravam na hora, mas o arraste de borda fica pendente até o Ctrl+S, com a lista
+// INTEIRA de trechos. Salvar
 // essa lista depois devolveria ao corte o que acabou de ser riscado, então a pendência
 // é gravada antes. E o histórico recomeça, como ao salvar: com o Ctrl+Z, a lista velha
 // voltaria a ser pendente.
@@ -47,6 +53,8 @@ export interface TrechosRiscados {
   riscar: (indice: number) => void;
   restaurar: (indice: number) => void;
   desfazerRodada: () => void;
+  /** D-1089 (P10): o trecho `indice` volta à borda da IA, e à rodada. */
+  voltarABordaDaIa: (indice: number) => void;
 }
 
 export function useTrechosRiscados(
@@ -59,6 +67,7 @@ export function useTrechosRiscados(
   const remover = useRemoverDesvio(corteId);
   const restaurar = useRestaurarDesvio(corteId);
   const desfazer = useDesfazerRodada(corteId);
+  const voltar = useVoltarABordaDaIa(corteId);
   const [ocupado, setOcupado] = useState(false);
   const fila = useRef(umaDeCadaVez(setOcupado));
 
@@ -82,5 +91,7 @@ export function useTrechosRiscados(
       executar(() => restaurar.mutateAsync(indice), 'Não foi possível restaurar o trecho.'),
     desfazerRodada: () =>
       executar(() => desfazer.mutateAsync(), 'Não foi possível desfazer a rodada.'),
+    voltarABordaDaIa: (indice: number) =>
+      executar(() => voltar.mutateAsync(indice), 'Não foi possível voltar à borda da IA.'),
   };
 }

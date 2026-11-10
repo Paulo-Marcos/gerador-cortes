@@ -83,6 +83,28 @@ def _intacta(desvio: dict) -> bool:
     )
 
 
+def voltar_a_borda_da_ia(desvios: list[dict], indice: int) -> list[dict]:
+    """Devolve ao trecho `indice` as bordas que a rodada deu (P10, D-1089).
+
+    É o caminho de volta do ajuste à mão: com a borda do carimbo, a marca fica intacta
+    de novo e o "Desfazer rodada" volta a levá-la. Trecho sem carimbo não tem para onde
+    voltar: foi marcado à mão desde o começo.
+    """
+    if not 0 <= indice < len(desvios):
+        raise PedidoInvalido("Este trecho não existe mais. Atualize a tela.")
+    borda = desvios[indice].get("borda_da_rodada")
+    if desvios[indice].get("rodada") is None or not borda:
+        raise PedidoInvalido("Este trecho não veio de uma rodada da IA: não há borda para voltar.")
+    # O HMS vem antes dos segundos na leitura: sai do dict para os segundos do carimbo valerem.
+    sem_bordas = {
+        chave: valor
+        for chave, valor in desvios[indice].items()
+        if chave not in ("inicio_hms", "fim_hms", "inicio", "fim")
+    }
+    marca = normalizar_desvio({**sem_bordas, "inicio_seg": borda[0], "fim_seg": borda[1]})
+    return [marca if i == indice else d for i, d in enumerate(desvios)]
+
+
 def _ultima_rodada(desvios: list[dict]) -> int | None:
     return max((d["rodada"] for d in desvios if _intacta(d)), default=None)
 

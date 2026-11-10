@@ -155,7 +155,7 @@ describe('D-1040 · o atalho do trecho no bruto', () => {
     h.adicionarDesvio.mockResolvedValue({ ...h.corteDe([h.trecho]), sincronia_falhou: false });
     await abrir();
 
-    tela.onAdicionarDesvio({ inicio_hms: '00:00:00', fim_hms: '00:00:05', motivo: 'Manual' });
+    tela.adicionarTrechoAqui();
     await assentar();
 
     expect(avisos('info')).toEqual([expect.stringContaining('já está na lista')]);

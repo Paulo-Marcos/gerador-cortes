@@ -129,6 +129,15 @@ export const cortesApi = {
   desfazerRodada: (corteId: string) =>
     dados(api.POST('/api/cortes/{corte_id}/desfazer-rodada', doCorte(corteId))),
 
+  // D-1089 (P10): o trecho ajustado à mão volta à borda que a rodada da IA deu.
+  voltarABordaDaIa: (corteId: string, desvioIndex: number) =>
+    dados(
+      api.POST('/api/cortes/{corte_id}/voltar-a-borda-da-ia', {
+        ...doCorte(corteId),
+        body: { desvio_index: desvioIndex },
+      }),
+    ),
+
   // D-998: o editor conferiu o fato; o trecho segue no corte e o alerta sai da timeline.
   marcarAlertaConferido: (corteId: string, alertaId: string) =>
     dados(
