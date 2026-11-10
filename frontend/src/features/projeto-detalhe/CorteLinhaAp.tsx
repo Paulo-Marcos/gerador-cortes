@@ -1,10 +1,7 @@
 import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { useAprovar, useAtualizarCorte, useDeletarCorte } from '@/features/editor/useCortes';
-import { confirmacaoExcluirCorte } from '@/features/editor/regeracaoConfirmacao';
-import { useMotivosVisiveis } from '@/features/channels/useMotivosDeExclusao';
-import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
+import { useAprovar, useAtualizarCorte } from '@/features/editor/useCortes';
+import { useRiscarCorte } from '@/features/editor/useRiscarCorte';
 import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { ShortsDesteCorte } from '@/features/shorts/ShortsDesteCorte';
@@ -76,7 +73,6 @@ type CorteLinhaApProps = {
 type TriagemPeloTeclado = {
   projetoId: string;
   corte: Corte | undefined;
-  status: StatusExportCorte;
   /** Modal de metadados ou ⋯ da linha aberto: o teclado é deles. */
   sobreposicaoAberta: boolean;
   aprovar: ReturnType<typeof useAprovar>;
@@ -88,29 +84,32 @@ type TriagemPeloTeclado = {
 
 /**
  * D-746/D-842: triagem pelo teclado na linha focada (a regra da tecla mora em
- * `acaoDaTeclaNaLinha`). Digitando num campo, nada disso vale. R abre o mesmo
- * diálogo de exclusão do editor; só o "Excluir de vez" apaga, e o foco segue
- * para a linha vizinha em vez de cair no nada. Desistir devolve o foco à
- * própria linha: o modal não o restaura, e sem isso J/K/A paravam até um clique.
+ * `acaoDaTeclaNaLinha`). Digitando num campo, nada disso vale.
+ * D-1096: R risca direto, como no editor (D-1088): o riscado guarda a proposta e
+ * o trabalho e solta a mídia, então não há o que confirmar. O aviso traz o
+ * motivo e o Desfazer, e o foco segue para a linha vizinha em vez de cair no
+ * nada. Corte no YouTube não se risca: o aviso diz "Já está no YouTube".
  */
 function useTriagemPeloTeclado({
   projetoId,
   corte,
-  status,
   sobreposicaoAberta,
   aprovar,
   atualizar,
   avisarFalha,
   explicar,
 }: TriagemPeloTeclado) {
-  const deletar = useDeletarCorte(status.corte_id, projetoId);
-  const motivosDoCanal = useMotivosVisiveis(); // D-1006: os chips do excluir
-  const confirmacao = useConfirmacao();
+  const vizinhaAoRiscar = useRef<HTMLElement | null>(null);
   const linhaQuePediu = useRef<HTMLElement | null>(null);
-  const cancelar = () => {
-    confirmacao.cancelar();
-    linhaQuePediu.current?.focus();
-  };
+  // A lista vazia: a linha não escolhe o próximo pela ordem dos cortes, segue a
+  // linha vizinha na tela. O Desfazer devolve o foco à linha que voltou.
+  const riscar = useRiscarCorte(
+    corte,
+    [],
+    projetoId,
+    () => vizinhaAoRiscar.current?.focus(),
+    () => linhaQuePediu.current?.focus(),
+  );
 
   const aoTeclar = (e: KeyboardEvent<HTMLElement>) => {
     const alvo = e.target as HTMLElement;
@@ -118,8 +117,7 @@ function useTriagemPeloTeclado({
     // portal, o keydown sobe pela árvore do React até aqui. Sem esta guarda,
     // `A` aprovava o corte de trás com o modal aberto. D-868: o mesmo vale
     // para o ⋯ da linha — com ele aberto, A aprovava e K levava o foco embora.
-    if (sobreposicaoAberta || confirmacao.pedido || alvo.closest('[role="dialog"], [role="menu"]'))
-      return;
+    if (sobreposicaoAberta || alvo.closest('[role="dialog"], [role="menu"]')) return;
     if (e.metaKey || e.ctrlKey || e.altKey || alvo.closest('input, textarea, select')) return;
     const acao = acaoDaTeclaNaLinha(e.key, corte?.status);
     if (!acao) return;
@@ -129,13 +127,10 @@ function useTriagemPeloTeclado({
     else if (acao === 'devolver')
       atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('devolver') });
     else if (acao === 'explicar') explicar();
-    else if (acao === 'excluir') {
+    else if (acao === 'riscar') {
       linhaQuePediu.current = linha;
-      const pedido = confirmacaoExcluirCorte(status.numero, status.titulo ?? '', corte?.origem_analise, motivosDoCanal);
-      confirmacao.executarOuPedir(pedido, (motivos) => {
-        const vizinha = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
-        deletar.mutate(motivos, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });
-      });
+      vizinhaAoRiscar.current = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
+      riscar.riscarCorte();
     } else {
       e.stopPropagation();
       const vizinha = (acao === 'descer' ? linha.nextElementSibling : linha.previousElementSibling) as
@@ -145,7 +140,7 @@ function useTriagemPeloTeclado({
     }
   };
 
-  return { aoTeclar, confirmacao, cancelar };
+  return aoTeclar;
 }
 
 export function CorteLinhaAp({
@@ -212,10 +207,9 @@ export function CorteLinhaAp({
   // (amarrar ao foco falhava: K ou Tab levavam o foco e o menu ficava aberto).
   const [maisAberto, setMaisAberto] = useState(false);
   const barraEmColuna = useJanelaMin(BARRA_EM_COLUNA_MIN_PX);
-  const { aoTeclar, confirmacao, cancelar } = useTriagemPeloTeclado({
+  const aoTeclar = useTriagemPeloTeclado({
     projetoId,
     corte,
-    status,
     sobreposicaoAberta: metaAberto || maisAberto || porQueAberto,
     aprovar,
     atualizar,
@@ -380,19 +374,6 @@ export function CorteLinhaAp({
           onAbertoMudou={setMaisAberto}
         />
       </span>
-      {/* Portal para a `.ap`, como o de metadados: o vidro (`backdrop-filter`)
-          do card vira a referência do `position: fixed` e prenderia o diálogo
-          dentro da linha. */}
-      {confirmacao.pedido
-        ? createPortal(
-            <ConfirmDialog
-              pedido={confirmacao.pedido}
-              onCancel={cancelar}
-              onConfirm={confirmacao.confirmar}
-            />,
-            document.querySelector('.ap') ?? document.body,
-          )
-        : null}
       {porQueAberto && corte ? (
         <PorQueDoCorteModal corte={corte} aoFechar={() => setPorQueAberto(false)} />
       ) : null}

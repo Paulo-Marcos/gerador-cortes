@@ -1,6 +1,5 @@
-import type { OpcaoConfirmacao, PedidoConfirmacao } from '@/components/ui/confirm-dialog';
+import type { PedidoConfirmacao } from '@/components/ui/confirm-dialog';
 import type { RegerarBrutoOpcoes } from './regerarBrutoPlan';
-import { MOTIVOS_APAGADO } from './motivoApagado';
 
 // ─────────────────────────────────────────────────────────────
 // regeracaoConfirmacao (D-428) — decide se uma acao do editor e' PRIMEIRA
@@ -8,8 +7,7 @@ import { MOTIVOS_APAGADO } from './motivoApagado';
 // do dialogo. Puro de proposito: o "ja tem resultado?" e o que exatamente se
 // perde sao regra, nao layout — ficam testaveis fora do React.
 //
-// Cada funcao devolve `null` quando NAO ha nada a confirmar — menos a de
-// excluir o corte, que confirma sempre.
+// Cada funcao devolve `null` quando NAO ha nada a confirmar.
 // ─────────────────────────────────────────────────────────────
 
 function pluralizar(quantidade: number, um: string, varios: string): string {
@@ -77,35 +75,5 @@ export function confirmacaoRegerarBruto(
     descricao: `O video bruto deste corte sera renderizado de novo, substituindo o atual.${extras}`,
     confirmLabel: 'Regerar bruto',
     tone: 'danger',
-  };
-}
-
-/**
- * D-842: excluir o corte (R na linha do Workspace) confirma SEMPRE.
- * Apaga o corte e os arquivos dele do disco, sem volta; a tecla sozinha nunca
- * pode bastar. Quem so' queria tirar a aprovacao tem o A, que alterna.
- * D-1088: o editor deixou de excluir (R risca, sem dialogo); o Workspace segue
- * aqui ate a D-1096 leva-lo ao riscar tambem.
- */
-export function confirmacaoExcluirCorte(
-  numero: number,
-  titulo: string,
-  /** D-988: quem propôs o corte; null/vazio = criado na mão. */
-  origemAnalise?: string | null,
-  /** D-1006: os motivos visíveis do canal; sem eles, o padrão. */
-  motivos: readonly OpcaoConfirmacao[] = MOTIVOS_APAGADO,
-): PedidoConfirmacao {
-  return {
-    titulo: 'Excluir o corte de vez',
-    detalhe: `Corte #${numero} · ${titulo}`,
-    descricao:
-      'O corte e todos os arquivos dele (bruto, render, capa) saem do disco. Não há como desfazer. Para só tirar a aprovação, use Devolver (A).',
-    confirmLabel: 'Excluir de vez',
-    tone: 'danger',
-    // D-993: só a proposta da IA tem motivo a medir; o corte feito na mão não.
-    // D-1006: canal que escondeu todos os motivos não pergunta.
-    ...(origemAnalise && motivos.length > 0
-      ? { escolha: { pergunta: 'Por que sai? (marque quantos quiser, opcional)', opcoes: motivos } }
-      : {}),
   };
 }

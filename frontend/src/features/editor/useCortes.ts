@@ -156,14 +156,6 @@ export function useAprovar(corteId: string, projetoId?: string) {
   });
 }
 
-export function useDeletarCorte(corteId: string, projetoId?: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (motivos?: readonly string[]) => cortesApi.deletarCorte(corteId, motivos),
-    onSuccess: () => invalidaCorte(qc, corteId, projetoId),
-  });
-}
-
 export function useToggleFire(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({

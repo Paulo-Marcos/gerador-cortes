@@ -4,6 +4,7 @@ import { useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import {
   alvosDoLote,
+  descricaoDoRefazerTranscricao,
   falhaDaConsulta,
   linhaPassaNoFiltro,
   mesclarCortesComExport,
@@ -291,14 +292,14 @@ export function useWorkspaceProjeto() {
     );
   }
 
-  // D-746: re-sincroniza TODOS os cortes — pede confirmação, como o "Gerar
-  // trechos" já pedia.
+  // D-746: re-sincroniza TODOS os cortes, riscados inclusive (D-1096) — pede
+  // confirmação, como o "Gerar trechos" já pedia.
   function dispararRefazerTranscricao() {
     confirmacao.executarOuPedir(
       {
         titulo: 'Refazer a transcrição',
         detalhe: dados?.titulo_live,
-        descricao: `As legendas são baixadas de novo e os ${cortes.length} cortes são re-sincronizados com elas.`,
+        descricao: descricaoDoRefazerTranscricao(cortes),
         confirmLabel: 'Refazer transcrição',
       },
       refazerTranscricaoConfirmado,

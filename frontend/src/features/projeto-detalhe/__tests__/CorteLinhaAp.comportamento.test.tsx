@@ -3,9 +3,7 @@ import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ConfirmDialog, type PedidoConfirmacao } from '@/components/ui/confirm-dialog';
 import { ToastProvider } from '@/components/ui/toaster';
-import { confirmacaoExcluirCorte } from '@/features/editor/regeracaoConfirmacao';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { PorQueDoCorteModal } from '@/features/porque-do-corte/PorQueDoCorteModal';
@@ -14,24 +12,23 @@ import { CorteLinhaAp } from '../CorteLinhaAp';
 
 // D-878 · o que a linha do corte já fazia na main sem teste nenhum — as
 // mutações das auditorias da D-868 passavam vivas por aqui: a capa quebrada,
-// a duração da miniatura, o rejeitado, a exclusão pela tecla R, a seleção e o
-// gradiente.
+// a duração da miniatura, o rejeitado, a tecla R (que risca desde a D-1096), a
+// seleção e o gradiente.
 //
 // Sem DOM não há clique, mas há render-phase update: um setState chamado
 // enquanto a sonda desenha faz o React do servidor desenhá-la de novo, com o
 // estado novo e os mesmos refs. É assim que `encenar` anda de quadro em quadro.
 const h = vi.hoisted(() => ({
-  deletar: vi.fn(),
+  riscar: vi.fn(),
+  argsDoRiscar: [] as unknown[],
   aprovar: vi.fn(),
-  portais: [] as { filho: ReactElement<ConfirmDialogProps>; alvo: unknown }[],
+  portais: [] as { filho: ReactElement; alvo: unknown }[],
 }));
-
-type ConfirmDialogProps = { pedido: PedidoConfirmacao; onCancel: () => void; onConfirm: () => void };
 
 vi.mock('react-dom', async (original) => ({
   ...(await original<typeof import('react-dom')>()),
   // O servidor não desenha portal; o substituto anota o que iria para ele.
-  createPortal: (filho: ReactElement<ConfirmDialogProps>, alvo: unknown) => {
+  createPortal: (filho: ReactElement, alvo: unknown) => {
     h.portais.push({ filho, alvo });
     return null;
   },
@@ -40,7 +37,13 @@ vi.mock('@/features/editor/useCortes', async (original) => ({
   ...(await original<typeof import('@/features/editor/useCortes')>()),
   useAprovar: () => ({ mutate: h.aprovar }),
   useAtualizarCorte: () => ({ mutate: vi.fn() }),
-  useDeletarCorte: () => ({ mutate: h.deletar }),
+}));
+// D-1096: o R usa o riscar do editor (D-1088); o hook tem os testes dele.
+vi.mock('@/features/editor/useRiscarCorte', () => ({
+  useRiscarCorte: (...args: unknown[]) => {
+    h.argsDoRiscar = args;
+    return { riscarCorte: h.riscar, bloqueio: null, riscando: false };
+  },
 }));
 vi.mock('@/upgrade/medidas', async (original) => ({
   ...(await original<typeof import('@/upgrade/medidas')>()),
@@ -197,7 +200,7 @@ describe('CorteLinhaAp · rejeitado e seleção (D-878)', () => {
   });
 });
 
-describe('CorteLinhaAp · excluir pela tecla R (D-878)', () => {
+describe('CorteLinhaAp · riscar pela tecla R (D-1096)', () => {
   const vizinhas = () => ({ seguinte: { focus: vi.fn() }, anterior: { focus: vi.fn() } });
 
   function linhaFocada(seguinte: unknown, anterior: unknown) {
@@ -215,55 +218,39 @@ describe('CorteLinhaAp · excluir pela tecla R (D-878)', () => {
       currentTarget: linha,
       target: { closest: () => null },
     });
-  const noDialogo = (botao: 'onConfirm' | 'onCancel') => () => h.portais[h.portais.length - 1].filho.props[botao]();
+  /** O que a linha passou ao riscar: para onde o foco vai e o que o Desfazer faz. */
+  const riscou = () => h.argsDoRiscar as [unknown, unknown, unknown, () => void, () => void];
 
-  it('R abre o diálogo de exclusão do editor, por portal na casca — e não apaga ainda', () => {
-    vi.stubGlobal('document', { querySelector: (s: string) => (s === '.ap' ? casca : null), body: corpo });
+  it('R risca direto, sem diálogo e sem redesenhar a linha', () => {
     const { seguinte, anterior } = vizinhas();
     const { quadros } = encenar([teclarR(linhaFocada(seguinte, anterior))]);
-    expect(quadros).toHaveLength(2);
-    expect(h.portais).toHaveLength(1);
-    const { filho, alvo } = h.portais[0];
-    expect(filho.type).toBe(ConfirmDialog);
-    expect(filho.props.pedido).toEqual(confirmacaoExcluirCorte(7, 'Pedro II e a Igreja'));
-    expect(alvo).toBe(casca);
-    expect(h.deletar).not.toHaveBeenCalled();
+    expect(quadros).toHaveLength(1);
+    expect(h.portais).toHaveLength(0);
+    expect(h.riscar).toHaveBeenCalledOnce();
   });
 
-  it('sem a casca, o diálogo vai para o body', () => {
-    vi.stubGlobal('document', { querySelector: () => null, body: corpo });
-    encenar([teclarR(linhaFocada(null, null))]);
-    expect(h.portais[0].alvo).toBe(corpo);
-  });
-
-  it('"Excluir de vez" apaga, e o foco segue para a linha de baixo', () => {
-    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+  it('riscado, o foco segue para a linha de baixo', () => {
     const { seguinte, anterior } = vizinhas();
-    const { quadros } = encenar([teclarR(linhaFocada(seguinte, anterior)), noDialogo('onConfirm')]);
-    expect(quadros).toHaveLength(3);
-    expect(h.deletar).toHaveBeenCalledOnce();
-    h.deletar.mock.calls[0][1].onSuccess();
+    encenar([teclarR(linhaFocada(seguinte, anterior))]);
+    riscou()[3]();
     expect(seguinte.focus).toHaveBeenCalledOnce();
     expect(anterior.focus).not.toHaveBeenCalled();
   });
 
   it('na última linha, o foco sobe para a de cima', () => {
-    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
     const { anterior } = vizinhas();
-    encenar([teclarR(linhaFocada(null, anterior)), noDialogo('onConfirm')]);
-    h.deletar.mock.calls[0][1].onSuccess();
+    encenar([teclarR(linhaFocada(null, anterior))]);
+    riscou()[3]();
     expect(anterior.focus).toHaveBeenCalledOnce();
   });
 
-  it('desistir fecha o diálogo, não apaga e devolve o foco à própria linha', () => {
-    vi.stubGlobal('document', { querySelector: () => casca, body: corpo });
+  it('o Desfazer devolve o foco à própria linha', () => {
     const { seguinte, anterior } = vizinhas();
     const linha = linhaFocada(seguinte, anterior);
-    const { quadros } = encenar([teclarR(linha), noDialogo('onCancel')]);
-    expect(quadros).toHaveLength(3);
-    expect(h.portais).toHaveLength(1);
+    encenar([teclarR(linha)]);
+    riscou()[4]();
     expect(linha.focus).toHaveBeenCalledOnce();
-    expect(h.deletar).not.toHaveBeenCalled();
+    expect(seguinte.focus).not.toHaveBeenCalled();
   });
 });
 

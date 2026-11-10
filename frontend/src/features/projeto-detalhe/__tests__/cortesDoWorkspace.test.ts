@@ -87,9 +87,9 @@ describe('mesclarCortesComExport', () => {
   });
 });
 
-// D-842: A alterna e R exclui. O R só devolvia a proposto (D-746), o que o A
-// já fazia; agora ele exclui — e a confirmação é o que impede o irreversível
-// num toque só.
+// D-842: A alterna. O R só devolvia a proposto (D-746), o que o A já fazia;
+// depois excluía com confirmação, e desde a D-1096 risca direto: o riscado
+// guarda a proposta e o trabalho, e o aviso traz o Desfazer.
 describe('acaoDaTeclaNaLinha', () => {
   it('A aprova o corte proposto', () => {
     expect(acaoDaTeclaNaLinha('a', 'proposto')).toBe('aprovar');
@@ -104,9 +104,9 @@ describe('acaoDaTeclaNaLinha', () => {
   });
 
   it.each(['proposto', 'aprovado', 'processado', 'rejeitado'] as const)(
-    'R exclui o corte %s (a linha pede confirmação antes)',
+    'R risca o corte %s (sem diálogo; o aviso traz o Desfazer)',
     (status) => {
-      expect(acaoDaTeclaNaLinha('r', status)).toBe('excluir');
+      expect(acaoDaTeclaNaLinha('r', status)).toBe('riscar');
     },
   );
 
