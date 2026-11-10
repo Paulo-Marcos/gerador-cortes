@@ -56,7 +56,7 @@ from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_video_cmd,
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
-from app.services import abrir_no_sistema, origem_das_cenas, proposta_apagada, riscar_corte
+from app.services import abrir_no_sistema, origem_das_cenas, proposta_apagada, volta_do_riscado
 from app.services.alertas_conferir import dividir_alertas, juntar_alertas_dos_cortes
 from app.services.claude_ia import (
     ClaudeIaService,
@@ -355,7 +355,7 @@ def _validar_pedido_de_status(corte: Corte, dados: AtualizarCorteDTO) -> bool:
         return False
     atual = getattr(corte.status, "value", corte.status)
     ciclo_corte.validar_pedido_do_operador(atual, dados.status)
-    return riscar_corte.voltar_se_riscado(corte, dados.status)
+    return volta_do_riscado.voltar_se_riscado(corte, dados.status)
 
 
 def _aplicar_titulo_e_bordas(corte: Corte, dados: AtualizarCorteDTO) -> None:
@@ -648,15 +648,15 @@ async def _gravar_sincronia(
 
 class CorteService:
     @staticmethod
-    async def aprovar(corte_id: str) -> None:
-        """Aprova o corte — um pedido do operador, que segue o ciclo do corte (RN-04, D-665)."""
+    async def aprovar(corte_id: str) -> bool:
+        """Aprova o corte (RN-04, D-665); devolve se o bruto solto do riscado se gera."""
         async with AsyncSessionLocal() as db, db.begin():
             corte = await db.get(Corte, corte_id)
             if not corte:
                 raise NaoEncontrado("Corte não encontrado")
             regerar_bruto = _validar_pedido_de_status(corte, AtualizarCorteDTO(status="aprovado"))
             corte.status = StatusCorte.APROVADO
-        await riscar_corte.gerar_o_bruto_se_solto(corte_id, regerar_bruto)
+        return regerar_bruto
 
     @staticmethod
     async def abrir_pasta(corte_id: str) -> str:
@@ -726,7 +726,7 @@ class CorteService:
 
         await db.commit()
         await _depois_de_gravar(db, corte, dados)
-        await riscar_corte.gerar_o_bruto_se_solto(corte.id, regerar_bruto)
+        corte.bruto_a_regerar = regerar_bruto
 
         await db.refresh(corte)
         return corte

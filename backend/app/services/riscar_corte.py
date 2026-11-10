@@ -10,11 +10,11 @@ A ordem segue a ADR-0016: o status e o snapshot gravam numa transação curta; a
 mídia sai depois, numa thread (bruto, grade e overlays somam GB, D-645); uma
 segunda transação só esquece o caminho do bruto que deixou de existir.
 
-A volta é uma só (`_desfazer_o_riscar`). Chegam a ela a rota `trazer_de_volta`,
+A volta é uma só (`volta_do_riscado`). Chegam a ela a rota `trazer_de_volta`,
 do Desfazer do aviso do editor e da seção Riscados (D-1092), e o PATCH ou o
-/aprovar que tiram o corte do riscado (o A do editor, o Voltar do Workspace),
-por `voltar_se_riscado`. Por qualquer porta, voltar limpa o snapshot de apagado
-e gera de novo o bruto que o riscar soltou.
+/aprovar que tiram o corte do riscado (o A do editor, o Voltar do Workspace).
+Por qualquer porta, voltar limpa o snapshot de apagado e gera de novo o bruto
+que o riscar soltou (`gerar_o_bruto_se_solto`, depois do commit).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.corte import ciclo_corte
 from app.models import Corte, StatusCorte
-from app.services import bruto_do_corte, proposta_apagada
+from app.services import bruto_do_corte, proposta_apagada, volta_do_riscado
 from app.services.export import ExportService
 from app.services.media_retention import MediaRetentionService
 from app.services.render.render_progress import RenderProgressStore
@@ -104,42 +104,11 @@ async def trazer_de_volta(corte_id: str) -> CorteTrazidoDeVolta:
         corte = await db.get(Corte, corte_id)
         if corte is None:
             raise NaoEncontrado("Corte não encontrado")
-        regerar = _desfazer_o_riscar(corte)
+        regerar = volta_do_riscado.desfazer_o_riscar(corte)
         novo = getattr(corte.status, "value", corte.status)
 
     gerando = await gerar_o_bruto_se_solto(corte_id, regerar)
     return CorteTrazidoDeVolta(corte_id=corte_id, status=novo, gerando_bruto=gerando)
-
-
-def voltar_se_riscado(corte: Corte, pedido: str) -> bool:
-    """O PATCH e o /aprovar que tiram o corte do riscado passam pela mesma volta.
-
-    Chamar na transação do pedido, depois de validá-lo; o status pedido vale (o A
-    pede aprovado, o Voltar do Workspace pede proposto). Devolve se o bruto que o
-    riscar soltou precisa ser gerado: chamar `gerar_o_bruto_se_solto` depois do
-    commit (ADR-0016). Corte que não está riscado não muda.
-    """
-    if getattr(corte.status, "value", corte.status) != ciclo_corte.REJEITADO:
-        return False
-    regerar = _desfazer_o_riscar(corte)
-    corte.status = StatusCorte(pedido)
-    return regerar
-
-
-def _desfazer_o_riscar(corte: Corte) -> bool:
-    """A volta única: a etapa de antes, fora da conta de apagados (RN-05).
-
-    Devolve se o riscar soltou um bruto que precisa ser gerado de novo.
-    """
-    novo = ciclo_corte.status_ao_trazer_de_volta(
-        getattr(corte.status, "value", corte.status), corte.status_antes_de_riscar or ""
-    )
-    corte.status = StatusCorte(novo)
-    regerar = bool(corte.bruto_solto_ao_riscar)
-    corte.status_antes_de_riscar = ""
-    corte.bruto_solto_ao_riscar = False
-    proposta_apagada.desfazer_riscado(corte)
-    return regerar
 
 
 async def gerar_o_bruto_se_solto(corte_id: str, solto: bool) -> bool:
