@@ -56,7 +56,9 @@ interface ConteudoDaAbaDecisoesProps {
   desvios: Desvio[];
   selectedDesvioIdx: number | null;
   transcricao?: TranscricaoLinha[];
-  corte?: Pick<Corte, 'desvios_riscados' | 'trechos_da_ultima_rodada' | 'inicio_seg' | 'fim_seg'>;
+  corte?: Pick<Corte, 'desvios_riscados' | 'trechos_da_ultima_rodada'>;
+  /** D-1105: a janela da tela (corteUI), a mesma da faixa O bruto vai ter. */
+  janela?: Pick<Corte, 'inicio_seg' | 'fim_seg'>;
   acoes: AcoesDasDecisoes;
   /** D-1095: sem ele (fora do editor) a pergunta do som não aparece. */
   som?: SomDoCorte;
@@ -72,6 +74,7 @@ export function conteudoDaAbaDecisoes({
   selectedDesvioIdx,
   transcricao,
   corte,
+  janela,
   acoes,
   som,
 }: ConteudoDaAbaDecisoesProps) {
@@ -88,7 +91,7 @@ export function conteudoDaAbaDecisoes({
         onRiscar={acoes.riscar}
         onDecidir={acoes.decidirOsSilencios}
       />
-      <PerguntaDosDesvios corte={corte} desvios={desvios}>
+      <PerguntaDosDesvios corte={janela} desvios={desvios}>
         <TrechosList
           desvios={desvios}
           semOSilencioDoApp

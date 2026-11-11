@@ -13,9 +13,7 @@ vi.mock('@/features/editor/useCortes', async () => {
   const actual = await vi.importActual<typeof import('@/features/editor/useCortes')>('@/features/editor/useCortes');
   return {
     ...actual,
-    useCorte: () => ({
-      data: { projeto_id: 'p1', trechos_da_ultima_rodada: 0, desvios_riscados: corte.riscados, inicio_seg: 0, fim_seg: 1211 },
-    }),
+    useCorte: () => ({ data: { projeto_id: 'p1', trechos_da_ultima_rodada: 0, desvios_riscados: corte.riscados } }),
   };
 });
 vi.mock('@/features/diarizacao/useDiarizacao', async () => {
@@ -75,6 +73,7 @@ function envolver(no: ReactNode) {
 function painel(props: Record<string, unknown> = {}) {
   return {
     corteId: 'c1',
+    janela: { inicio_seg: 0, fim_seg: 1211 },
     desvios: [SILENCIO, TANGENTE],
     selectedDesvioIdx: null,
     onSeek: noop,

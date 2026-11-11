@@ -58,7 +58,7 @@ export function PerguntaDaDecisao({ numero, pergunta, resumo, assunto, children 
 }
 
 interface PerguntaDosDesviosProps {
-  /** A janela do corte; ainda carregando, o título fica sem o "sai". */
+  /** A janela do corte na tela (o corteUI, com o I e o O ainda não salvos), a mesma da faixa. */
   corte?: Pick<Corte, 'inicio_seg' | 'fim_seg'>;
   desvios: Desvio[];
   children: ReactNode;
@@ -69,7 +69,8 @@ interface PerguntaDosDesviosProps {
  * D-1093: o silêncio do app é da pergunta 1 e não entra aqui.
  * D-1105: a conta e o formato são os da faixa "O bruto vai ter" (medirFicaESai), para a
  * mesma tela não dar dois números ao mesmo sai: recorta pela janela do corte e fecha
- * a conta com o bruto exibido.
+ * a conta com o bruto exibido. A janela é a da tela, não a salva (`useCorte`): com o I
+ * marcado e ainda não salvo, a faixa já recorta pela nova.
  */
 export function PerguntaDosDesvios({ corte, desvios, children }: PerguntaDosDesviosProps) {
   const saiSeg = corte ? medirFicaESai(corte.inicio_seg, corte.fim_seg, desvios.filter(naoESilencioDoApp)).saiSeg : 0;
