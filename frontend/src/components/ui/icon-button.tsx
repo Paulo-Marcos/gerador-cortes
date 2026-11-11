@@ -3,8 +3,8 @@ import { cn } from '@/lib/utils';
 
 // D-599: na casca nova o botão de ícone é o `.btn.btn-icon` do handoff —
 // 30 px quadrados, canto de 4 px. As variantes de COR continuam valendo:
-// elas carregam significado (ok = aprovar, err = rejeitar),
-// e trocar significado por estética seria perder informação.
+// elas carregam significado, e trocar significado por estética seria
+// perder informação.
 
 const AP_SIZES: Record<NonNullable<IconButtonProps['size']>, string> = {
   sm: 'btn btn-icon btn-sm',
@@ -19,8 +19,6 @@ const AP_VARIANTS: Record<NonNullable<IconButtonProps['variant']>, string> = {
   outline: '',
   solid: 'btn-pri',
   accent: 'btn-pri',
-  ok: 'btn-ok',
-  err: 'btn-danger',
   'err-outline': 'btn-danger',
   inset: 'btn-soft',
   'toggle-active': '',
@@ -40,8 +38,6 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
     | 'outline'
     | 'solid'
     | 'accent'
-    | 'ok'
-    | 'err'
     | 'err-outline'
     | 'inset'
     | 'toggle-active';
