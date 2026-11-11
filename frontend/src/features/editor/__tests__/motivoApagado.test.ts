@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { MOTIVOS_APAGADO } from '../motivoApagado';
 
 // D-993: o motivo de apagar uma proposta da IA, do lado da tela.
@@ -16,37 +16,5 @@ describe('acordo com o domínio do backend', () => {
       ([, slug, rotulo]) => ({ slug, rotulo }),
     );
     expect(noBackend).toEqual(MOTIVOS_APAGADO);
-  });
-});
-
-describe('cortesApi.deletarCorte · motivo (D-993)', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
-  });
-
-  async function urlDoDelete(motivos?: readonly string[]): Promise<string> {
-    const chamadas: Request[] = [];
-    vi.resetModules();
-    vi.stubEnv('VITE_API_URL', 'http://api.test/api');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (pedido: Request) => {
-        chamadas.push(pedido);
-        return new Response('{"message":"ok","corte_id":"c1"}', { status: 200 });
-      }),
-    );
-    const { cortesApi } = await import('../api/cortes');
-    await cortesApi.deletarCorte('c1', motivos);
-    expect(chamadas[0].method).toBe('DELETE');
-    return chamadas[0].url;
-  }
-
-  it('leva o motivo escolhido na query', async () => {
-    expect(await urlDoDelete(['repetido'])).toBe('http://api.test/api/cortes/c1?motivo=repetido');
-  });
-
-  it('sem motivo, a URL fica a de sempre', async () => {
-    expect(await urlDoDelete()).toBe('http://api.test/api/cortes/c1');
   });
 });

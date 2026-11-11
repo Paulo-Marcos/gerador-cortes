@@ -41,7 +41,6 @@ describe('cortesApi sobre o cliente gerado', () => {
   it.each([
     ['abre um corte', async () => (await cortes()).obterCorte('c1'), 'GET', '/cortes/c1'],
     ['aprova', async () => (await cortes()).aprovarCorte('c1'), 'POST', '/cortes/c1/aprovar'],
-    ['exclui', async () => (await cortes()).deletarCorte('c1'), 'DELETE', '/cortes/c1'],
     ['abre a pasta', async () => (await cortes()).abrirPastaCorte('c1'), 'POST', '/cortes/c1/abrir-pasta'],
     ['detecta segmentos', async () => (await cortes()).detectarSegmentos('c1'), 'POST', '/cortes/c1/detectar-segmentos'],
     ['o prompt de trechos', async () => (await cortes()).obterPromptDesvios('c1'), 'GET', '/cortes/c1/desvios/prompt'],

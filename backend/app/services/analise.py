@@ -706,8 +706,8 @@ class AnaliseService:
         """Analisa a transcrição via Claude e ADICIONA os cortes gerados aos que
         já existem no projeto, encadeando (opcional) o refazer-transcrição.
 
-        D-298 — modo aditivo: a análise nunca apaga cortes; deletar é ação
-        manual do editor. Os cortes novos seguem a numeração a partir do maior
+        D-298 — modo aditivo: a análise nunca apaga cortes; tirar um corte é
+        riscar, gesto do editor (D-1088). Os cortes novos seguem a numeração a partir do maior
         número já usado, e um corte novo cujo início cai no mesmo bucket de 30s
         de um corte JÁ EXISTENTE é pulado — evita inundar a live com
         quase-duplicatas quando o projeto é reanalisado. Os `descartados` são

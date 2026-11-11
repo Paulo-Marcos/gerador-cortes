@@ -50,16 +50,6 @@ export const cortesApi = {
   aprovarCorte: (corteId: string) =>
     dados(api.POST('/api/cortes/{corte_id}/aprovar', doCorte(corteId))),
 
-  // D-993: os motivos (opcionais) ficam no snapshot da proposta. D-1005: são
-  // vários, e viajam num só `motivo` separados por "|" — o mesmo formato que o
-  // backend grava (`domain/corte/motivo_apagado.py`).
-  deletarCorte: (corteId: string, motivos?: readonly string[]) =>
-    dados(
-      api.DELETE('/api/cortes/{corte_id}', {
-        params: { path: { corte_id: corteId }, query: { motivo: motivos?.length ? motivos.join('|') : undefined } },
-      }),
-    ),
-
   // D-1088: riscar fica no lugar do excluir. O corte continua no banco como
   // rejeitado e a mídia sai; riscar de novo com o motivo é como o chip o grava.
   riscarCorte: (corteId: string, motivos?: readonly string[]) =>

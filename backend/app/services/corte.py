@@ -57,7 +57,7 @@ from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_video_cmd,
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
-from app.services import abrir_no_sistema, origem_das_cenas, proposta_apagada, volta_do_riscado
+from app.services import abrir_no_sistema, origem_das_cenas, volta_do_riscado
 from app.services.alertas_conferir import dividir_alertas, juntar_alertas_dos_cortes
 from app.services.claude_ia import (
     ClaudeIaService,
@@ -628,24 +628,6 @@ class CorteService:
             if not corte:
                 raise NaoEncontrado("Corte não encontrado")
         return abrir_no_sistema.abrir_pasta(projetos_dir() / corte.projeto_id / "cortes" / corte_id)
-
-    @staticmethod
-    async def remover(corte_id: str, motivo: str | None = None) -> None:
-        """Apaga o corte e a pasta dele no disco (D-705); a proposta fica no
-        snapshot, com o motivo (D-993). A pasta sai depois da transação (ADR-0016)
-        e numa thread: bruto, grade e overlays somam GB e travariam o app (D-645).
-        """
-        async with AsyncSessionLocal() as db, db.begin():
-            corte = await db.get(Corte, corte_id)
-            if not corte:
-                raise NaoEncontrado("Corte não encontrado")
-            projeto_id = corte.projeto_id
-            await proposta_apagada.registrar(db, corte, motivo)
-            await db.delete(corte)
-
-        corte_dir = projetos_dir() / projeto_id / "cortes" / corte_id
-        if corte_dir.exists():
-            await asyncio.to_thread(shutil.rmtree, corte_dir, ignore_errors=True)
 
     @staticmethod
     async def atualizar(db: AsyncSession, corte_id: str, dados: AtualizarCorteDTO) -> Corte:

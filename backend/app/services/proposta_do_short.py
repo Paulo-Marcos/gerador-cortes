@@ -7,15 +7,12 @@ reescrito — editar as bordas, regerar ou juntar cortes mexe só no short.
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
 
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.short.shorts import SugestaoShort
 from app.models import Short, ShortSnapshot, StatusShort
 from app.services.canal import editorial_skills
 from app.services.claude_ia import modelo_usado
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass(frozen=True)
@@ -69,19 +66,3 @@ def congelar(shorts: list[Short], projeto_id: str, origem: OrigemDaProposta) -> 
         )
         for short in shorts
     ]
-
-
-async def marcar_apagados(db: AsyncSession, corte_id: str) -> None:
-    """Data o snapshot de cada short do corte que vai ser apagado; chamar antes do `delete`.
-
-    Pelo `short_id`, e não pelo `corte_id` do snapshot: depois de juntar cortes o
-    short mora num corte diferente daquele em que nasceu.
-    """
-    await db.execute(
-        update(ShortSnapshot)
-        .where(
-            ShortSnapshot.short_id.in_(select(Short.id).where(Short.corte_id == corte_id)),
-            ShortSnapshot.apagado_em.is_(None),
-        )
-        .values(apagado_em=datetime.utcnow())
-    )

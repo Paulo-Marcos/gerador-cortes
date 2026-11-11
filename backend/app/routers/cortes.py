@@ -185,12 +185,6 @@ async def aprovar_corte(corte_id: str):
     return {"message": "Corte aprovado", "corte_id": corte_id}
 
 
-@router.delete("/{corte_id}", response_model=MensagemDoCorteResponse)
-async def deletar_corte(corte_id: str, motivo: str | None = None):
-    await CorteService.remover(corte_id, motivo)
-    return {"message": "Corte deletado com sucesso", "corte_id": corte_id}
-
-
 @router.post("/{corte_id}/remover-desvio", response_model=CorteResponse)
 async def remover_desvio(
     corte_id: str, body: RemoverDesvioRequest, db: AsyncSession = Depends(get_db)

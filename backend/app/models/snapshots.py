@@ -12,9 +12,9 @@ class CorteSnapshot(Base):
 
     Congela a proposta ANTES da edição humana e nunca muda: é a régua proposta×
     final da telemetria. Corte sem snapshot foi criado na mão ou é anterior a ela.
-    D-993: sobrevive ao corte. Apagar o corte grava `apagado_em` e o motivo
-    (`domain/corte/motivo_apagado.py`); `corte_id` não é FK (migration 009),
-    porque a linha guarda o id de um corte que pode não existir mais.
+    D-993: sobrevive ao corte. Riscar o corte grava `apagado_em` e o motivo
+    (`domain/corte/motivo_apagado.py`; D-1088); `corte_id` não é FK (migration
+    009), porque a linha guarda o id de um corte que pode não existir mais.
     """
 
     __tablename__ = "corte_snapshots"
@@ -55,9 +55,10 @@ class ShortSnapshot(Base):
     esta linha (`domain/short/telemetria_shorts.py`).
 
     Sobrevive ao short, na forma que a D-993 deu ao snapshot do corte: `short_id`
-    e `corte_id` não são FK, e apagar o corte (que leva os shorts no cascade)
-    grava `apagado_em`. `corte_id` é o corte em que o short NASCEU: juntar cortes
-    move o short, não a origem da proposta.
+    e `corte_id` não são FK. `apagado_em` era gravado pelo apagar do corte, que
+    saiu na D-1106 (o riscado guarda os shorts); a telemetria conta como apagado
+    o short que deixou de existir. `corte_id` é o corte em que o short NASCEU:
+    juntar cortes move o short, não a origem da proposta.
     """
 
     __tablename__ = "short_snapshots"

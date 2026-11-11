@@ -1,9 +1,9 @@
 """D-995: o short que a IA propõe nasce com a proposta congelada, e ela não muda.
 
 O ciclo inteiro pelos serviços de verdade: `sugerir_shorts` (só o cliente do
-Claude é dublê), a edição do operador, uma nova rodada de sugestões, o apagar do
-corte e a telemetria do projeto. Banco em memória: toda sessão do app é
-desviada para ele.
+Claude é dublê), a edição do operador, uma nova rodada de sugestões e a
+telemetria do projeto. Banco em memória: toda sessão do app é desviada para
+ele. O apagar do corte saiu na D-1106 (o riscar guarda o corte e os shorts).
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ from app.infrastructure import claude_cli_client
 from app.models import Base, Corte, Projeto, Short, ShortSnapshot
 from app.services import shorts as shorts_store
 from app.services.canal import editorial_scaffolds, editorial_skills
-from app.services.corte import CorteService
 from app.services.telemetria_cortes import TelemetriaCortesService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -149,20 +148,6 @@ async def test_editar_o_short_e_regerar_nao_mexem_na_proposta(fabrica):
 
 
 @pytest.mark.asyncio
-async def test_apagar_o_corte_leva_o_short_e_a_proposta_fica_datada(fabrica):
-    short_id, _ = await _nascer(fabrica)
-
-    await CorteService.remover("c1")
-
-    async with fabrica() as db:
-        assert await db.get(Short, short_id) is None
-    [snapshot] = await _snapshots(fabrica)
-    assert snapshot.short_id == short_id
-    assert (snapshot.corte_id, snapshot.projeto_id) == ("c1", "p1")
-    assert snapshot.apagado_em is not None
-
-
-@pytest.mark.asyncio
 async def test_telemetria_do_projeto_compara_a_proposta_do_short_com_o_final(fabrica):
     short_id, _ = await _nascer(fabrica)
     await shorts_store.atualizar_short(
@@ -179,20 +164,6 @@ async def test_telemetria_do_projeto_compara_a_proposta_do_short_com_o_final(fab
     assert linha["modelo"] == "sonnet"
     assert telemetria["shorts"]["resumo"]["aceitos"] == 1
     assert telemetria["shorts"]["resumo"]["esticados"] == 1
-
-
-@pytest.mark.asyncio
-async def test_telemetria_mantem_a_proposta_do_short_apagado(fabrica):
-    await _nascer(fabrica)
-    await CorteService.remover("c1")
-
-    async with fabrica() as db:
-        telemetria = await TelemetriaCortesService.telemetria_do_projeto("p1", db)
-
-    [linha] = telemetria["shorts"]["shorts"]
-    assert linha["situacao"] == "apagado"
-    assert linha["inicio_proposto_seg"] == 10.0
-    assert telemetria["shorts"]["resumo"]["apagados"] == 1
 
 
 def _resultado(resposta: dict):
