@@ -11,7 +11,7 @@ import type { SomDoCorte } from './useSomDoCorte';
 import { useCorte } from '@/features/editor/useCortes';
 import { useDiarizarCorte, useFalantes } from '@/features/diarizacao/useDiarizacao';
 import type { FalantesMap } from '@/features/diarizacao/api';
-import type { Desvio, TranscricaoLinha } from '@/types/models';
+import type { Corte, Desvio, TranscricaoLinha } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
@@ -37,6 +37,11 @@ import { Icon } from '@/upgrade/Icon';
 
 interface RightTabsPanelProps {
   corteId: string;
+  /**
+   * D-1105: a janela da tela (corteUI), não a salva; é por ela que a pergunta 2 recorta o
+   * sai. O editor sempre a passa; sem ela, o título fica sem o "sai", sem cair na janela salva.
+   */
+  janela?: Pick<Corte, 'inicio_seg' | 'fim_seg'>;
   // Trechos
   desvios: Desvio[];
   selectedDesvioIdx: number | null;
@@ -80,6 +85,7 @@ type TabId = 'decisoes' | 'ordem' | 'transcricao' | 'avaliacao';
 
 export function RightTabsPanel({
   corteId,
+  janela,
   desvios,
   selectedDesvioIdx,
   onSeek,
@@ -149,6 +155,7 @@ export function RightTabsPanel({
           selectedDesvioIdx,
           transcricao,
           corte: corteAtual,
+          janela,
           acoes,
           som,
         })

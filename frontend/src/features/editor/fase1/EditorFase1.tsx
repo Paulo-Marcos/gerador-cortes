@@ -257,6 +257,7 @@ export function EditorFase1({
             <RightTabsPanel
               onRecolher={alternarTrechos}
               corteId={corte.id}
+              janela={corte}
               desvios={corte.desvios ?? []}
               selectedDesvioIdx={selectedDesvioIdx}
               onSeek={onSeek}
@@ -264,11 +265,7 @@ export function EditorFase1({
               riscados={riscados}
               onGerarManual={onGerarManual}
               onGerarTrechosIA={onGerarTrechosIA}
-              pendingTrechos={{
-                adicionando: pending.adicionando,
-                removendo: pending.removendo,
-                claude: pending.claude,
-              }}
+              pendingTrechos={pending}
               transcricao={corte.transcricao_corte}
               currentTime={currentTime}
               onAtualizarTranscricao={onAtualizarTranscricao}

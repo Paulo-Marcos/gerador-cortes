@@ -63,6 +63,7 @@ function envolver(no: ReactNode) {
 function painel(props: Record<string, unknown> = {}) {
   return {
     corteId: 'c1',
+    janela: { inicio_seg: 0, fim_seg: 1211 },
     desvios: [DA_IA, AJUSTADA],
     selectedDesvioIdx: null,
     onSeek: noop,

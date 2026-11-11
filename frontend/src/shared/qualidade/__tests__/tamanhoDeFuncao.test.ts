@@ -45,7 +45,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/BancadaChrome.tsx::BancadaChrome": 207,
   "src/features/editor/EditorPage.tsx::EditorPage": 224,
   "src/features/editor/fase1/BlocosPanel.tsx::BlocosPanel": 175,
-  "src/features/editor/fase1/EditorFase1.tsx::EditorFase1": 181,
+  "src/features/editor/fase1/EditorFase1.tsx::EditorFase1": 178,
   "src/features/editor/fase1/PlayerPanel.tsx::forwardRef": 258,
   "src/features/editor/fase1/RightTabsPanel.tsx::TranscriptList": 129,
   "src/features/editor/fase1/TimelinePanel.tsx::AdvancedMenu": 322,

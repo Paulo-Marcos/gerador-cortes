@@ -73,6 +73,7 @@ function envolver(no: ReactNode) {
 function painel(props: Record<string, unknown> = {}) {
   return {
     corteId: 'c1',
+    janela: { inicio_seg: 0, fim_seg: 1211 },
     desvios: [SILENCIO, TANGENTE],
     selectedDesvioIdx: null,
     onSeek: noop,
@@ -184,7 +185,7 @@ describe('a pergunta 1 na aba Decisões', () => {
   it('a pergunta 2 não lista o silêncio nem o conta no "sai"', () => {
     const bloco = pergunta(envolver(<RightTabsPanel {...painel()} />), 'os desvios de assunto');
 
-    expect(bloco).toContain('sai 40 s');
+    expect(bloco).toContain('sai 0:40');
     expect(bloco).not.toContain('Silêncio Detectado');
   });
 
