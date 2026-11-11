@@ -13,7 +13,9 @@ vi.mock('@/features/editor/useCortes', async () => {
   const actual = await vi.importActual<typeof import('@/features/editor/useCortes')>('@/features/editor/useCortes');
   return {
     ...actual,
-    useCorte: () => ({ data: { projeto_id: 'p1', trechos_da_ultima_rodada: 0, desvios_riscados: corte.riscados } }),
+    useCorte: () => ({
+      data: { projeto_id: 'p1', trechos_da_ultima_rodada: 0, desvios_riscados: corte.riscados, inicio_seg: 0, fim_seg: 1211 },
+    }),
   };
 });
 vi.mock('@/features/diarizacao/useDiarizacao', async () => {
@@ -184,7 +186,7 @@ describe('a pergunta 1 na aba Decisões', () => {
   it('a pergunta 2 não lista o silêncio nem o conta no "sai"', () => {
     const bloco = pergunta(envolver(<RightTabsPanel {...painel()} />), 'os desvios de assunto');
 
-    expect(bloco).toContain('sai 40 s');
+    expect(bloco).toContain('sai 0:40');
     expect(bloco).not.toContain('Silêncio Detectado');
   });
 

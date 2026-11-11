@@ -56,7 +56,7 @@ interface ConteudoDaAbaDecisoesProps {
   desvios: Desvio[];
   selectedDesvioIdx: number | null;
   transcricao?: TranscricaoLinha[];
-  corte?: Pick<Corte, 'desvios_riscados' | 'trechos_da_ultima_rodada'>;
+  corte?: Pick<Corte, 'desvios_riscados' | 'trechos_da_ultima_rodada' | 'inicio_seg' | 'fim_seg'>;
   acoes: AcoesDasDecisoes;
   /** D-1095: sem ele (fora do editor) a pergunta do som não aparece. */
   som?: SomDoCorte;
@@ -88,7 +88,7 @@ export function conteudoDaAbaDecisoes({
         onRiscar={acoes.riscar}
         onDecidir={acoes.decidirOsSilencios}
       />
-      <PerguntaDosDesvios desvios={desvios}>
+      <PerguntaDosDesvios corte={corte} desvios={desvios}>
         <TrechosList
           desvios={desvios}
           semOSilencioDoApp

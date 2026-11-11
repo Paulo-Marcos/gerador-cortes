@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import type { Desvio } from '@/types/models';
+import type { Corte, Desvio } from '@/types/models';
+import { formatarDuracao } from '@/lib/utils';
+import { medirFicaESai } from '../timeUtils';
 import { naoESilencioDoApp } from './silencioDoCorte';
-import { rotuloDoTempo, tempoQueSai } from './perguntaDosDesvios';
 
 // D-1089 (E6, canvas `03-cortes-proposta`): a aba "Trechos" virou "Decisões". O
 // operador não revisa uma lista: responde perguntas sobre o corte, uma sob a outra,
@@ -56,13 +57,23 @@ export function PerguntaDaDecisao({ numero, pergunta, resumo, assunto, children 
   );
 }
 
+interface PerguntaDosDesviosProps {
+  /** A janela do corte; ainda carregando, o título fica sem o "sai". */
+  corte?: Pick<Corte, 'inicio_seg' | 'fim_seg'>;
+  desvios: Desvio[];
+  children: ReactNode;
+}
+
 /**
  * Pergunta 2 (P10). O tempo do título conta uma vez o trecho que cai dentro de outro.
  * D-1093: o silêncio do app é da pergunta 1 e não entra aqui.
+ * D-1105: a conta e o formato são os da faixa "O bruto vai ter" (medirFicaESai), para a
+ * mesma tela não dar dois números ao mesmo sai: recorta pela janela do corte e fecha
+ * a conta com o bruto exibido.
  */
-export function PerguntaDosDesvios({ desvios, children }: { desvios: Desvio[]; children: ReactNode }) {
-  const deAssunto = desvios.filter(naoESilencioDoApp);
-  const sai = deAssunto.length > 0 ? `sai ${rotuloDoTempo(tempoQueSai(deAssunto))}` : undefined;
+export function PerguntaDosDesvios({ corte, desvios, children }: PerguntaDosDesviosProps) {
+  const saiSeg = corte ? medirFicaESai(corte.inicio_seg, corte.fim_seg, desvios.filter(naoESilencioDoApp)).saiSeg : 0;
+  const sai = saiSeg > 0 ? `sai ${formatarDuracao(saiSeg)}` : undefined;
   return (
     <PerguntaDaDecisao numero={2} pergunta="Tirar os desvios de assunto?" resumo={sai} assunto="os desvios de assunto">
       {children}

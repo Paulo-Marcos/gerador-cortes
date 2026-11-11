@@ -8,7 +8,7 @@ import type { Desvio } from '@/types/models';
 
 vi.mock('@/features/editor/useCortes', async () => {
   const actual = await vi.importActual<typeof import('@/features/editor/useCortes')>('@/features/editor/useCortes');
-  return { ...actual, useCorte: () => ({ data: { projeto_id: 'p1', trechos_da_ultima_rodada: 1 } }) };
+  return { ...actual, useCorte: () => ({ data: { projeto_id: 'p1', trechos_da_ultima_rodada: 1, inicio_seg: 0, fim_seg: 1211 } }) };
 });
 vi.mock('@/features/diarizacao/useDiarizacao', async () => {
   const actual = await vi.importActual<typeof import('@/features/diarizacao/useDiarizacao')>(
