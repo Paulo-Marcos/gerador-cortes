@@ -130,6 +130,6 @@ export function medirFicaESai(
   const sai = fimSeg - inicioSeg - fica;
   const brutoSeg = Math.floor(fimSeg - inicioSeg);
   const ficaSeg = Math.floor(fica);
-  const saiSeg = sai > 0.05 ? Math.max(1, brutoSeg - ficaSeg) : 0;
+  const saiSeg = sai > 0.001 ? Math.max(1, brutoSeg - ficaSeg) : 0;
   return { brutoSeg, ficaSeg, saiSeg };
 }
