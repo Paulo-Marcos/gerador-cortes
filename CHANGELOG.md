@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The caption's profanity mask no longer shows as `[&nbsp;__&nbsp;]`.** The
+  YouTube VTT writes its text HTML-escaped, and the parser only stripped the
+  tags: the mask, the `>>` speaker change and `&` reached the transcript as
+  entities, and the Cortes step showed them in the speech that goes and in the
+  seam. The parser now decodes them, and so does the function that prepares
+  the transcript for the cut sync, the live analysis and the scenes plan; the
+  API decodes what each cut saved before, without rewriting the database. The
+  metadata prompt of an old cut gets clean text after its next sync (D-1083).
+
 ## [0.7.0] - 2026-11-06
 
 ### Added

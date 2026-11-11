@@ -10,6 +10,8 @@ Exemplo:
 
 import re
 
+from app.domain.projeto.entidades_da_legenda import decodificar_entidades_da_legenda
+
 # A linha de tempo do VTT é "início --> fim".
 _LADOS_DA_LINHA_DE_TEMPO = 2
 
@@ -40,9 +42,10 @@ def parse_vtt(vtt_content: str) -> list[dict]:
         inicio = partes[0].strip().split(" ")[0]
         fim = partes[1].strip().split(" ")[0]
 
-        # Limpa tags HTML e extrai apenas as linhas de texto do bloco atual
+        # Limpa tags HTML, decodifica as entidades (D-1083) e extrai apenas as
+        # linhas de texto do bloco atual
         texto_linhas = [
-            re.sub(r"<[^>]+>", "", line).strip()
+            decodificar_entidades_da_legenda(re.sub(r"<[^>]+>", "", line)).strip()
             for line in lines
             if "-->" not in line and not line.strip().isdigit()
         ]

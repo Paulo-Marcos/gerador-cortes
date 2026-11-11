@@ -21,6 +21,7 @@ from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, sco
 from app.domain.corte.desvio_categoria import classificar_desvio
 from app.domain.corte.motivo_apagado import ler_motivos_gravados
 from app.domain.corte.riscados import riscados_gravados, trechos_da_ultima_rodada
+from app.domain.projeto.entidades_da_legenda import decodificar_entidades_da_legenda
 from app.models import Corte
 from app.services.bruto_do_corte import reservar_cenas_do_operador
 from fastapi import HTTPException
@@ -63,6 +64,18 @@ def _lista_json(corte: Corte, coluna: str) -> list:
         return json.loads(getattr(corte, coluna, None) or "[]")
     except (ValueError, TypeError):
         return []
+
+
+def _decodificar_linhas(corte: Corte, coluna: str) -> list:
+    """D-1083: a transcrição do corte com as entidades HTML do VTT decodificadas.
+
+    O que foi gravado antes da correção do parser sai limpo na leitura, sem regravar.
+    """
+    linhas = json.loads(getattr(corte, coluna) or "[]")
+    for linha in linhas:
+        if isinstance(linha, dict) and isinstance(linha.get("texto"), str):
+            linha["texto"] = decodificar_entidades_da_legenda(linha["texto"])
+    return linhas
 
 
 def _origem_da_analise(corte: Corte) -> str | None:
@@ -136,8 +149,8 @@ def _corte_to_dict(corte: Corte) -> dict:
     d["is_fire"] = bool(getattr(corte, "is_fire", False))
     d["origem_analise"] = _origem_da_analise(corte)
     d["motivo_riscado"] = _ler_motivo_do_riscado(corte)
-    d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
-    d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
+    d["transcricao_corte"] = _decodificar_linhas(corte, "transcricao_corte")
+    d["transcricao_final"] = _decodificar_linhas(corte, "transcricao_final")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""
     d["cenas_remotion"] = normalizar_cenas_remotion_payload(
         json.loads(corte.cenas_remotion or "[]")

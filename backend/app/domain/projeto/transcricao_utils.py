@@ -1,4 +1,5 @@
 from app.domain.compartilhado.time_convert import hms_to_seg
+from app.domain.projeto.entidades_da_legenda import decodificar_entidades_da_legenda
 
 # Texto que a ingestão gravava no lugar da transcrição quando o yt-dlp não achava
 # legenda (D-444). Não é mais produzido, mas continua no banco dos projetos
@@ -242,7 +243,9 @@ def limpar_e_ordenar_transcricao(transcricao: list[dict]) -> list[dict]:
     for item in transcricao:
         inicio = _segundos(item.get("start", item.get("inicio", 0)))
         fim = _segundos(item.get("end", item.get("fim", inicio + 0.1)))
-        texto = item.get("texto", item.get("text", "")).strip()
+        # D-1083: a transcrição gravada do VTT pode vir escapada (`[&nbsp;__&nbsp;]`).
+        # Esta função é o funil da sincronia do corte e dos pedidos à IA.
+        texto = decodificar_entidades_da_legenda(item.get("texto", item.get("text", ""))).strip()
         if texto:
             seg = {"start": inicio, "end": max(inicio + 0.05, fim), "texto": texto}
             # Preserva o rótulo de falante (D-286) ao reconstruir o dict.
