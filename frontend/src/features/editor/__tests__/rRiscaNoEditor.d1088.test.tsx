@@ -14,7 +14,6 @@ const h = vi.hoisted(() => ({
   pedir: vi.fn(),
   obterCorte: vi.fn(),
   riscarCorte: vi.fn(),
-  deletarCorte: vi.fn(),
   salvar: vi.fn(),
 }));
 
@@ -22,7 +21,7 @@ vi.mock('../api/cortes', async (original) => {
   const real = await original<typeof import('../api/cortes')>();
   return {
     ...real,
-    cortesApi: { ...real.cortesApi, obterCorte: h.obterCorte, riscarCorte: h.riscarCorte, deletarCorte: h.deletarCorte },
+    cortesApi: { ...real.cortesApi, obterCorte: h.obterCorte, riscarCorte: h.riscarCorte },
   };
 });
 vi.mock('@/features/projeto-detalhe/useProjetoDetalhe', () => ({
@@ -95,13 +94,13 @@ describe('D-1088 · o R do editor', () => {
   const apertarR = () => tela.bindings.find((b) => b.key === 'r' && b.description === 'Riscar corte')!.action();
 
   beforeEach(() => {
-    for (const fn of [h.notify, h.pedir, h.obterCorte, h.riscarCorte, h.deletarCorte, h.salvar]) fn.mockReset();
+    for (const fn of [h.notify, h.pedir, h.obterCorte, h.riscarCorte, h.salvar]) fn.mockReset();
     h.salvar.mockImplementation((_patch, opcoes?: { onSuccess?: () => void }) => opcoes?.onSuccess?.());
     h.obterCorte.mockResolvedValue(h.corte);
     h.riscarCorte.mockResolvedValue({ corte_id: 'c1', status_anterior: 'aprovado', liberado_mb: 0, retido_mb: 0 });
   });
 
-  it('risca sem abrir diálogo e não exclui', async () => {
+  it('risca sem abrir diálogo', async () => {
     await abrir();
 
     apertarR();
@@ -109,7 +108,6 @@ describe('D-1088 · o R do editor', () => {
 
     expect(h.riscarCorte).toHaveBeenCalledWith('c1');
     expect(h.pedir).not.toHaveBeenCalled();
-    expect(h.deletarCorte).not.toHaveBeenCalled();
   });
 
   // D-883 descartava o ajuste ao excluir: salvá-lo no corte apagado dava 404. O

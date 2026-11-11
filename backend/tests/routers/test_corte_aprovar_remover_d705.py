@@ -1,10 +1,9 @@
-"""Aprovar e remover um corte, pela porta HTTP (D-705).
+"""Aprovar um corte, pela porta HTTP (D-705).
 
-Teste de caracterização, antes de as duas regras saírem do router para o
-`CorteService`. Aprovar é um pedido do operador e segue o ciclo do corte
-(RN-04); remover apaga a linha e a pasta do corte no disco. Troca só as bordas:
-banco em memória (toda sessão do app é desviada para ele) e a pasta dos
-projetos. As referências que o movimento troca ficam no topo.
+Teste de caracterização, antes de a regra sair do router para o `CorteService`.
+Aprovar é um pedido do operador e segue o ciclo do corte (RN-04). Troca só a
+borda do banco: em memória, e toda sessão do app é desviada para ele. O remover
+saiu na D-1106: o riscar (D-1088) ficou no lugar dele e nada mais o chamava.
 """
 
 from __future__ import annotations
@@ -23,9 +22,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
-
-# Onde a remoção lê a pasta dos projetos.
-_PROJETOS_DIR_LIDO_EM = ["app.services.corte"]
 
 
 @pytest_asyncio.fixture
@@ -60,10 +56,7 @@ async def fabrica(monkeypatch):
 
 
 @pytest.fixture
-def cliente(fabrica, monkeypatch, tmp_path):
-    for modulo in _PROJETOS_DIR_LIDO_EM:
-        monkeypatch.setattr(f"{modulo}.projetos_dir", lambda: tmp_path)
-
+def cliente(fabrica):
     async def sessao():
         async with fabrica() as db:
             yield db
@@ -106,32 +99,5 @@ async def test_aprovar_fora_do_ciclo_da_400_e_nao_muda_nada(cliente, fabrica):
 
 def test_aprovar_corte_inexistente_da_404(cliente):
     resposta = cliente.post("/api/cortes/nao-tem/aprovar")
-
-    assert (resposta.status_code, resposta.json()["detail"]) == (404, "Corte não encontrado")
-
-
-@pytest.mark.asyncio
-async def test_remover_apaga_o_corte_e_a_pasta_dele(cliente, fabrica, tmp_path):
-    pasta = tmp_path / "p1" / "cortes" / "c1"
-    (pasta / "bruto").mkdir(parents=True)
-    (pasta / "bruto" / "video.mp4").write_bytes(b"mp4")
-
-    resposta = cliente.delete("/api/cortes/c1")
-
-    assert resposta.json() == {"message": "Corte deletado com sucesso", "corte_id": "c1"}
-    assert await _cortes(fabrica) == []
-    assert not pasta.exists()
-
-
-@pytest.mark.asyncio
-async def test_remover_corte_sem_pasta_so_apaga_a_linha(cliente, fabrica):
-    resposta = cliente.delete("/api/cortes/c1")
-
-    assert resposta.status_code == 200
-    assert await _cortes(fabrica) == []
-
-
-def test_remover_corte_inexistente_da_404(cliente):
-    resposta = cliente.delete("/api/cortes/nao-tem")
 
     assert (resposta.status_code, resposta.json()["detail"]) == (404, "Corte não encontrado")

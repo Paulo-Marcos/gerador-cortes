@@ -17184,62 +17184,6 @@
       }
     },
     "/api/cortes/{corte_id}": {
-      "delete": {
-        "operationId": "deletar_corte_api_cortes__corte_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "corte_id",
-            "required": true,
-            "schema": {
-              "title": "Corte Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "motivo",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Motivo"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MensagemDoCorteResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Deletar Corte",
-        "tags": [
-          "Cortes"
-        ]
-      },
       "get": {
         "operationId": "obter_corte_api_cortes__corte_id__get",
         "parameters": [

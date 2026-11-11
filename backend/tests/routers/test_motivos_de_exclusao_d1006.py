@@ -1,9 +1,9 @@
 """D-1006: os motivos de excluir moram no settings.db, por canal, editáveis na tela.
 
-Pela porta HTTP da tela de Canais, e depois pela do apagar: o motivo novo vale
-no snapshot, o escondido é recusado ao apagar mas segue contado e nomeado na
-telemetria. Banco do projeto em memória (fixtures da D-1005); canal e
-settings.db numa pasta do teste.
+Pela porta HTTP da tela de Canais, e depois pela do riscar: o motivo novo vale
+no snapshot, o escondido é recusado ao riscar mas segue contado e nomeado na
+telemetria. Banco do projeto em memória (fixtures do riscar, D-1088; até a
+D-1106 eram as do apagar, que saiu); canal e settings.db numa pasta do teste.
 """
 
 from __future__ import annotations
@@ -16,12 +16,13 @@ from app.services.telemetria_cortes import TelemetriaCortesService
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from tests.routers import test_apagar_corte_varios_motivos_d1005 as d1005
+from tests.routers import test_riscar_corte_d1088 as d1088
 
-# O banco do projeto e a porta do apagar são os da D-1005.
-fabrica = d1005.fabrica
-cliente = d1005.cliente
-_snapshot = d1005._snapshot
+# O banco do projeto e a porta do riscar são os da D-1088.
+fabrica = d1088.fabrica
+raiz = d1088.raiz
+cliente = d1088.cliente
+_snapshot = d1088._snapshot
 
 ROTA = "/api/channels/ativo/motivos-de-exclusao"
 
@@ -79,11 +80,11 @@ def test_nome_repetido_da_400_e_slug_estranho_da_404(tela):
 
 
 @pytest.mark.asyncio
-async def test_apagar_aceita_o_novo_e_recusa_o_escondido(tela, cliente, fabrica):
+async def test_riscar_aceita_o_novo_e_recusa_o_escondido(tela, cliente, fabrica):
     tela.post(ROTA, json={"rotulo": "Polêmico"})
     tela.put(f"{ROTA}/repetido", json={"ativo": False})
 
-    resposta = cliente.delete("/api/cortes/c1", params={"motivo": "repetido|polemico"})
+    resposta = cliente.post("/api/cortes/c1/riscar", json={"motivo": "repetido|polemico"})
 
     assert resposta.status_code == 200
     assert (await _snapshot(fabrica, "c1")).motivo_apagado == "polemico"
@@ -91,7 +92,7 @@ async def test_apagar_aceita_o_novo_e_recusa_o_escondido(tela, cliente, fabrica)
 
 @pytest.mark.asyncio
 async def test_telemetria_conta_e_nomeia_o_motivo_escondido(tela, cliente, fabrica):
-    cliente.delete("/api/cortes/c1", params={"motivo": "repetido"})
+    cliente.post("/api/cortes/c1/riscar", json={"motivo": "repetido"})
     tela.put(f"{ROTA}/repetido", json={"ativo": False})
 
     async with fabrica() as db:

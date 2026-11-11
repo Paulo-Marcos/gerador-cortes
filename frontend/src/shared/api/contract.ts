@@ -1117,8 +1117,7 @@ export interface paths {
         get: operations["obter_corte_api_cortes__corte_id__get"];
         put?: never;
         post?: never;
-        /** Deletar Corte */
-        delete: operations["deletar_corte_api_cortes__corte_id__delete"];
+        delete?: never;
         options?: never;
         head?: never;
         /** Atualizar Corte */
@@ -12971,39 +12970,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CorteResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deletar_corte_api_cortes__corte_id__delete: {
-        parameters: {
-            query?: {
-                motivo?: string | null;
-            };
-            header?: never;
-            path: {
-                corte_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MensagemDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
