@@ -43,7 +43,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/channels/PromptsUtilitariosSection.tsx::PromptsUtilitariosSection": 102,
   "src/features/editor/AdicionarCorteModal.tsx::AdicionarCorteModal": 174,
   "src/features/editor/BancadaChrome.tsx::BancadaChrome": 207,
-  "src/features/editor/CommonTopBar.tsx::StatusToggleRow": 127,
   "src/features/editor/EditorPage.tsx::EditorPage": 224,
   "src/features/editor/fase1/BlocosPanel.tsx::BlocosPanel": 175,
   "src/features/editor/fase1/EditorFase1.tsx::EditorFase1": 181,
