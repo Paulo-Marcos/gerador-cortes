@@ -26,9 +26,13 @@ def voltar_se_riscado(corte: Corte, pedido: str) -> bool:
     "Voltar" do Workspace pede proposto e fica proposto; o A pede aprovado e fica
     aprovado. Só o "Trazer de volta", que não pede status, herda a etapa de antes
     (`desfazer_o_riscar`). Devolve se o bruto que o riscar soltou precisa ser
-    gerado. Corte que não está riscado não muda.
+    gerado. Corte que não está riscado não muda, nem o pedido de rejeitado num
+    riscado: ele não sai do riscado, e desfazer ali apagaria a etapa de antes, o
+    tiraria da conta de apagados e geraria o bruto de um corte riscado (D-1101).
     """
     if getattr(corte.status, "value", corte.status) != ciclo_corte.REJEITADO:
+        return False
+    if pedido == ciclo_corte.REJEITADO:
         return False
     regerar = desfazer_o_riscar(corte)
     corte.status = StatusCorte(pedido)

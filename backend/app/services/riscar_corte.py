@@ -69,7 +69,9 @@ async def riscar(corte_id: str, motivo: str | None = None) -> CorteRiscado:
         status_anterior=anterior,
         liberado_mb=relatorio.liberado_mb,
         retido_mb=relatorio.retido_mb,
-        nao_removidos=[*relatorio.erros, *relatorio.pulados],
+        # Só o resíduo medido no disco: o arquivo em uso também entra em `erros`
+        # ao falhar o unlink, e somar os dois o contava duas vezes (D-1101).
+        nao_removidos=list(relatorio.pulados),
     )
 
 
