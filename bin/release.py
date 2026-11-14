@@ -36,12 +36,15 @@ SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 NIVEIS = ("patch", "minor", "major")
 # Keep a Changelog: o que cada categoria significa para o número da versão.
 CATEGORIAS_DE_PATCH = {"Fixed", "Security"}
-# Quebra de compatibilidade se declara abrindo a entrada com `**BREAKING**`
-# (ou `BREAKING:`, a forma da skill de release). A palavra no meio do texto não
-# conta: "its breaking changes touch no code here" (D-982) é uma correção, e a
-# entrada que só CITA a marca não é quebra; a partir da 1.0, as duas forçariam
-# um major (D-1067).
-MARCA_DE_QUEBRA = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*BREAKING\*\*|BREAKING:)", re.M)
+# Quebra de compatibilidade: a palavra BREAKING, em maiúsculas e inteira, no
+# começo de QUALQUER linha da seção (abrindo a entrada ou a linha seguinte
+# dela), com ou sem o marcador de lista e com ou sem negrito. Assim valem
+# `**BREAKING**`, `BREAKING:`, `**BREAKING:**` e `BREAKING CHANGE:` (D-1068).
+# Não conta a palavra no meio do texto: "its breaking changes touch no code
+# here" (D-982) é uma correção, e a entrada que só CITA a marca, entre crases,
+# não é quebra; a partir da 1.0, as duas forçariam um major (D-1067). Nem
+# `BREAKINGS`: o `\b` exige a palavra inteira.
+MARCA_DE_QUEBRA = re.compile(r"^\s*(?:[-*]\s+)?\**BREAKING\b", re.M)
 COPIAS_DA_VERSAO = [
     "VERSION",
     "backend/openapi.json",
@@ -126,7 +129,7 @@ def juntar_secoes(*partes: dict[str, str]) -> dict[str, str]:
 
 def nivel_sugerido(secoes: dict[str, str], atual: str) -> str:
     """Correção só → patch; qualquer outra categoria → minor. Quebra marcada
-    (entrada aberta por `**BREAKING**` ou `BREAKING:`, em qualquer categoria)
+    (linha que começa com BREAKING, ver MARCA_DE_QUEBRA, em qualquer categoria)
     → major a partir da 1.0; antes dela, a minor faz esse papel (SemVer, item
     4: na 0.y.z tudo pode mudar)."""
     if not secoes:

@@ -22,8 +22,10 @@ worktree d-NNN-slug ──PR──▶ CI + pr-audit ──squash──▶ main �
    numa branch própria: vale como worktree (regras dela no fim desta seção).
 2. **Na branch:** commits no padrão abaixo, portão local, entrada no
    `CHANGELOG` em `[Unreleased]`. Quebra de compatibilidade abre a entrada com
-   `**BREAKING**` (ou `BREAKING:`): é só essa abertura que o `bin/release.py`
-   lê para sugerir o major (a palavra no meio do texto não conta, D-1067).
+   `**BREAKING**` (valem também `BREAKING:`, `**BREAKING:**` e
+   `BREAKING CHANGE:`): o `bin/release.py` sugere o major quando uma linha
+   começa com a palavra BREAKING, em maiúsculas e inteira (a palavra no meio do
+   texto não conta, D-1067, D-1068).
 3. **PR contra a `main`:** `git push -u origin d-NNN-slug` e `gh pr create`, com
    o título igual ao assunto do commit. Uma demanda, um PR.
 4. **CI no PR.** A proteção da `main` exige `CI ok` (o job que espera todos os
