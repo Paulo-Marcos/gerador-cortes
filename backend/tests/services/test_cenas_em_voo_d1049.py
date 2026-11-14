@@ -1,4 +1,4 @@
-"""A cena cai na frase que a IA escolheu, mesmo com o corte mudando no meio (D-1049, RN-36).
+"""A cena cai na frase que a IA escolheu, mesmo com o corte mudando no meio (D-1049, RN-43).
 
 A IA recebe legendas numeradas e devolve o NÚMERO da legenda. A importação convertia esse
 número contra a transcrição do momento: se o operador tirasse um trecho enquanto a IA
@@ -582,7 +582,7 @@ def test_sem_tempo_por_palavra_e_mesma_fala_nao_ha_aviso():
 
 
 def test_a_abertura_fica_no_comeco_sem_aviso():
-    # RN-36: a abertura (até 1 s) pertence ao começo do corte, não a uma frase.
+    # RN-43: a abertura (até 1 s) pertence ao começo do corte, não a uma frase.
     resultado = {"cenas": [{"tipo": "pergunta_transicao", "inicio": 0.0, "fim": 3.0}]}
     lida = json.dumps(_transcricao_da_live(com_palavras=False))
     atual = json.dumps(_transcricao_da_live(com_palavras=False, deslocar=-10.0))

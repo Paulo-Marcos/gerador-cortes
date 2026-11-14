@@ -1,4 +1,4 @@
-"""D-1030 (RN-36): recorte que tira a frase de uma cena desfaz a marca de cenas validadas.
+"""D-1030 (RN-43): recorte que tira a frase de uma cena desfaz a marca de cenas validadas.
 
 Decisão do dono: "Sim, desfazer". O operador validou aquela cena sobre aquela fala; sem a
 fala, a validação não vale mais. Mover a cena junto com a frase não muda o que foi validado.

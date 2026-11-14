@@ -1,4 +1,4 @@
-"""D-1040 (RN-36): a sincronia que falha não desfaz o trecho gravado nem o duplica.
+"""D-1040 (RN-43): a sincronia que falha não desfaz o trecho gravado nem o duplica.
 
 `adicionar_desvio` grava e depois sincroniza. Com a sincronia falhando, a resposta era
 500 com o desvio já no banco: a tela do atalho não mostrava nada, o operador apertava de

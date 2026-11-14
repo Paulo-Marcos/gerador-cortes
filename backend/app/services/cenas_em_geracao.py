@@ -115,7 +115,7 @@ reservar_o_ajuste = _marca.reservar_o_ajuste
 def recusar_dividir_ou_juntar(*cortes_ids: str) -> None:
     """Dividir e juntar mudam qual corte existe: a exceção a levar as cenas junto (D-1049).
 
-    Trecho e borda, a cena acompanha (RN-36). Aqui parte dela iria para outro corte, e o
+    Trecho e borda, a cena acompanha (RN-43). Aqui parte dela iria para outro corte, e o
     absorvido fica riscado (D-1097) antes de a resposta da IA chegar.
     """
     if any(esta_gerando(corte_id) for corte_id in cortes_ids):

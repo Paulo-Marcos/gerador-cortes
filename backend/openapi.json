@@ -24443,7 +24443,7 @@
     },
     "/api/shorts/corte/{corte_id}/gerar": {
       "post": {
-        "description": "Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.\n\nServe os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca\nna pós-produção — refaz só o vídeo (D-160). A rodada soma aos candidatos\nque já existem e não apaga nenhum (RN-26).",
+        "description": "Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.\n\nServe os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca\nna pós-produção — refaz só o vídeo (D-160). A rodada soma aos candidatos\nque já existem e não apaga nenhum (RN-41).",
         "operationId": "gerar_manualmente_api_shorts_corte__corte_id__gerar_post",
         "parameters": [
           {

@@ -7,7 +7,7 @@ import { validateSceneOverlaps, type SceneValidationResult } from './sceneValida
 
 // ─────────────────────────────────────────────────────────────────────────────
 // O plano de cenas da Pós (D-1070). Cada cena diz de onde veio, e a mesma cor vale
-// no card e na linha do tempo. A conferência só avisa (RN-35): "pede conferência"
+// no card e na linha do tempo. A conferência só avisa (RN-42): "pede conferência"
 // não trava a validação, só conta quantas faltam.
 // ─────────────────────────────────────────────────────────────────────────────
 
