@@ -7,7 +7,8 @@ registro de verdade e reprova o documento vivo que cita uma trava inexistente
 ou que diz que arquivo novo é trava enquanto nenhuma trava bloqueia `add`.
 
 Documento vivo é todo `.md` e `.txt` versionado, menos o que é histórico:
-`docs/interno/`, `.guia/reports/`, os CHANGELOG e `.guia/locks/exceptions.md`.
+`docs/interno/`, `.guia/reports/`, os CHANGELOG, os fragmentos de `changelog.d/`
+(viram o CHANGELOG na release, D-1081) e `.guia/locks/exceptions.md`.
 A citação é a marca `[unlock:<id>]` (o mesmo padrão do `bin/check-lock.py`)
 ou a afirmação "trava (`id`)", "lock global `id`", "lock-curinga `id`". Os ids
 de exemplo do README de travas ficam numa lista explícita.
@@ -25,7 +26,7 @@ import yaml
 _RAIZ = Path(__file__).resolve().parents[2]
 _REGISTRO = _RAIZ / ".guia" / "locks" / "registry.yaml"
 
-_HISTORICO_PREFIXOS = ("docs/interno/", ".guia/reports/")
+_HISTORICO_PREFIXOS = ("docs/interno/", ".guia/reports/", "changelog.d/")
 _HISTORICO_ARQUIVOS = {".guia/locks/exceptions.md"}
 # Ids inventados que o README usa para explicar o mecanismo (lock, unlock, audit).
 _EXEMPLOS_DO_README = {
@@ -95,6 +96,22 @@ def test_varredura_pega_os_documentos_de_travas():
     for documento in ("AGENTS.md", ".guia/locks/README.md", ".githooks/README.md"):
         assert documento in DOCUMENTOS_VIVOS
     assert not any(doc.startswith("docs/interno/") for doc in DOCUMENTOS_VIVOS)
+
+
+def test_fragmento_de_changelog_citando_trava_antiga_fica_fora(monkeypatch):
+    """Controle (D-1081): o fragmento de `changelog.d/` é histórico como o CHANGELOG.
+
+    Contar a remoção de uma trava no fragmento cita a trava que já não existe;
+    é a exclusão, e não o texto, que o mantém fora da varredura.
+    """
+    fragmento = "changelog.d/D-9999.removed.md"
+    texto = "Sai a trava; o commit levou `[unlock:adicoes-exigem-autorizacao]`."
+    assert _travas_citadas(texto) == {"adicoes-exigem-autorizacao"}
+    saida_do_git = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout=f"AGENTS.md\n{fragmento}\n", stderr=""
+    )
+    monkeypatch.setattr(subprocess, "run", lambda *_a, **_k: saida_do_git)
+    assert _documentos_vivos() == ["AGENTS.md"]
 
 
 @pytest.mark.parametrize("documento", DOCUMENTOS_VIVOS)
