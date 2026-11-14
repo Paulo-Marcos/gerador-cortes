@@ -10,7 +10,7 @@ import { useCorte } from './useCortes';
 // D-1044: o que ficou aberto viaja com o corte. Cada pendência morava numa tela só
 // (o Conferir no editor, os avisos na aba Cenas), e 7 de 48 cortes renderizaram sem
 // validar as cenas. A barra das três telas mostra a lista e não bloqueia nada: quem
-// decide é o operador (RN-35).
+// decide é o operador (RN-42).
 
 export type RetratoDasPendencias = {
   brutoDefasado: boolean;

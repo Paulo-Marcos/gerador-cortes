@@ -160,7 +160,7 @@ async def test_validar_marca_as_cenas_e_desfazer_tira_a_marca(cliente, fabrica):
 
 @pytest.mark.asyncio
 async def test_validar_sem_cenas_valida_o_plano_vazio(cliente, fabrica):
-    # RN-37 (D-1072): o plano vazio também se valida.
+    # RN-38 (D-1072): o plano vazio também se valida.
     async with fabrica() as db:
         (await db.get(Corte, "c1")).cenas_remotion = "[]"
         await db.commit()

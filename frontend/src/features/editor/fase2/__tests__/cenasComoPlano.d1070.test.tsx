@@ -122,7 +122,7 @@ describe('Validar o plano (faltam N)', () => {
     expect(botaoValidar(painel({ validadas: true }))).toContain('Plano validado');
   });
 
-  it('o aviso não trava: com faltam 1 o botão segue livre (RN-35)', () => {
+  it('o aviso não trava: com faltam 1 o botão segue livre (RN-42)', () => {
     expect(painel()).not.toMatch(/<button[^>]*disabled[^>]*data-testid="botao-validar-cenas"/);
   });
 });

@@ -43,7 +43,7 @@ async def gerar_manualmente(corte_id: str):
 
     Serve os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca
     na pós-produção — refaz só o vídeo (D-160). A rodada soma aos candidatos
-    que já existem e não apaga nenhum (RN-26).
+    que já existem e não apaga nenhum (RN-41).
     """
     try:
         return await fabrica_de_shorts.gerar_shorts_do_corte(corte_id)

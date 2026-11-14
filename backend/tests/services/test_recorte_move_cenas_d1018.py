@@ -1,4 +1,4 @@
-"""D-1018 (RN-36): a sincronia real leva as cenas junto com a frase quando o corte muda."""
+"""D-1018 (RN-43): a sincronia real leva as cenas junto com a frase quando o corte muda."""
 
 import json
 from types import SimpleNamespace

@@ -1,4 +1,4 @@
-"""De onde vem o que a cena afirma, conferido contra a fala (D-1018, RN-35).
+"""De onde vem o que a cena afirma, conferido contra a fala (D-1018, RN-42).
 
 WHY: em 175 cenas reais, nenhum card de número mostrava fonte, 10 de 19 eram
 hipótese sob o rótulo "DADO" e 4 de 13 citações erravam (paráfrase do apresentador

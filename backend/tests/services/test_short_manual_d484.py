@@ -160,7 +160,7 @@ class TestSobrevivenciaARegeracao:
 
     @pytest.mark.asyncio
     async def test_regerar_soma_ao_palpite_antigo_da_ia(self, ambiente):
-        """D-803 (RN-26): gerar de novo soma; o palpite pendente nao some mais."""
+        """D-803 (RN-41): gerar de novo soma; o palpite pendente nao some mais."""
         await servico.registrar_sugestoes(_contexto(), _sugestoes((10.0, 40.0), (50.0, 80.0)))
 
         await servico.registrar_sugestoes(_contexto(), _sugestoes((200.0, 240.0)))

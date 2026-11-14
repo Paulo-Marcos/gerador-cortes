@@ -65,7 +65,7 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
         regerou = True
 
     # D-803: o bruto de um Fire ja propoe os shorts no fim (D-455). Chamar a IA
-    # de novo aqui pagaria minutos por uma rodada que a regra da soma (RN-26)
+    # de novo aqui pagaria minutos por uma rodada que a regra da soma (RN-41)
     # descartaria quase inteira. So roda se aquele passo nao aconteceu ou falhou.
     if regerou and _bruto_ja_propos_shorts(corte_id):
         resultado: dict = {"shorts": [], "descartes": []}

@@ -1,5 +1,5 @@
-"""A origem das cenas de um corte: a conferência só lê e avisa (D-1018, RN-35); o recorte
-leva as cenas junto e, se tirar a frase de alguma, desfaz a validação (D-1030, RN-36); a
+"""A origem das cenas de um corte: a conferência só lê e avisa (D-1018, RN-42); o recorte
+leva as cenas junto e, se tirar a frase de alguma, desfaz a validação (D-1030, RN-43); a
 geração guarda a rodada que substituiu, para desfazer e comparar (D-1071, RN-37); o ajuste
 de uma cena aceito troca só ela, sobre o plano que o pedido leu (D-1074, RN-40)."""
 
@@ -125,7 +125,7 @@ def _levar_no_recorte(
     cenas: str | None, antiga: str | None, nova: list, da_live: list, colunas: tuple
 ) -> dict:
     """As colunas de uma rodada depois do recorte: as cenas levadas e, se alguma perdeu a
-    frase, a marca de validadas desfeita (RN-36). `colunas`: cenas, validadas, validadas_em."""
+    frase, a marca de validadas desfeita (RN-43). `colunas`: cenas, validadas, validadas_em."""
     levadas = seguir_recorte(cenas, antiga, nova, da_live)
     if levadas is None:
         return {}
@@ -139,7 +139,7 @@ def _levar_no_recorte(
 async def gravar_recorte(
     db: AsyncSession, corte: Corte, transcricao_nova: list, transcricao_da_live: list, colunas: dict
 ) -> None:
-    """Grava a transcrição nova com as cenas levadas para ela (RN-36).
+    """Grava a transcrição nova com as cenas levadas para ela (RN-43).
 
     Se o recorte tirou a frase de alguma cena, desfaz a marca de validadas: o operador
     validou aquela cena sobre aquela fala (D-1030). O `where` grava só se as cenas seguem as
@@ -181,7 +181,7 @@ async def gravar_cenas_geradas(
 ) -> dict:
     """Grava as cenas que a IA gerou sobre `transcricao_lida`, levadas para a de agora.
 
-    RN-36, D-1049: quem edita não espera a IA, e a cena segue a frase como as gravadas. O
+    RN-43, D-1049: quem edita não espera a IA, e a cena segue a frase como as gravadas. O
     `where` grava só se a transcrição não mudou desde a leitura logo acima; se mudou,
     leva de novo a partir do que a IA leu.
 

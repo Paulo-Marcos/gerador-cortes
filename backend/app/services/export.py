@@ -100,7 +100,7 @@ class ExportService(
             ``{"status": "erro", "mensagem": str}`` caso contrário.
         """
         # D-1037: o bruto espera as cenas em voo: a cadeia e o clique pagariam a mesma geração
-        # duas vezes. A cena em si segue a salvaguarda (D-1049, RN-36).
+        # duas vezes. A cena em si segue a salvaguarda (D-1049, RN-43).
         # D-1048: e todo bruto segura a marca até os shorts.
         pedir_cenas = refazer_cenas and settings.claude_auto_cenas_no_bruto
         reserva = reservar(corte_id, gera_cenas=pedir_cenas)

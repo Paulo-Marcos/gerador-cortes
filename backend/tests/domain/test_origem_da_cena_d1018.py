@@ -1,4 +1,4 @@
-"""D-1018 (RN-35): a conferência da origem avisa e nunca reescreve. Os casos são os erros medidos em cenas reais."""
+"""D-1018 (RN-42): a conferência da origem avisa e nunca reescreve. Os casos são os erros medidos em cenas reais."""
 
 import copy
 
