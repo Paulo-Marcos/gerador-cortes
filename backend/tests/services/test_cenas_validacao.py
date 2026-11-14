@@ -181,7 +181,7 @@ async def test_validar_com_validado_false_desfaz_a_marca(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_validar_sem_cenas_salvas_valida_o_plano_vazio(monkeypatch):
-    # RN-37 (D-1072): o plano vazio também se valida; é a decisão do operador
+    # RN-38 (D-1072): o plano vazio também se valida; é a decisão do operador
     # que destrava o render final, não a existência de cenas.
     corte = _corte_estavel(cenas_remotion="[]", cenas_validadas=0)
     db = _db_que_retorna(corte)

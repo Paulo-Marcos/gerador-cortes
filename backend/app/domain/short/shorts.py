@@ -257,7 +257,7 @@ def _sem_sobreposicao(
 def sem_repetir_existentes(
     resultado: ResultadoSugestoes, existentes: list[tuple[float, float]]
 ) -> ResultadoSugestoes:
-    """Tira da rodada nova o trecho que já é candidato do corte (RN-26, D-803).
+    """Tira da rodada nova o trecho que já é candidato do corte (RN-41, D-803).
 
     Gerar de novo SOMA à fila e nunca apaga: o palpite pendente pode estar na
     cabeça do operador, e sumir com ele seria desfazer trabalho sem aviso. O

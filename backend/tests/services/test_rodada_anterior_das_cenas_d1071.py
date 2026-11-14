@@ -436,7 +436,7 @@ async def test_desfazer_corte_que_nao_existe_e_404(cliente):
 
 @pytest.mark.asyncio
 async def test_desfazer_depois_do_recorte_traz_a_cena_na_fala_de_agora(cliente, ia, fabrica):
-    """RN-36: a anterior segue a frase como a atual; desfazer não a traz no lugar velho."""
+    """RN-43: a anterior segue a frase como a atual; desfazer não a traz no lugar velho."""
     await _gerar_pelo_claude(cliente, ia, "Na frase")
     ia.frase = "palavra4"
     await _gerar_pelo_claude(cliente, ia, "Outra")

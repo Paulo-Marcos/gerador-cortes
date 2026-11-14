@@ -181,7 +181,7 @@ function ItemDaFila({ fire, liveRodando }: { fire: FireComBruto; liveRodando: bo
  * depois, o indicado à mão e a proposta que falhou ficavam sem short e sem
  * caminho. Sem bruto, ele é refeito antes sem refazer a transcrição da live nem
  * as cenas (D-160); a salvaguarda de silêncios ainda ressincroniza a
- * transcrição do corte. Nada do que já está na fila é apagado (RN-26).
+ * transcrição do corte. Nada do que já está na fila é apagado (RN-41).
  */
 export function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: boolean }) {
   const queryClient = useQueryClient();

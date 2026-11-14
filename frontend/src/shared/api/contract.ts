@@ -4162,7 +4162,7 @@ export interface paths {
          *
          *     Serve os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca
          *     na pós-produção — refaz só o vídeo (D-160). A rodada soma aos candidatos
-         *     que já existem e não apaga nenhum (RN-26).
+         *     que já existem e não apaga nenhum (RN-41).
          */
         post: operations["gerar_manualmente_api_shorts_corte__corte_id__gerar_post"];
         delete?: never;

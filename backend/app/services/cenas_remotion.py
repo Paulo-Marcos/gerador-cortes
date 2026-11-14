@@ -386,7 +386,7 @@ class CenasRemotionService:
         transcricao_lida: str | None = None,
         dur_bruta: float = 0.0,
     ) -> dict:
-        """Normaliza a resposta da IA e salva as cenas, na frase que ela escolheu (RN-36, D-1049).
+        """Normaliza a resposta da IA e salva as cenas, na frase que ela escolheu (RN-43, D-1049).
 
         O número de legenda vale na transcrição que a IA leu: converte contra ela e a gravação
         leva a cena à de agora. Sem `transcricao_lida` (manual), vale a do momento.

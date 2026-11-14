@@ -1,4 +1,4 @@
-"""D-1031 (RN-35/RN-36): o atalho do bruto mexe no trecho e a transcrição acompanha na hora.
+"""D-1031 (RN-42/RN-43): o atalho do bruto mexe no trecho e a transcrição acompanha na hora.
 
 `adicionar_desvio` gravava o desvio e parava: a cena não se movia e a marca de validadas
 ficava até a próxima sincronia. `remover_desvio` já sincronizava; o teste o mantém assim.

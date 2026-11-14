@@ -1,4 +1,4 @@
-"""A cena segue a frase quando o corte muda (D-1018, RN-36).
+"""A cena segue a frase quando o corte muda (D-1018, RN-43).
 
 WHY: a cena guarda segundos do corte. Tirar um trecho antes dela refaz a
 transcrição e deixa a cena no segundo antigo, sem aviso. Aqui as duas transcrições
@@ -262,7 +262,7 @@ def levar_cenas_geradas(
 ) -> dict:
     """As cenas que a IA gerou sobre a transcrição lida, na transcrição de agora (D-1049).
 
-    O mesmo caminho das gravadas (RN-36), mas sem a live: aqui toda frase que sumiu avisa,
+    O mesmo caminho das gravadas (RN-43), mas sem a live: aqui toda frase que sumiu avisa,
     pois a cena acabou de nascer e ninguém a viu. Transcrição sem tempo por palavra
     (legenda antiga) não se alinha: se a fala mudou, nenhuma cena pode garantir o lugar.
     """

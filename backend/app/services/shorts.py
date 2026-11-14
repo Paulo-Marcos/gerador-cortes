@@ -117,7 +117,7 @@ async def registrar_sugestoes(
     resultado: ResultadoSugestoes,
     origem: proposta_do_short.OrigemDaProposta = proposta_do_short.SEM_ORIGEM,
 ) -> list[dict]:
-    """Soma os recém-propostos aos candidatos do corte, sem apagar nenhum (RN-26).
+    """Soma os recém-propostos aos candidatos do corte, sem apagar nenhum (RN-41).
 
     Até a D-803 a rodada nova trocava os palpites pendentes da IA; o operador
     pediu que gerar de novo nunca desfaça o que já está na fila. O trecho que
