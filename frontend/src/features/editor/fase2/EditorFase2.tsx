@@ -15,6 +15,7 @@ import { YoutubeLayoutPanel } from './YoutubeLayoutPanel';
 import { SegmentoDetectadoPopover } from './SegmentoDetectadoPopover';
 import { PanelShell } from '@/components/workbench/PanelShell';
 import { useEditorFase2 } from './useEditorFase2';
+import { PainelLateralComPiso } from './PainelLateralComPiso';
 import { Icon } from '@/upgrade/Icon';
 
 // D-1072: a aba Filtros saiu: o filtro é do canal (RN-25) e aparece como linha.
@@ -52,6 +53,7 @@ export interface Props {
 }
 
 const PANEL_PERSIST = 'editor-fase2-panels-v1';
+const GRUPO_DOS_PAINEIS = 'editor-fase2-paineis';
 
 export function EditorFase2(props: Props) {
   const {
@@ -220,8 +222,8 @@ export function EditorFase2(props: Props) {
   }
 
   return (
-    <PanelGroup direction="horizontal" autoSaveId={PANEL_PERSIST} className="flex-1">
-      <Panel defaultSize={70} minSize={40} order={1}>
+    <PanelGroup id={GRUPO_DOS_PAINEIS} direction="horizontal" autoSaveId={PANEL_PERSIST} className="flex-1">
+      <Panel id="editor-fase2-principal" defaultSize={70} minSize={40} order={1}>
         <div className="flex h-full min-h-0 flex-col gap-3">
           <AlertaCenasForaDoCorte fora={cenasFora} duracaoCorte={duracaoDoCorte} />
           <div className="min-h-0 flex-1">
@@ -303,7 +305,7 @@ export function EditorFase2(props: Props) {
         </div>
       </Panel>
       <PanelResizeHandle className="w-1 bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--wb-accent)_50%,transparent)]" />
-      <Panel defaultSize={30} minSize={22} order={2}>
+      <PainelLateralComPiso grupoId={GRUPO_DOS_PAINEIS}>
         <div className="flex h-full min-h-0 flex-col">
           {/* Tabs header — replica v3_pos.jsx:385-432. D-1072: Cenas e Layout. D-1086: o filtro do canal (RN-25)
               é um chip nesta linha, FORA do tablist (o ARIA só admite abas nele), não uma faixa fixa. */}
@@ -376,7 +378,7 @@ export function EditorFase2(props: Props) {
             )}
           </div>
         </div>
-      </Panel>
+      </PainelLateralComPiso>
     </PanelGroup>
   );
 }
