@@ -1289,7 +1289,7 @@ class CorteService:
     ) -> Corte:
         """Adiciona um desvio criado manualmente ao corte, ordenado por início.
 
-        Insere o desvio com origem `manual` e sincroniza (RN-36). O mesmo intervalo não
+        Insere o desvio com origem `manual` e sincroniza (RN-43). O mesmo intervalo não
         entra de novo, e a sincronia que falha não desfaz o trecho: fica marcada em
         `corte.sincronia_falhou`, para a resposta avisar a tela (D-1040).
         Levanta `ValueError("Corte não encontrado")` (→404).
@@ -1302,7 +1302,7 @@ class CorteService:
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
         await db.commit()
 
-        # D-1031: a cena se move e a marca de validadas se desfaz já (RN-36).
+        # D-1031: a cena se move e a marca de validadas se desfaz já (RN-43).
         # D-1040: se falhar, o trecho fica; repetir o mesmo intervalo refaz só esta parte.
         try:
             await CorteService.sincronizar_transcricao_corte(corte_id)

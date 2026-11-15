@@ -3,7 +3,7 @@
 Três regras moram aqui:
 
 - gerar shorts de novo NÃO apaga candidato nenhum — nem o palpite pendente da
-  IA. O que a nova rodada propõe sobre um trecho que já é candidato cai (RN-26);
+  IA. O que a nova rodada propõe sobre um trecho que já é candidato cai (RN-41);
 - a regeração do bruto de um Fire já propõe os shorts (D-455), então o caminho
   manual não paga a mesma chamada de IA duas vezes;
 - a fábrica da live baixa o vídeo UMA vez e passa por todos os Fires pendentes

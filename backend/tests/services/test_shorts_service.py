@@ -131,7 +131,7 @@ async def test_registrar_grava_os_candidatos_ordenados(session_factory):
 
 @pytest.mark.asyncio
 async def test_regerar_soma_sem_apagar_sugeridos_nem_curadoria(session_factory):
-    """D-803 (RN-26): a rodada nova soma; nem o palpite pendente nem o curado somem."""
+    """D-803 (RN-41): a rodada nova soma; nem o palpite pendente nem o curado somem."""
     await _seed_corte(session_factory)
     contexto = await servico.montar_contexto("c1")
 

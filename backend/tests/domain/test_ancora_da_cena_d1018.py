@@ -1,4 +1,4 @@
-"""D-1018 (RN-36): a cena segue a frase quando o corte muda, e avisa quando a frase sai."""
+"""D-1018 (RN-43): a cena segue a frase quando o corte muda, e avisa quando a frase sai."""
 
 import json
 

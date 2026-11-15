@@ -27,7 +27,7 @@ describe('D-1044 · as pendências na barra de ações', () => {
     expect(html.indexOf('cenas por validar')).toBeLessThan(html.indexOf('Renderizar final'));
   });
 
-  it('o primário segue liberado com pendência: ela só avisa (RN-35)', () => {
+  it('o primário segue liberado com pendência: ela só avisa (RN-42)', () => {
     const html = renderToStaticMarkup(<ActionBar barra={{ pendencias: PENDENCIA, primario: PRIMARIO }} />);
     const botao = /<button[^>]*>(?:(?!<\/button>).)*Renderizar final/s.exec(html)?.[0] ?? '';
     expect(botao).toContain('Renderizar final');
