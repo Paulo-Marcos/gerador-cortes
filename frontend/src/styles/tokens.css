@@ -1,0 +1,105 @@
+/* D-1113 (E-069 H-02): tokens da identidade "Sala escura" (D-1111, §4.1).
+   Camada NOVA e ainda sem consumidor: nenhuma tela usa `--cc-*` até a H-03 apontar
+   as camadas antigas para cá. Por isso este arquivo não declara `color-scheme` nem
+   mexe em `--font-*`: os dois mudariam a tela atual (ficam para a H-04 e a H-05).
+
+   Escuro é o tema principal (`:root`); claro é o segundo (`data-theme="light"`).
+   Os dois declaram o MESMO conjunto de nomes — o teste `tokens.test.ts` garante. */
+
+:root,
+:root[data-theme='dark'] {
+  --cc-bg: #07080b;
+  --cc-bg-2: #0d0e13;
+  --cc-painel: rgba(15, 17, 23, 0.66);
+  /* O painel composto sobre o bg, para as telas com vídeo (§3.6): sem backdrop-filter. */
+  --cc-painel-solido: #0c0e13;
+  --cc-vidro: rgba(255, 255, 255, 0.045);
+  --cc-vidro-2: rgba(255, 255, 255, 0.08);
+  --cc-vidro-3: rgba(255, 255, 255, 0.13);
+  --cc-pop: rgba(24, 26, 34, 0.94);
+  --cc-poco: rgba(0, 0, 0, 0.32);
+  --cc-fio: rgba(255, 255, 255, 0.09);
+  --cc-fio-2: rgba(255, 255, 255, 0.17);
+  --cc-fio-topo: rgba(255, 255, 255, 0.14);
+  --cc-fio-campo: rgba(255, 255, 255, 0.36);
+  --cc-fg: #f4f5f8;
+  --cc-fg-2: #bcc0cc;
+  --cc-fg-3: #9196a4;
+  --cc-fg-off: #5d616d;
+  --cc-iris: #aa9dff;
+  --cc-iris-2: #c2b8ff;
+  --cc-iris-suave: rgba(170, 157, 255, 0.16);
+  --cc-iris-fio: rgba(170, 157, 255, 0.42);
+  --cc-sobre-iris: #0d0a24;
+  --cc-feixe-a: #cbbcff;
+  --cc-feixe-b: #96d2ff;
+  --cc-feixe-c: #8ff2cf;
+  --cc-feixe-brilho: rgba(150, 210, 255, 0.5);
+  --cc-sobre-feixe: #090a12;
+  --cc-ok: #74e6ab;
+  --cc-aviso: #ffc56e;
+  --cc-erro: #ff8a8a;
+  --cc-erro-cheio: #ff7b7b;
+  --cc-sobre-erro: #1d0508;
+  --cc-info: #7fc8ff;
+  --cc-fire: #ff9d57;
+  --cc-canal-a: #b9f24a;
+  --cc-canal-b: #ffe45c;
+  --cc-halo-iris: rgba(124, 104, 255, 0.32);
+  --cc-halo-menta: rgba(64, 208, 190, 0.2);
+  --cc-palco: #000000;
+  --cc-veu: rgba(4, 5, 8, 0.62);
+  --cc-foco: #ffffff;
+  --cc-sombra-painel: 0 30px 70px -36px rgba(0, 0, 0, 0.85);
+  --cc-sombra-pop: 0 24px 60px -18px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 0, 0, 0.4);
+  --cc-aurora-forca: 0.5;
+  --cc-pontos: rgba(255, 255, 255, 0.07);
+}
+
+:root[data-theme='light'] {
+  --cc-bg: #eceef5;
+  --cc-bg-2: #f6f7fb;
+  --cc-painel: rgba(255, 255, 255, 0.72);
+  --cc-painel-solido: #fafafc;
+  --cc-vidro: rgba(255, 255, 255, 0.58);
+  --cc-vidro-2: rgba(255, 255, 255, 0.82);
+  --cc-vidro-3: #ffffff;
+  --cc-pop: rgba(255, 255, 255, 0.97);
+  --cc-poco: rgba(14, 18, 32, 0.05);
+  --cc-fio: rgba(14, 18, 32, 0.08);
+  --cc-fio-2: rgba(14, 18, 32, 0.15);
+  --cc-fio-topo: rgba(255, 255, 255, 0.95);
+  --cc-fio-campo: rgba(14, 18, 32, 0.46);
+  --cc-fg: #0d0f17;
+  --cc-fg-2: #3d414e;
+  --cc-fg-3: #585d6b;
+  --cc-fg-off: #9b9fab;
+  --cc-iris: #5443d6;
+  --cc-iris-2: #4334bd;
+  --cc-iris-suave: rgba(84, 67, 214, 0.1);
+  --cc-iris-fio: rgba(84, 67, 214, 0.4);
+  --cc-sobre-iris: #ffffff;
+  --cc-feixe-a: #5b46e0;
+  --cc-feixe-b: #4159e2;
+  --cc-feixe-c: #2f6fdc;
+  --cc-feixe-brilho: rgba(65, 89, 226, 0.45);
+  --cc-sobre-feixe: #ffffff;
+  --cc-ok: #0a7442;
+  --cc-aviso: #8a5100;
+  --cc-erro: #b5202c;
+  --cc-erro-cheio: #c9283a;
+  --cc-sobre-erro: #ffffff;
+  --cc-info: #0a5fa6;
+  --cc-fire: #b84a00;
+  --cc-canal-a: #6fae00;
+  --cc-canal-b: #d9a400;
+  --cc-halo-iris: rgba(124, 104, 255, 0.16);
+  --cc-halo-menta: rgba(64, 208, 190, 0.1);
+  --cc-palco: #0b0c10;
+  --cc-veu: rgba(20, 24, 40, 0.36);
+  --cc-foco: #0d0f17;
+  --cc-sombra-painel: 0 26px 60px -34px rgba(40, 50, 110, 0.35);
+  --cc-sombra-pop: 0 24px 60px -20px rgba(30, 40, 90, 0.3), 0 0 0 1px rgba(14, 18, 32, 0.06);
+  --cc-aurora-forca: 0.3;
+  --cc-pontos: rgba(14, 18, 32, 0.08);
+}

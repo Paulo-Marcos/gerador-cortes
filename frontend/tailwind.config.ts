@@ -8,12 +8,43 @@ import animate from 'tailwindcss-animate';
 const comAlfa = (token: string) =>
   `color-mix(in oklab, var(${token}) calc(<alpha-value> * 100%), transparent)`;
 
+const cc = (t: string) => comAlfa(`--cc-${t}`);
+
 const config: Config = {
   darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
+      // D-1113 (E-069 H-02): chaves da Sala escura (D-1111 §4.6), ao lado das antigas.
+      // `info` fica de fora de propósito: a chave já existe (`--info`) e sobrescrevê-la
+      // mudaria a tela atual; o `--cc-info` entra quando a H-24 remover a camada antiga.
+      // Os tokens translúcidos (painel, vidro*, pop, poco, fio*) já levam o alfa
+      // e não aceitam modificador `/NN`.
+      app: { DEFAULT: cc('bg'), 2: cc('bg-2') },
+      painel: { DEFAULT: 'var(--cc-painel)', solido: cc('painel-solido') },
+      vidro: { DEFAULT: 'var(--cc-vidro)', 2: 'var(--cc-vidro-2)', 3: 'var(--cc-vidro-3)' },
+      pop: 'var(--cc-pop)',
+      poco: 'var(--cc-poco)',
+      veu: 'var(--cc-veu)',
+      palco: cc('palco'),
+      fio: { DEFAULT: 'var(--cc-fio)', 2: 'var(--cc-fio-2)' },
+      campo: 'var(--cc-fio-campo)',
+      fg: { DEFAULT: cc('fg'), 2: cc('fg-2'), 3: cc('fg-3'), off: cc('fg-off') },
+      iris: {
+        DEFAULT: cc('iris'),
+        2: cc('iris-2'),
+        suave: 'var(--cc-iris-suave)',
+        fio: 'var(--cc-iris-fio)',
+      },
+      'sobre-iris': cc('sobre-iris'),
+      'sobre-feixe': cc('sobre-feixe'),
+      'sobre-erro': cc('sobre-erro'),
+      ok: cc('ok'),
+      aviso: cc('aviso'),
+      erro: { DEFAULT: cc('erro'), cheio: cc('erro-cheio') },
+      fire: cc('fire'),
+      foco: cc('foco'),
         bg: {
           500: comAlfa('--bg-500'),
           600: comAlfa('--bg-600'),
@@ -83,6 +114,27 @@ const config: Config = {
           'leitura-soft': comAlfa('--wb-leitura-soft'),
         },
       },
+      backgroundImage: {
+        feixe:
+          'linear-gradient(100deg, var(--cc-feixe-a) 0%, var(--cc-feixe-b) 52%, var(--cc-feixe-c) 100%)',
+      },
+      fontSize: {
+        display: ['44px', { lineHeight: '50px', fontWeight: '300', letterSpacing: '-0.028em' }],
+        titulo: ['22px', { lineHeight: '28px', fontWeight: '700', letterSpacing: '-0.02em' }],
+        secao: ['16px', { lineHeight: '22px', fontWeight: '700', letterSpacing: '-0.015em' }],
+        linha: ['14px', { lineHeight: '20px', fontWeight: '600' }],
+        corpo: ['13px', { lineHeight: '20px' }],
+        pequeno: ['12px', { lineHeight: '16px', fontWeight: '500' }],
+        micro: ['11px', { lineHeight: '16px', fontWeight: '600' }],
+      },
+      height: {
+        'botao-pq': '30px',
+        'botao-md': '38px',
+        'botao-gd': '46px',
+        campo: '40px',
+        linha: '72px',
+        barra: '62px',
+      },
       fontFamily: {
         sans: ['var(--font-sans)'],
         serif: ['var(--font-serif)'],
@@ -93,12 +145,25 @@ const config: Config = {
         DEFAULT: 'var(--radius)',
         lg: 'var(--radius-lg)',
         xl: 'var(--radius-xl)',
+        etiqueta: '6px',
+        ladrilho: '9px',
+        campo: '12px',
+        capa: '14px',
+        bloco: '16px',
+        cartao: '20px',
+        painel: '24px',
+        dialogo: '26px',
+        pilula: '999px',
       },
       boxShadow: {
         sm: 'var(--shadow-sm)',
         DEFAULT: 'var(--shadow-md)',
         lg: 'var(--shadow-lg)',
         glow: 'var(--shadow-glow)',
+        topo: 'inset 0 1px 0 var(--cc-fio-topo)',
+        painel: 'inset 0 1px 0 var(--cc-fio-topo), var(--cc-sombra-painel)',
+        pop: 'inset 0 1px 0 var(--cc-fio-topo), var(--cc-sombra-pop)',
+        feixe: 'inset 0 1px 0 rgb(255 255 255 / .55), 0 10px 30px -10px var(--cc-feixe-brilho)',
       },
       keyframes: {
         'fade-in': {
