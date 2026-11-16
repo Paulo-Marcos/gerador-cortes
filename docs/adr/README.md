@@ -36,3 +36,4 @@ para daqui em diante (status `Aceito`), e dizem o que ainda falta fazer para cum
 | [0015](0015-camadas-globais-e-dominio-por-agregado.md) | Camadas globais e domínio por agregado | Aceito |
 | [0016](0016-unidade-de-trabalho-e-fronteira-de-transacao.md) | Unidade de trabalho e fronteira de transação | Aceito |
 | [0017](0017-casca-unica.md) | Casca única de interface | Aceito |
+| [0018](0018-sistema-de-design-sala-escura.md) | Sistema de design "Sala escura" | Aceito |

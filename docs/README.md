@@ -11,6 +11,7 @@ Está **em vigor**: descreve o app de hoje e é corrigido quando o app muda.
 | [SETUP.md](SETUP.md) | instalar e configurar, do clone ao primeiro canal |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | problemas conhecidos e como sair deles |
 | [adr/](adr/README.md) | as decisões de arquitetura e o porquê de cada uma |
+| [design/](design/README.md) | a direção visual "Sala escura": tokens, componentes, telas e CSS de referência |
 | [dominio/](dominio/mapa-de-contextos.md) | mapa de contextos, [glossário](dominio/glossario.md) e [regras de negócio](dominio/regras-de-negocio.md) |
 | [ai_features_map.md](ai_features_map.md) | onde o app chama IA, e por qual provedor |
 | [ai-index/](ai-index/render-pipeline.md) | índices de navegação para agentes de IA (ver [AI_NAVIGATION.md](../AI_NAVIGATION.md)) |
