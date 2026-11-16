@@ -37,42 +37,32 @@ function Linha({ titulo, children }: { titulo: string; children: React.ReactNode
   );
 }
 
-export function KitAcao() {
-  const [emVoo, setEmVoo] = useState<ProviderIA | null>(null);
-  const [carregando, setCarregando] = useState(true);
+function EstadosDasVariantes() {
+  return VARIANTES.map(({ variant, rotulo }) => (
+    <Linha key={variant} titulo={variant}>
+      <Button variant={variant}>{rotulo}</Button>
+      <Button variant={variant} className={FORCA.hover}>
+        hover
+      </Button>
+      <Button variant={variant} className={FORCA.ativo}>
+        ativo
+      </Button>
+      <Button variant={variant} className={FORCA.foco}>
+        foco
+      </Button>
+      <Button variant={variant} disabled>
+        desabilitado
+      </Button>
+      <Button variant={variant} carregando>
+        Gravando…
+      </Button>
+    </Linha>
+  ));
+}
 
+function TamanhosEIcones() {
   return (
-    <section
-      aria-labelledby="kit-acao"
-      className="flex flex-col gap-5 rounded-cartao border border-fio bg-app p-6 text-fg"
-    >
-      <h2 id="kit-acao" className="text-secao">
-        Ação
-      </h2>
-
-      {VARIANTES.map(({ variant, rotulo }) => (
-        <div key={variant} className="flex flex-col gap-3">
-          <Linha titulo={variant}>
-            <Button variant={variant}>{rotulo}</Button>
-            <Button variant={variant} className={FORCA.hover}>
-              hover
-            </Button>
-            <Button variant={variant} className={FORCA.ativo}>
-              ativo
-            </Button>
-            <Button variant={variant} className={FORCA.foco}>
-              foco
-            </Button>
-            <Button variant={variant} disabled>
-              desabilitado
-            </Button>
-            <Button variant={variant} carregando>
-              Gravando…
-            </Button>
-          </Linha>
-        </div>
-      ))}
-
+    <>
       <Linha titulo="tamanhos">
         <Button variant="primario" size="pq">
           Pequeno 30
@@ -125,42 +115,67 @@ export function KitAcao() {
           <Kbd>K</Kbd>
         </span>
       </Linha>
+    </>
+  );
+}
 
-      <Linha titulo="ação de IA">
-        <AcaoDeIa
-          aparencia="sala-escura"
-          rotulo="Gerar trechos"
-          emVoo={emVoo}
-          onGerar={(p) => setEmVoo(p)}
-          tamanho="md"
-        />
-        <AcaoDeIa
-          aparencia="sala-escura"
-          rotulo="Gerar metadados"
-          emVoo={null}
-          onGerar={() => undefined}
-          comNome
-        />
-        <AcaoDeIa
-          aparencia="sala-escura"
-          rotulo="Gerar trechos"
-          emVoo="gemini"
-          rotuloEmVoo="Gerando…"
-          onGerar={() => undefined}
-        />
-        {emVoo && (
-          <LinkDeAcao onClick={() => setEmVoo(null)}>Parar a demonstração</LinkDeAcao>
-        )}
-      </Linha>
+function AcoesDeIa() {
+  const [emVoo, setEmVoo] = useState<ProviderIA | null>(null);
+  return (
+    <Linha titulo="ação de IA">
+      <AcaoDeIa
+        aparencia="sala-escura"
+        rotulo="Gerar trechos"
+        emVoo={emVoo}
+        onGerar={(p) => setEmVoo(p)}
+        tamanho="md"
+      />
+      <AcaoDeIa
+        aparencia="sala-escura"
+        rotulo="Gerar metadados"
+        emVoo={null}
+        onGerar={() => undefined}
+        comNome
+      />
+      <AcaoDeIa
+        aparencia="sala-escura"
+        rotulo="Gerar trechos"
+        emVoo="gemini"
+        rotuloEmVoo="Gerando…"
+        onGerar={() => undefined}
+      />
+      {emVoo && <LinkDeAcao onClick={() => setEmVoo(null)}>Parar a demonstração</LinkDeAcao>}
+    </Linha>
+  );
+}
 
-      <Linha titulo="carregando">
-        <Button variant="primario" carregando={carregando} onClick={() => undefined}>
-          {carregando ? 'Renderizando…' : 'Renderizar'}
-        </Button>
-        <Button variant="secundario" size="pq" onClick={() => setCarregando((c) => !c)}>
-          Alternar
-        </Button>
-      </Linha>
+function BotaoCarregando() {
+  const [carregando, setCarregando] = useState(true);
+  return (
+    <Linha titulo="carregando">
+      <Button variant="primario" carregando={carregando} onClick={() => undefined}>
+        {carregando ? 'Renderizando…' : 'Renderizar'}
+      </Button>
+      <Button variant="secundario" size="pq" onClick={() => setCarregando((c) => !c)}>
+        Alternar
+      </Button>
+    </Linha>
+  );
+}
+
+export function KitAcao() {
+  return (
+    <section
+      aria-labelledby="kit-acao"
+      className="flex flex-col gap-5 rounded-cartao border border-fio bg-app p-6 text-fg"
+    >
+      <h2 id="kit-acao" className="text-secao">
+        Ação
+      </h2>
+      <EstadosDasVariantes />
+      <TamanhosEIcones />
+      <AcoesDeIa />
+      <BotaoCarregando />
     </section>
   );
 }
