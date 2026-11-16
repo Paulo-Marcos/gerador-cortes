@@ -4,6 +4,8 @@
 @import './upgrade/upgrade.css';
 /* D-746: rampa de temas e tokens da moldura — depois do upgrade.css. */
 @import './upgrade/upgrade-temas.css';
+/* D-1113: tokens da Sala escura (E-069). Sem consumidor até a H-03. */
+@import './styles/tokens.css';
 
 @tailwind base;
 @tailwind components;
@@ -382,4 +384,63 @@
   /* Acento ink dark é quase-branco: texto sobre ele segue --wb-ink-fg dark. */
   --wb-accent-fg: oklch(0.15 0.01 60);
   --wb-focus: oklch(0.88 0.005 75 / 0.42);
+}
+
+/* D-1113 (E-069 H-02): utilitárias da Sala escura (D-1111 §4.6). Ninguém as usa
+   ainda; as telas passam a usá-las nas histórias seguintes. */
+@layer components {
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    letter-spacing: -0.02em;
+    word-spacing: -0.2em;
+  }
+
+  /* O feixe em texto: uma palavra do h1. */
+  .text-feixe {
+    background: linear-gradient(100deg, var(--cc-feixe-a) 0%, var(--cc-feixe-b) 55%, var(--cc-feixe-c) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Fio de luz: borda de 1px em degradê, por máscara. Um cartão por tela. */
+  .cc-fio {
+    position: relative;
+    border-color: transparent;
+  }
+  .cc-fio::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      125deg,
+      var(--cc-feixe-a) 0%,
+      color-mix(in srgb, var(--cc-feixe-b) 55%, transparent) 18%,
+      var(--cc-fio) 46%,
+      var(--cc-fio) 70%,
+      color-mix(in srgb, var(--cc-feixe-c) 75%, transparent) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* O único lugar com backdrop-filter na casca (§3.6). */
+  .cc-vidro-casca {
+    background: var(--cc-painel);
+    border: 1px solid var(--cc-fio);
+    box-shadow:
+      inset 0 1px 0 var(--cc-fio-topo),
+      var(--cc-sombra-painel);
+    -webkit-backdrop-filter: blur(30px) saturate(1.5);
+    backdrop-filter: blur(30px) saturate(1.5);
+  }
 }
