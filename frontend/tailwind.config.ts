@@ -161,8 +161,10 @@ const config: Config = {
         lg: 'var(--shadow-lg)',
         glow: 'var(--shadow-glow)',
         topo: 'inset 0 1px 0 var(--cc-fio-topo)',
-        painel: 'inset 0 1px 0 var(--cc-fio-topo), var(--cc-sombra-painel)',
-        pop: 'inset 0 1px 0 var(--cc-fio-topo), var(--cc-sombra-pop)',
+        // `painel-luz`/`pop-luz`, não `painel`/`pop`: esses nomes já são cores e o
+        // `shadow-*` aceita cor — a regra de cor venceria e apagaria o fio de luz.
+        'painel-luz': 'inset 0 1px 0 var(--cc-fio-topo), var(--cc-sombra-painel)',
+        'pop-luz': 'inset 0 1px 0 var(--cc-fio-topo), var(--cc-sombra-pop)',
         feixe: 'inset 0 1px 0 rgb(255 255 255 / .55), 0 10px 30px -10px var(--cc-feixe-brilho)',
       },
       keyframes: {

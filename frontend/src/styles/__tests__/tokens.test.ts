@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import config from '../../../tailwind.config';
 
 const css = readFileSync(resolve(__dirname, '../tokens.css'), 'utf-8');
 
@@ -69,7 +70,7 @@ describe('tokens da Sala escura', () => {
 
   it('não declara color-scheme nem fonte (mudariam a tela atual; são da H-04 e da H-05)', () => {
     expect(css).not.toMatch(/color-scheme\s*:/);
-    expect(css).not.toMatch(/--font-[w-]+s*:/);
+    expect(css).not.toMatch(/--font-[\w-]+\s*:/);
   });
 });
 
@@ -148,5 +149,16 @@ describe('o número escuro no corte pronto (fg a 88%)', () => {
     const num = m.bg; // número escuro = bg sobre a pílula fg a 88%
     const pilula = sobre([...m.v('fg').slice(0, 3), 0.88] as Rgba, m.painel);
     expect(contraste(num, pilula)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe('chaves do Tailwind', () => {
+  // `shadow-<nome>` aceita sombra E cor: se a chave existe nos dois mapas, o Tailwind
+  // gera duas regras e a de cor vence, apagando o fio de luz da sombra.
+  it('nenhuma chave de sombra repete uma chave de cor', () => {
+    const ext = config.theme?.extend as Record<string, Record<string, unknown>>;
+    const cores = new Set(Object.keys(ext.colors));
+    const colisoes = Object.keys(ext.boxShadow).filter((k) => cores.has(k));
+    expect(colisoes).toEqual([]);
   });
 });
