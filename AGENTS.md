@@ -17,7 +17,7 @@
 - **Backend** (FastAPI, Python 3.11+): `routers/` (só HTTP) → `services/` (orquestração) → `domain/` (regras puras: sem FastAPI, SQLAlchemy, HTTP nem `models`) e `infrastructure/` (mundo externo). SQLite assíncrono (WAL), um banco por canal. Fronteiras verificadas pelo import-linter (`backend/pyproject.toml`).
 - **Erros:** service e domínio levantam `ErroDeDominio` (`domain/compartilhado/erros.py`); um tratador global escolhe o status. Router não traduz erro.
 - **IA:** pela assinatura do operador, sem chave: Claude CLI e Antigravity CLI (`agy -p`), mais o modo manual e a API do Gemini (cenas, capas). As skills editoriais são **por canal, no banco** (tela de Canais).
-- **Frontend** (React 19 + Vite 6 + TanStack Query): páginas em `frontend/src/features/`; fronteiras entre pastas pelo ESLint.
+- **Frontend** (React 19 + Vite 6 + TanStack Query): páginas em `frontend/src/features/`; fronteiras entre pastas pelo ESLint. O visual segue [`docs/design/`](docs/design/README.md) (ADR-0018): tokens `--cc-*`, escuro primeiro.
 - **Renderer** (`video-renderer/`, Remotion): a fila é **de arquivos** (`req_<id>.json` → `res_<id>.json`), contrato em `video-renderer/protocol/`. A cena tem uma definição só (zod em `video-renderer/src/schema.ts`). **Overlay é ProRes 4444, obrigatório**; filtergraph com fonte infinita precisa de limite.
 - **Contrato HTTP:** `backend/openapi.json`; mudança intencional: `ATUALIZAR_OPENAPI=1 pytest tests/test_contrato_openapi_d664.py`.
 - **Ciclos de vida** com dono no domínio (`domain/projeto/ciclo_projeto.py`, `domain/corte/ciclo_corte.py`). Schema evolui no boot (`app/migrations/`): coluna nova se declara no modelo; o resto vira migration versionada.
