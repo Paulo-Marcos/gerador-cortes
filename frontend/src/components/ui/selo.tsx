@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cva } from 'class-variance-authority';
-import { Check, Loader2 } from 'lucide-react';
+import { Icon } from '@/upgrade/Icon';
 import { cn } from '@/lib/utils';
 
 // D-1117 (E-069 H-09) · Selo: DE QUEM É A VEZ NESTE ITEM. Um por item (DIRECAO §5).
@@ -44,12 +44,7 @@ function Marca({ tom }: { tom: TomDoSelo }) {
       return <span aria-hidden data-marca="anel" className="size-[7px] flex-none rounded-full border-[1.5px] border-current" />;
     case 'curso':
       return (
-        <Loader2
-          aria-hidden
-          data-marca="giro"
-          strokeWidth={2.4}
-          className="size-3 flex-none animate-spin motion-reduce:animate-none"
-        />
+        <span aria-hidden data-marca="giro" className="inline-flex flex-none"><Icon name="loader-2" className="size-3 flex-none animate-spin motion-reduce:animate-none" /></span>
       );
     case 'convite':
       return (
@@ -60,7 +55,7 @@ function Marca({ tom }: { tom: TomDoSelo }) {
         />
       );
     case 'ok':
-      return <Check aria-hidden data-marca="visto" strokeWidth={2.4} className="size-3 flex-none" />;
+      return <span aria-hidden data-marca="visto" className="inline-flex flex-none"><Icon name="check" className="size-3" /></span>;
     case 'erro':
       return <span aria-hidden data-marca="losango" className={cn(PONTO, 'rounded-[1.5px] rotate-45')} />;
     default:

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Check } from 'lucide-react';
+import { Icon } from '@/upgrade/Icon';
 import { cn } from '@/lib/utils';
 
 // D-1117 · Chip: filtro que se liga e desliga (`aria-pressed`). Ligado = fundo e
@@ -32,7 +32,7 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(function Chip
       )}
       {...props}
     >
-      {pressionado ? <Check aria-hidden data-marca="visto" strokeWidth={2.4} className="size-3 flex-none text-iris" /> : null}
+      {pressionado ? <span aria-hidden data-marca="visto" className="inline-flex flex-none text-iris"><Icon name="check" className="size-3" /></span> : null}
       {children}
       {contagem !== undefined ? (
         <span className={cn('font-mono text-[11px] font-medium tabular-nums', pressionado ? 'text-iris-2' : 'text-fg-3')}>

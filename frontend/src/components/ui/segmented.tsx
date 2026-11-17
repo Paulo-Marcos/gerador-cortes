@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import { Check } from 'lucide-react';
+import { Icon } from '@/upgrade/Icon';
 import { cn } from '@/lib/utils';
 
 // D-1117 · Segmented: escolha de UM entre poucos, num trilho de pílula (Radix
@@ -63,7 +63,7 @@ export function Segmented<V extends string = string>({
           )}
         >
           {o.valor === value ? (
-            <Check aria-hidden data-marca="visto" strokeWidth={2.4} className="size-3 flex-none text-iris" />
+            <span aria-hidden data-marca="visto" className="inline-flex flex-none text-iris"><Icon name="check" className="size-3" /></span>
           ) : null}
           {o.rotulo}
         </ToggleGroup.Item>
