@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Icon } from '@/upgrade/Icon';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 // D-1117 · Chip: filtro que se liga e desliga (`aria-pressed`). Ligado = fundo e

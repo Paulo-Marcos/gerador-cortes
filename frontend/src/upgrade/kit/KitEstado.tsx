@@ -27,10 +27,23 @@ const SENTIDO_DO_TOM: Record<TomDoSelo, string> = {
   erro: 'travou',
 };
 
+/** Põe o tema no <html> e devolve a função que repõe o que havia. */
+export function aplicarTemaNoDocumento(
+  raiz: Pick<HTMLElement, 'getAttribute' | 'setAttribute' | 'removeAttribute'>,
+  tema: string,
+): () => void {
+  const anterior = raiz.getAttribute('data-theme');
+  raiz.setAttribute('data-theme', tema);
+  return () => {
+    if (anterior === null) raiz.removeAttribute('data-theme');
+    else raiz.setAttribute('data-theme', anterior);
+  };
+}
+
 function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-[11px] uppercase tracking-wider text-fg-3">{titulo}</h3>
+      <h3 className="text-[11px] text-fg-3">{titulo}</h3>
       <div className="flex flex-wrap items-center gap-3">{children}</div>
     </section>
   );
@@ -132,15 +145,7 @@ export function KitEstado() {
 
   // Os tokens `--cc-*` moram no <html>: o seletor de tema da seção troca o do
   // documento inteiro, e a seção devolve o que encontrou ao sair.
-  useEffect(() => {
-    const raiz = document.documentElement;
-    const anterior = raiz.getAttribute('data-theme');
-    raiz.setAttribute('data-theme', tema);
-    return () => {
-      if (anterior === null) raiz.removeAttribute('data-theme');
-      else raiz.setAttribute('data-theme', anterior);
-    };
-  }, [tema]);
+  useEffect(() => aplicarTemaNoDocumento(document.documentElement, tema), [tema]);
 
   return (
     <section

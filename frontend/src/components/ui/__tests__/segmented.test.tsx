@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { Segmented } from '../segmented';
+import { vi } from 'vitest';
+import { Segmented, repassarSeEscolhido } from '../segmented';
 
 const OPCOES = [
   { valor: 'mapa', rotulo: 'Mapa' },
@@ -40,5 +41,13 @@ describe('Segmented', () => {
     const h = render('mapa', { cheio: true });
     expect(h.match(/class="([^"]*)"/)?.[1].split(' ')).toContain('flex');
     expect(h).toContain('flex-1');
+  });
+
+  it('clicar no já escolhido (valor vazio) não desmarca nem avisa a tela', () => {
+    const aoEscolher = vi.fn();
+    repassarSeEscolhido('', aoEscolher);
+    expect(aoEscolher).not.toHaveBeenCalled();
+    repassarSeEscolhido('lista', aoEscolher);
+    expect(aoEscolher).toHaveBeenCalledWith('lista');
   });
 });

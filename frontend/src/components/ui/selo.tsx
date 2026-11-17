@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cva } from 'class-variance-authority';
-import { Icon } from '@/upgrade/Icon';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 // D-1117 (E-069 H-09) · Selo: DE QUEM É A VEZ NESTE ITEM. Um por item (DIRECAO §5).
@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils';
 // Redondo e plano de propósito: não parece apertável (quem se aperta é botão/chip).
 // NUNCA usa a íris nem o feixe — íris e feixe são "ação" e "onde estou" (§3.1).
 // Sem `backdrop-filter` (§3.6): o selo mora em linha de lista.
+// A cor do tom é `--c` (como no sala-escura.css): fundo a 13% e fio a 22%, os valores em que o
+// contraste da DIRECAO §8.1 foi medido; `--cc-info` direto porque o `text-info` do Tailwind ainda é o antigo.
 // Tamanho em px (`text-[12px]`) e não `text-pequeno`: o tailwind-merge do `cn` não conhece
 // os tamanhos do tema e trataria `text-pequeno` como COR, descartando-o ao lado de `text-ok`.
 
@@ -19,16 +21,16 @@ export const TONS_DO_SELO = ['inerte', 'neutro', 'curso', 'convite', 'ok', 'erro
 export type TomDoSelo = (typeof TONS_DO_SELO)[number];
 
 const seloVariants = cva(
-  'inline-flex h-6 flex-none select-none items-center gap-1.5 whitespace-nowrap rounded-pilula border py-0 pl-2 pr-2.5 text-[12px] font-semibold leading-none',
+  'inline-flex h-6 flex-none select-none items-center gap-1.5 whitespace-nowrap rounded-pilula border border-[color-mix(in_srgb,var(--c)_22%,transparent)] bg-[color-mix(in_srgb,var(--c)_13%,transparent)] py-0 pl-2 pr-2.5 text-[color:var(--c)] text-[12px] font-semibold leading-none',
   {
     variants: {
       tom: {
-        inerte: 'border-fg-3/25 bg-fg-3/10 text-fg-3',
-        neutro: 'border-fg-2/25 bg-fg-2/10 text-fg-2',
-        curso: 'border-info/25 bg-info/10 text-info',
-        convite: 'border-aviso/25 bg-aviso/10 text-aviso',
-        ok: 'border-ok/25 bg-ok/10 text-ok',
-        erro: 'border-erro/25 bg-erro/10 text-erro',
+        inerte: '[--c:var(--cc-fg-3)]',
+        neutro: '[--c:var(--cc-fg-2)]',
+        curso: '[--c:var(--cc-info)]',
+        convite: '[--c:var(--cc-aviso)]',
+        ok: '[--c:var(--cc-ok)]',
+        erro: '[--c:var(--cc-erro)]',
       },
     },
     defaultVariants: { tom: 'neutro' },

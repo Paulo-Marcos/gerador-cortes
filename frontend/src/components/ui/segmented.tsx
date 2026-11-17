@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import { Icon } from '@/upgrade/Icon';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 // D-1117 · Segmented: escolha de UM entre poucos, num trilho de pílula (Radix
@@ -25,6 +25,12 @@ export interface SegmentedProps<V extends string = string> {
   className?: string;
 }
 
+/** Clicar no item já escolhido faz o Radix devolver vazio: aqui isso é ignorado, porque
+ *  o Segmented sempre tem um escolhido. */
+export function repassarSeEscolhido<V extends string>(valor: string, aoEscolher: (v: V) => void) {
+  if (valor) aoEscolher(valor as V);
+}
+
 export function Segmented<V extends string = string>({
   value,
   onValueChange,
@@ -38,9 +44,7 @@ export function Segmented<V extends string = string>({
       type="single"
       value={value}
       aria-label={ariaLabel}
-      onValueChange={(v) => {
-        if (v) onValueChange(v as V);
-      }}
+      onValueChange={(v) => repassarSeEscolhido(v, onValueChange)}
       className={cn(
         'gap-0.5 rounded-pilula border border-fio bg-poco p-[3px]',
         cheio ? 'flex' : 'inline-flex',
