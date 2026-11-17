@@ -36,6 +36,18 @@ EXCECOES: dict[str, Excecao] = {
         ),
         rever_em=date(2027, 1, 3),
     ),
+    "GHSA-fc5q-39xc-vjpf": Excecao(
+        motivo=(
+            "picomatch <=4.0.7 (ReDoS por extglob repetido, como +(*)) não tem versão "
+            "corrigida: 4.0.7 é a última publicada. O ataque exige que o padrão glob venha "
+            "de fora. Aqui só entra por ferramenta de desenvolvimento (Tailwind 3 via "
+            "chokidar e micromatch, Vite, Vitest, typescript-eslint), que compila os globs "
+            "do próprio config e os padrões fixos do Vite, sem extglob; nada vai para o "
+            "bundle nem para o render. Sai com versão corrigida do picomatch (o Tailwind 4 "
+            "tira só o caminho do chokidar e do micromatch)."
+        ),
+        rever_em=date(2027, 1, 3),
+    ),
 }
 
 
