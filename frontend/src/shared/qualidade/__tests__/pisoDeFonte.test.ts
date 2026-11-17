@@ -49,7 +49,6 @@ const EXCECOES: Record<string, number> = {
   "src/components/ThumbnailHintsEditor.tsx": 1,
   "src/components/ui/acao-de-ia.tsx": 1,
   "src/components/ui/button.tsx": 1,
-  "src/components/ui/overflow-menu.tsx": 1,
   "src/components/workbench/PanelShell.tsx": 3,
   "src/features/analises/AnalisesPage.tsx": 1,
   "src/features/analises/LlmCallsTab.tsx": 3,

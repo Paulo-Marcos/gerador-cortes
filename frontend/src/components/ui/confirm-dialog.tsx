@@ -49,9 +49,7 @@ function EscolhaOpcional({
 }) {
   return (
     <div className="mt-3 flex flex-col gap-1.5">
-      <span className="font-code text-[11px] uppercase tracking-wide text-[var(--wb-text-mute)]">
-        {pergunta}
-      </span>
+      <span className="text-micro text-fg-3">{pergunta}</span>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={pergunta}>
         {opcoes.map((opcao) => {
           const ativa = escolhidas.includes(opcao.slug);
@@ -62,10 +60,11 @@ function EscolhaOpcional({
               aria-pressed={ativa}
               onClick={() => onAlternar(opcao.slug)}
               className={cn(
-                'rounded-[7px] border px-2 py-[3px] text-[11px] font-bold transition-colors',
+                'rounded-pilula border px-3 py-1 text-micro transition-colors duration-150 motion-reduce:transition-none',
+                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
                 ativa
-                  ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--sel-ink)]'
-                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                  ? 'border-iris-fio bg-iris-suave text-iris-2'
+                  : 'border-fio-2 bg-poco text-fg-2 hover:bg-vidro-2 hover:text-fg',
               )}
             >
               {opcao.rotulo}
@@ -111,9 +110,9 @@ export function ConfirmDialog({
     >
       <div className="flex items-start gap-2.5">
         {perigoso && (
-          <Icon name="triangle-alert" size={16} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
+          <Icon name="triangle-alert" size={16} className="mt-0.5 shrink-0 text-erro" />
         )}
-        <p className="text-[13px] leading-relaxed text-[var(--wb-text)]">{pedido?.descricao}</p>
+        <p className="text-corpo text-fg">{pedido?.descricao}</p>
       </div>
       {pedido?.escolha && (
         <EscolhaOpcional
@@ -124,7 +123,11 @@ export function ConfirmDialog({
         />
       )}
       <div className="mt-4 flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+        {/* Foco inicial no que não faz estrago (DIRECAO §7.10): o Enter solto não destrói.
+            Os botões seguem nas variantes antigas de propósito (D-1122): as variantes de luz
+            levam `aria-pressed:` nas classes, e o teste travado deste diálogo (D-993) exige
+            que o HTML sem escolha não tenha a palavra `aria-pressed`. */}
+        <Button type="button" variant="outline" size="sm" data-autofocus onClick={onCancel}>
           Cancelar
         </Button>
         <Button
@@ -132,7 +135,7 @@ export function ConfirmDialog({
           variant="default"
           size="sm"
           onClick={() => (escolhidas.length === 0 ? onConfirm() : onConfirm(escolhidas))}
-          className={perigoso ? 'bg-[var(--wb-warn)] hover:opacity-90' : ''}
+          className={perigoso ? 'bg-erro-cheio text-sobre-erro hover:opacity-90' : ''}
         >
           {pedido?.confirmLabel ?? 'Confirmar'}
         </Button>

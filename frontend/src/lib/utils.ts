@@ -1,5 +1,16 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+// D-1122 (E-069 H-11b): a escala tipográfica da Sala escura (`text-micro` … `text-display`)
+// é de TAMANHO. O tailwind-merge não a conhece e tratava `text-pequeno` como COR: ao lado de
+// `text-fg` um dos dois era descartado em silêncio e o texto perdia o tamanho (ou a cor).
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [{ text: ['micro', 'pequeno', 'corpo', 'linha', 'secao', 'titulo', 'display'] }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));

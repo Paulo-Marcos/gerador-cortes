@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Icon, type IconName } from '@/upgrade/Icon';
+import { ITEM_DO_MENU, ITEM_DO_MENU_PERIGOSO, PAINEL_DO_MENU } from '@/components/ui/menu';
 
 // ─────────────────────────────────────────────────────────────
 // OverflowMenu (⋯) — princípio anti-poluição do redesign v3:
@@ -8,6 +9,12 @@ import { Icon, type IconName } from '@/upgrade/Icon';
 // divisória — nunca uma fileira solta de ícones coloridos".
 // Usado no ProjetoCard (Biblioteca) e no MetadataCard (header e
 // coluna da thumb).
+//
+// D-1122 (E-069 H-11b): a pele do painel e dos itens vem do `menu.tsx` (a mesma do
+// menu da Sala escura). O MOTOR continua aqui: o teste travado deste menu (D-867/
+// D-868) prende a forma do componente — `GatilhoDoMenu`, `ItemDoMenu`,
+// `ouvirFechamento`, o `useEffectEvent` — e ler o código-fonte; por isso ele não pôde
+// virar um `DropdownMenu` do Radix sem reescrever o contrato. A API é a mesma.
 // ─────────────────────────────────────────────────────────────
 
 export interface OverflowMenuItem {
@@ -87,11 +94,9 @@ export function GatilhoDoMenu({
       aria-haspopup="menu"
       aria-expanded={open}
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-[7px] font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        'flex shrink-0 items-center justify-center rounded-pilula transition-colors duration-150 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
         compact ? 'h-[26px] w-[26px]' : grande ? 'h-8 w-8' : 'h-7 w-7',
-        open
-          ? 'bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
-          : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+        open ? 'bg-vidro-3 text-fg' : 'bg-vidro-2 text-fg-2 hover:bg-vidro-3 hover:text-fg',
       )}
     >
       <Icon name="more-horizontal" />
@@ -99,8 +104,10 @@ export function GatilhoDoMenu({
   );
 }
 
-const itemClass =
-  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--wb-bg-inset)]';
+// O ícone leva a classe do tema antigo (o teste do menu a confere) e a pele nova
+// a repinta por cima: `[&_svg]` vence a classe do próprio <svg>.
+const itemClass = ITEM_DO_MENU + ' [&_svg]:text-fg-3';
+const itemPerigosoClass = ITEM_DO_MENU_PERIGOSO + ' [&_svg]:text-erro';
 
 /**
  * Um item do painel. D-867: item desligado é `aria-disabled`, não `disabled`
@@ -119,7 +126,7 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
       )}
       <span className="flex-1">{item.label}</span>
       {item.kbd && (
-        <span className="font-code text-[10px] text-[var(--wb-text-dim)]">{item.kbd}</span>
+        <span className="font-mono text-micro text-fg-3">{item.kbd}</span>
       )}
     </>
   );
@@ -127,7 +134,7 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
   // Item de upload: <label> com input de arquivo escondido.
   if (item.accept && item.onFile) {
     return (
-      <label role="menuitem" className={cn(itemClass, 'cursor-pointer text-[var(--wb-text)]')}>
+      <label role="menuitem" className={cn(itemClass, 'cursor-pointer')}>
         {conteudo}
         <input
           type="file"
@@ -157,8 +164,7 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
       }}
       className={cn(
         itemClass,
-        item.disabled && 'cursor-not-allowed opacity-50',
-        item.danger ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text)]',
+        item.danger && itemPerigosoClass,
       )}
     >
       {conteudo}
@@ -232,7 +238,8 @@ export function OverflowMenu({
         <div
           role="menu"
           className={cn(
-            'absolute top-[calc(100%+4px)] z-40 flex w-[220px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]',
+            PAINEL_DO_MENU,
+            'absolute top-[calc(100%+4px)] z-40 w-[220px]',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >

@@ -3,6 +3,7 @@ import { KitScreen } from './KitScreen';
 import { KitEstado } from './kit/KitEstado';
 import { KitTempo } from './kit/KitTempo';
 import { KitListas } from './kit/KitListas';
+import { KitFlutua } from './kit/KitFlutua';
 import { ScreenHeader } from './ScreenHeader';
 import { useUpgradeTheme } from './useUpgradeTheme';
 
@@ -84,6 +85,7 @@ export default function UpgradeKitPage() {
         <KitEstado />
         <KitTempo />
         <KitListas />
+        <KitFlutua />
       </div>
     </div>
   );
