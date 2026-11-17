@@ -1,5 +1,5 @@
 import * as React from 'react';
-import clsx from 'clsx';
+import { cn } from '@/lib/utils';
 
 // D-1120 (E-069 H-10) · KPI: um número que o operador quer ler de relance.
 //
@@ -15,7 +15,7 @@ export interface KpiProps extends React.HTMLAttributes<HTMLDivElement> {
   valor?: number | string | null;
   /** "min", "%", "views"… colado ao valor, menor. */
   unidade?: string;
-  /** Por que não há dado, quando `valor` falta. Obrigatório de fato: sem motivo o operador não sabe o que fazer. */
+  /** Por que não há dado, quando `valor` falta. Passe sempre: o texto padrão só diz que não há medição, não o que fazer. */
   motivo?: string;
   /** Linha de contexto sob o valor ("+12% sobre a semana"). */
   detalhe?: string;
@@ -30,7 +30,7 @@ export const Kpi = React.forwardRef<HTMLDivElement, KpiProps>(function Kpi(
     <div
       ref={ref}
       data-semdados={semDado || undefined}
-      className={clsx(
+      className={cn(
         'flex min-w-0 flex-col gap-1.5 rounded-cartao border border-fio bg-vidro px-5 py-[18px] shadow-topo',
         className,
       )}

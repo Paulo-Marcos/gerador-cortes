@@ -1,7 +1,6 @@
 import * as React from 'react';
-import clsx from 'clsx';
 import { Icon } from '@/components/ui/icon';
-import { formatarDuracao } from '@/lib/utils';
+import { cn, formatarDuracao } from '@/lib/utils';
 
 // D-1120 (E-069 H-10) · Miniatura: a capa de uma live ou de um corte.
 //
@@ -50,7 +49,7 @@ export const Miniatura = React.forwardRef<HTMLDivElement, MiniaturaProps>(functi
     <div
       ref={ref}
       data-proporcao={proporcao}
-      className={clsx(
+      className={cn(
         'relative flex-none overflow-hidden bg-vidro-3 shadow-[inset_0_0_0_1px_var(--cc-fio-2)]',
         grande ? 'rounded-capa' : 'rounded-[10px]',
         CLASSE_DA_PROPORCAO[proporcao],
@@ -74,12 +73,12 @@ export const Miniatura = React.forwardRef<HTMLDivElement, MiniaturaProps>(functi
         </span>
       )}
       {numero !== undefined && (
-        <span data-numero className={clsx(SELO_DO_CANTO, 'num left-1.5 top-1.5 min-w-5')}>
+        <span data-numero className={cn(SELO_DO_CANTO, 'num left-1.5 top-1.5 min-w-5')}>
           {numero}
         </span>
       )}
       {duracaoSeg !== undefined && (
-        <span data-duracao className={clsx(SELO_DO_CANTO, 'num bottom-2 left-2')}>
+        <span data-duracao className={cn(SELO_DO_CANTO, 'num bottom-2 left-2')}>
           {formatarDuracao(duracaoSeg)}
         </span>
       )}

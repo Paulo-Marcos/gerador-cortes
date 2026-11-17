@@ -1,5 +1,5 @@
 import * as React from 'react';
-import clsx from 'clsx';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,7 +35,7 @@ export const EstadoVazio = React.forwardRef<HTMLDivElement, EstadoVazioProps>(fu
     <div
       ref={ref}
       data-estado="vazio"
-      className={clsx('flex flex-col items-center justify-center gap-2.5 p-10 text-center', className)}
+      className={cn('flex flex-col items-center justify-center gap-2.5 p-10 text-center', className)}
       {...props}
     >
       <span
@@ -70,12 +70,12 @@ export const EstadoCarregando = React.forwardRef<HTMLDivElement, EstadoCarregand
         role="status"
         aria-live="polite"
         data-estado="carregando"
-        className={clsx('flex flex-col gap-3', className)}
+        className={cn('flex flex-col gap-3', className)}
         {...props}
       >
         <p className="text-pequeno text-fg-3">{frase}</p>
         {Array.from({ length: linhas }, (_, i) => (
-          <Skeleton key={i} className="h-[72px] w-full rounded-bloco" />
+          <Skeleton key={i} className="h-[72px] w-full" />
         ))}
       </div>
     );

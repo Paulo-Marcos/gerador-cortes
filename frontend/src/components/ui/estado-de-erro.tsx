@@ -1,5 +1,5 @@
 import * as React from 'react';
-import clsx from 'clsx';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 
@@ -27,7 +27,7 @@ export const EstadoDeErro = React.forwardRef<HTMLDivElement, EstadoDeErroProps>(
       ref={ref}
       role="alert"
       data-estado="erro"
-      className={clsx(
+      className={cn(
         'flex flex-col items-center justify-center gap-2.5 rounded-cartao border border-[color-mix(in_srgb,var(--cc-erro)_22%,transparent)] bg-[color-mix(in_srgb,var(--cc-erro)_7%,transparent)] p-10 text-center',
         className,
       )}

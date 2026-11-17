@@ -1,5 +1,5 @@
 import * as React from 'react';
-import clsx from 'clsx';
+import { cn } from '@/lib/utils';
 
 // D-1120 (E-069 H-10) · Lista: linhas de 72 px sobre uma grade CSS que a própria lista
 // declara em `--cols` (a mesma para o cabeçalho e para cada linha, para as colunas
@@ -25,7 +25,7 @@ export const Lista = React.forwardRef<HTMLUListElement, ListaProps>(function Lis
   // `--cols` é variável CSS: geometria de execução, não aparência (catraca estiloInline).
   const estilo: ColunasCss = { ...style, '--cols': colunas };
   return (
-    <ul ref={ref} style={estilo} className={clsx('m-0 flex list-none flex-col gap-1.5 p-0', className)} {...props} />
+    <ul ref={ref} style={estilo} className={cn('m-0 flex list-none flex-col gap-1.5 p-0', className)} {...props} />
   );
 });
 
@@ -38,7 +38,9 @@ export const CabecalhoDaLista = React.forwardRef<HTMLLIElement, React.HTMLAttrib
       <li
         ref={ref}
         aria-hidden
-        className={clsx(GRADE, 'h-7 pl-3 pr-3.5 text-micro text-fg-3', className)}
+        // O tamanho vai FORA do `cn`: o twMerge atual lê `text-micro` como cor e o descartaria
+        // ao lado de `text-fg-3`. A cor pode ser trocada por `className`; o tamanho é fixo.
+        className={`${cn(GRADE, 'h-7 pl-3 pr-3.5 text-fg-3', className)} text-micro`}
         {...props}
       />
     );
@@ -61,7 +63,7 @@ export const LinhaDaLista = React.forwardRef<HTMLLIElement, LinhaDaListaProps>(f
       aria-current={atual ? 'true' : undefined}
       data-marcada={marcada || undefined}
       data-riscada={riscada || undefined}
-      className={clsx(
+      className={cn(
         GRADE,
         'min-h-linha rounded-bloco border border-transparent py-2 pl-3 pr-3.5 transition-[background-color,border-color] duration-150 motion-reduce:transition-none',
         'hover:border-fio hover:bg-vidro',

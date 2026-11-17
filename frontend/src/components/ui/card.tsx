@@ -38,9 +38,12 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 Card.displayName = 'Card';
 
 /** O corpo de texto do cartão da Sala escura (o que fica ao lado ou abaixo da capa). */
-export const CardCorpo = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex min-w-0 flex-1 flex-col gap-1.5 px-1.5', className)} {...props} />
+export const CardCorpo = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('flex min-w-0 flex-1 flex-col gap-1.5 px-1.5', className)} {...props} />
+  ),
 );
+CardCorpo.displayName = 'CardCorpo';
 
 export const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('flex flex-col gap-1 p-4', className)} {...props} />

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Card, CardCorpo } from '@/components/ui/card';
 import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
@@ -6,7 +5,6 @@ import { Etiqueta } from '@/components/ui/etiqueta';
 import { Kpi } from '@/components/ui/kpi';
 import { CabecalhoDaLista, LinhaDaLista, Lista } from '@/components/ui/lista';
 import { Miniatura } from '@/components/ui/miniatura';
-import { Segmented } from '@/components/ui/segmented';
 import { Selo } from '@/components/ui/selo';
 import {
   Tabela,
@@ -16,7 +14,6 @@ import {
   TabelaLinha,
   TabelaTitulo,
 } from '@/components/ui/tabela';
-import { aplicarTemaNoDocumento } from './KitEstado';
 
 // D-1120 (E-069 H-10) · seção "Listas e dados" do Kit: cartão, miniatura, lista, tabela,
 // KPI e os estados de tela. Só a vitrine: nenhuma tela usa estes componentes ainda.
@@ -163,25 +160,16 @@ function EstadosDoKit() {
 }
 
 export function KitListas() {
-  const [tema, setTema] = useState<'dark' | 'light'>('dark');
-  useEffect(() => aplicarTemaNoDocumento(document.documentElement, tema), [tema]);
-
+  // Sem chave de tema própria: a do `KitEstado` já troca o `data-theme` do documento, e duas
+  // chaves gravando no mesmo atributo se dessincronizam (e a limpeza deixaria "dark" para trás).
   return (
     <section
       aria-label="Listas e dados"
       className="mt-6 flex flex-col gap-8 rounded-painel border border-fio bg-app p-6 font-sans text-corpo text-fg"
     >
-      <header className="flex items-center justify-between gap-4">
+      <header>
         <h2 className="text-secao">Listas e dados · Sala escura</h2>
-        <Segmented
-          aria-label="Tema do kit de listas"
-          value={tema}
-          onValueChange={(v) => setTema(v as 'dark' | 'light')}
-          opcoes={[
-            { valor: 'dark', rotulo: 'Escuro' },
-            { valor: 'light', rotulo: 'Claro' },
-          ]}
-        />
+        <p className="text-pequeno text-fg-3">O tema vem da chave da seção "Estado e navegação".</p>
       </header>
       <CartoesDoKit />
       <ListaDoKit />
