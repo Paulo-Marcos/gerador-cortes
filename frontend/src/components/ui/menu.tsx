@@ -16,7 +16,7 @@ export const MenuGrupo = RM.Group;
 
 /** Painel do menu: cartão de 16 px de raio, 6 px de respiro, itens de 34 px. */
 export const PAINEL_DO_MENU =
-  'z-[60] flex min-w-[220px] flex-col gap-px rounded-bloco p-1.5 outline-none focus-visible:outline-transparent ' + PELE_FLUTUANTE;
+  'z-[60] flex min-w-[220px] flex-col gap-px rounded-bloco p-1.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-foco focus-visible:-outline-offset-2 ' + PELE_FLUTUANTE;
 
 /** Item do menu: ladrilho de 10 px, 34 px de altura. Compartilhado com o `OverflowMenu`. */
 export const ITEM_DO_MENU =

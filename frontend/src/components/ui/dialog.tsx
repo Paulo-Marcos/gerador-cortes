@@ -19,7 +19,7 @@ import { PELE_FLUTUANTE } from '@/components/ui/superficie-flutuante';
  * Larguras do diálogo (DIRECAO §6): 460 · 560 · 880 · 1152 e a gaveta de 432. O diálogo
  * centraliza por `translate`, e a gaveta encosta à direita com 12 px de folga.
  */
-export const caixaDoDialogo = cva('fixed z-50 flex flex-col overflow-hidden outline-none focus-visible:outline-transparent ' + PELE_FLUTUANTE, {
+export const caixaDoDialogo = cva('fixed z-50 flex flex-col overflow-hidden outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-foco focus-visible:-outline-offset-2 ' + PELE_FLUTUANTE, {
   variants: {
     tamanho: {
       sm: 'w-[460px]',
@@ -58,6 +58,14 @@ export function lembrarOrigem(ativo: unknown): OrigemDoFoco | null {
   return el && typeof el.focus === 'function' && 'isConnected' in el ? (el as OrigemDoFoco) : null;
 }
 
+/**
+ * A origem é a de QUANDO O DIÁLOGO ABRIU: enquanto há uma guardada, o foco novo (que já pode
+ * estar dentro do diálogo, num campo com `autoFocus`) não a troca.
+ */
+export function guardarOrigem(atual: OrigemDoFoco | null, ativo: unknown): OrigemDoFoco | null {
+  return atual ?? lembrarOrigem(ativo);
+}
+
 export function devolverFoco(origem: OrigemDoFoco | null): void {
   if (origem?.isConnected) origem.focus();
 }
@@ -82,9 +90,7 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
   // commit, e o gancho de abertura do Radix nem chega a rodar (o foco já está dentro). No
   // desenho, o foco ainda está no botão que abriu. A origem só se zera ao devolver o foco
   // (depois da saída animada), por isso fechar não a apaga.
-  if (open && origem.current === null && typeof document !== 'undefined') {
-    origem.current = lembrarOrigem(document.activeElement);
-  }
+  if (open && typeof document !== 'undefined') origem.current = guardarOrigem(origem.current, document.activeElement);
 
   return (
     <RD.Root open={open} onOpenChange={(aberto) => !aberto && onClose()}>
