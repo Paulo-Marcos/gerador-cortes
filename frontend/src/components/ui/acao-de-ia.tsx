@@ -30,6 +30,89 @@ const TAMANHOS = {
   md: { altura: 'h-9', texto: 'text-[13px]', icone: 16, botao: 'w-9' },
 } as const;
 
+// D-1114 (E-069 H-07): a Sala escura. Uma pílula de vidro; a faísca em `iris` é o sinal de
+// "a IA faz isto" e o provedor é ícone no tom do texto, não cor de marca (DIRECAO §5).
+// Sem `backdrop-filter`: o grupo aparece em vários pontos da mesma tela (§3.6).
+const TAMANHOS_SALA = {
+  sm: { altura: 'h-botao-pq', texto: 'text-[12px]', icone: 14, botao: 'w-[30px]' },
+  md: { altura: 'h-botao-md', texto: 'text-[13px]', icone: 16, botao: 'w-[38px]' },
+} as const;
+
+type MedidasDaAcao =
+  (typeof TAMANHOS)[keyof typeof TAMANHOS] | (typeof TAMANHOS_SALA)[keyof typeof TAMANHOS_SALA];
+
+/** As classes de um botão de provedor: o desenho (legado ou Sala escura) e o encaixe na fileira. */
+function classeDoProvedor(o: {
+  sala: boolean;
+  t: MedidasDaAcao;
+  comNome: boolean;
+  apenasProvedores: boolean;
+  /** Sem rótulo, o primeiro botão abre o grupo: a divisória fica só entre eles. */
+  comDivisoria: boolean;
+  /** Só o que NÃO está gerando esmaece: o que gira precisa ficar legível. */
+  esmaecido: boolean;
+}) {
+  const { sala, t, comNome } = o;
+  return cn(
+    'grid shrink-0 place-items-center transition-colors',
+    o.comDivisoria && (sala ? 'border-l border-fio' : 'border-l border-[var(--wb-border-soft)]'),
+    o.apenasProvedores && 'flex-1',
+    // Partem da largura natural (auto, não 0): só assim falta espaço e o
+    // verbo, e não o nome, é quem encolhe.
+    comNome &&
+      cn(
+        'flex min-w-0 flex-[1_1_auto] items-center justify-center gap-1.5 px-1.5 font-medium',
+        t.texto,
+      ),
+    sala
+      ? 'text-fg-2 hover:bg-vidro-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco active:bg-vidro'
+      : 'hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
+    'disabled:cursor-not-allowed',
+    o.esmaecido && 'opacity-40',
+    !comNome && t.botao,
+  );
+}
+
+/** O verbo da ação (ícone + texto), à esquerda dos provedores. */
+function classeDoRotulo(o: {
+  sala: boolean;
+  t: MedidasDaAcao;
+  comNome: boolean;
+  destaque: boolean;
+}) {
+  const { sala, destaque } = o;
+  const cor = sala
+    ? destaque
+      ? 'text-iris'
+      : 'text-fg'
+    : destaque
+      ? 'text-[var(--wb-accent)]'
+      : 'text-[var(--wb-text)]';
+  return cn(
+    // min-w-0: numa coluna estreita é o TEXTO que encolhe (com reticências),
+    // nunca os botões dos provedores — sem eles a ação não existe.
+    'flex min-w-0 items-center gap-1.5 whitespace-nowrap font-semibold',
+    // Com os nomes, o verbo cede primeiro (shrink 1000 contra 1): numa
+    // coluna de notebook ele vira só o ícone e "Claude"/"Gemini" ficam.
+    o.comNome ? 'flex-[0_1000_auto] px-2' : 'flex-1 px-2.5',
+    sala && 'pl-3.5',
+    o.t.texto,
+    cor,
+  );
+}
+
+/** O grupo todo: pílula de vidro (Sala escura) ou o cartão de 8 px de hoje. */
+function classeDoGrupo(sala: boolean, altura: string, className?: string) {
+  return cn(
+    'inline-flex items-stretch overflow-hidden',
+    sala
+      ? 'rounded-pilula border border-fio-2 bg-vidro-2 text-fg shadow-topo'
+      : 'rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-card)]',
+    altura,
+    className,
+  );
+}
+
 interface AcaoDeIaProps {
   /** O que a IA vai fazer, no infinitivo: "Gerar trechos", "Regerar metadados". */
   rotulo: string;
@@ -67,6 +150,8 @@ interface AcaoDeIaProps {
    * `emVoo` deixa o botão ocupado junto do provedor da vez.
    */
   asDuas?: { onGerar: () => void; emVoo: boolean };
+  /** `legada` (padrão) é o desenho `--wb-*` das telas de hoje; `sala-escura` é o novo. */
+  aparencia?: 'legada' | 'sala-escura';
   className?: string;
 }
 
@@ -83,38 +168,31 @@ export function AcaoDeIa({
   apenasProvedores = false,
   comNome = false,
   asDuas,
+  aparencia = 'legada',
   className,
 }: AcaoDeIaProps) {
-  const t = TAMANHOS[tamanho];
+  const sala = aparencia === 'sala-escura';
+  const t = (sala ? TAMANHOS_SALA : TAMANHOS)[tamanho];
   const travado = desabilitado || emVoo !== null;
 
   return (
     <div
       role="group"
       aria-label={descricao}
-      className={cn(
-        'inline-flex items-stretch overflow-hidden rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-card)]',
-        t.altura,
-        className,
-      )}
+      data-variant="acao-de-ia"
+      data-aparencia={aparencia}
+      className={classeDoGrupo(sala, t.altura, className)}
     >
       {!apenasProvedores && (
-        <span
-          className={cn(
-            // min-w-0: numa coluna estreita é o TEXTO que encolhe (com reticências),
-            // nunca os botões dos provedores — sem eles a ação não existe.
-            'flex min-w-0 items-center gap-1.5 whitespace-nowrap font-semibold',
-            // Com os nomes, o verbo cede primeiro (shrink 1000 contra 1): numa
-            // coluna de notebook ele vira só o ícone e "Claude"/"Gemini" ficam.
-            comNome ? 'flex-[0_1000_auto] px-2' : 'flex-1 px-2.5',
-            t.texto,
-            destaque ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text)]',
-          )}
-        >
+        <span className={classeDoRotulo({ sala, t, comNome, destaque })}>
           {emVoo ? (
-            <Icon name="loader-2" size={t.icone} className="animate-spin" />
+            <Icon
+              name="loader-2"
+              size={t.icone}
+              className={cn('animate-spin motion-reduce:animate-none', sala && 'text-iris')}
+            />
           ) : (
-            <Icon name={icone} size={t.icone} />
+            <Icon name={icone} size={t.icone} className={cn(sala && 'text-iris')} />
           )}
           {/* aria-live: quem não vê o spinner ouve que a geração começou. */}
           <span aria-live="polite" className="truncate">
@@ -132,28 +210,22 @@ export function AcaoDeIa({
           aria-label={`${descricao} com o ${nome}`}
           aria-busy={emVoo === id}
           title={`${descricao} com o ${nome}`}
-          className={cn(
-            'grid shrink-0 place-items-center transition-colors',
-            // Sem rótulo, o primeiro botão abre o grupo: a divisória fica só entre eles.
-            (!apenasProvedores || indice > 0) && 'border-l border-[var(--wb-border-soft)]',
-            apenasProvedores && 'flex-1',
-            // Partem da largura natural (auto, não 0): só assim falta espaço e o
-            // verbo, e não o nome, é quem encolhe.
-            comNome && cn('flex min-w-0 flex-[1_1_auto] items-center justify-center gap-1.5 px-1.5 font-medium', t.texto),
-            'hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
-            // Só o que NÃO está gerando esmaece: o que gira precisa ficar legível.
-            'disabled:cursor-not-allowed',
-            travado && emVoo !== id && 'opacity-40',
-            !comNome && t.botao,
-          )}
+          className={classeDoProvedor({
+            sala,
+            t,
+            comNome,
+            apenasProvedores,
+            comDivisoria: !apenasProvedores || indice > 0,
+            esmaecido: travado && emVoo !== id,
+          })}
           // Com o nome escrito, a marca fica só no ícone: o texto é neutro (D-871,
           // a cor do painel fica para estado).
-          style={{ color: comNome ? 'var(--wb-text)' : cor }}
+          style={sala ? undefined : { color: comNome ? 'var(--wb-text)' : cor }}
         >
           {emVoo === id ? (
             <Icon name="loader-2" size={t.icone} className="animate-spin" />
           ) : comNome ? (
-            <span className="flex flex-none" style={{ color: cor }}>
+            <span className="flex flex-none" style={sala ? undefined : { color: cor }}>
               <Icone size={t.icone} />
             </span>
           ) : (
@@ -163,7 +235,13 @@ export function AcaoDeIa({
         </button>
       ))}
       {asDuas && (
-        <BotaoDasDuas descricao={descricao} travado={travado} tamanho={tamanho} {...asDuas} />
+        <BotaoDasDuas
+          descricao={descricao}
+          travado={travado}
+          tamanho={tamanho}
+          sala={sala}
+          {...asDuas}
+        />
       )}
     </div>
   );
@@ -176,14 +254,16 @@ function BotaoDasDuas({
   travado,
   emVoo,
   tamanho,
+  sala,
 }: {
   descricao: string;
   onGerar: () => void;
   travado: boolean;
   emVoo: boolean;
   tamanho: keyof typeof TAMANHOS;
+  sala: boolean;
 }) {
-  const t = TAMANHOS[tamanho];
+  const t = (sala ? TAMANHOS_SALA : TAMANHOS)[tamanho];
   return (
     <button
       type="button"
@@ -193,9 +273,11 @@ function BotaoDasDuas({
       aria-busy={emVoo}
       title={`${descricao} com o Claude e depois com o Gemini`}
       className={cn(
-        'flex shrink-0 items-center gap-1 border-l border-[var(--wb-border-soft)] px-2 font-medium text-[var(--wb-text)] transition-colors',
+        'flex shrink-0 items-center gap-1 border-l px-2 font-medium transition-colors',
+        sala
+          ? 'border-fio text-fg-2 hover:bg-vidro-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco'
+          : 'border-[var(--wb-border-soft)] text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
         t.texto,
-        'hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
         'disabled:cursor-not-allowed',
         travado && !emVoo && 'opacity-40',
       )}
@@ -204,7 +286,7 @@ function BotaoDasDuas({
         <Icon name="loader-2" size={t.icone} className="animate-spin" />
       ) : (
         PROVEDORES.map(({ id, cor, Icone }) => (
-          <span key={id} className="flex flex-none" style={{ color: cor }}>
+          <span key={id} className="flex flex-none" style={sala ? undefined : { color: cor }}>
             <Icone size={t.icone - 2} />
           </span>
         ))
