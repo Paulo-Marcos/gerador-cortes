@@ -2,6 +2,7 @@ import { Icon } from './Icon';
 import { KitScreen } from './KitScreen';
 import { KitEstado } from './kit/KitEstado';
 import { KitTempo } from './kit/KitTempo';
+import { KitListas } from './kit/KitListas';
 import { ScreenHeader } from './ScreenHeader';
 import { useUpgradeTheme } from './useUpgradeTheme';
 
@@ -82,6 +83,7 @@ export default function UpgradeKitPage() {
         <KitScreen />
         <KitEstado />
         <KitTempo />
+        <KitListas />
       </div>
     </div>
   );

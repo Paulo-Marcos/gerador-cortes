@@ -135,6 +135,11 @@ const config: Config = {
         linha: '72px',
         barra: '62px',
       },
+      // `min-h-linha`: a linha de lista tem NO MÍNIMO 72 px. O token em `height` não vale para
+      // `min-height` no Tailwind, então ele é declarado aqui também (D-1120).
+      minHeight: {
+        linha: '72px',
+      },
       fontFamily: {
         sans: ['var(--font-sans)'],
         serif: ['var(--font-serif)'],
