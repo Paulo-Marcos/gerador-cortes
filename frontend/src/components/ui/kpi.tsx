@@ -9,23 +9,29 @@ import { cn } from '@/lib/utils';
 // publicou"). `valor={0}` continua sendo um zero de verdade. O cartão é vidro de raio 20,
 // sem fio de luz (§3.1) e sem feixe.
 
-export interface KpiProps extends React.HTMLAttributes<HTMLDivElement> {
+interface KpiBase extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
   rotulo: string;
-  /** Ausente = sem dado. `0` é um zero real. */
-  valor?: number | string | null;
   /** "min", "%", "views"… colado ao valor, menor. */
   unidade?: string;
-  /** Por que não há dado, quando `valor` falta. Passe sempre: o texto padrão só diz que não há medição, não o que fazer. */
-  motivo?: string;
   /** Linha de contexto sob o valor ("+12% sobre a semana"). */
   detalhe?: string;
 }
+
+/**
+ * Ou há valor, ou há MOTIVO: sem valor o tipo exige dizer por que ("O YouTube ainda não liberou…").
+ * `0` é um valor, um zero medido. O número sai formatado em pt-BR ("6,4", "48.210").
+ */
+export type KpiProps = KpiBase &
+  ({ valor: number | string; motivo?: string } | { valor?: null | undefined; motivo: string });
+
+const NUMERO_PT_BR = new Intl.NumberFormat('pt-BR');
 
 export const Kpi = React.forwardRef<HTMLDivElement, KpiProps>(function Kpi(
   { rotulo, valor, unidade, motivo, detalhe, className, ...props },
   ref,
 ) {
   const semDado = valor === undefined || valor === null || valor === '';
+  const exibido = typeof valor === 'number' ? NUMERO_PT_BR.format(valor) : valor;
   return (
     <div
       ref={ref}
@@ -40,12 +46,12 @@ export const Kpi = React.forwardRef<HTMLDivElement, KpiProps>(function Kpi(
       {semDado ? (
         <>
           <span className="text-display font-light text-fg-3">Sem dados</span>
-          <span className="text-pequeno text-fg-3">{motivo ?? 'Ainda não há medição.'}</span>
+          <span className="text-pequeno text-fg-3">{motivo}</span>
         </>
       ) : (
         <>
           <span className="flex items-baseline gap-1.5">
-            <span className="text-display font-extrabold tabular-nums text-fg">{valor}</span>
+            <span className="text-display font-extrabold tabular-nums text-fg">{exibido}</span>
             {unidade && <span className="text-pequeno text-fg-3">{unidade}</span>}
           </span>
           {detalhe && <span className="text-pequeno text-fg-2">{detalhe}</span>}
