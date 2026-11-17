@@ -202,10 +202,22 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   color: var(--accent);
 }
 
-.ap button,
-.ap input,
-.ap select,
-.ap textarea {
+/* D-1119: os componentes da Sala escura (components/ui/) trazem a própria fonte e o
+   próprio anel de foco. Sem esta exceção, `font: inherit` (0,1,1) e `:focus-visible`
+   (0,2,0) venciam as utilidades deles (`text-[12px]`, `font-semibold`,
+   `outline-foco`: 0,1,0) e o botão novo perdia tamanho, peso e raio.
+   A exceção é `:where(:not(...))`: especificidade ZERO, então a regra continua
+   valendo igual para todo botão antigo e nenhuma tela atual muda. O marcador é a
+   classe que todo controle novo carrega: `outline-foco` (botão, chip, abas,
+   segmented, caixa, interruptor, rádio), `ring-foco` (a pílula da ação de IA, que
+   desenha o foco em anel) ou `rounded-campo` (entrada, seleção, área de texto, que
+   desenham o foco em sombra). Um teste garante que o marcador não some do
+   componente (upgrade/__tests__/salaNaoHerdaDaCasca.d1119.test.tsx). Lacuna
+   conhecida: reconhecer por classe é frágil; a D-1124 troca por `data-sala`. */
+.ap button:where(:not([class*='outline-foco'], [class*='ring-foco'], [class*='rounded-campo'])),
+.ap input:where(:not([class*='rounded-campo'])),
+.ap select:where(:not([class*='rounded-campo'])),
+.ap textarea:where(:not([class*='rounded-campo'])) {
   font: inherit;
 }
 
@@ -225,7 +237,7 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
    O `outline-offset` positivo é o que faz o anel funcionar sobre vidro:
    encostado na borda de um `.card` translúcido ele desaparecia. */
 
-.ap :focus-visible {
+.ap :focus-visible:where(:not([class*='outline-foco'], [class*='ring-foco'], [class*='rounded-campo'])) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--r1);
