@@ -22,7 +22,7 @@ export function useLigacaoDoCampo(): LigacaoDoCampo | null {
 
 /** Classes do corpo de um campo (§3.4): poço, fio de campo, hover, foco em íris e erro. */
 export const CLASSES_DO_CAMPO = cn(
-  'w-full rounded-campo border border-campo bg-poco text-[13px] text-fg',
+  'w-full rounded-campo border border-campo bg-poco text-corpo text-fg',
   'transition-[border-color,box-shadow,background-color] duration-150',
   'placeholder:text-fg-3',
   'hover:border-fg/[.62]',

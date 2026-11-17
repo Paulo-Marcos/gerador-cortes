@@ -57,7 +57,7 @@ export function Segmented<V extends string = string>({
           value={o.valor}
           disabled={o.desabilitado}
           className={cn(
-            'inline-flex h-[30px] select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-pilula border border-transparent bg-transparent px-3.5 text-[12px] font-semibold leading-none text-fg-3 transition-colors duration-150',
+            'inline-flex h-[30px] select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-pilula border border-transparent bg-transparent px-3.5 text-pequeno font-semibold leading-none text-fg-3 transition-colors duration-150',
             cheio && 'flex-1',
             'hover:text-fg',
             'data-[state=on]:border-fio-2 data-[state=on]:bg-vidro-3 data-[state=on]:text-fg data-[state=on]:shadow-topo',

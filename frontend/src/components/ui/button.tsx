@@ -113,9 +113,9 @@ export const botaoDeLuz = cva(BASE_DE_LUZ, {
       ),
     },
     tamanho: {
-      pq: 'h-botao-pq gap-1.5 px-3 text-[12px]',
-      md: 'h-botao-md gap-2 px-4 text-[13px]',
-      gd: 'h-botao-gd gap-2.5 px-[22px] text-[14px]',
+      pq: 'h-botao-pq gap-1.5 px-3 text-pequeno',
+      md: 'h-botao-md gap-2 px-4 text-corpo',
+      gd: 'h-botao-gd gap-2.5 px-[22px] text-linha',
     },
     // Só ícone: círculo, largura = altura.
     soIcone: { true: 'aspect-square px-0', false: '' },

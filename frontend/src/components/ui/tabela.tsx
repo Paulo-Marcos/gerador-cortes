@@ -5,13 +5,10 @@ import { cn } from '@/lib/utils';
 // (análises, filas). Cabeçalho de 32 px em `micro`/`fg-3`, linha de 38 px, fio entre
 // linhas, hover em `vidro`. Número vai à direita e em mono (`aDireita` + `numero`) para as casas
 // alinharem. Sem caixa-alta: o peso e o tamanho fazem a hierarquia.
-//
-// O tamanho de fonte vai FORA do `cn` (`${cn(...)} text-corpo`): o twMerge atual lê
-// `text-corpo` como cor e o descartaria ao lado de `text-fg`.
 
 export const Tabela = React.forwardRef<HTMLTableElement, React.TableHTMLAttributes<HTMLTableElement>>(
   function Tabela({ className, ...props }, ref) {
-    return <table ref={ref} className={`${cn('w-full border-collapse text-fg', className)} text-corpo`} {...props} />;
+    return <table ref={ref} className={cn('w-full border-collapse text-fg', className, 'text-corpo')} {...props} />;
   },
 );
 
@@ -46,7 +43,7 @@ export const TabelaTitulo = React.forwardRef<
     <th
       ref={ref}
       scope={scope}
-      className={`${cn('h-8 border-b border-fio px-3 text-fg-3', aDireita ? 'text-right' : 'text-left', className)} text-micro`}
+      className={cn('h-8 border-b border-fio px-3 text-fg-3', aDireita ? 'text-right' : 'text-left', className, 'text-micro')}
       {...props}
     />
   );

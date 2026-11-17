@@ -27,15 +27,15 @@ const PROVEDORES: {
 
 const TAMANHOS = {
   sm: { altura: 'h-7', texto: 'text-[11.5px]', icone: 14, botao: 'w-7' },
-  md: { altura: 'h-9', texto: 'text-[13px]', icone: 16, botao: 'w-9' },
+  md: { altura: 'h-9', texto: 'text-corpo', icone: 16, botao: 'w-9' },
 } as const;
 
 // D-1114 (E-069 H-07): a Sala escura. Uma pílula de vidro; a faísca em `iris` é o sinal de
 // "a IA faz isto" e o provedor é ícone no tom do texto, não cor de marca (DIRECAO §5).
 // Sem `backdrop-filter`: o grupo aparece em vários pontos da mesma tela (§3.6).
 const TAMANHOS_SALA = {
-  sm: { altura: 'h-botao-pq', texto: 'text-[12px]', icone: 14, botao: 'w-[30px]' },
-  md: { altura: 'h-botao-md', texto: 'text-[13px]', icone: 16, botao: 'w-[38px]' },
+  sm: { altura: 'h-botao-pq', texto: 'text-pequeno', icone: 14, botao: 'w-[30px]' },
+  md: { altura: 'h-botao-md', texto: 'text-corpo', icone: 16, botao: 'w-[38px]' },
 } as const;
 
 type MedidasDaAcao =
@@ -391,7 +391,7 @@ export function MenuDeIa({
                 setAberto(false);
                 onGerar(id);
               }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)]"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-pequeno font-normal text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)]"
             >
               <span style={{ color: cor }}>
                 <IconeProvedor size={14} />

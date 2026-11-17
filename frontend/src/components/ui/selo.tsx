@@ -14,14 +14,12 @@ import { cn } from '@/lib/utils';
 // Sem `backdrop-filter` (§3.6): o selo mora em linha de lista.
 // A cor do tom é `--c` (como no sala-escura.css): fundo a 13% e fio a 22%, os valores em que o
 // contraste da DIRECAO §8.1 foi medido; `--cc-info` direto porque o `text-info` do Tailwind ainda é o antigo.
-// Tamanho em px (`text-[12px]`) e não `text-pequeno`: o tailwind-merge do `cn` não conhece
-// os tamanhos do tema e trataria `text-pequeno` como COR, descartando-o ao lado de `text-ok`.
 
 export const TONS_DO_SELO = ['inerte', 'neutro', 'curso', 'convite', 'ok', 'erro'] as const;
 export type TomDoSelo = (typeof TONS_DO_SELO)[number];
 
 const seloVariants = cva(
-  'inline-flex h-6 flex-none select-none items-center gap-1.5 whitespace-nowrap rounded-pilula border border-[color-mix(in_srgb,var(--c)_22%,transparent)] bg-[color-mix(in_srgb,var(--c)_13%,transparent)] py-0 pl-2 pr-2.5 text-[color:var(--c)] text-[12px] font-semibold leading-none',
+  'inline-flex h-6 flex-none select-none items-center gap-1.5 whitespace-nowrap rounded-pilula border border-[color-mix(in_srgb,var(--c)_22%,transparent)] bg-[color-mix(in_srgb,var(--c)_13%,transparent)] py-0 pl-2 pr-2.5 text-[color:var(--c)] text-pequeno font-semibold leading-none',
   {
     variants: {
       tom: {
