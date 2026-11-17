@@ -25,7 +25,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       className={cn(
         'relative inline-block h-6 w-10 flex-none rounded-pilula border border-campo bg-poco p-0',
         'transition-[background-color,border-color] duration-150',
-        'hover:border-fg/60',
+        'hover:border-fg/[.62]',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
         'aria-checked:border-iris aria-checked:bg-iris aria-checked:hover:border-iris',
         'disabled:cursor-not-allowed disabled:border-dashed disabled:border-fio-2 disabled:bg-transparent disabled:hover:border-fio-2',

@@ -21,6 +21,14 @@ export function useItemDoGrupo(valor: string) {
   };
 }
 
+/** Índice do próximo item do grupo para a tecla, ou `null` se a tecla não navega (circular). */
+export function proximoDoGrupo(total: number, atual: number, tecla: string): number | null {
+  if (total <= 0 || atual < 0) return null;
+  if (tecla === 'ArrowDown' || tecla === 'ArrowRight') return (atual + 1) % total;
+  if (tecla === 'ArrowUp' || tecla === 'ArrowLeft') return (atual - 1 + total) % total;
+  return null;
+}
+
 export type GrupoDeRadioProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & {
   value: string | undefined;
   onValueChange: (valor: string) => void;
@@ -39,16 +47,17 @@ export function GrupoDeRadio({
   const ctx = React.useMemo(() => ({ value, escolher: onValueChange }), [value, onValueChange]);
   const aoTeclar = (e: React.KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(e);
-    const avanca = e.key === 'ArrowDown' || e.key === 'ArrowRight';
-    const recua = e.key === 'ArrowUp' || e.key === 'ArrowLeft';
-    if (!avanca && !recua) return;
     const itens = Array.from(
       e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]:not(:disabled)'),
     );
-    const i = itens.indexOf(document.activeElement as HTMLElement);
-    if (i < 0) return;
+    const i = proximoDoGrupo(
+      itens.length,
+      itens.indexOf(document.activeElement as HTMLElement),
+      e.key,
+    );
+    if (i === null) return;
     e.preventDefault();
-    const proximo = itens[(i + (avanca ? 1 : -1) + itens.length) % itens.length];
+    const proximo = itens[i];
     proximo.focus();
     proximo.click();
   };
@@ -61,7 +70,10 @@ export function GrupoDeRadio({
   );
 }
 
-export type RadioProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'value' | 'onChange'> & {
+export type RadioProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'value' | 'onChange'
+> & {
   value: string;
 };
 
@@ -103,7 +115,7 @@ export const Radio = React.forwardRef<HTMLButtonElement, RadioProps>(
       >
         <BolinhaDoRadio
           marcado={marcado}
-          className="group-hover:border-fg/60 group-disabled:border-dashed group-disabled:border-fio-2 group-disabled:bg-transparent group-disabled:hover:border-fio-2"
+          className="group-hover:border-fg/[.62] group-disabled:border-dashed group-disabled:border-fio-2 group-disabled:bg-transparent group-disabled:hover:border-fio-2"
         />
       </button>
     );

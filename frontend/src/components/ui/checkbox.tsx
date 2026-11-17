@@ -20,7 +20,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
       className={cn(
         'inline-flex size-[18px] flex-none items-center justify-center rounded-etiqueta border border-campo bg-poco p-0 text-sobre-iris',
         'transition-[background-color,border-color] duration-150',
-        'hover:border-fg/60',
+        'hover:border-fg/[.62]',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
         'aria-[checked=true]:border-iris aria-[checked=true]:bg-iris aria-[checked=mixed]:border-iris aria-[checked=mixed]:bg-iris',
         'disabled:cursor-not-allowed disabled:border-dashed disabled:border-fio-2 disabled:bg-transparent disabled:text-fg-off disabled:hover:border-fio-2',

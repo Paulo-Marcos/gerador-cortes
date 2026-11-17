@@ -25,7 +25,7 @@ export const CLASSES_DO_CAMPO = cn(
   'w-full rounded-campo border border-campo bg-poco text-[13px] text-fg',
   'transition-[border-color,box-shadow,background-color] duration-150',
   'placeholder:text-fg-3',
-  'hover:border-fg/60',
+  'hover:border-fg/[.62]',
   'focus-visible:border-iris focus-visible:bg-iris/5 focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--cc-iris-suave)]',
   'aria-[invalid=true]:border-erro aria-[invalid=true]:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cc-erro)_16%,transparent)]',
   'disabled:cursor-not-allowed disabled:border-dashed disabled:border-fio disabled:bg-transparent disabled:text-fg-off disabled:shadow-none disabled:hover:border-fio',

@@ -26,9 +26,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       return (
         <input
           ref={ref}
-          id={id}
+          id={id ?? campo?.id}
           placeholder={placeholder}
           disabled={disabled}
+          aria-invalid={campo?.invalido ? true : undefined}
+          aria-describedby={props['aria-describedby'] ?? campo?.describedBy}
           className={cn(
             'fld w-full placeholder:text-[var(--dim)] focus-visible:border-[var(--accent)] focus-visible:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-50',
@@ -47,7 +49,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           placeholder={carregando ? frase : placeholder}
           disabled={disabled || Boolean(carregando)}
           aria-busy={carregando ? true : undefined}
-          aria-invalid={invalido ?? campo?.invalido ? true : undefined}
+          aria-invalid={(invalido ?? campo?.invalido) ? true : undefined}
           aria-describedby={props['aria-describedby'] ?? campo?.describedBy}
           required={props.required ?? campo?.obrigatorio}
           className={cn(CLASSES_DO_CAMPO, 'h-10 px-3.5', carregando && 'pr-10', className)}
