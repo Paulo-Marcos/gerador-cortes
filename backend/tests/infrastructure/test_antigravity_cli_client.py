@@ -168,10 +168,13 @@ class TestProcessoQueNaoSai:
         return resultado, time.perf_counter() - inicio
 
     def test_devolve_a_resposta_sem_esperar_o_processo_sair(self, monkeypatch):
-        resultado, gasto = self._rodar(monkeypatch, self._RESPONDE_E_FICA, timeout=5)
+        # D-1118: a folga conta a partida do Python, que passa de 5 s com a máquina
+        # carregada (várias suítes em paralelo). 30 s segue bem abaixo dos 60 s em
+        # que o processo fica vivo, então ainda prova que não esperamos ele sair.
+        resultado, gasto = self._rodar(monkeypatch, self._RESPONDE_E_FICA, timeout=30)
 
         assert resultado["response"] == "capa pronta"
-        assert gasto < 5
+        assert gasto < 30
 
     def test_sem_resposta_ainda_estoura_o_timeout(self, monkeypatch):
         with pytest.raises(AntigravityCliError, match="timeout"):
