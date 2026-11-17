@@ -36,7 +36,7 @@ function MenuEPopover() {
         </MenuTrigger>
         <MenuContent>
           <MenuRotulo>Corte</MenuRotulo>
-          <MenuItem icone="edit-3" atalho="E">
+          <MenuItem icone="pen" atalho="E">
             Editar corte
           </MenuItem>
           <MenuItem icone="copy">Duplicar</MenuItem>
