@@ -29,8 +29,11 @@ export type GrupoDaTira = 'CENAS' | 'RENDER' | 'PUBLICAÇÃO';
 export type Pip = {
   /** Sigla de 3 letras: ícone de 11px sem texto não se lê. */
   sigla: string;
-  /** Rótulo humano, vindo de `buildStatusPills` ("Bruto", "Graded"…). */
+  /** Rótulo humano, vindo de `buildStatusPills` ("Bruto", "Graded"…). É a CHAVE da etapa. */
   nome: string;
+  /** D-1121: o nome para LER ("Filtro", "Capa", "Metadados"): o medidor da Sala escura
+   *  troca as siglas por ele. `nome` não serve: é chave e está em inglês em duas etapas. */
+  etapa: string;
   /** O `hint` de `buildStatusPills`, sem reescrita. */
   descricao: string;
   /** D-868: o que falta fazer, em palavras ("gerar bruto"). */
@@ -47,15 +50,15 @@ export type Pip = {
 // D-868: o verbo diz o que falta em palavras — a linha do Workspace troca as
 // siglas por "próximo: gerar bruto". O rótulo de `buildStatusPills` é inglês
 // ("Graded", "Thumb") e aquele arquivo está travado; o verbo mora aqui.
-const POR_ROTULO: Record<string, { sigla: string; grupo: GrupoDaTira; verbo: string }> = {
-  Bruto: { sigla: 'BRU', grupo: 'CENAS', verbo: 'gerar bruto' },
-  Cenas: { sigla: 'CEN', grupo: 'CENAS', verbo: 'validar cenas' },
-  Graded: { sigla: 'GRD', grupo: 'RENDER', verbo: 'aplicar filtro' },
-  Overlays: { sigla: 'OVL', grupo: 'RENDER', verbo: 'renderizar overlays' },
-  Final: { sigla: 'FIN', grupo: 'RENDER', verbo: 'renderizar final' },
-  Thumb: { sigla: 'THU', grupo: 'PUBLICAÇÃO', verbo: 'gerar capa' },
-  Meta: { sigla: 'MET', grupo: 'PUBLICAÇÃO', verbo: 'completar metadados' },
-  YouTube: { sigla: 'YT', grupo: 'PUBLICAÇÃO', verbo: 'publicar no YouTube' },
+const POR_ROTULO: Record<string, { sigla: string; nome: string; grupo: GrupoDaTira; verbo: string }> = {
+  Bruto: { sigla: 'BRU', nome: 'Bruto', grupo: 'CENAS', verbo: 'gerar bruto' },
+  Cenas: { sigla: 'CEN', nome: 'Cenas', grupo: 'CENAS', verbo: 'validar cenas' },
+  Graded: { sigla: 'GRD', nome: 'Filtro', grupo: 'RENDER', verbo: 'aplicar filtro' },
+  Overlays: { sigla: 'OVL', nome: 'Overlays', grupo: 'RENDER', verbo: 'renderizar overlays' },
+  Final: { sigla: 'FIN', nome: 'Final', grupo: 'RENDER', verbo: 'renderizar final' },
+  Thumb: { sigla: 'THU', nome: 'Capa', grupo: 'PUBLICAÇÃO', verbo: 'gerar capa' },
+  Meta: { sigla: 'MET', nome: 'Metadados', grupo: 'PUBLICAÇÃO', verbo: 'completar metadados' },
+  YouTube: { sigla: 'YT', nome: 'YouTube', grupo: 'PUBLICAÇÃO', verbo: 'publicar no YouTube' },
 };
 
 export type Tira = {
@@ -92,6 +95,7 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
       done: p.done && !gerandoCenas,
       descricao: p.hint,
       sigla: meta?.sigla ?? p.label.slice(0, 3).toUpperCase(),
+      etapa: meta?.nome ?? p.label,
       // Cenas que nem foram geradas não têm o que validar (achado da
       // pr-audit da D-868): o verbo segue o que de fato falta. E não se manda
       // gerar o que já está gerando (D-1037): o convite é o clique duplicado.
@@ -118,6 +122,7 @@ export function montarTira(status: StatusExportCorte, statusCorte?: string): Tir
   const pips: Pip[] = ordenados.map((p, i) => ({
     sigla: p.sigla,
     nome: p.nome,
+    etapa: p.etapa,
     descricao: p.descricao,
     verbo: p.verbo,
     grupo: p.grupo,
