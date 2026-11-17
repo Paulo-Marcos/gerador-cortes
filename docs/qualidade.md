@@ -50,6 +50,17 @@ commit, e a melhoria fica travada.
 | Tamanho de função (Python) | `backend/tests/test_tamanho_de_funcao_d772.py` | complexidade 10, 40 instruções | sim |
 | Tamanho de função (frontend) | `frontend/src/shared/qualidade/__tests__/tamanhoDeFuncao.test.ts` | 100 linhas | sim (vitest) |
 | Tipos (pyright) | `backend/tests/test_tipos_pyright_d773.py` | erro novo por arquivo e regra | não (~60 s) |
+| Design: estilo inline | `frontend/src/shared/qualidade/__tests__/estiloInline.test.ts` | `style={{` com chave que não seja `--*` | sim (vitest) |
+| Design: tokens legados | `…/__tests__/tokensLegados.test.ts` | `var(--wb-`, variáveis curtas da `.ap`, `bg-bg-*`, `text-text-*`, `surface-[123]`, `accent-[2-7]00` | sim |
+| Design: caixa-alta | `…/__tests__/caixaAlta.test.ts` | `uppercase`, `textTransform` | sim |
+| Design: vidro | `…/__tests__/vidroSoNaCasca.test.ts` | `backdrop-filter` e `backdrop-blur` fora de `.cc-vidro-casca` | sim |
+| Design: feixe | `…/__tests__/feixeSoNoLugar.test.ts` | `bg-feixe`, `text-feixe`, `cc-fio`, `--cc-feixe` fora dos lugares marcados (nasce zerada) | sim |
+| Design: território do canal | `…/__tests__/territorioDoCanal.test.ts` | `cc-canal-a/b` (nasce zerada) | sim |
+| Design: transição e foco | `…/__tests__/semTransicaoTotal.test.ts` | `transition-all`, `transition: all`, `outline-none` sem foco desenhado na linha | sim |
+| Design: fontes do index | `…/__tests__/fontesDoIndex.test.ts` | famílias que o `index.html` pede (11 hoje; alvo 2) | sim |
+| Design: cor literal em CSS | `…/__tests__/corLiteralCss.test.ts` | cor literal nos `.css` fora de `styles/tokens.css` (estende a `corLiteral`) | sim |
+| Design: tamanho de fonte arbitrário | `…/__tests__/fonteArbitraria.test.ts` | `text-[Npx]` fora da escala (estende a `pisoDeFonte`) | sim |
+| Design: um primário por tela | `…/__tests__/umPrimarioPorTela.test.ts` | `data-variant="primary"` no HTML de cada tela: `esperarPrimarios` no teste de render da tela | sim |
 
 **Reprovou?**
 
@@ -58,6 +69,7 @@ commit, e a melhoria fica travada.
   à lista de exceções nem suba um teto:** afrouxar catraca é decisão do dono.
 - **"Baixe o teto" / "remova da lista":** você melhorou algo; atualize a lista no
   mesmo commit.
+- **Catraca de design (E-069):** a linha de base de cada uma é um `linhasDeBase/<nome>.json` ao lado do teste (caminho → teto), medido com `git ls-files`: arquivo novo precisa de `git add` para ser visto. Quem melhora baixa o teto no JSON; o motor é `catraca.ts` e as regras, `definicoes.ts`. Aceitar uma exceção nova (arquivo permitido do feixe, isento do vídeo) é decisão do dono.
 - **Erro de tipo novo:** corrija o tipo. Se a contagem mudou **sem o código mudar**,
   foi uma dependência: meça de novo no `.venv` sincronizado (D-795).
 
