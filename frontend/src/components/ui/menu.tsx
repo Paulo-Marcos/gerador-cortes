@@ -16,14 +16,14 @@ export const MenuGrupo = RM.Group;
 
 /** Painel do menu: cartão de 16 px de raio, 6 px de respiro, itens de 34 px. */
 export const PAINEL_DO_MENU =
-  'z-[60] flex min-w-[220px] flex-col gap-px rounded-bloco p-1.5 outline-none ' + PELE_FLUTUANTE;
+  'z-[60] flex min-w-[220px] flex-col gap-px rounded-bloco p-1.5 outline-none focus-visible:outline-transparent ' + PELE_FLUTUANTE;
 
 /** Item do menu: ladrilho de 10 px, 34 px de altura. Compartilhado com o `OverflowMenu`. */
 export const ITEM_DO_MENU =
-  'flex h-[34px] w-full cursor-default select-none items-center gap-2.5 rounded-[10px] px-2.5 text-left text-corpo font-medium text-fg outline-none ' +
+  'flex h-[34px] w-full cursor-default select-none items-center gap-2.5 rounded-[10px] px-2.5 text-left text-corpo font-medium text-fg ' +
   'transition-colors duration-150 motion-reduce:transition-none ' +
   'hover:bg-vidro-2 data-[highlighted]:bg-vidro-2 ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco ' +
+  'outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco ' +
   'aria-disabled:cursor-not-allowed aria-disabled:text-fg-off aria-disabled:hover:bg-transparent aria-disabled:data-[highlighted]:bg-transparent';
 
 export const ITEM_DO_MENU_PERIGOSO =

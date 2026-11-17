@@ -7,7 +7,9 @@ import { Dialog, type TamanhoDoDialogo } from '@/components/ui/dialog';
 // foco de volta a quem abriu) vem do Radix, pelo `Dialog`.
 //
 // As cinco larguras antigas (448 · 512 · 672 · 896 · 1152) caem nas quatro novas
-// (460 · 560 · 880 · 1152): cada uma vira a mais próxima que NÃO aperta o conteúdo.
+// (460 · 560 · 880 · 1152): `sm`, `md` e `2xl` caem na mais próxima; `lg` (672) sobe para 880
+// e não aperta. O `xl` (896) cai em 880, 16 px mais estreito: o degrau mais largo seguinte
+// (1152) esticaria cinco modais de formulário, e 16 px a menos cabe no miolo, que rola.
 // O `2xl` (D-542, o modal de marcar um quadro de vídeo) segue no degrau mais largo.
 
 interface ModalProps {

@@ -26,7 +26,7 @@ export const PopoverContent = React.forwardRef<React.ElementRef<typeof RP.Conten
         sideOffset={sideOffset}
         align={align}
         className={cn(
-          'z-[60] w-72 max-w-[calc(100vw-32px)] rounded-bloco p-4 text-corpo outline-none',
+          'z-[60] w-72 max-w-[calc(100vw-32px)] rounded-bloco p-4 text-corpo outline-none focus-visible:outline-transparent',
           PELE_FLUTUANTE,
           MOVIMENTO_FLUTUANTE,
           className,

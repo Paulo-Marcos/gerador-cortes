@@ -19,7 +19,7 @@ import { PELE_FLUTUANTE } from '@/components/ui/superficie-flutuante';
  * Larguras do diálogo (DIRECAO §6): 460 · 560 · 880 · 1152 e a gaveta de 432. O diálogo
  * centraliza por `translate`, e a gaveta encosta à direita com 12 px de folga.
  */
-export const caixaDoDialogo = cva('fixed z-50 flex flex-col overflow-hidden outline-none ' + PELE_FLUTUANTE, {
+export const caixaDoDialogo = cva('fixed z-50 flex flex-col overflow-hidden outline-none focus-visible:outline-transparent ' + PELE_FLUTUANTE, {
   variants: {
     tamanho: {
       sm: 'w-[460px]',
@@ -78,6 +78,14 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
   const caixa = React.useRef<HTMLDivElement>(null);
   const lateral = tamanho === 'lateral';
 
+  // Quem abriu é guardado ANTES de o miolo montar: um campo com `autoFocus` toma o foco no
+  // commit, e o gancho de abertura do Radix nem chega a rodar (o foco já está dentro). No
+  // desenho, o foco ainda está no botão que abriu. A origem só se zera ao devolver o foco
+  // (depois da saída animada), por isso fechar não a apaga.
+  if (open && origem.current === null && typeof document !== 'undefined') {
+    origem.current = lembrarOrigem(document.activeElement);
+  }
+
   return (
     <RD.Root open={open} onOpenChange={(aberto) => !aberto && onClose()}>
       <RD.Overlay
@@ -94,7 +102,6 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
         // Sem descrição, o Radix não deve apontar para uma que não existe.
         {...(description ? {} : { 'aria-describedby': undefined })}
         onOpenAutoFocus={(evento) => {
-          origem.current = lembrarOrigem(document.activeElement);
           // Quem pede um foco inicial (o "Cancelar" do diálogo destrutivo, DIRECAO §7.10)
           // marca o elemento com `data-autofocus`; sem marca, o foco vai para o próprio
           // diálogo — o leitor de tela lê o título primeiro, sem cair num botão.
