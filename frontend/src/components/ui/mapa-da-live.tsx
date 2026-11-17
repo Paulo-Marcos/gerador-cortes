@@ -1,6 +1,12 @@
 import * as React from 'react';
 import { Selo, type TomDoSelo } from '@/components/ui/selo';
-import { marcasDoMapa, posicaoNoMapa, tempoDaLive } from '@/lib/posicaoNoMapa';
+import {
+  marcasDoMapa,
+  posicaoNoMapa,
+  tempoDaLive,
+  type MarcaDoMapa,
+  type PosicaoNoMapa,
+} from '@/lib/posicaoNoMapa';
 import { cn } from '@/lib/utils';
 
 // D-1121 (E-069 H-11a) · Mapa da live: a barra de 0:00 ao fim, com os cortes no ponto onde
@@ -132,6 +138,108 @@ export interface MapaDaLiveProps extends Omit<
   tamanho?: 'normal' | 'mini';
 }
 
+type Tamanho = (typeof TAMANHO)[keyof typeof TAMANHO];
+
+/** Um corte: o `<a>` com a posição por variável CSS e o número lido pelo estado. */
+function PilulaDoCorte({
+  corte: c,
+  pos,
+  aberto,
+  t,
+  onAbrir,
+}: {
+  corte: CorteDoMapa;
+  pos: PosicaoNoMapa | null;
+  aberto: boolean;
+  t: Tamanho;
+  onAbrir?: (id: string) => void;
+}) {
+  const geometria = pos
+    ? ({
+        '--inicio': `${pos.inicioPct}%`,
+        '--largura': `${pos.larguraPct}%`,
+      } as React.CSSProperties)
+    : undefined;
+  return (
+    <a
+      data-corte={c.id}
+      data-estado={c.estado}
+      href={c.href ?? `#corte-${c.id}`}
+      aria-label={rotuloDoCorte(c, aberto)}
+      aria-current={aberto ? 'true' : undefined}
+      onClick={aoClicarNoCorte(c.id, onAbrir)}
+      style={geometria}
+      className={cn(
+        'group flex items-center justify-center overflow-hidden rounded-pilula border font-mono leading-none no-underline',
+        'shadow-topo transition-[background-color,transform] duration-150 motion-reduce:transition-none',
+        'hover:scale-y-[1.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
+        pos
+          ? cn(
+              'absolute left-[min(var(--inicio),calc(100%-var(--piso)))] w-[var(--largura)]',
+              t.corte,
+            )
+          : cn('relative', t.corte),
+        c.estado === 'proposto' && 'hover:bg-fg/[.26]',
+        ESTADO_DA_PILULA[c.estado],
+        PILULA_ABERTA,
+      )}
+    >
+      {/* Tamanho num span e cor no de dentro: o `cn` não conhece `text-micro` e o trataria como cor. */}
+      <span aria-hidden className="text-micro">
+        <span className={cn(NUMERO_DO_ESTADO[c.estado], NUMERO_ABERTO)}>{c.numero}</span>
+      </span>
+    </a>
+  );
+}
+
+/** Os tempos de baixo: 0:00, uma marca a cada 30 min e o fim. Sem duração, o aviso. */
+function TemposDaPista({ duracaoSeg, marcas }: { duracaoSeg: number; marcas: MarcaDoMapa[] }) {
+  if (marcas.length === 0 && !(duracaoSeg > 0)) {
+    return (
+      <p data-parte="sem-duracao" className="mt-1.5 text-pequeno">
+        <span className="text-fg-3">
+          A duração da live não é conhecida: os cortes aparecem em fila, sem posição.
+        </span>
+      </p>
+    );
+  }
+  return (
+    <div aria-hidden data-parte="tempos" className="relative mt-1.5 h-[18px] text-fg-3">
+      <span className="num absolute left-0 top-0">0:00</span>
+      {/* O tempo do fim ocupa a ponta direita: o rótulo da marca que cai colada nele sai (a linha fica). */}
+      {marcas
+        .filter((m) => m.pct <= LIMITE_DO_ROTULO_PCT)
+        .map((m) => (
+          <span
+            key={m.seg}
+            style={{ '--x': `${m.pct}%` } as React.CSSProperties}
+            className="num absolute left-[var(--x)] top-0 -translate-x-1/2"
+          >
+            {horaMinuto(m.seg)}
+          </span>
+        ))}
+      <span className="num absolute right-0 top-0">{tempoDaLive(duracaoSeg)}</span>
+    </div>
+  );
+}
+
+/** O corte aberto em palavras: o estado vai num `Selo` (o mapa fala em luz, o selo em cor). */
+function ResumoDoAberto({ corte }: { corte: CorteDoMapa }) {
+  return (
+    <p data-parte="aberto" className="mt-3 flex min-w-0 items-center gap-2 text-corpo">
+      <Selo tom={TOM_DO_ESTADO[corte.estado]}>{ROTULO_DO_ESTADO[corte.estado]}</Selo>
+      <span className="truncate">
+        <span className="text-fg">
+          Corte {corte.numero} · {corte.nome}
+        </span>
+      </span>
+      <span className="num flex-none text-fg-3">
+        {tempoDaLive(corte.inicioSeg)}–{tempoDaLive(corte.fimSeg)}
+      </span>
+    </p>
+  );
+}
+
 export const MapaDaLive = React.forwardRef<HTMLElement, MapaDaLiveProps>(function MapaDaLive(
   { duracaoSeg, cortes, abertoId, onAbrir, tamanho = 'normal', className, ...props },
   ref,
@@ -182,87 +290,19 @@ export const MapaDaLive = React.forwardRef<HTMLElement, MapaDaLiveProps>(functio
               className={cn('absolute left-[var(--x)] w-px bg-fio-2', t.marca)}
             />
           ))}
-        {cortes.map((c) => {
-          const pos = sabeDuracao ? posicaoNoMapa(c.inicioSeg, c.fimSeg, duracaoSeg) : null;
-          const ehAberto = c.id === abertoId;
-          const geometria = pos
-            ? ({
-                '--inicio': `${pos.inicioPct}%`,
-                '--largura': `${pos.larguraPct}%`,
-              } as React.CSSProperties)
-            : undefined;
-          return (
-            <a
-              key={c.id}
-              data-corte={c.id}
-              data-estado={c.estado}
-              href={c.href ?? `#corte-${c.id}`}
-              aria-label={rotuloDoCorte(c, ehAberto)}
-              aria-current={ehAberto ? 'true' : undefined}
-              onClick={aoClicarNoCorte(c.id, onAbrir)}
-              style={geometria}
-              className={cn(
-                'group flex items-center justify-center overflow-hidden rounded-pilula border font-mono leading-none no-underline',
-                'shadow-topo transition-[background-color,transform] duration-150 motion-reduce:transition-none',
-                'hover:scale-y-[1.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
-                pos
-                  ? cn(
-                      'absolute left-[min(var(--inicio),calc(100%-var(--piso)))] w-[var(--largura)]',
-                      t.corte,
-                    )
-                  : cn('relative', t.corte),
-                c.estado === 'proposto' && 'hover:bg-fg/[.26]',
-                ESTADO_DA_PILULA[c.estado],
-                PILULA_ABERTA,
-              )}
-            >
-              {/* Tamanho num span e cor no de dentro: o `cn` não conhece `text-micro` e o trataria como cor. */}
-              <span aria-hidden className="text-micro">
-                <span className={cn(NUMERO_DO_ESTADO[c.estado], NUMERO_ABERTO)}>{c.numero}</span>
-              </span>
-            </a>
-          );
-        })}
+        {cortes.map((c) => (
+          <PilulaDoCorte
+            key={c.id}
+            corte={c}
+            pos={sabeDuracao ? posicaoNoMapa(c.inicioSeg, c.fimSeg, duracaoSeg) : null}
+            aberto={c.id === abertoId}
+            t={t}
+            onAbrir={onAbrir}
+          />
+        ))}
       </div>
-
-      {sabeDuracao ? (
-        <div aria-hidden data-parte="tempos" className="relative mt-1.5 h-[18px] text-fg-3">
-          <span className="num absolute left-0 top-0">0:00</span>
-          {/* O tempo do fim ocupa a ponta direita: o rótulo da marca que cai colada nele sai (a linha fica). */}
-          {marcas
-            .filter((m) => m.pct <= LIMITE_DO_ROTULO_PCT)
-            .map((m) => (
-              <span
-                key={m.seg}
-                style={{ '--x': `${m.pct}%` } as React.CSSProperties}
-                className="num absolute left-[var(--x)] top-0 -translate-x-1/2"
-              >
-                {horaMinuto(m.seg)}
-              </span>
-            ))}
-          <span className="num absolute right-0 top-0">{tempoDaLive(duracaoSeg)}</span>
-        </div>
-      ) : (
-        <p data-parte="sem-duracao" className="mt-1.5 text-pequeno">
-          <span className="text-fg-3">
-            A duração da live não é conhecida: os cortes aparecem em fila, sem posição.
-          </span>
-        </p>
-      )}
-
-      {aberto && (
-        <p data-parte="aberto" className="mt-3 flex min-w-0 items-center gap-2 text-corpo">
-          <Selo tom={TOM_DO_ESTADO[aberto.estado]}>{ROTULO_DO_ESTADO[aberto.estado]}</Selo>
-          <span className="truncate">
-            <span className="text-fg">
-              Corte {aberto.numero} · {aberto.nome}
-            </span>
-          </span>
-          <span className="num flex-none text-fg-3">
-            {tempoDaLive(aberto.inicioSeg)}–{tempoDaLive(aberto.fimSeg)}
-          </span>
-        </p>
-      )}
+      <TemposDaPista duracaoSeg={sabeDuracao ? duracaoSeg : 0} marcas={marcas} />
+      {aberto && <ResumoDoAberto corte={aberto} />}
     </nav>
   );
 });

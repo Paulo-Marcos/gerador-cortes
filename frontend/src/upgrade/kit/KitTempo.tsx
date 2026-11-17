@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Anel } from '@/components/ui/anel';
+import { Icon } from '@/components/ui/icon';
 import { MapaDaLive, type CorteDoMapa } from '@/components/ui/mapa-da-live';
 import { MedidorDeEtapas } from '@/components/ui/medidor-de-etapas';
 import { Progresso } from '@/components/ui/progresso';
@@ -195,7 +196,7 @@ export function KitTempo() {
               <span className="num text-micro">13</span>
             </Anel>
             <Anel valor={100} rotulo="Tudo pronto" tamanho={30} espessura={3} cor="ok">
-              <span className="num text-micro">✓</span>
+              <Icon name="check" className="size-3.5" />
             </Anel>
             <Anel valor={87.5} rotulo="7 de 8 etapas em cada corte" tamanho={64} espessura={6}>
               <span className="num text-linha">7/8</span>
