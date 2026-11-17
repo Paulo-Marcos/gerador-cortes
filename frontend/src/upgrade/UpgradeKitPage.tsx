@@ -1,6 +1,7 @@
 import { Icon } from './Icon';
 import { KitScreen } from './KitScreen';
 import { KitEstado } from './kit/KitEstado';
+import { KitTempo } from './kit/KitTempo';
 import { ScreenHeader } from './ScreenHeader';
 import { useUpgradeTheme } from './useUpgradeTheme';
 
@@ -80,6 +81,7 @@ export default function UpgradeKitPage() {
       <div style={{ flex: 1, overflow: 'auto', padding: '4px 18px 18px', minHeight: 0 }}>
         <KitScreen />
         <KitEstado />
+        <KitTempo />
       </div>
     </div>
   );
