@@ -1,41 +1,41 @@
 import * as React from 'react';
 import * as RT from '@radix-ui/react-tooltip';
 import { cn } from '@/lib/utils';
+import { containerDoPortal } from '@/lib/containerDoPortal';
+import { MOVIMENTO_FLUTUANTE, PELE_FLUTUANTE } from '@/components/ui/superficie-flutuante';
 
 export const TooltipProvider = RT.Provider;
 export const TooltipRoot = RT.Root;
 export const TooltipTrigger = RT.Trigger;
 
-// D-599: o tooltip é renderizado num PORTAL, e portal para o <body> sai de
-// dentro da casca `.ap` — onde moram o tema claro/escuro e a ponte de tokens.
-// Sem isto a dica nascia com os valores de `:root` e podia sair CLARA numa casca
-// escura. Com a casca ligada o portal passa a apontar para o próprio `.ap`, e a
-// dica herda o tema como qualquer outra peça da tela.
+// D-1122 (E-069 H-11b): a dica da Sala escura — ladrilho de 9 px, fio `fio-2`, texto de
+// 12 px. O portal, a casca `.ap` e o tema seguem como na D-599 (`containerDoPortal`).
+// A dica nomeia o botão só de ícone; ela nunca é o único lugar de uma informação, porque
+// no toque não há hover.
 
-function containerDoPortal(): HTMLElement | undefined {
-  if (typeof document === 'undefined') return undefined;
-  return document.querySelector<HTMLElement>('.ap') ?? undefined;
+interface TooltipContentProps extends React.ComponentPropsWithoutRef<typeof RT.Content> {
+  /** `false` desenha no lugar, sem portal — só para o teste em servidor. */
+  portal?: boolean;
 }
 
-export const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof RT.Content>,
-  React.ComponentPropsWithoutRef<typeof RT.Content>
->(({ className, sideOffset = 6, ...props }, ref) => (
-  <RT.Portal container={containerDoPortal()}>
-    <RT.Content
-      ref={ref}
-      sideOffset={sideOffset}
-      className={cn(
-        'card z-[70] overflow-hidden px-2 py-1 text-[11.5px] text-[var(--ink)]',
-        'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-        'data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1',
-        className,
-      )}
-      style={{ borderRadius: 'var(--r1)' }}
-      {...props}
-    />
-  </RT.Portal>
-));
+export const TooltipContent = React.forwardRef<React.ElementRef<typeof RT.Content>, TooltipContentProps>(
+  ({ className, sideOffset = 6, portal = true, ...props }, ref) => {
+    const conteudo = (
+      <RT.Content
+        ref={ref}
+        sideOffset={sideOffset}
+        className={cn(
+          'z-[70] max-w-[280px] rounded-ladrilho px-2.5 py-1.5 text-pequeno',
+          PELE_FLUTUANTE,
+          MOVIMENTO_FLUTUANTE,
+          className,
+        )}
+        {...props}
+      />
+    );
+    return portal ? <RT.Portal container={containerDoPortal()}>{conteudo}</RT.Portal> : conteudo;
+  },
+);
 TooltipContent.displayName = 'TooltipContent';
 
 interface TooltipProps {

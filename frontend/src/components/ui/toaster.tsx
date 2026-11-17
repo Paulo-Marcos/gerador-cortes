@@ -1,17 +1,21 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { Icon, type IconName } from '@/upgrade/Icon';
+import { Icon, type IconName } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/icon-button';
 
-// D-599: na casca nova o aviso vira o toast do handoff — cartão de vidro no
-// canto, ícone colorido pelo tom, título em negrito e o resto em `--mute`.
-// Ele sobe para 74 px do rodapé porque a barra de ações fixa mora ali: um
-// aviso que tapa o botão primário atrapalha exatamente quem avisou.
+// D-1122 (E-069 H-11b): o aviso da Sala escura — pílula de 18 px de raio, o sinal do tom
+// num círculo de 32 px, título em negrito e o resto em `fg-2`. Mantém o que a D-599
+// decidiu: sobe 74 px do rodapé, porque a barra de ações fixa mora ali e um aviso que
+// tapa o botão primário atrapalha exatamente quem avisou. Sem `backdrop-filter` (§3.6).
+//
+// O viewport é uma região `aria-live`: o leitor de tela anuncia cada aviso que entra,
+// sem tirar o foco de onde o operador estava. O erro é `role="alert"` (anunciado já).
 
-const AP_TOM: Record<ToastTone, string> = {
-  success: 'var(--ok)',
-  info: 'var(--info)',
-  warning: 'var(--warn)',
-  error: 'var(--err)',
+const COR_DO_TOM: Record<ToastTone, string> = {
+  success: '[--c:var(--cc-ok)]',
+  info: '[--c:var(--cc-info)]',
+  warning: '[--c:var(--cc-aviso)]',
+  error: '[--c:var(--cc-erro)]',
 };
 
 export type ToastTone = 'success' | 'info' | 'warning' | 'error';
@@ -103,40 +107,39 @@ export function ToastViewport({
     <div
       aria-live="polite"
       aria-relevant="additions removals"
-      className={cn(
-        'pointer-events-none fixed right-5 z-[80] grid w-[min(360px,calc(100vw-40px))] gap-2',
-        'bottom-[74px]',
-      )}
+      className="pointer-events-none fixed bottom-[74px] right-5 z-[80] grid w-[min(380px,calc(100vw-40px))] gap-2"
     >
-      {toasts.map((toast) => {
-        return (
-          <div
-            key={toast.id}
-            className="card pointer-events-none flex items-center gap-[9px] p-[10px_12px] animate-in fade-in slide-in-from-bottom-1"
-            style={{ padding: '10px 12px', boxShadow: '0 18px 44px rgb(0 0 0/.3)' }}
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          role={toast.tone === 'error' ? 'alert' : 'status'}
+          data-tone={toast.tone}
+          className={cn(
+            'pointer-events-none flex items-center gap-3 rounded-[18px] border border-fio-2 bg-pop py-2.5 pl-2.5 pr-3.5 text-fg shadow-pop-luz',
+            'animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none',
+            COR_DO_TOM[toast.tone],
+          )}
+        >
+          <span className="inline-grid size-8 flex-none place-items-center rounded-full bg-[color-mix(in_srgb,var(--c)_16%,transparent)] text-[var(--c)]">
+            <Icon name={ICONE_DO_TOM[toast.tone]} />
+          </span>
+          <span className="min-w-0 flex-1 text-pequeno">
+            {toast.title ? <b className="font-bold">{toast.title} </b> : null}
+            <span className="font-normal text-fg-2">{toast.message}</span>
+            {toast.conteudo ? <span className="pointer-events-auto mt-1.5 block">{toast.conteudo}</span> : null}
+          </span>
+          <IconButton
+            variant="fantasma"
+            size="pq"
+            aria-label="Fechar aviso"
+            title="Fechar aviso"
+            onClick={() => onDismiss(toast.id)}
+            className="pointer-events-auto"
           >
-            <Icon
-              name={ICONE_DO_TOM[toast.tone]}
-              style={{ color: AP_TOM[toast.tone], flex: 'none' }}
-            />
-            <span className="min-w-0 flex-1 text-[12px] leading-[1.45]">
-              {toast.title ? <b>{toast.title} </b> : null}
-              <span style={{ color: 'var(--mute)' }}>{toast.message}</span>
-              {toast.conteudo ? <span className="pointer-events-auto mt-[6px] block">{toast.conteudo}</span> : null}
-            </span>
-            <button
-              type="button"
-              aria-label="Fechar aviso"
-              title="Fechar aviso"
-              onClick={() => onDismiss(toast.id)}
-              className="btn btn-icon btn-ghost pointer-events-auto"
-              style={{ width: 22, height: 22 }}
-            >
-              <Icon name="x" />
-            </button>
-          </div>
-        );
-      })}
+            <Icon name="x" />
+          </IconButton>
+        </div>
+      ))}
     </div>
   );
 }
