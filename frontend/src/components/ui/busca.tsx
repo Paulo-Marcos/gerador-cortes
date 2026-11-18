@@ -29,6 +29,7 @@ export const Busca = React.forwardRef<HTMLInputElement, BuscaProps>(
         <input
           ref={ref}
           type="search"
+          data-sala=""
           id={id ?? campo?.id}
           value={value}
           onChange={(e) => aoMudar(e.target.value)}
@@ -49,6 +50,7 @@ export const Busca = React.forwardRef<HTMLInputElement, BuscaProps>(
           podeLimpar && (
             <button
               type="button"
+              data-sala=""
               aria-label="Limpar busca"
               onClick={() => aoMudar('')}
               className="absolute right-2.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-full text-fg-3 transition-colors hover:bg-vidro-3 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"

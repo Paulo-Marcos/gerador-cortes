@@ -21,6 +21,7 @@ export const TabsTrigger = React.forwardRef<
   return (
     <TabsPrimitive.Trigger
       ref={ref}
+      data-sala=""
       className={cn(
         'relative inline-flex h-10 items-center gap-1.5 whitespace-nowrap border-0 bg-transparent p-0 text-corpo font-semibold text-fg-3 transition-colors duration-150',
         'hover:text-fg data-[state=active]:text-fg',
@@ -42,6 +43,7 @@ export const TabsContent = React.forwardRef<
   return (
     <TabsPrimitive.Content
       ref={ref}
+      data-sala=""
       className={cn(
         'focus-visible:rounded-etiqueta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
         className,

@@ -163,6 +163,7 @@ function PilulaDoCorte({
   return (
     <a
       data-corte={c.id}
+      data-sala=""
       data-estado={c.estado}
       href={c.href ?? `#corte-${c.id}`}
       aria-label={rotuloDoCorte(c, aberto)}

@@ -56,6 +56,7 @@ export function Segmented<V extends string = string>({
           key={o.valor}
           value={o.valor}
           disabled={o.desabilitado}
+          data-sala=""
           className={cn(
             'inline-flex h-[30px] select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-pilula border border-transparent bg-transparent px-3.5 text-pequeno font-semibold leading-none text-fg-3 transition-colors duration-150',
             cheio && 'flex-1',

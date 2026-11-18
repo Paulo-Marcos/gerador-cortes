@@ -58,6 +58,7 @@ function EscolhaOpcional({
               key={opcao.slug}
               type="button"
               aria-pressed={ativa}
+              data-sala=""
               onClick={() => onAlternar(opcao.slug)}
               className={cn(
                 'rounded-pilula border px-3 py-1 text-micro transition-colors duration-150 motion-reduce:transition-none',

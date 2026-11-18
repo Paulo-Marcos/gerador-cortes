@@ -19,6 +19,7 @@ export const LinkDeAcao = React.forwardRef<HTMLButtonElement, LinkDeAcaoProps>(
         ref={ref}
         {...(asChild ? {} : { type })}
         data-variant="link-de-acao"
+        data-sala=""
         className={cn(
           'inline-flex items-center gap-1.5 rounded-md border-0 bg-transparent py-1 text-corpo font-semibold text-iris transition-colors duration-150',
           'hover:text-iris-2 hover:underline hover:underline-offset-[3px]',

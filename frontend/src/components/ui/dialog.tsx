@@ -99,6 +99,7 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
       />
       <RD.Content
         ref={caixa}
+        data-sala=""
         className={cn(
           caixaDoDialogo({ tamanho }),
           lateral ? 'data-[state=open]:slide-in-from-right-8' : CENTRADO,
@@ -129,6 +130,7 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
               nas classes, e o teste travado do `ConfirmDialog` (D-993) exige que o HTML sem
               escolha não tenha a palavra. Mesma pele do fantasma, 30 px. */}
           <RD.Close
+            data-sala=""
             aria-label="Fechar"
             className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-pilula text-fg-2 transition-colors duration-150 hover:bg-vidro-2 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco motion-reduce:transition-none"
           >

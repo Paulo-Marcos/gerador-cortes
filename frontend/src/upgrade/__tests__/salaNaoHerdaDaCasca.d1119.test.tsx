@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 const css = readFileSync(resolve(__dirname, '../upgrade.css'), 'utf-8');
 
-const MARCADORES = ["[class*='outline-foco']", "[class*='rounded-campo']"];
+const MARCADORES = ['[data-sala]'];
 
 /** Regras da casca que reiniciam a fonte ou pintam o anel de foco em controles. */
 function regrasReiniciadoras() {
@@ -93,7 +93,7 @@ describe('D-1119: a casca antiga não herda por cima da Sala escura', () => {
       expect(excecao, `${seletor} sem a exceção :where(:not(...))`).not.toBeNull();
       // O marcador do campo basta para input/select/textarea; o botão e o foco
       // precisam dos dois, porque os dois tipos de controle passam por eles.
-      expect(excecao![1]).toContain("[class*='rounded-campo']");
+      expect(excecao![1]).toContain('[data-sala]');
       if (/^\.ap (button|:focus-visible)/.test(seletor)) {
         for (const m of MARCADORES) expect(excecao![1]).toContain(m);
       }

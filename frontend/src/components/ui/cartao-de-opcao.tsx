@@ -24,6 +24,7 @@ export const CartaoDeOpcao = React.forwardRef<HTMLButtonElement, CartaoDeOpcaoPr
         ref={ref}
         type="button"
         role="radio"
+        data-sala=""
         aria-checked={marcado}
         tabIndex={tabIndex}
         disabled={disabled}

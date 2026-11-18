@@ -39,6 +39,7 @@ export const MenuContent = React.forwardRef<React.ElementRef<typeof RM.Content>,
     const conteudo = (
       <RM.Content
         ref={ref}
+        data-sala=""
         sideOffset={sideOffset}
         align={align}
         className={cn(PAINEL_DO_MENU, MOVIMENTO_FLUTUANTE, className)}
@@ -80,6 +81,7 @@ export const MenuItem = React.forwardRef<React.ElementRef<typeof RM.Item>, MenuI
   ({ className, icone, atalho, perigo, desligado, onSelect, children, ...props }, ref) => (
     <RM.Item
       ref={ref}
+      data-sala=""
       aria-disabled={desligado || undefined}
       onSelect={(evento) => aoEscolherItem(desligado, evento, onSelect)}
       className={cn(ITEM_DO_MENU, perigo && ITEM_DO_MENU_PERIGOSO, className)}

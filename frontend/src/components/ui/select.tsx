@@ -48,6 +48,7 @@ export function Select({
     >
       <div className="relative w-full">
         <RadixSelect.Trigger
+          data-sala=""
           id={id ?? campo?.id}
           aria-label={ariaLabel}
           aria-busy={carregando ? true : undefined}

@@ -190,6 +190,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={classes}
         ref={ref}
         data-variant={variant}
+        data-sala={LEGADAS.has(variant) ? undefined : ''}
         aria-busy={carregando || undefined}
         onClick={carregando ? (e: React.MouseEvent<HTMLButtonElement>) => e.preventDefault() : onClick}
         {...props}

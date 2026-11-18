@@ -15,6 +15,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
       ref={ref}
       type="button"
       role="checkbox"
+      data-sala=""
       aria-checked={checked}
       onClick={() => onCheckedChange(checked !== true)}
       className={cn(
