@@ -11,6 +11,7 @@ serviço e mapeia os erros de domínio para os status corretos.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Literal
 
 from app.domain.canal import palco_componentes as palco_dominio
@@ -38,7 +39,7 @@ from app.services import (
     palco_por_escopo,
     studio_youtube,
 )
-from app.services.canal import faixa_do_short, motivos_de_exclusao
+from app.services.canal import faixa_do_short, luz_do_canal, motivos_de_exclusao
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -406,6 +407,9 @@ class CanalResponse(BaseModel):
     youtube_channel_id: str = ""
     paleta: PaletaModel
     ativo: bool
+    # Duas cores amostradas das capas (`#rrggbb`); vazio sem capa. A paleta cadastrada
+    # tem precedência, e quem decide isso é a tela (D-1130).
+    luz: list[str] = Field(default_factory=list)
 
 
 class ListaCanaisResponse(BaseModel):
@@ -434,7 +438,7 @@ class SelecionarCanalResponse(BaseModel):
     requer_restart: bool
 
 
-def _para_response(canal: Canal) -> CanalResponse:
+def _para_response(canal: Canal, luz: list[str] | None = None) -> CanalResponse:
     return CanalResponse(
         id=canal.id,
         handle=canal.handle,
@@ -447,6 +451,7 @@ def _para_response(canal: Canal) -> CanalResponse:
             acento=canal.paleta.acento,
         ),
         ativo=canal.ativo,
+        luz=luz or [],
     )
 
 
@@ -455,7 +460,10 @@ async def listar_canais():
     canais = channels_service.listar_canais()
     ativo = next((c.id for c in canais if c.ativo), None)
     return ListaCanaisResponse(
-        canais=[_para_response(c) for c in canais],
+        canais=[
+            _para_response(c, await asyncio.to_thread(luz_do_canal.luz_do_canal, c.id))
+            for c in canais
+        ],
         ativo=ativo,
     )
 
@@ -491,4 +499,5 @@ async def editar_canal(canal_id: str, body: IdentidadeModel):
         canal = channels_service.editar_identidade(canal_id, identidade)
     except CanalNaoEncontrado as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return _para_response(canal)
+    luz = await asyncio.to_thread(luz_do_canal.luz_do_canal, canal.id)
+    return _para_response(canal, luz)
