@@ -205,7 +205,7 @@ export function AcaoDeIa({
         <button
           key={id}
           type="button"
-          data-sala=""
+          data-sala={sala ? '' : undefined}
           onClick={() => onGerar(id)}
           disabled={travado}
           aria-label={`${descricao} com o ${nome}`}
@@ -268,7 +268,7 @@ function BotaoDasDuas({
   return (
     <button
       type="button"
-      data-sala=""
+      data-sala={sala ? '' : undefined}
       onClick={onGerar}
       disabled={travado}
       aria-label={`${descricao} com o Claude e o Gemini`}
@@ -354,7 +354,6 @@ export function MenuDeIa({
     <div ref={raiz} className={cn('relative', className)}>
       <button
         type="button"
-        data-sala=""
         onClick={() => setAberto((atual) => !atual)}
         disabled={desabilitado || ocupado}
         aria-label={rotulo}
@@ -389,7 +388,6 @@ export function MenuDeIa({
             <button
               key={id}
               type="button"
-              data-sala=""
               role="menuitem"
               onClick={() => {
                 setAberto(false);
