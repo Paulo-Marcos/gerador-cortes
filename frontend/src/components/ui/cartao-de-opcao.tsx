@@ -42,7 +42,7 @@ export const CartaoDeOpcao = React.forwardRef<HTMLButtonElement, CartaoDeOpcaoPr
         <span className="flex items-start gap-2.5">
           <BolinhaDoRadio marcado={marcado} className="mt-0.5" />
           <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-[13px] font-semibold leading-5 text-fg group-disabled:text-fg-off">
+            <span className="text-corpo font-semibold leading-5 text-fg group-disabled:text-fg-off">
               {titulo}
             </span>
             {descricao && <span className="text-xs leading-4 text-fg-3">{descricao}</span>}

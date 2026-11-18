@@ -20,7 +20,7 @@ export const LinkDeAcao = React.forwardRef<HTMLButtonElement, LinkDeAcaoProps>(
         {...(asChild ? {} : { type })}
         data-variant="link-de-acao"
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-md border-0 bg-transparent py-1 text-[13px] font-semibold text-iris transition-colors duration-150',
+          'inline-flex items-center gap-1.5 rounded-md border-0 bg-transparent py-1 text-corpo font-semibold text-iris transition-colors duration-150',
           'hover:text-iris-2 hover:underline hover:underline-offset-[3px]',
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
           'disabled:cursor-not-allowed disabled:text-fg-off disabled:no-underline motion-reduce:transition-none',

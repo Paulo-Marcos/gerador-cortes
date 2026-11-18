@@ -38,9 +38,8 @@ export const CabecalhoDaLista = React.forwardRef<HTMLLIElement, React.HTMLAttrib
       <li
         ref={ref}
         aria-hidden
-        // O tamanho vai FORA do `cn`: o twMerge atual lê `text-micro` como cor e o descartaria
-        // ao lado de `text-fg-3`. A cor pode ser trocada por `className`; o tamanho é fixo.
-        className={`${cn(GRADE, 'h-7 pl-3 pr-3.5 text-fg-3', className)} text-micro`}
+        // A cor pode ser trocada por `className`; o tamanho é fixo (`text-micro`, depois do `className`).
+        className={cn(GRADE, 'h-7 pl-3 pr-3.5 text-fg-3', className, 'text-micro')}
         {...props}
       />
     );

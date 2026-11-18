@@ -40,7 +40,7 @@ describe('Selo', () => {
 
   it.each(TONS_DO_SELO)('tom %s mantém o tamanho junto da cor (o cn não pode comer um dos dois)', (tom) => {
     const h = html(tom);
-    expect(h).toContain('text-[12px]');
+    expect(h).toContain('text-pequeno');
     expect(h).toMatch(/\[--c:var\(--cc-(fg-3|fg-2|info|aviso|ok|erro)\)\]/);
     expect(h).toContain('text-[color:var(--c)]');
   });

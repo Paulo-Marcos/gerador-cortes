@@ -9,7 +9,7 @@ export const Etiqueta = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<H
       <span
         ref={ref}
         className={cn(
-          'inline-flex h-5 select-none items-center whitespace-nowrap rounded-etiqueta bg-vidro-2 px-2 text-[11px] font-semibold leading-none text-fg-2',
+          'inline-flex h-5 select-none items-center whitespace-nowrap rounded-etiqueta bg-vidro-2 px-2 text-micro font-semibold leading-none text-fg-2',
           className,
         )}
         {...props}
