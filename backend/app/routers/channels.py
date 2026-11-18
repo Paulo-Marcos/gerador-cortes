@@ -407,8 +407,6 @@ class CanalResponse(BaseModel):
     youtube_channel_id: str = ""
     paleta: PaletaModel
     ativo: bool
-    # Duas cores amostradas das capas (`#rrggbb`); vazio sem capa. A paleta cadastrada
-    # tem precedência, e quem decide isso é a tela (D-1130).
     luz: list[str] = Field(default_factory=list)
 
 
@@ -499,5 +497,4 @@ async def editar_canal(canal_id: str, body: IdentidadeModel):
         canal = channels_service.editar_identidade(canal_id, identidade)
     except CanalNaoEncontrado as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    luz = await asyncio.to_thread(luz_do_canal.luz_do_canal, canal.id)
-    return _para_response(canal, luz)
+    return _para_response(canal, await asyncio.to_thread(luz_do_canal.luz_do_canal, canal.id))

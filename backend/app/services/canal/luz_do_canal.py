@@ -3,7 +3,8 @@
 Lê `instance/channels/<canal>/projetos/*/thumbnails/thumb_*` (as capas do YouTube;
 `_arte` é a arte sem texto e fica de fora). Sem capa, a luz vem vazia. O resultado
 fica em memória por alguns minutos: a lista de canais é consultada a toda hora e as
-capas mudam de tempos em tempos.
+capas mudam de tempos em tempos. A paleta cadastrada tem precedência sobre esta
+amostra, mas quem decide isso é a tela.
 """
 
 from __future__ import annotations
