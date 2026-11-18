@@ -6160,6 +6160,8 @@ export interface components {
             handle: string;
             /** Id */
             id: string;
+            /** Luz */
+            luz?: string[];
             /** Nome */
             nome: string;
             paleta: components["schemas"]["PaletaModel"];

@@ -2388,6 +2388,13 @@
             "title": "Id",
             "type": "string"
           },
+          "luz": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Luz",
+            "type": "array"
+          },
           "nome": {
             "title": "Nome",
             "type": "string"
