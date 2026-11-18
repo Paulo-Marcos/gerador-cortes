@@ -21,8 +21,15 @@ logger = logging.getLogger(__name__)
 
 CAPAS_AMOSTRADAS = 6
 _VALIDADE_S = 300.0
-_EXTENSOES = {".png", ".jpg", ".jpeg"}
+_EXTENSOES = {".png", ".jpg", ".jpeg", ".webp"}
 _cache: dict[str, tuple[float, list[str]]] = {}
+
+
+def _quando(capa: Path) -> float:
+    try:
+        return capa.stat().st_mtime
+    except OSError:  # apagada entre o glob e aqui
+        return 0.0
 
 
 def _capas_recentes(projetos: Path) -> list[Path]:
@@ -31,7 +38,7 @@ def _capas_recentes(projetos: Path) -> list[Path]:
         for p in projetos.glob("*/thumbnails/thumb_*")
         if p.suffix.lower() in _EXTENSOES and not p.stem.endswith("_arte")
     ]
-    capas.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    capas.sort(key=_quando, reverse=True)
     return capas[:CAPAS_AMOSTRADAS]
 
 
@@ -41,8 +48,8 @@ def luz_da_pasta(projetos: Path) -> list[str]:
     for capa in _capas_recentes(projetos):
         try:
             pixels.extend(amostra_de_pixels(capa))
-        except OSError:
-            logger.warning("Capa ilegível ao amostrar a luz do canal: %s", capa)
+        except Exception:  # noqa: BLE001 - uma capa quebrada (ou bomba do PIL) não derruba a lista
+            logger.warning("Capa ilegível ao amostrar a luz do canal: %s", capa, exc_info=True)
     return luz_das_amostras(pixels)
 
 

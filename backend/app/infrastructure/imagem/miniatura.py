@@ -15,12 +15,17 @@ from PIL import Image
 
 LARGURA_DA_MINIATURA = 64
 LIMITE_DA_MINIATURA_BYTES = 4096
+_ALTURA_MAXIMA = 144  # imagem comprida demais não vira resize gigante
 _QUALIDADES = (80, 70, 60, 50, 40, 30, 20)
 _LADO_DA_AMOSTRA = 32
 
 
 def _abrir_rgb(caminho: Path, lado_maximo: int) -> Image.Image:
-    img = Image.open(caminho)
+    with Image.open(caminho) as aberta:
+        return _como_rgb(aberta, lado_maximo)
+
+
+def _como_rgb(img: Image.Image, lado_maximo: int) -> Image.Image:
     # Num JPEG o decodificador já entrega a imagem encolhida: poupa ler os pixels todos.
     img.draft("RGB", (lado_maximo * 2, lado_maximo * 2))
     return img.convert("RGB")
@@ -29,7 +34,7 @@ def _abrir_rgb(caminho: Path, lado_maximo: int) -> Image.Image:
 def miniatura_jpeg(caminho: Path) -> bytes:
     """A capa em 64 px de largura, JPEG 4:4:4, com até 4 KB (a melhor qualidade que cabe)."""
     img = _abrir_rgb(caminho, LARGURA_DA_MINIATURA)
-    altura = max(1, round(img.height * LARGURA_DA_MINIATURA / img.width))
+    altura = min(_ALTURA_MAXIMA, max(1, round(img.height * LARGURA_DA_MINIATURA / img.width)))
     img = img.resize((LARGURA_DA_MINIATURA, altura), Image.Resampling.LANCZOS)
     dados = b""
     for qualidade in _QUALIDADES:
