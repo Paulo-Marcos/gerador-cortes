@@ -21,6 +21,7 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(function Chip
       ref={ref}
       type={type}
       aria-pressed={pressionado}
+      data-sala=""
       className={cn(
         'inline-flex h-[30px] select-none items-center gap-1.5 whitespace-nowrap rounded-pilula border border-fio-2 bg-transparent px-3 text-pequeno font-semibold leading-none text-fg-2 transition-colors duration-150',
         'hover:bg-vidro-2 hover:text-fg',

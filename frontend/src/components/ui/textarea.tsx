@@ -16,6 +16,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         ref={ref}
+        data-sala=""
         id={id ?? campo?.id}
         placeholder={carregando ? frase : placeholder}
         disabled={disabled || Boolean(carregando)}

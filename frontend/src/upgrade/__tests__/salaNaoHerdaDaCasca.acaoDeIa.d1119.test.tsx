@@ -16,10 +16,10 @@ const css = readFileSync(resolve(__dirname, '../upgrade.css'), 'utf-8');
 const MARCADOR = /outline-foco|ring-foco|rounded-campo/;
 
 describe('D-1119: a casca também reconhece a ação de IA, a busca, a seleção e o cartão', () => {
-  it('a exceção da casca inclui `ring-foco` na fonte e no foco', () => {
+  it('a exceção da casca inclui `[data-sala]` na fonte e no foco', () => {
     const regras = css.match(/^\.ap (button|:focus-visible):where\(:not\(.*\)\)/gm) ?? [];
     expect(regras).toHaveLength(2);
-    for (const r of regras) expect(r).toContain("[class*='ring-foco']");
+    for (const r of regras) expect(r).toContain('[data-sala]');
   });
 
   it.each([

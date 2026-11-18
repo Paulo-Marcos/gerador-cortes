@@ -23,6 +23,7 @@ export const PopoverContent = React.forwardRef<React.ElementRef<typeof RP.Conten
     const conteudo = (
       <RP.Content
         ref={ref}
+        data-sala=""
         sideOffset={sideOffset}
         align={align}
         className={cn(

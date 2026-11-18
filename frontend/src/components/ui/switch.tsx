@@ -18,6 +18,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       ref={ref}
       type="button"
       role="switch"
+      data-sala=""
       aria-checked={checked}
       aria-busy={carregando ? true : undefined}
       disabled={disabled || carregando}

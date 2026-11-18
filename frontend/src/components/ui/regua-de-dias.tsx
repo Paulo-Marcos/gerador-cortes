@@ -101,6 +101,7 @@ export const ReguaDeDias = React.forwardRef<HTMLOListElement, ReguaDeDiasProps>(
                 <a
                   key={l.id}
                   href={l.href}
+                  data-sala=""
                   className="flex min-w-0 items-center gap-2 rounded-etiqueta text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
                 >
                   {l.capa && (

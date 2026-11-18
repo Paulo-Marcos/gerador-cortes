@@ -46,6 +46,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={id ?? campo?.id}
+          data-sala=""
           placeholder={carregando ? frase : placeholder}
           disabled={disabled || Boolean(carregando)}
           aria-busy={carregando ? true : undefined}

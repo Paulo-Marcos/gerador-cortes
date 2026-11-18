@@ -90,6 +90,7 @@ export function GatilhoDoMenu({
       type="button"
       onClick={onAlternar}
       aria-label={label}
+      data-sala=""
       title={label}
       aria-haspopup="menu"
       aria-expanded={open}
@@ -155,6 +156,7 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
     <button
       type="button"
       role="menuitem"
+      data-sala=""
       title={item.title}
       aria-disabled={item.disabled || undefined}
       onClick={() => {

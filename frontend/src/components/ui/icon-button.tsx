@@ -79,6 +79,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>((
         ref={ref}
         type={type}
         data-variant={variant}
+        data-sala=""
         className={cn(
           botaoDeLuz({ variante: LUZ_DA_VARIANTE[variant], tamanho: size, soIcone: true }),
           className,
