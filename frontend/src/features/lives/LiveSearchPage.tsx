@@ -181,7 +181,7 @@ export function LiveSearchPage() {
         </section>
 
         {selectedLives.length > 0 && (
-          <section className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-accent)] bg-[color-mix(in_oklch,var(--wb-accent)_6%,var(--wb-bg-card))] p-3.5 shadow-[0_14px_36px_rgba(20,15,10,0.10)] md:grid-cols-[minmax(0,1fr)_auto]">
+          <section className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-accent)] bg-[color-mix(in_oklab,var(--wb-accent)_6%,var(--wb-bg-card))] p-3.5 shadow-[0_14px_36px_rgba(20,15,10,0.10)] md:grid-cols-[minmax(0,1fr)_auto]">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]">
@@ -282,7 +282,7 @@ function LiveRow({
         'grid items-center gap-3 rounded-[var(--radius-lg)] border bg-[var(--wb-bg-card)] p-3 shadow-[shadow:var(--wb-shadow)] transition-colors',
         'md:grid-cols-[28px_146px_minmax(0,1fr)_auto]',
         selected
-          ? 'border-[var(--wb-accent)] bg-[color-mix(in_oklch,var(--wb-accent)_8%,var(--wb-bg-card))]'
+          ? 'border-[var(--wb-accent)] bg-[color-mix(in_oklab,var(--wb-accent)_8%,var(--wb-bg-card))]'
           : 'border-[var(--wb-border-soft)]',
         live.ja_baixado && 'opacity-65',
       )}

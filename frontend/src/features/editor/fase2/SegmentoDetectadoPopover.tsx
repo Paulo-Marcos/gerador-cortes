@@ -136,7 +136,7 @@ function DecisaoButton({
       style={{
         background: toneMap.bg,
         color: toneMap.text,
-        borderColor: `color-mix(in oklch, ${toneMap.border} 45%, transparent)`,
+        borderColor: `color-mix(in oklab, ${toneMap.border} 45%, transparent)`,
       }}
     >
       {label}

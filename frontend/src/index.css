@@ -33,10 +33,10 @@
        Superfície antiga vira SÓLIDA (`--cc-painel-solido`): vidro só chega com a casca
        (H-13). O `.ap` redeclara a mesma lista (upgrade/upgrade.css) e o teste
        `styles/__tests__/ponteDosTokens.d1128.test.ts` confere que nada fica sem destino.
-       Toda mistura daqui é `in oklab`, nunca `in oklch`: medido no Chrome 157 (18/11),
-       `color-mix(in oklch, …)` sobre um hex quase neutro como `--cc-painel-solido` perde
-       o matiz (`oklch(0.164 0.011 none)`) e pinta com matiz 0 — o cinza azulado sai
-       marrom avermelhado. Em oklab não há matiz para perder. */
+       Toda mistura de cor do app é em oklab, nunca em oklch: medido no Chrome 157
+       (18/11), misturar em oklch um hex quase neutro como `--cc-painel-solido` perde o
+       matiz (sai `none`) e pinta com matiz 0 — o cinza azulado sai marrom avermelhado.
+       Em oklab não há matiz para perder (styles/__tests__/semMisturaEmOklch.d1128). */
     --success: var(--cc-ok);
     --warning: var(--cc-aviso);
     --error: var(--cc-erro);

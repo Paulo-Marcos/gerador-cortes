@@ -95,7 +95,7 @@ function desenharAlerta(regions: RegionsInstance, alerta: AlertaConferir, offset
     ';pointer-events:none',
     'height:14px',
     'border-top:3px solid var(--wb-warn)',
-    'background:repeating-linear-gradient(135deg, color-mix(in oklch, var(--wb-warn) 35%, transparent) 0 4px, transparent 4px 8px)',
+    'background:repeating-linear-gradient(135deg, color-mix(in oklab, var(--wb-warn) 35%, transparent) 0 4px, transparent 4px 8px)',
     'z-index:4',
   ].join(';');
 }

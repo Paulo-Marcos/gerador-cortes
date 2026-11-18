@@ -39,7 +39,7 @@ export function sceneTypeStyle(tipo: string) {
   const meta = metaCena(tipo);
   return {
     color: meta.color,
-    soft: `color-mix(in oklch, ${meta.color} 16%, var(--wb-bg-card))`,
-    border: `color-mix(in oklch, ${meta.color} 58%, var(--wb-border))`,
+    soft: `color-mix(in oklab, ${meta.color} 16%, var(--wb-bg-card))`,
+    border: `color-mix(in oklab, ${meta.color} 58%, var(--wb-border))`,
   };
 }

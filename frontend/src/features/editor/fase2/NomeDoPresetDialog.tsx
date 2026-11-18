@@ -32,7 +32,7 @@ export function NomeDoPresetDialog({
 }) {
   return (
     <div
-      className="absolute inset-0 z-[90] flex items-center justify-center bg-[color-mix(in_oklch,var(--wb-ink)_40%,transparent)]"
+      className="absolute inset-0 z-[90] flex items-center justify-center bg-[color-mix(in_oklab,var(--wb-ink)_40%,transparent)]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

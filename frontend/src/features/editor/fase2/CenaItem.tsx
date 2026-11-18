@@ -68,7 +68,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
       }
     : ativa
       ? {
-          background: `color-mix(in oklch, ${meta.color} 10%, var(--wb-bg-card))`,
+          background: `color-mix(in oklab, ${meta.color} 10%, var(--wb-bg-card))`,
           borderColor: meta.color,
           boxShadow: 'var(--wb-shadow)',
         }
@@ -91,8 +91,8 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           <span
             className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-xs)] border"
             style={{
-              background: `color-mix(in oklch, ${meta.color} 18%, var(--wb-bg-card))`,
-              borderColor: `color-mix(in oklch, ${meta.color} 50%, var(--wb-border))`,
+              background: `color-mix(in oklab, ${meta.color} 18%, var(--wb-bg-card))`,
+              borderColor: `color-mix(in oklab, ${meta.color} 50%, var(--wb-border))`,
               color: meta.color,
             }}
             title={meta.label}
