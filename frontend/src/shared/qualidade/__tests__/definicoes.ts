@@ -99,8 +99,10 @@ const TRANSICAO_TOTAL = [
   /\btransition\s*:\s*['"]?[\d.]/g,
 ];
 // `outline-none` só vale com o foco desenhado de outro jeito na mesma linha:
-// `ring-0` e `outline-offset` não desenham nada.
-const FOCO_DESENHADO = /\b(?:ring|outline)-(?!none\b|0\b|offset)[\w[]/;
+// `ring-0`, `outline-offset`, as cores que não pintam (`transparent`, `inherit`,
+// `current`) e os modificadores sem cor (`inset`, estilos de traço) não desenham nada.
+const FOCO_DESENHADO =
+  /\b(?:ring|outline)-(?!(?:none|0|offset|transparent|inherit|current|inset|solid|dashed|dotted|double|hidden)\b)[\w[]/;
 
 function contarOutlineSemPar(texto: string): number {
   return semComentarios(texto)
@@ -234,6 +236,14 @@ export const DEFINICOES: Record<string, Definicao> = {
       ["style={{ outline: 'none' }}", 1],
       ['className="outline-none ring-0"', 1],
       ['className="outline-none outline-offset-2"', 1],
+      ['className="outline-none focus-visible:outline-transparent"', 1],
+      ['className="outline-none focus-visible:ring-transparent"', 1],
+      ['className="outline-none focus-visible:outline-inherit"', 1],
+      ['className="outline-none focus-visible:outline-current"', 1],
+      ['className="outline-none focus-visible:outline-dashed"', 1],
+      ['className="outline-none focus-visible:outline-foco"', 0],
+      ['className="outline-none focus-visible:ring-2 focus-visible:ring-accent-500"', 0],
+      ['className="outline-none focus-visible:outline-2 focus-visible:outline-accent-400"', 0],
       ['a { transition: opacity .2s ease }', 0],
     ],
   },
