@@ -4,6 +4,7 @@ import { KitEstado } from './kit/KitEstado';
 import { KitTempo } from './kit/KitTempo';
 import { KitListas } from './kit/KitListas';
 import { KitFlutua } from './kit/KitFlutua';
+import { KitLuz } from './kit/KitLuz';
 import { ScreenHeader } from './ScreenHeader';
 import { useUpgradeTheme } from './useUpgradeTheme';
 
@@ -86,6 +87,7 @@ export default function UpgradeKitPage() {
         <KitTempo />
         <KitListas />
         <KitFlutua />
+        <KitLuz />
       </div>
     </div>
   );
