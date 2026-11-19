@@ -65,7 +65,7 @@ export function PromptUtilitarioForm({ prompt, pending, onSave, onReset, onCance
                 className={cn(
                   'rounded border px-1.5 py-0.5 font-mono text-[11px]',
                   ausente
-                    ? 'border-error/40 bg-[color-mix(in_oklch,var(--error)_12%,transparent)] text-error'
+                    ? 'border-error/40 bg-[color-mix(in_oklab,var(--error)_12%,transparent)] text-error'
                     : 'border-[var(--wb-border-soft)] text-[var(--wb-text-dim)]',
                 )}
                 title={ausente ? 'Ausente no texto atual' : 'Presente'}
@@ -79,7 +79,7 @@ export function PromptUtilitarioForm({ prompt, pending, onSave, onReset, onCance
               className={cn(
                 'rounded border px-1.5 py-0.5 text-[11px]',
                 marcadorAusente
-                  ? 'border-error/40 bg-[color-mix(in_oklch,var(--error)_12%,transparent)] text-error'
+                  ? 'border-error/40 bg-[color-mix(in_oklab,var(--error)_12%,transparent)] text-error'
                   : 'border-[var(--wb-border-soft)] text-[var(--wb-text-dim)]',
               )}
               title="Marcador do contrato de saída"

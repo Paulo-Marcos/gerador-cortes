@@ -56,7 +56,15 @@
   --cc-pontos: rgba(255, 255, 255, 0.07);
 }
 
-:root[data-theme='light'] {
+/* D-1128 (H-03): até a H-04 levar o tema para o <html>, quem escolhe o tema das telas
+   é o `data-theme` da casca (`.ap`). Os três degraus claros da rampa leem o claro; o
+   resto (Escuro e Ardósia) fica no escuro. O `:not(…)` deixa o <html> com tema
+   explícito (o Kit) mandar; não pode ser `:not([data-theme])`, porque o index.html
+   nasce com `data-theme="indigo"`, resto da paleta antiga. */
+:root[data-theme='light'],
+:root:not([data-theme='dark'], [data-theme='light']):has(
+    .ap:is([data-theme='light'], [data-theme='papel'], [data-theme='nevoa'])
+  ) {
   --cc-bg: #eceef5;
   --cc-bg-2: #f6f7fb;
   --cc-painel: rgba(255, 255, 255, 0.72);

@@ -222,7 +222,7 @@ function DefinirScopeRow({
     >
       <span
         className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
-        style={{ background: 'color-mix(in oklch, ' + tone + ' 18%, transparent)', color: tone }}
+        style={{ background: 'color-mix(in oklab, ' + tone + ' 18%, transparent)', color: tone }}
       >
         <Icon name={icon} />
       </span>
@@ -238,7 +238,7 @@ function DefinirScopeRow({
             <span
               className="flex-none rounded-full px-1.5 font-code text-[8.5px] font-bold uppercase tracking-[0.04em]"
               style={{
-                background: 'color-mix(in oklch, var(--wb-accent) 16%, transparent)',
+                background: 'color-mix(in oklab, var(--wb-accent) 16%, transparent)',
                 color: 'var(--wb-accent)',
               }}
               title="É deste escopo que o corte está lendo agora"

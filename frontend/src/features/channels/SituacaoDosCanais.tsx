@@ -28,7 +28,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
 
   if (erro) {
     return (
-      <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklch,var(--error)_10%,var(--wb-bg-card))] p-5">
+      <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklab,var(--error)_10%,var(--wb-bg-card))] p-5">
         <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
           <Icon name="triangle-alert" size={16} className="text-error" />
           {mensagemErro(erro, 'Não foi possível carregar os canais.')}

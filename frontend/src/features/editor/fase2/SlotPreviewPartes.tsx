@@ -240,7 +240,7 @@ export function SlotDragOverlay({
         width: `${(rect.w / 1920) * 100}%`,
         height: `${(rect.h / 1080) * 100}%`,
         borderColor: visivel ? color : 'transparent',
-        background: selected ? `color-mix(in oklch, ${color} 12%, transparent)` : 'transparent',
+        background: selected ? `color-mix(in oklab, ${color} 12%, transparent)` : 'transparent',
       }}
     >
       {visivel && (

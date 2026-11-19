@@ -27,73 +27,79 @@
     --radius-lg: 12px;
     --radius-xl: 16px;
 
-    --success: oklch(0.55 0.13 145);
-    --warning: oklch(0.62 0.15 70);
-    --error: oklch(0.55 0.18 25);
-    --info: oklch(0.56 0.13 245);
+    /* D-1128 (E-069 H-03): a ponte. Cada variável antiga aponta para o token da
+       Sala escura pela tabela de-para (docs/design/DIRECAO.md §9.2), e o tema vem dos
+       próprios `--cc-*` (styles/tokens.css): não há mais bloco escuro aqui, nem paleta.
+       Superfície antiga vira SÓLIDA (`--cc-painel-solido`): vidro só chega com a casca
+       (H-13). O `.ap` redeclara a mesma lista (upgrade/upgrade.css) e o teste
+       `styles/__tests__/ponteDosTokens.d1128.test.ts` confere que nada fica sem destino.
+       Toda mistura de cor do app é em oklab, nunca em oklch: medido no Chrome 157
+       (18/11), misturar em oklch um hex quase neutro como `--cc-painel-solido` perde o
+       matiz (sai `none`) e pinta com matiz 0 — o cinza azulado sai marrom avermelhado.
+       Em oklab não há matiz para perder (styles/__tests__/semMisturaEmOklch.d1128). */
+    --success: var(--cc-ok);
+    --warning: var(--cc-aviso);
+    --error: var(--cc-erro);
+    --info: var(--cc-info);
 
-    /* Base COOL-GRAY do design Workbench 1c (validação 1 do Paulo:
-       adotar as cores do protótipo literalmente — família 240/250). */
-    --wb-bg: oklch(0.965 0.005 240);
-    --wb-bg-panel: #ffffff;
-    --wb-bg-card: #ffffff;
-    --wb-bg-card-elev: oklch(0.985 0.004 240);
-    --wb-bg-inset: oklch(0.945 0.006 240);
-    /* Faixa das abas do shell Workbench (protótipo: --strip). */
-    --wb-bg-strip: oklch(0.92 0.008 240);
-    --wb-border: oklch(0.9 0.008 240);
-    --wb-border-soft: oklch(0.93 0.006 240);
-    --wb-text: oklch(0.22 0.015 250);
-    --wb-text-mute: oklch(0.45 0.02 250);
-    --wb-text-dim: oklch(0.6 0.02 250);
-    --wb-accent: oklch(0.52 0.165 28);
-    --wb-accent-strong: oklch(0.44 0.18 28);
-    --wb-accent-soft: oklch(0.95 0.04 28);
-    /* Texto sobre fundo --wb-accent (protótipo: --acc-fg). */
-    --wb-accent-fg: #ffffff;
-    --wb-ink: oklch(0.2 0.015 250);
-    --wb-ink-fg: var(--wb-bg);
-    --wb-pill-bg: rgb(255 255 255 / 0.9);
-    --wb-focus: oklch(0.58 0.16 28 / 0.45);
-    --wb-shadow: 0 1px 2px rgb(20 25 40 / 0.05), 0 8px 24px rgb(20 25 40 / 0.07);
-    --wb-shadow-btn: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 4px 12px oklch(0.52 0.165 28 / 0.24);
+    --wb-bg: var(--cc-bg);
+    --wb-bg-panel: var(--cc-painel-solido);
+    --wb-bg-card: var(--cc-painel-solido);
+    --wb-bg-card-elev: var(--cc-vidro-2);
+    --wb-bg-inset: var(--cc-poco);
+    --wb-bg-strip: var(--cc-poco);
+    --wb-border: var(--cc-fio-2);
+    --wb-border-soft: var(--cc-fio);
+    --wb-text: var(--cc-fg);
+    --wb-text-mute: var(--cc-fg-2);
+    --wb-text-dim: var(--cc-fg-3);
+    --wb-text-faint: var(--cc-fg-3);
+    /* O acento antigo vira íris, não feixe: a ponte não sabe qual botão é o primário
+       da tela (§9.2: esse julgamento é da história de cada tela). */
+    --wb-accent: var(--cc-iris);
+    --wb-accent-strong: var(--cc-iris-2);
+    --wb-accent-soft: var(--cc-iris-suave);
+    --wb-accent-fg: var(--cc-sobre-iris);
+    --wb-ink: var(--cc-fg);
+    --wb-ink-fg: var(--cc-sobre-iris);
+    --wb-pill-bg: var(--cc-vidro-2);
+    /* `--wb-focus` pinta o anel dos controles antigos (`ring-[var(--wb-focus)]`): o anel
+       da Sala é `--cc-foco` (§3.4). Sem ele, o foco sumiria nas telas não migradas. */
+    --wb-focus: var(--cc-foco);
+    --wb-shadow: inset 0 1px 0 var(--cc-fio-topo);
+    --wb-shadow-btn: inset 0 1px 0 var(--cc-fio-topo);
 
-    /* Cores semanticas (status) — valores do protótipo Workbench 1c.
-       Cada cor tem variante `-soft` para fundo de chip/badge.
-       Existem tambem --success/--warning/--error/--info (legado): preferir --wb-* nos componentes novos. */
-    --wb-ok: oklch(0.6 0.13 145);
-    --wb-ok-soft: oklch(0.94 0.06 145);
-    /* Texto legível sobre --wb-ok-soft (protótipo Workbench 1c: --ok-ink). */
-    --wb-ok-ink: oklch(0.4 0.12 145);
-    --wb-warn: oklch(0.62 0.15 70);
-    --wb-warn-soft: oklch(0.955 0.035 70);
-    /* Texto legível sobre --wb-warn-soft (protótipo Workbench 1c: --warn-ink). */
-    --wb-warn-ink: oklch(0.48 0.13 70);
-    --wb-err: oklch(0.58 0.18 25);
-    --wb-err-soft: oklch(0.95 0.06 25);
-    /* Texto legível sobre --wb-err-soft (protótipo Workbench v3: --err-ink). */
-    --wb-err-ink: oklch(0.45 0.16 25);
-    --wb-info: oklch(0.56 0.13 245);
-    --wb-info-soft: oklch(0.94 0.05 245);
-    --wb-violet: oklch(0.56 0.14 295);
-    --wb-violet-soft: oklch(0.95 0.05 295);
-    --wb-fire: oklch(0.66 0.19 50);
-    --wb-fire-soft: oklch(0.96 0.045 55);
-    --wb-leitura: oklch(0.56 0.13 240);
-    --wb-leitura-soft: oklch(0.94 0.06 240);
+    /* Estado: a cor cheia é o texto; o fundo tintado sai da cor a 13% (§4.1). */
+    --wb-ok: var(--cc-ok);
+    --wb-ok-soft: color-mix(in srgb, var(--cc-ok) 13%, transparent);
+    --wb-ok-ink: var(--cc-ok);
+    --wb-warn: var(--cc-aviso);
+    --wb-warn-soft: color-mix(in srgb, var(--cc-aviso) 13%, transparent);
+    --wb-warn-ink: var(--cc-aviso);
+    --wb-err: var(--cc-erro);
+    --wb-err-soft: color-mix(in srgb, var(--cc-erro) 13%, transparent);
+    --wb-err-ink: var(--cc-erro);
+    --wb-danger: var(--cc-erro);
+    --wb-danger-ink: var(--cc-erro);
+    --wb-info: var(--cc-info);
+    --wb-info-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
+    --wb-violet: var(--cc-info);
+    --wb-violet-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
+    /* O fogo é só glifo: onde era fundo, vira vidro (§9.2). */
+    --wb-fire: var(--cc-fire);
+    --wb-fire-soft: var(--cc-vidro-2);
+    --wb-leitura: var(--cc-info);
+    --wb-leitura-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
 
-    /* Tintas aplicadas no fundo do card de corte na sidebar do editor.
-       Combinadas via linear-gradient quando o corte acumula flags.
-       Variante vivid = usada no corte selecionado; -soft = no inativo. */
-    --tint-aprovado: oklch(0.86 0.13 145);
-    --tint-fire: oklch(0.85 0.14 55);
-    --tint-leitura: oklch(0.86 0.09 240);
-    --tint-rejeitado: oklch(0.82 0.14 25);
+    --tint-aprovado: color-mix(in srgb, var(--cc-ok) 13%, transparent);
+    --tint-fire: var(--cc-vidro-2);
+    --tint-leitura: color-mix(in srgb, var(--cc-info) 13%, transparent);
+    --tint-rejeitado: color-mix(in srgb, var(--cc-erro) 13%, transparent);
 
-    --tint-aprovado-soft: oklch(0.96 0.04 145);
-    --tint-fire-soft: oklch(0.96 0.04 55);
-    --tint-leitura-soft: oklch(0.96 0.03 240);
-    --tint-rejeitado-soft: oklch(0.95 0.05 25);
+    --tint-aprovado-soft: color-mix(in srgb, var(--cc-ok) 13%, transparent);
+    --tint-fire-soft: var(--cc-vidro-2);
+    --tint-leitura-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
+    --tint-rejeitado-soft: color-mix(in srgb, var(--cc-erro) 13%, transparent);
 
     --bg-950: var(--wb-bg);
     --bg-900: var(--wb-bg-panel);
@@ -116,86 +122,12 @@
     --text-400: var(--wb-text-dim);
     --text-500: var(--wb-text);
     --border: var(--wb-border);
-    --border-hover: var(--wb-text-dim);
+    --border-hover: var(--cc-fio-campo);
     --border-accent: var(--wb-accent);
     --accent-glow: var(--wb-focus);
     --shadow-sm: var(--wb-shadow);
     --shadow-md: var(--wb-shadow);
-    --shadow-lg: 0 18px 50px rgb(20 15 10 / 0.12);
-  }
-
-  :root[data-wb-theme='dark'] {
-    color-scheme: dark;
-
-    --success: oklch(0.78 0.13 145);
-    --warning: oklch(0.8 0.15 75);
-    --error: oklch(0.72 0.16 25);
-    --info: oklch(0.72 0.12 245);
-
-    /* Base COOL-GRAY dark do protótipo Workbench 1c (família 255/250). */
-    --wb-bg: oklch(0.16 0.012 255);
-    --wb-bg-panel: oklch(0.195 0.012 255);
-    --wb-bg-card: oklch(0.195 0.012 255);
-    --wb-bg-card-elev: oklch(0.225 0.012 255);
-    --wb-bg-inset: oklch(0.23 0.012 255);
-    /* Faixa das abas — dark (protótipo: --strip). */
-    --wb-bg-strip: oklch(0.125 0.012 255);
-    --wb-border: oklch(0.3 0.012 255);
-    --wb-border-soft: oklch(0.26 0.012 255);
-    --wb-text: oklch(0.95 0.008 250);
-    --wb-text-mute: oklch(0.72 0.015 250);
-    --wb-text-dim: oklch(0.52 0.015 250);
-    --wb-accent: oklch(0.72 0.155 32);
-    --wb-accent-strong: oklch(0.8 0.15 32);
-    --wb-accent-soft: oklch(0.3 0.08 28 / 0.45);
-    /* Texto sobre acento dark: quase-preto na familia do acento (protótipo). */
-    --wb-accent-fg: oklch(0.14 0.01 60);
-    --wb-ink: oklch(0.95 0.008 250);
-    --wb-ink-fg: oklch(0.15 0.012 255);
-    --wb-pill-bg: oklch(0.1 0.012 255 / 0.78);
-    --wb-focus: oklch(0.72 0.155 32 / 0.42);
-    --wb-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 26px rgb(0 0 0 / 0.3);
-    --wb-shadow-btn: 0 1px 0 oklch(1 0 0 / 0.1) inset, 0 4px 14px oklch(0.72 0.155 32 / 0.3);
-
-    /* Cores semanticas (status) — dark do protótipo. Soft usa alpha. */
-    --wb-ok: oklch(0.76 0.14 145);
-    --wb-ok-soft: oklch(0.3 0.08 145 / 0.4);
-    /* Texto legível sobre --wb-ok-soft (protótipo Workbench 1c: --ok-ink). */
-    --wb-ok-ink: oklch(0.8 0.13 145);
-    --wb-warn: oklch(0.8 0.15 70);
-    --wb-warn-soft: oklch(0.32 0.09 70 / 0.42);
-    /* Texto legível sobre --wb-warn-soft (protótipo Workbench 1c: --warn-ink). */
-    --wb-warn-ink: oklch(0.84 0.13 75);
-    --wb-err: oklch(0.72 0.16 25);
-    --wb-err-soft: oklch(0.32 0.11 25 / 0.4);
-    /* Texto legível sobre --wb-err-soft (protótipo Workbench v3: --err-ink). */
-    --wb-err-ink: oklch(0.82 0.13 25);
-    --wb-info: oklch(0.72 0.13 245);
-    --wb-info-soft: oklch(0.3 0.09 245 / 0.4);
-    --wb-violet: oklch(0.74 0.14 295);
-    --wb-violet-soft: oklch(0.3 0.09 295 / 0.4);
-    --wb-fire: oklch(0.78 0.18 55);
-    --wb-fire-soft: oklch(0.32 0.1 55 / 0.4);
-    --wb-leitura: oklch(0.74 0.13 245);
-    --wb-leitura-soft: oklch(0.3 0.09 245 / 0.4);
-
-    /* Tintas para tema escuro — vivid = mais L+chroma, soft = quase indistinguível. */
-    --tint-aprovado: oklch(0.42 0.14 145);
-    --tint-fire: oklch(0.42 0.15 55);
-    --tint-leitura: oklch(0.42 0.1 240);
-    --tint-rejeitado: oklch(0.4 0.16 25);
-
-    --tint-aprovado-soft: oklch(0.2 0.04 145);
-    --tint-fire-soft: oklch(0.2 0.04 55);
-    --tint-leitura-soft: oklch(0.2 0.03 240);
-    --tint-rejeitado-soft: oklch(0.2 0.05 25);
-
-    --bg-700: oklch(0.26 0.012 255);
-    --bg-600: oklch(0.3 0.012 255);
-    --bg-500: oklch(0.38 0.012 255);
-    --accent-200: oklch(0.9 0.07 32);
-    --accent-300: oklch(0.86 0.09 32);
-    --accent-400: var(--wb-accent);
+    --shadow-lg: var(--cc-sombra-pop);
   }
 
   * {
@@ -253,7 +185,7 @@
 
 @layer utilities {
   .glass {
-    background: color-mix(in oklch, var(--wb-bg-panel) 86%, transparent);
+    background: color-mix(in oklab, var(--wb-bg-panel) 86%, transparent);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
   }
@@ -317,74 +249,8 @@
   }
 }
 
-/* ─── Paletas de acento (F-024) ────────────────────────────────────
-   Fora de `@layer base` para que o Tailwind nao purgue (Tailwind v3
-   limpa regras dentro de `@layer base` que nao tem class referenciada
-   no content scan; aqui as classes `wb-palette-<id>` sao adicionadas
-   via JS no <html>, entao precisam ficar em CSS top-level).
-
-   Especificidade: `:root.wb-palette-X` (0,2,0) ganha de `:root` (0,1,0)
-   no light; em dark a regra `[data-wb-theme='dark'].wb-palette-X`
-   (0,3,0) ganha de tudo. Default `terracota` nao tem classe — usa os
-   tokens base de `@layer base`. */
-/* Valores do protótipo Workbench 1c (body[data-accent=...]): as paletas
-   mudam SÓ o acento — o fundo cool-gray é fixo, como no design. */
-:root.wb-palette-indigo {
-  --wb-accent: oklch(0.5 0.14 275);
-  --wb-accent-strong: oklch(0.42 0.16 275);
-  --wb-accent-soft: oklch(0.94 0.04 275);
-  --wb-focus: oklch(0.5 0.14 275 / 0.45);
-}
-:root[data-wb-theme='dark'].wb-palette-indigo {
-  --wb-accent: oklch(0.72 0.13 275);
-  --wb-accent-strong: oklch(0.8 0.12 275);
-  --wb-accent-soft: oklch(0.3 0.09 275 / 0.45);
-  --wb-accent-fg: oklch(0.14 0.01 275);
-  --wb-focus: oklch(0.72 0.13 275 / 0.42);
-}
-
-:root.wb-palette-forest {
-  --wb-accent: oklch(0.5 0.12 155);
-  --wb-accent-strong: oklch(0.42 0.13 155);
-  --wb-accent-soft: oklch(0.94 0.05 155);
-  --wb-focus: oklch(0.5 0.12 155 / 0.45);
-}
-:root[data-wb-theme='dark'].wb-palette-forest {
-  --wb-accent: oklch(0.74 0.13 155);
-  --wb-accent-strong: oklch(0.82 0.13 155);
-  --wb-accent-soft: oklch(0.3 0.08 155 / 0.45);
-  --wb-accent-fg: oklch(0.14 0.01 155);
-  --wb-focus: oklch(0.74 0.13 155 / 0.42);
-}
-
-:root.wb-palette-plum {
-  --wb-accent: oklch(0.5 0.13 320);
-  --wb-accent-strong: oklch(0.42 0.15 320);
-  --wb-accent-soft: oklch(0.95 0.04 320);
-  --wb-focus: oklch(0.5 0.13 320 / 0.45);
-}
-:root[data-wb-theme='dark'].wb-palette-plum {
-  --wb-accent: oklch(0.74 0.12 320);
-  --wb-accent-strong: oklch(0.82 0.11 320);
-  --wb-accent-soft: oklch(0.3 0.09 320 / 0.45);
-  --wb-accent-fg: oklch(0.14 0.01 320);
-  --wb-focus: oklch(0.74 0.12 320 / 0.42);
-}
-
-:root.wb-palette-ink {
-  --wb-accent: oklch(0.32 0.02 70);
-  --wb-accent-strong: oklch(0.22 0.02 70);
-  --wb-accent-soft: oklch(0.94 0.008 70);
-  --wb-focus: oklch(0.32 0.02 70 / 0.45);
-}
-:root[data-wb-theme='dark'].wb-palette-ink {
-  --wb-accent: oklch(0.88 0.005 75);
-  --wb-accent-strong: oklch(0.95 0.005 75);
-  --wb-accent-soft: oklch(0.25 0.005 75);
-  /* Acento ink dark é quase-branco: texto sobre ele segue --wb-ink-fg dark. */
-  --wb-accent-fg: oklch(0.15 0.01 60);
-  --wb-focus: oklch(0.88 0.005 75 / 0.42);
-}
+/* D-1128 (H-03): as paletas de acento (F-024, `wb-palette-*`) saíram daqui. O acento da
+   Sala é a íris, fixa do CutCut; a escolha ainda gravada some da tela na H-04. */
 
 /* D-1113 (E-069 H-02): utilitárias da Sala escura (D-1111 §4.6). Ninguém as usa
    ainda; as telas passam a usá-las nas histórias seguintes. */

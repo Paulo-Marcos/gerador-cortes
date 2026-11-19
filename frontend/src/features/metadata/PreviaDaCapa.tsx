@@ -44,11 +44,11 @@ export function PreviaDaCapa({
           bastava — o título e o @ encostam no limite, e as bordas dos blocos o
           cobriam. */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 bg-[color-mix(in_oklch,var(--wb-bg)_55%,transparent)]"
+        className="pointer-events-none absolute inset-x-0 top-0 bg-[color-mix(in_oklab,var(--wb-bg)_55%,transparent)]"
         style={{ height: pct(seguro.y, quadro.altura) }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 bg-[color-mix(in_oklch,var(--wb-bg)_55%,transparent)]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 bg-[color-mix(in_oklab,var(--wb-bg)_55%,transparent)]"
         style={{ height: pct(quadro.altura - seguro.y - seguro.h, quadro.altura) }}
       />
       <span

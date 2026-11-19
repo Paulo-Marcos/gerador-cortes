@@ -120,13 +120,13 @@ type CorDoBloco = { soft: string; border: string; color: string; tracejada?: boo
 function coresDoBloco(cor: CorDoBloco, isSelected: boolean, isActive: boolean): React.CSSProperties {
   const destaque = isSelected ? 'var(--wb-accent)' : isActive ? cor.color : null;
   return {
-    background: destaque ? `color-mix(in oklch, ${destaque} 30%, var(--wb-bg-card))` : cor.soft,
+    background: destaque ? `color-mix(in oklab, ${destaque} 30%, var(--wb-bg-card))` : cor.soft,
     borderColor: destaque ?? cor.border,
     borderWidth: destaque ? 2 : 1,
     borderStyle: cor.tracejada ? 'dashed' : undefined,
     color: cor.color,
     boxShadow: isSelected
-      ? '0 0 0 2px color-mix(in oklch, var(--wb-accent) 45%, transparent)'
+      ? '0 0 0 2px color-mix(in oklab, var(--wb-accent) 45%, transparent)'
       : isActive
         ? 'var(--wb-shadow)'
         : undefined,
@@ -896,8 +896,8 @@ export function SceneTimeline({
                         width: `${width}%`,
                         top: 1,
                         bottom: 1,
-                        background: 'color-mix(in oklch, var(--wb-warn) 10%, transparent)',
-                        borderColor: 'color-mix(in oklch, var(--wb-warn) 70%, transparent)',
+                        background: 'color-mix(in oklab, var(--wb-warn) 10%, transparent)',
+                        borderColor: 'color-mix(in oklab, var(--wb-warn) 70%, transparent)',
                         opacity: 0.75,
                       }}
                     />
@@ -945,17 +945,17 @@ export function SceneTimeline({
                       top: 3,
                       bottom: 3,
                       background: isSelected
-                        ? 'color-mix(in oklch, var(--wb-accent) 28%, var(--wb-bg-card))'
-                        : `color-mix(in oklch, ${tone} 22%, var(--wb-bg-card))`,
+                        ? 'color-mix(in oklab, var(--wb-accent) 28%, var(--wb-bg-card))'
+                        : `color-mix(in oklab, ${tone} 22%, var(--wb-bg-card))`,
                       borderColor: isSelected
                         ? 'var(--wb-accent)'
-                        : `color-mix(in oklch, ${tone} 60%, var(--wb-border))`,
+                        : `color-mix(in oklab, ${tone} 60%, var(--wb-border))`,
                       borderWidth: isSelected ? 2 : 1,
                       color: tone,
                       boxShadow: resizing
-                        ? `0 0 0 2px color-mix(in oklch, ${tone} 55%, transparent)`
+                        ? `0 0 0 2px color-mix(in oklab, ${tone} 55%, transparent)`
                         : isSelected
-                          ? '0 0 0 2px color-mix(in oklch, var(--wb-accent) 50%, transparent)'
+                          ? '0 0 0 2px color-mix(in oklab, var(--wb-accent) 50%, transparent)'
                           : undefined,
                     }}
                   >
@@ -1027,7 +1027,7 @@ function WaveformBackdrop({ bars, compact = false }: { bars: number[]; compact?:
             className="min-w-[1px] flex-1 rounded-full"
             style={{
               height: `${height}%`,
-              background: 'color-mix(in oklch, var(--wb-info) 24%, transparent)',
+              background: 'color-mix(in oklab, var(--wb-info) 24%, transparent)',
             }}
           />
         );

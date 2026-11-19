@@ -77,14 +77,14 @@ export function MetadataCard(props: {
       className={cn(
         'outline-none',
         !modal &&
-          'scroll-mt-[132px] overflow-visible rounded-[12px] border border-[var(--wb-border-soft)] bg-[color-mix(in_oklch,var(--wb-bg-card)_88%,var(--wb-bg-panel))] shadow-[0_1px_2px_rgba(20,15,10,0.05),0_10px_26px_rgba(20,15,10,0.07)] focus-visible:border-[var(--wb-accent)]',
+          'scroll-mt-[132px] overflow-visible rounded-[12px] border border-[var(--wb-border-soft)] bg-[color-mix(in_oklab,var(--wb-bg-card)_88%,var(--wb-bg-panel))] shadow-[0_1px_2px_rgba(20,15,10,0.05),0_10px_26px_rgba(20,15,10,0.07)] focus-visible:border-[var(--wb-accent)]',
       )}
     >
       {!modal && (
         <header
           onClick={() => setExpanded((current) => !current)}
           className={cn(
-            'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-[color-mix(in_oklch,var(--wb-bg-inset)_52%,var(--wb-bg-card))] px-4 py-3',
+            'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-[color-mix(in_oklab,var(--wb-bg-inset)_52%,var(--wb-bg-card))] px-4 py-3',
             expanded && 'border-b border-[var(--wb-border-soft)]',
           )}
         >
@@ -203,7 +203,7 @@ export function MetadataCard(props: {
       )}
 
       {expanded && !metaQuery.isLoading && !generated && (
-        <section className="grid min-h-[190px] place-items-center bg-[color-mix(in_oklch,var(--wb-bg-card)_72%,var(--wb-bg-panel))] p-5">
+        <section className="grid min-h-[190px] place-items-center bg-[color-mix(in_oklab,var(--wb-bg-card)_72%,var(--wb-bg-panel))] p-5">
           <div className="grid w-[min(520px,100%)] gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] p-5 text-center">
             <div className="font-editorial text-[30px] font-medium leading-none">
               Metadados ainda nao gerados
@@ -374,7 +374,7 @@ export function MetadataCard(props: {
       )}
 
       {expanded && generated && !modal && (
-        <section className="grid gap-3 bg-[color-mix(in_oklch,var(--wb-bg-card)_72%,var(--wb-bg-panel))] p-3.5 lg:grid-cols-[minmax(0,1fr)_232px]">
+        <section className="grid gap-3 bg-[color-mix(in_oklab,var(--wb-bg-card)_72%,var(--wb-bg-panel))] p-3.5 lg:grid-cols-[minmax(0,1fr)_232px]">
           {/* D-746: 232px, como no modal. Em 190px a capa do TikTok não cabia e
               a coluna inteira vazava para fora do card. */}
           <div className="grid gap-3">

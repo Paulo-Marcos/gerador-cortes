@@ -25,50 +25,49 @@
   --sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
   --mono: 'Geist Mono', ui-monospace, monospace;
 
-  --bg: oklch(0.975 0.004 240);
-  --panel: rgb(255 255 255 / 0.62);
-  --solid: #fff;
-  --inset: rgb(255 255 255 / 0.5);
-  --line: rgb(20 25 40 / 0.1);
-  --line2: rgb(20 25 40 / 0.055);
+  /* D-1128 (E-069 H-03): os tokens da casca leem a Sala escura (DIRECAO.md §9.2).
+     O tema vem dos `--cc-*` (styles/tokens.css), então não há mais bloco por tema
+     declarando cor aqui. Superfícies SÓLIDAS: `--panel` é o painel sólido e `--glass`
+     não desfoca nada — vidro só chega com a casca nova (H-13). Misturas em oklab, não
+     em oklch (o porquê está no comentário da ponte, em index.css). */
+  --bg: var(--cc-bg);
+  --panel: var(--cc-painel-solido);
+  --solid: var(--cc-painel-solido);
+  --inset: var(--cc-poco);
+  --line: var(--cc-fio-2);
+  --line2: var(--cc-fio);
 
-  --ink: oklch(0.2 0.015 250);
-  --mute: oklch(0.45 0.02 250);
-  --dim: oklch(0.62 0.02 250);
+  --ink: var(--cc-fg);
+  --mute: var(--cc-fg-2);
+  --dim: var(--cc-fg-3);
 
-  --accent: oklch(0.52 0.165 28);
-  --accent2: oklch(0.44 0.18 28);
-  --accent-soft: oklch(0.52 0.165 28 / 0.12);
-  --on-accent: #fff;
-  /* D-847: "onde estou" — item do trilho, aba, filtro, fase da live — é
-     tinta neutra, não acento. O acento é o que se aperta; quando o mesmo
-     vermelho marcava o lugar, a ação principal e o excluir, nada se
-     destacava. Derivam de --ink, então acompanham os cinco temas sozinhos. */
-  --sel-bg: color-mix(in oklab, var(--ink) 8%, transparent);
-  --sel-line: color-mix(in oklab, var(--ink) 55%, transparent);
-  --sel-ink: var(--ink);
-  /* Texto sobre a seleção CHEIA (fundo --sel-ink): o par invertido, para
-     quando o escolhido precisa pesar mais que um fundo de 8%. */
-  --sel-on: var(--solid);
+  /* Acento como texto ou marca: íris. O feixe é do botão primário, que a ponte não
+     sabe distinguir (§9.2: julgamento da história de cada tela). */
+  --accent: var(--cc-iris);
+  --accent2: var(--cc-iris-2);
+  --accent-soft: var(--cc-iris-suave);
+  --on-accent: var(--cc-sobre-iris);
+  /* D-847: "onde estou" é tinta neutra, não acento. */
+  --sel-bg: var(--cc-vidro-3);
+  --sel-line: var(--cc-fio-campo);
+  --sel-ink: var(--cc-fg);
+  /* Texto sobre a seleção CHEIA (fundo --sel-ink, que é `--cc-fg`). */
+  --sel-on: var(--cc-sobre-iris);
 
-  /* R4: medido compondo o alpha em sRGB — ok e aviso reprovavam (4,21 e
-     4,45 no claro). O texto desce 0.05 L e o -soft passa a usar A MESMA
-     cor do texto: com dois valores diferentes (0.55 contra 0.52) o par
-     dependia de dois números, e quem mexesse num desmontava o outro. */
-  --ok: oklch(0.47 0.13 145);
-  --ok-soft: oklch(0.47 0.13 145 / 0.16);
-  --warn: oklch(0.47 0.135 70);
-  --warn-soft: oklch(0.47 0.135 70 / 0.16);
-  --info: oklch(0.46 0.13 245);
-  --info-soft: oklch(0.46 0.13 245 / 0.16);
-  --err: oklch(0.48 0.18 25);
-  --err-soft: oklch(0.48 0.18 25 / 0.16);
+  /* Estado: a cor cheia é o texto; o fundo tintado sai da cor a 13% (§4.1). */
+  --ok: var(--cc-ok);
+  --ok-soft: color-mix(in srgb, var(--cc-ok) 13%, transparent);
+  --warn: var(--cc-aviso);
+  --warn-soft: color-mix(in srgb, var(--cc-aviso) 13%, transparent);
+  --info: var(--cc-info);
+  --info-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
+  --err: var(--cc-erro);
+  --err-soft: color-mix(in srgb, var(--cc-erro) 13%, transparent);
 
-  --glass: blur(22px) saturate(1.6);
-  --hi: 0 1px 0 rgb(255 255 255 / 0.6) inset;
-  --shadow:
-    0 1px 0 rgb(255 255 255 / 0.6) inset,
-    0 8px 28px rgb(20 25 40 / 0.09);
+  --glass: none;
+  /* Cartão: nenhuma sombra, só o brilho de 1 px no topo (§3.5). */
+  --hi: inset 0 1px 0 var(--cc-fio-topo);
+  --shadow: inset 0 1px 0 var(--cc-fio-topo);
 
   --r1: 3px;
   --r2: 4px;
@@ -78,116 +77,15 @@
   font-family: var(--sans);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
-  background-image:
-    linear-gradient(oklch(0.965 0.006 240), oklch(0.945 0.01 250));
-}
-
-.ap[data-theme='dark'] {
-  --bg: oklch(0.17 0.012 255);
-  --panel: rgb(255 255 255 / 0.06);
-  --solid: oklch(0.21 0.012 255);
-  --inset: rgb(255 255 255 / 0.09);
-  --line: rgb(255 255 255 / 0.14);
-  --line2: rgb(255 255 255 / 0.07);
-
-  --ink: oklch(0.95 0.008 250);
-  --mute: oklch(0.74 0.015 250);
-  --dim: oklch(0.56 0.015 250);
-
-  --accent: oklch(0.72 0.155 32);
-  --accent2: oklch(0.82 0.15 32);
-  --accent-soft: oklch(0.72 0.155 32 / 0.16);
-  --on-accent: oklch(0.14 0.01 60);
-
-  --ok: oklch(0.8 0.14 145);
-  --ok-soft: oklch(0.78 0.14 145 / 0.16);
-  --warn: oklch(0.84 0.15 75);
-  --warn-soft: oklch(0.82 0.15 75 / 0.16);
-  --info: oklch(0.76 0.13 245);
-  --info-soft: oklch(0.74 0.13 245 / 0.16);
-  --err: oklch(0.74 0.16 25);
-  --err-soft: oklch(0.72 0.16 25 / 0.16);
-
-  --hi: 0 1px 0 rgb(255 255 255 / 0.08) inset;
-  --shadow:
-    0 1px 0 rgb(255 255 255 / 0.08) inset,
-    0 10px 30px rgb(0 0 0 / 0.45);
-
-  color-scheme: dark;
-  background-image:
-    linear-gradient(oklch(0.17 0.012 255), oklch(0.14 0.014 260));
-}
-
-/* Vidro desligado: as superfícies viram sólidas e o fundo perde os
-   gradientes. É o mesmo layout — muda só o material. */
-.ap[data-glass='0'] {
-  --panel: var(--solid);
-  --inset: oklch(0.955 0.005 240);
-  --glass: none;
-
-  background-image: none;
   background-color: var(--bg);
 }
 
-.ap[data-glass='0'][data-theme='dark'] {
-  --inset: oklch(0.25 0.012 255);
-}
-
-/* ─── Paletas ─────────────────────────────────────────────────────
-   D-610 · as mesmas cinco da versão anterior (usePalette, D-174/F-024):
-   a escolha mora em `wb-palette-<id>` no <html> e no mesmo localStorage,
-   então quem já tinha escolhido Floresta volta a vê-la sem refazer nada.
-   Terracota é o padrão e não tem classe. Muda só o acento; estados
-   (ok/warn/err/info) ficam fixos — verde continua sendo "deu certo" em
-   qualquer paleta. O fundo não tinge com a paleta desde a D-846: atrás do
-   conteúdo, cor é ruído que disputa com os estados. */
-
-html.wb-palette-indigo .ap {
-  --accent: oklch(0.5 0.14 275);
-  --accent2: oklch(0.42 0.16 275);
-  --accent-soft: oklch(0.5 0.14 275 / 0.12);
-}
-html.wb-palette-indigo .ap:is([data-theme='dark'], [data-theme='ardosia']) {
-  --accent: oklch(0.72 0.13 275);
-  --accent2: oklch(0.8 0.12 275);
-  --accent-soft: oklch(0.72 0.13 275 / 0.16);
-  --on-accent: oklch(0.14 0.01 275);
-}
-
-html.wb-palette-forest .ap {
-  --accent: oklch(0.5 0.12 155);
-  --accent2: oklch(0.42 0.13 155);
-  --accent-soft: oklch(0.5 0.12 155 / 0.12);
-}
-html.wb-palette-forest .ap:is([data-theme='dark'], [data-theme='ardosia']) {
-  --accent: oklch(0.74 0.13 155);
-  --accent2: oklch(0.82 0.13 155);
-  --accent-soft: oklch(0.74 0.13 155 / 0.16);
-  --on-accent: oklch(0.14 0.01 155);
-}
-
-html.wb-palette-plum .ap {
-  --accent: oklch(0.5 0.13 320);
-  --accent2: oklch(0.42 0.15 320);
-  --accent-soft: oklch(0.5 0.13 320 / 0.12);
-}
-html.wb-palette-plum .ap:is([data-theme='dark'], [data-theme='ardosia']) {
-  --accent: oklch(0.74 0.12 320);
-  --accent2: oklch(0.82 0.11 320);
-  --accent-soft: oklch(0.74 0.12 320 / 0.16);
-  --on-accent: oklch(0.14 0.01 320);
-}
-
-html.wb-palette-ink .ap {
-  --accent: oklch(0.32 0.02 70);
-  --accent2: oklch(0.22 0.02 70);
-  --accent-soft: oklch(0.32 0.02 70 / 0.1);
-}
-html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
-  --accent: oklch(0.88 0.005 75);
-  --accent2: oklch(0.95 0.005 75);
-  --accent-soft: oklch(0.88 0.005 75 / 0.14);
-  --on-accent: oklch(0.16 0.01 70);
+/* Os temas escuros pedem `color-scheme: dark` (scrollbar, autofill, campos). A cor de
+   cada tema vem dos `--cc-*`; o vidro desligado (`data-glass='0'`) já não muda nada,
+   porque as superfícies da ponte são sólidas nos dois casos. As paletas de acento
+   (D-610, `wb-palette-*`) saíram: o acento da Sala é a íris, fixa (D-1128). */
+.ap:is([data-theme='dark'], [data-theme='ardosia']) {
+  color-scheme: dark;
 }
 
 /* ─── Primitivos ──────────────────────────────────────────────────
@@ -315,7 +213,7 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   background-image: linear-gradient(rgb(255 255 255 / 0.18), transparent);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.3) inset,
-    0 6px 18px color-mix(in oklch, var(--accent) 30%, transparent);
+    0 6px 18px color-mix(in oklab, var(--accent) 30%, transparent);
   color: var(--on-accent);
   font-weight: 700;
 }
@@ -516,17 +414,19 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
    eles recebem o mesmo papel a partir dos --wb-* do :root, para não
    cair em `var()` vazio — dentro da casca, a declaração do `.ap` vence. */
 :root {
-  --sel-bg: color-mix(in oklab, var(--wb-text) 8%, transparent);
-  --sel-line: color-mix(in oklab, var(--wb-text) 55%, transparent);
-  --sel-ink: var(--wb-text);
-  --sel-on: var(--wb-bg-panel);
+  --sel-bg: var(--cc-vidro-3);
+  --sel-line: var(--cc-fio-campo);
+  --sel-ink: var(--cc-fg);
+  --sel-on: var(--cc-sobre-iris);
 }
 
 /* ─── Ponte para as telas ainda não migradas ──────────────────────
    Toda tela que ainda fala `--wb-*` e cai DENTRO da casca nova passa a
-   ler os tokens de `.ap`. É uma ponte, não uma fusão: as telas fora da
-   casca continuam com os valores originais em `:root`, então desligar
-   a flag devolve tudo exatamente como estava.
+   ler os tokens de `.ap`. Desde a D-1128, o `:root` do index.css aponta
+   a MESMA lista para os mesmos `--cc-*`; a redeclaração aqui continua
+   necessária porque uma variável se resolve onde é declarada (D-841), e
+   o teste `ponteDosTokens.d1128` confere que os dois lados chegam ao
+   mesmo token.
 
    Vale muito na Bancada. Ali moram 22 mil linhas de player, wavesurfer
    e pipeline de render, e reescrever a cor à mão em cada uma seria
@@ -542,7 +442,7 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
      e vidro sem desfoque atras vira so contraste perdido. */
   --wb-bg-panel: var(--solid);
   --wb-bg-card: var(--solid);
-  --wb-bg-card-elev: var(--inset);
+  --wb-bg-card-elev: var(--cc-vidro-2);
   --wb-bg-inset: var(--inset);
   --wb-bg-strip: var(--inset);
   --wb-border: var(--line);
@@ -556,9 +456,10 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --wb-accent-soft: var(--accent-soft);
   --wb-accent-fg: var(--on-accent);
   --wb-ink: var(--ink);
-  --wb-ink-fg: var(--bg);
-  --wb-pill-bg: var(--solid);
-  --wb-focus: var(--accent-soft);
+  --wb-ink-fg: var(--on-accent);
+  --wb-pill-bg: var(--cc-vidro-2);
+  /* O anel dos controles antigos (`ring-[var(--wb-focus)]`) é o anel da Sala (§3.4). */
+  --wb-focus: var(--cc-foco);
   --wb-shadow: var(--shadow);
   --wb-shadow-btn: var(--hi);
 
@@ -579,8 +480,9 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --wb-info-soft: var(--info-soft);
   --wb-violet: var(--info);
   --wb-violet-soft: var(--info-soft);
-  --wb-fire: var(--accent);
-  --wb-fire-soft: var(--accent-soft);
+  /* O fogo é só glifo: onde era fundo, vira vidro (§9.2). */
+  --wb-fire: var(--cc-fire);
+  --wb-fire-soft: var(--cc-vidro-2);
   --wb-leitura: var(--info);
   --wb-leitura-soft: var(--info-soft);
 
@@ -617,11 +519,22 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --text-400: var(--wb-text-dim);
   --text-500: var(--wb-text);
   --border: var(--wb-border);
-  --border-hover: var(--wb-text-dim);
+  --border-hover: var(--cc-fio-campo);
   --border-accent: var(--wb-accent);
   --accent-glow: var(--wb-focus);
   --shadow-sm: var(--wb-shadow);
   --shadow-md: var(--wb-shadow);
+  --shadow-lg: var(--cc-sombra-pop);
+
+  /* D-1128: as tintas do cartão de corte também mudam de tema dentro da casca. */
+  --tint-aprovado: color-mix(in srgb, var(--cc-ok) 13%, transparent);
+  --tint-fire: var(--cc-vidro-2);
+  --tint-leitura: color-mix(in srgb, var(--cc-info) 13%, transparent);
+  --tint-rejeitado: color-mix(in srgb, var(--cc-erro) 13%, transparent);
+  --tint-aprovado-soft: color-mix(in srgb, var(--cc-ok) 13%, transparent);
+  --tint-fire-soft: var(--cc-vidro-2);
+  --tint-leitura-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
+  --tint-rejeitado-soft: color-mix(in srgb, var(--cc-erro) 13%, transparent);
 
   /* Cantos: o design inteiro vive entre 3 e 5 px. Deixar 10–16 px nas
      telas não migradas criaria duas linguagens de forma na mesma janela. */
