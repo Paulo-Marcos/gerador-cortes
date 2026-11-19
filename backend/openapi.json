@@ -3810,6 +3810,19 @@
         "title": "DefinirCenasRequest",
         "type": "object"
       },
+      "DefinirNomeDoOperador": {
+        "properties": {
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome"
+        ],
+        "title": "DefinirNomeDoOperador",
+        "type": "object"
+      },
       "DesfazerRodadaRequest": {
         "properties": {
           "versao": {
@@ -7731,6 +7744,20 @@
           "navegador"
         ],
         "title": "NavegadorDoRobo",
+        "type": "object"
+      },
+      "NomeDoOperador": {
+        "description": "\"\" quando o operador ainda não disse o nome.",
+        "properties": {
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome"
+        ],
+        "title": "NomeDoOperador",
         "type": "object"
       },
       "NovidadeResponse": {
@@ -21941,6 +21968,66 @@
         "summary": "Marcar Novidades Vistas",
         "tags": [
           "Novidades"
+        ]
+      }
+    },
+    "/api/operador": {
+      "get": {
+        "operationId": "ler_nome_api_operador_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NomeDoOperador"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ler Nome",
+        "tags": [
+          "Operador"
+        ]
+      },
+      "put": {
+        "operationId": "definir_nome_api_operador_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefinirNomeDoOperador"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NomeDoOperador"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Definir Nome",
+        "tags": [
+          "Operador"
         ]
       }
     },

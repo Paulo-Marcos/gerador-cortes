@@ -34,6 +34,7 @@ from app.routers import (
     metadados,
     miniaturas,
     novidades,
+    operador,
     ordem_cortes,
     origem_das_cenas,
     presets,
@@ -152,6 +153,7 @@ app.include_router(export.router, prefix="/api/export", tags=["Export"])
 app.include_router(youtube_browser.router, prefix="/api/youtube", tags=["YouTube Browser"])
 app.include_router(app_settings.router, prefix="/api/settings", tags=["Settings"])
 app.include_router(mascot.router, prefix="/api/mascot", tags=["Mascote"])
+app.include_router(operador.router, prefix="/api/operador", tags=["Operador"])
 app.include_router(retratos.router, prefix="/api/retratos", tags=["Retratos"])
 app.include_router(claude_ia.router, prefix="/api/claude", tags=["Claude IA"])
 app.include_router(diarizacao.router, prefix="/api/diarizacao", tags=["Diarização"])
