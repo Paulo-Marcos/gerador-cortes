@@ -84,7 +84,7 @@
    cada tema vem dos `--cc-*`; o vidro desligado (`data-glass='0'`) já não muda nada,
    porque as superfícies da ponte são sólidas nos dois casos. As paletas de acento
    (D-610, `wb-palette-*`) saíram: o acento da Sala é a íris, fixa (D-1128). */
-.ap:is([data-theme='dark'], [data-theme='ardosia']) {
+.ap[data-theme='dark'] {
   color-scheme: dark;
 }
 

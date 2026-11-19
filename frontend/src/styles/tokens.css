@@ -1,13 +1,14 @@
 /* D-1113 (E-069 H-02): tokens da identidade "Sala escura" (D-1111, §4.1).
    Camada NOVA e ainda sem consumidor: nenhuma tela usa `--cc-*` até a H-03 apontar
-   as camadas antigas para cá. Por isso este arquivo não declara `color-scheme` nem
-   mexe em `--font-*`: os dois mudariam a tela atual (ficam para a H-04 e a H-05).
+   as camadas antigas para cá. Por isso este arquivo não mexe em `--font-*` (H-05).
+   O `color-scheme` é do tema (D-1133, H-04): sai do `data-theme` do <html>.
 
    Escuro é o tema principal (`:root`); claro é o segundo (`data-theme="light"`).
    Os dois declaram o MESMO conjunto de nomes — o teste `tokens.test.ts` garante. */
 
 :root,
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --cc-bg: #07080b;
   --cc-bg-2: #0d0e13;
   --cc-painel: rgba(15, 17, 23, 0.66);
@@ -56,15 +57,10 @@
   --cc-pontos: rgba(255, 255, 255, 0.07);
 }
 
-/* D-1128 (H-03): até a H-04 levar o tema para o <html>, quem escolhe o tema das telas
-   é o `data-theme` da casca (`.ap`). Os três degraus claros da rampa leem o claro; o
-   resto (Escuro e Ardósia) fica no escuro. O `:not(…)` deixa o <html> com tema
-   explícito (o Kit) mandar; não pode ser `:not([data-theme])`, porque o index.html
-   nasce com `data-theme="indigo"`, resto da paleta antiga. */
-:root[data-theme='light'],
-:root:not([data-theme='dark'], [data-theme='light']):has(
-    .ap:is([data-theme='light'], [data-theme='papel'], [data-theme='nevoa'])
-  ) {
+/* O tema vive no <html> (D-1133, H-04): `dark`, `light` ou, no Auto, o que o sistema pede
+   resolvido por `lib/tema.ts`. Sem atributo, vale o escuro. */
+:root[data-theme='light'] {
+  color-scheme: light;
   --cc-bg: #eceef5;
   --cc-bg-2: #f6f7fb;
   --cc-painel: rgba(255, 255, 255, 0.72);

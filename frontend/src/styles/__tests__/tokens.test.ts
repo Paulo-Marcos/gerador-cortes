@@ -68,8 +68,7 @@ describe('tokens da Sala escura', () => {
     }
   });
 
-  it('não declara color-scheme nem fonte (mudariam a tela atual; são da H-04 e da H-05)', () => {
-    expect(css).not.toMatch(/color-scheme\s*:/);
+  it('não declara fonte (mudaria a tela atual; é da H-05)', () => {
     expect(css).not.toMatch(/--font-[\w-]+\s*:/);
   });
 });

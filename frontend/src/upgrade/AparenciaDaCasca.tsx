@@ -1,16 +1,21 @@
-import { PALETTES, usePalette } from '@/hooks/usePalette';
+import { NOME_DA_PREFERENCIA, PREFERENCIAS, useUpgradeTheme, type Preferencia } from '@/lib/tema';
 import { Icon, type IconName } from './Icon';
-import { NOME_DO_TEMA, RAMPA, temaEscuro, useUpgradeTheme } from './useUpgradeTheme';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O cartão "Aparência" das Configurações.
 //
-// O design reúne aqui os dois eixos da casca: TEMA (claro/escuro) e
+// O design reúne aqui os dois eixos da casca: TEMA (escuro, claro ou auto) e
 // SUPERFÍCIE (vidro translúcido ou sólido). O tema também está no
 // botão da barra superior, porque se troca muito; a superfície só
 // aqui, porque se escolhe uma vez — e era justamente ela que não
 // tinha onde ser trocada fora da página de Componentes.
 // ─────────────────────────────────────────────────────────────────
+
+const ICONE_DA_PREFERENCIA: Record<Preferencia, IconName> = {
+  dark: 'moon',
+  light: 'sun',
+  auto: 'monitor',
+};
 
 function Segmentado<T extends string>({
   opcoes,
@@ -57,8 +62,7 @@ function Segmentado<T extends string>({
 }
 
 export function AparenciaDaCasca() {
-  const { theme, setTheme, glass, setGlass } = useUpgradeTheme();
-  const { palette, setPalette } = usePalette();
+  const { preferencia, setTheme, glass, setGlass } = useUpgradeTheme();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -69,12 +73,12 @@ export function AparenciaDaCasca() {
       >
         <span style={{ fontSize: 12.5, fontWeight: 600 }}>Tema</span>
         <Segmentado
-          valor={theme}
+          valor={preferencia}
           onEscolher={setTheme}
-          opcoes={RAMPA.map((t) => ({
-            id: t,
-            texto: NOME_DO_TEMA[t],
-            icone: temaEscuro(t) ? 'moon' : 'sun',
+          opcoes={PREFERENCIAS.map((p) => ({
+            id: p,
+            texto: NOME_DA_PREFERENCIA[p],
+            icone: ICONE_DA_PREFERENCIA[p],
           }))}
         />
 
@@ -94,52 +98,6 @@ export function AparenciaDaCasca() {
             ? 'translúcido sobre o fundo — mais bonito, custa GPU a cada quadro'
             : 'superfície opaca — mais leve com o render aberto atrás'}
         </span>
-
-        {/* D-610: a cor de acento volta a ser escolha — as cinco paletas da
-            versão anterior, gravadas no mesmo lugar. */}
-        <div
-          style={{
-            display: 'flex',
-            flexBasis: '100%',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 12,
-            paddingTop: 12,
-            borderTop: '1px solid var(--line2)',
-          }}
-        >
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>Cor</span>
-          <div role="radiogroup" aria-label="Cor de acento" style={{ display: 'flex', gap: 8 }}>
-            {PALETTES.map((p) => {
-              const ativa = p.id === palette;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={ativa}
-                  aria-label={p.nome}
-                  title={`${p.nome} — ${p.descricao}`}
-                  onClick={() => setPalette(p.id)}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    padding: 0,
-                    borderRadius: 99,
-                    border: '2px solid var(--solid)',
-                    background: p.swatch,
-                    boxShadow: ativa ? `0 0 0 2px ${p.swatch}` : '0 0 0 1px var(--line)',
-                    cursor: 'pointer',
-                  }}
-                />
-              );
-            })}
-          </div>
-          <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>
-            {PALETTES.find((p) => p.id === palette)?.nome} ·{' '}
-            {PALETTES.find((p) => p.id === palette)?.descricao}
-          </span>
-        </div>
       </div>
     </div>
   );

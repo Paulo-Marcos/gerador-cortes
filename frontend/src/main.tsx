@@ -5,12 +5,15 @@ import { RouterProvider } from 'react-router-dom';
 import { router } from './routes';
 import { TooltipProvider } from './components/ui/tooltip';
 import { bootstrapPalette } from './hooks/usePalette';
+import { iniciarTema } from './lib/tema';
 import { ToastProvider } from './components/ui/toaster';
 import './index.css';
 
 // Aplica a paleta salva no localStorage o mais cedo possivel — antes
 // do React hidratar — para evitar flash de cor no boot.
 bootstrapPalette();
+// D-1133: o tema (Escuro, Claro ou Auto) entra no <html> antes do React também.
+iniciarTema();
 
 const queryClient = new QueryClient({
   defaultOptions: {

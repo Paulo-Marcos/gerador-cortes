@@ -52,7 +52,7 @@ import {
   telaDaRota,
   trilhaDaTela,
 } from './upgradeRoutes';
-import { useUpgradeTheme } from './useUpgradeTheme';
+import { useUpgradeTheme } from '@/lib/tema';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A casca.
