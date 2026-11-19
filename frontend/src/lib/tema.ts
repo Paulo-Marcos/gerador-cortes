@@ -24,9 +24,6 @@ export const NOME_DA_PREFERENCIA: Record<Preferencia, string> = {
   auto: 'Auto',
 };
 
-/** Cores do `<meta name="theme-color">` (DIRECAO §3): o fundo de cada tema. */
-export const COR_DA_BARRA: Record<Tema, string> = { dark: '#07080b', light: '#eceef5' };
-
 export function temaEscuro(t: Tema): boolean {
   return t === 'dark';
 }
@@ -59,10 +56,19 @@ export function resolverTema(pref: Preferencia, sistemaEscuro: boolean): Tema {
 type Raiz = Pick<HTMLElement, 'setAttribute'>;
 type MetaDaBarra = Pick<HTMLMetaElement, 'setAttribute'>;
 
-/** Põe o tema no <html> (o CSS tira o `color-scheme` dele) e na cor da barra. */
-export function aplicarTema(raiz: Raiz, meta: MetaDaBarra | null, tema: Tema): void {
+/**
+ * Põe o tema no <html> (o CSS tira o `color-scheme` dele) e a cor da barra, que é o
+ * fundo do tema. `fundo` lê o `--cc-bg` já com o tema aplicado: a cor mora só no CSS.
+ */
+export function aplicarTema(
+  raiz: Raiz,
+  meta: MetaDaBarra | null,
+  tema: Tema,
+  fundo: () => string,
+): void {
   raiz.setAttribute('data-theme', tema);
-  meta?.setAttribute('content', COR_DA_BARRA[tema]);
+  const cor = fundo();
+  if (cor) meta?.setAttribute('content', cor);
 }
 
 const THEME_KEY = 'upgrade-theme';
@@ -101,6 +107,7 @@ function pintar() {
     document.documentElement,
     document.querySelector('meta[name="theme-color"]'),
     resolverTema(atual.preferencia, sistemaEscuro()),
+    () => getComputedStyle(document.documentElement).getPropertyValue('--cc-bg').trim(),
   );
 }
 

@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   aplicarTema,
-  COR_DA_BARRA,
   migrarPreferencia,
   NOME_DA_PREFERENCIA,
   PREFERENCIAS,
@@ -60,18 +59,14 @@ describe('aplicarTema · <html> e theme-color', () => {
   it.each(['dark', 'light'] as const)('põe %s no <html> e a cor da barra do tema', (tema) => {
     const raiz = alvo();
     const meta = alvo();
-    aplicarTema(raiz, meta, tema);
+    aplicarTema(raiz, meta, tema, () => `fundo-${tema}`);
     expect(raiz.attrs.get('data-theme')).toBe(tema);
-    expect(meta.attrs.get('content')).toBe(COR_DA_BARRA[tema]);
-  });
-
-  it('a cor da barra é o fundo de cada tema (DIRECAO §3)', () => {
-    expect(COR_DA_BARRA).toEqual({ dark: '#07080b', light: '#eceef5' });
+    expect(meta.attrs.get('content')).toBe(`fundo-${tema}`);
   });
 
   it('sem a meta no documento, só o <html> muda', () => {
     const raiz = alvo();
-    aplicarTema(raiz, null, 'light');
+    aplicarTema(raiz, null, 'light', () => '#fff');
     expect(raiz.attrs.get('data-theme')).toBe('light');
   });
 });
@@ -134,6 +129,7 @@ describe('Auto repinta quando o sistema troca', () => {
       addEventListener: () => {},
       removeEventListener: () => {},
     });
+    vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => ' #000 ' }));
     vi.stubGlobal('document', {
       documentElement: { setAttribute: (n: string, v: string) => void attrs.set(n, v) },
       querySelector: () => null,

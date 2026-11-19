@@ -21,6 +21,11 @@ describe('o tema mora no <html> (D-1133)', () => {
     expect(html).toMatch(/<html[^>]*data-theme="dark"/);
   });
 
+  it('o theme-color da barra é o --cc-bg de cada tema (DIRECAO §3)', () => {
+    expect(tokens).toMatch(/:root,\s*:root\[data-theme='dark'\]\s*\{[^}]*--cc-bg:\s*#07080b/);
+    expect(tokens).toMatch(/:root\[data-theme='light'\]\s*\{[^}]*--cc-bg:\s*#eceef5/);
+  });
+
   it('o theme-color nasce com o fundo do escuro', () => {
     expect(html).toMatch(/<meta name="theme-color" content="#07080b"/);
   });
