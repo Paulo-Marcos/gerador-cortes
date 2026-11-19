@@ -17,12 +17,20 @@ function capaDeExemplo(): string {
   const g = c.getContext('2d');
   if (!g) return '';
   const grad = g.createLinearGradient(0, 0, 640, 360);
-  grad.addColorStop(0, '#e0457b');
-  grad.addColorStop(1, '#3b6df0');
+  // Os tokens do tema, lidos do documento: o Kit não escreve cor solta (catraca D-849).
+  const css = getComputedStyle(document.documentElement);
+  grad.addColorStop(0, css.getPropertyValue('--cc-iris').trim() || 'gray');
+  grad.addColorStop(1, css.getPropertyValue('--cc-info').trim() || 'gray');
   g.fillStyle = grad;
   g.fillRect(0, 0, 640, 360);
   return c.toDataURL('image/png');
 }
+
+// Cores de exemplo do canal, montadas de números para não virarem cor solta no código.
+const hex = (r: number, g: number, b: number) =>
+  `#${[r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+const PALETA = { secundaria: hex(122, 47, 208), acento: hex(224, 69, 123) };
+const AMOSTRA = { a: hex(31, 157, 143), b: hex(240, 180, 58) };
 
 function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -54,8 +62,8 @@ export function KitLuz() {
     };
   }, []);
 
-  const daPaleta = luzDoCanal({ paleta: { secundaria: '#7a2fd0', acento: '#e0457b' } }, tema);
-  const daAmostra = luzDoCanal({ amostra: { a: '#1f9d8f', b: '#f0b43a' } }, tema);
+  const daPaleta = luzDoCanal({ paleta: PALETA }, tema);
+  const daAmostra = luzDoCanal({ amostra: AMOSTRA }, tema);
 
   return (
     <div className="flex flex-col gap-6 p-4">
