@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Kbd } from '@/components/ui/kbd';
 import { LinkDeAcao } from '@/components/ui/link-de-acao';
 import type { ProviderIA } from '@/lib/providerIa';
+import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // D-1114 (E-069 H-07): a seção "Ação" do Kit — o botão da Sala escura em todos os
 // estados. A página Kit inteira é montada na H-12; esta seção é autônoma para isso.
@@ -109,6 +110,13 @@ function TamanhosEIcones() {
         <LinkDeAcao disabled>Indisponível</LinkDeAcao>
       </Linha>
 
+      <Linha titulo="conceito = ícone">
+        <Button variant="secundario">
+          <Icon name={ICONE_DO_CONCEITO.auditar} size={16} />
+          Auditoria da análise
+        </Button>
+      </Linha>
+
       <Linha titulo="teclas">
         <span className="flex items-center gap-1 text-corpo text-fg-2">
           Paleta de comandos <Kbd>Ctrl</Kbd>
@@ -142,6 +150,12 @@ function AcoesDeIa() {
         rotulo="Gerar trechos"
         emVoo="gemini"
         rotuloEmVoo="Gerando…"
+        onGerar={() => undefined}
+      />
+      <AcaoDeIa
+        aparencia="sala-escura"
+        rotulo="Gerar com IA"
+        emVoo={null}
         onGerar={() => undefined}
       />
       {emVoo && <LinkDeAcao onClick={() => setEmVoo(null)}>Parar a demonstração</LinkDeAcao>}

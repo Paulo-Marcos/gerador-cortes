@@ -86,7 +86,6 @@ const EXCECOES: Record<string, number> = {
   "src/upgrade/ActionBar.tsx": 1,
   "src/upgrade/ContextColumn.tsx": 2,
   "src/upgrade/GavetaDaFila.tsx": 2,
-  "src/upgrade/KitScreen.tsx": 1,
   "src/upgrade/MolduraDeVideo.tsx": 5,
   "src/upgrade/PaletaDeComandos.tsx": 2,
   "src/upgrade/SeloDeEstado.tsx": 3,
