@@ -2,7 +2,7 @@
 //
 // Função pura. A ordem das fontes é a regra do produto, não detalhe:
 //   1. a paleta cadastrada no canal (`secundaria` e `acento`);
-//   2. a amostra das capas (dado novo B-3);
+//   2. a amostra das capas, o campo `luz` do canal (backend, D-1130);
 //   3. nada: anel neutro (`cc-vidro-3`), que o avatar desenha quando recebe `null`.
 // Na PROD a paleta está vazia, então hoje vale (2) ou (3).
 //
@@ -75,4 +75,17 @@ export function luzDoCanal(fontes: FontesDaLuz, tema: TemaDaLuz): LuzDoCanal | n
     doPar(fontes.paleta?.secundaria, fontes.paleta?.acento, tema) ??
     doPar(fontes.amostra?.a, fontes.amostra?.b, tema)
   );
+}
+
+/** O pedaço do `Canal` que a luz lê: a paleta cadastrada e o `luz` que o backend amostra das capas. */
+export interface CanalComLuz {
+  paleta?: { secundaria?: string | null; acento?: string | null } | null;
+  luz?: readonly string[] | null;
+}
+
+/** Fonte 2 vem do `luz` do canal (`[]` = sem capa = sem amostra). */
+export function luzDoCanalDe(canal: CanalComLuz | null | undefined, tema: TemaDaLuz): LuzDoCanal | null {
+  if (!canal) return null;
+  const [a, b] = canal.luz ?? [];
+  return luzDoCanal({ paleta: canal.paleta, amostra: { a, b } }, tema);
 }
