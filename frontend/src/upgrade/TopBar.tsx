@@ -13,7 +13,7 @@ import { PontaDaBarra } from './PontaDaBarra';
 import { AcoesDaTela, type ScreenAction } from './ScreenHeader';
 import type { ChromeAtual, ChromeEstado, ChromeLista } from './UpgradeChrome';
 import type { Migalha } from './upgradeRoutes';
-import type { UpgradeTheme } from './useUpgradeTheme';
+import type { UpgradeTheme } from '@/lib/tema';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A barra superior.

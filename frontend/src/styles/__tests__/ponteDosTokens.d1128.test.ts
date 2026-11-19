@@ -7,7 +7,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { RAMPA, temaEscuro } from '../../upgrade/useUpgradeTheme';
 
 const ler = (relativo: string) =>
   readFileSync(resolve(__dirname, relativo), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -145,22 +144,13 @@ describe('o tema vem dos --cc-*', () => {
     expect(comCor.map((b) => b.seletor)).toEqual([]);
   });
 
-  // Os degraus que a casca manda para o claro: a lista dentro de `.ap:is(…)`.
-  const degrausDoClaro = seletorClaro.match(/\.ap:is\(([^)]*)\)/)?.[1] ?? '';
-
-  it.each(RAMPA)('o degrau %s cai no tema certo da Sala', (tema) => {
-    expect(degrausDoClaro.includes(`[data-theme='${tema}']`)).toBe(!temaEscuro(tema));
+  it('tokens.css não tem :has: o tema vem do <html>', () => {
+    expect(seletorClaro).not.toMatch(/:has\(|\.ap:is\(/);
   });
 
-  // O index.html nasce com `data-theme="indigo"` (resto da paleta antiga): uma guarda
-  // `:not([data-theme])` deixava o claro da casca sem efeito nenhum.
-  it('o data-theme com que o <html> nasce não bloqueia o tema da casca', () => {
+  it('o <html> nasce sem tema de paleta antiga', () => {
     const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
-    const deNascenca = html.match(/<html[^>]*data-theme="([^"]+)"/)?.[1];
-    const guarda = seletorClaro.match(/:root:not\((.*?)\):has/)?.[1] ?? '';
-    expect(guarda).not.toBe('');
-    expect(guarda).not.toMatch(/\[data-theme\](?!=)/);
-    if (deNascenca) expect(guarda).not.toContain(`'${deNascenca}'`);
+    expect(html.match(/<html[^>]*data-theme="([^"]+)"/)?.[1]).toBe('dark');
   });
 
   it('o fundo da casca é sólido: sem degradê, na cor do fundo', () => {

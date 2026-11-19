@@ -216,7 +216,7 @@
   "src/features/thumbnail-padroes/ThumbnailPadroesPage.tsx": 31,
   "src/index.css": 39,
   "src/upgrade/ActionBar.tsx": 12,
-  "src/upgrade/AparenciaDaCasca.tsx": 11,
+  "src/upgrade/AparenciaDaCasca.tsx": 7,
   "src/upgrade/BarraDoCorte.tsx": 6,
   "src/upgrade/ContextColumn.tsx": 23,
   "src/upgrade/Erro404Page.tsx": 4,

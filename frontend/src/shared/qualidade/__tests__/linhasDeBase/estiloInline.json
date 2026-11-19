@@ -74,7 +74,7 @@
   "src/features/shorts/ShortsProntosPage.tsx": 1,
   "src/features/shorts/WorkspaceDoFirePage.tsx": 1,
   "src/upgrade/ActionBar.tsx": 13,
-  "src/upgrade/AparenciaDaCasca.tsx": 13,
+  "src/upgrade/AparenciaDaCasca.tsx": 8,
   "src/upgrade/BarraDoCorte.tsx": 4,
   "src/upgrade/ContextColumn.tsx": 30,
   "src/upgrade/Erro404Page.tsx": 7,

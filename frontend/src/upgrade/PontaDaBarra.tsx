@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Icon } from './Icon';
 import type { ChromeEstado } from './UpgradeChrome';
-import { temaEscuro, type UpgradeTheme } from './useUpgradeTheme';
+import { temaEscuro, type UpgradeTheme } from '@/lib/tema';
 
 // ─────────────────────────────────────────────────────────────────
 // D-877 · A ponta direita da barra superior: busca, canal, estado, fila e
