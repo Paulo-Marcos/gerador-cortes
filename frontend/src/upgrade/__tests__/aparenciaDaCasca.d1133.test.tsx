@@ -23,7 +23,8 @@ describe('AparenciaDaCasca · o cartão Tema', () => {
   it('oferece Escuro, Claro e Auto, e marca a escolha salva', async () => {
     const html = await renderizar('auto');
     const botoes = [...html.matchAll(/<button[^>]*aria-pressed="(true|false)"[^>]*>.*?<\/button>/g)].map((m) => ({
-      texto: m[0].replace(/<[^>]+>/g, ''),
+      // o rótulo é o texto depois da última tag, antes do </button> (sem apagar tags)
+      texto: m[0].slice(0, -'</button>'.length).split('>').pop() ?? '',
       ativo: m[1] === 'true',
     }));
     const tema = botoes.filter((b) => ['Escuro', 'Claro', 'Auto'].includes(b.texto));
