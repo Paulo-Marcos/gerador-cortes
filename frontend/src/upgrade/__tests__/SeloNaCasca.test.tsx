@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { LinhaDeLista } from '../ContextColumn';
-import { TopBar } from '../TopBar';
+import { LinhaDoTopo } from '../LinhaDoTopo';
 
 // D-991: a casca só carrega a marca que a tela entrega (`selo`): a lista e o
 // seletor do topo não sabem o que ela significa, e sem selo nada muda.
@@ -16,12 +16,10 @@ const linha = (selo?: React.ReactNode) =>
 const topo = (selo?: React.ReactNode) =>
   renderToStaticMarkup(
     <MemoryRouter>
-      <TopBar
+      <LinhaDoTopo
         trilha={[{ texto: 'Biblioteca', to: '/projetos' }, { texto: '#7' }]}
         atual={{ titulo: 'Pedro II', num: '7', selo, onAnterior: vi.fn(), onProximo: vi.fn() }}
         listaNoPainel={{ titulo: 'Cortes da live', itens: [] }}
-        tema="dark"
-        onAlternarTema={vi.fn()}
       />
     </MemoryRouter>,
   );

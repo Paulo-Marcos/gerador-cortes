@@ -24,7 +24,7 @@ const html = renderToStaticMarkup(
 
 describe('D-1086 · a barra de ações numa fileira, com a quebra como rede', () => {
   it('o principal nunca fica fora da barra: sem largura, a barra quebra em vez de cortar', () => {
-    expect(html).toMatch(/^<div class="gl" style="[^"]*flex-wrap:wrap/);
+    expect(html).toMatch(/^<div class="[^"]*cc-vidro-casca[^"]*" style="[^"]*flex-wrap:wrap/);
   });
 
   it('o motivo entra na conta da quebra só com o mínimo legível e cresce na sobra', () => {

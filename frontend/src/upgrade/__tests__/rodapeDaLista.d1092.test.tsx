@@ -2,7 +2,7 @@ import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { ContextColumn } from '../ContextColumn';
-import { ItensDoPainel } from '../TopBar';
+import { ItensDoPainel } from '../SeletorDoCorte';
 import type { ChromeLista } from '../UpgradeChrome';
 
 // D-1092: a lista da casca ganhou um rodapé (os cortes riscados, na Bancada). Ele

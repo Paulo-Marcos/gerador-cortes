@@ -31,6 +31,6 @@ describe('D-1044 · as pendências na barra de ações', () => {
     const html = renderToStaticMarkup(<ActionBar barra={{ pendencias: PENDENCIA, primario: PRIMARIO }} />);
     const botao = /<button[^>]*>(?:(?!<\/button>).)*Renderizar final/s.exec(html)?.[0] ?? '';
     expect(botao).toContain('Renderizar final');
-    expect(botao).not.toContain('disabled');
+    expect(botao).not.toMatch(/\sdisabled(?=[\s=>])/);
   });
 });
