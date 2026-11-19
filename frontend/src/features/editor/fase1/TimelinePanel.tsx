@@ -163,11 +163,11 @@ function buildTimecodes(inicio: number, fim: number): string[] {
   return Array.from({ length: TIMECODE_SLOTS }, (_, idx) => segParaHms(inicio + step * idx));
 }
 
-/** Insere alpha num oklch sem canal-A (formato `--wb-*` do index.css: `oklch(L C H)`).
- *  Strings que ja trazem "/" (com alpha) voltam intocadas. */
-function withAlpha(oklch: string, alpha: number): string {
-  if (!oklch || oklch.includes('/')) return oklch;
-  return oklch.replace(/\)\s*$/, ` / ${alpha})`);
+/** Põe alfa em qualquer cor (D-1128: com a ponte, `--wb-*` chega em hex, não em oklch).
+ *  Mistura em oklab com o transparente; o canvas do wavesurfer lê `color-mix`. */
+export function withAlpha(cor: string, alpha: number): string {
+  if (!cor) return cor;
+  return `color-mix(in oklab, ${cor} ${Math.round(alpha * 100)}%, transparent)`;
 }
 
 interface WaveformProps {
