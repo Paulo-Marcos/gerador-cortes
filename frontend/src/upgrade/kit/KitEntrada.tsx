@@ -21,7 +21,7 @@ const FORMATOS = [
 function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-4 rounded-cartao border border-fio bg-vidro p-5">
-      <h3 className="font-mono text-[11px] uppercase tracking-wider text-fg-3">{titulo}</h3>
+      <h3 className="font-mono text-micro uppercase tracking-wider text-fg-3">{titulo}</h3>
       {children}
     </section>
   );
@@ -86,7 +86,7 @@ function BlocoDeLigarEMarcar() {
   const [redes, setRedes] = useState({ yt: true, tt: false });
   return (
     <Bloco titulo="Switch e checkbox">
-      <label className="flex items-center justify-between gap-3 text-[13px]">
+      <label className="flex items-center justify-between gap-3 text-corpo">
         Legendas automáticas
         <Switch
           checked={legendas}
@@ -94,20 +94,20 @@ function BlocoDeLigarEMarcar() {
           aria-label="Legendas automáticas"
         />
       </label>
-      <label className="flex items-center justify-between gap-3 text-[13px]">
+      <label className="flex items-center justify-between gap-3 text-corpo">
         Desligado
         <Switch checked={false} onCheckedChange={() => {}} aria-label="Desligado" />
       </label>
-      <label className="flex items-center justify-between gap-3 text-[13px] text-fg-off">
+      <label className="flex items-center justify-between gap-3 text-corpo text-fg-off">
         Desabilitado
         <Switch checked={false} onCheckedChange={() => {}} disabled aria-label="Desabilitado" />
       </label>
-      <label className="flex items-center justify-between gap-3 text-[13px]">
+      <label className="flex items-center justify-between gap-3 text-corpo">
         Carregando
         <Switch checked onCheckedChange={() => {}} carregando aria-label="Carregando" />
       </label>
       <div className="flex flex-col gap-3">
-        <label className="flex items-center gap-2.5 text-[13px]">
+        <label className="flex items-center gap-2.5 text-corpo">
           <Checkbox
             checked={redes.yt}
             onCheckedChange={(v) => setRedes((r) => ({ ...r, yt: v }))}
@@ -115,7 +115,7 @@ function BlocoDeLigarEMarcar() {
           />
           YouTube
         </label>
-        <label className="flex items-center gap-2.5 text-[13px]">
+        <label className="flex items-center gap-2.5 text-corpo">
           <Checkbox
             checked={redes.tt}
             onCheckedChange={(v) => setRedes((r) => ({ ...r, tt: v }))}
@@ -123,7 +123,7 @@ function BlocoDeLigarEMarcar() {
           />
           TikTok
         </label>
-        <label className="flex items-center gap-2.5 text-[13px]">
+        <label className="flex items-center gap-2.5 text-corpo">
           <Checkbox
             checked={redes.yt && redes.tt ? true : redes.yt || redes.tt ? 'mixed' : false}
             onCheckedChange={(v) => setRedes({ yt: v, tt: v })}
@@ -131,7 +131,7 @@ function BlocoDeLigarEMarcar() {
           />
           Todas as redes (parcial)
         </label>
-        <label className="flex items-center gap-2.5 text-[13px] text-fg-off">
+        <label className="flex items-center gap-2.5 text-corpo text-fg-off">
           <Checkbox checked={false} onCheckedChange={() => {}} disabled aria-label="Instagram" />
           Instagram (desabilitado)
         </label>
@@ -152,7 +152,7 @@ function BlocoDeEscolhaUnica() {
         className="flex flex-col gap-3"
       >
         {FORMATOS.map((f) => (
-          <label key={f.valor} className="flex items-center gap-2.5 text-[13px]">
+          <label key={f.valor} className="flex items-center gap-2.5 text-corpo">
             <Radio value={f.valor} disabled={f.desabilitada} aria-label={f.rotulo} />
             {f.rotulo}
           </label>

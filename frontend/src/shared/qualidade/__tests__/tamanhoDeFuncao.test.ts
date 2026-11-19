@@ -128,8 +128,6 @@ const EXCECOES: Record<string, number> = {
   "src/upgrade/ActionBar.tsx::ActionBar": 132,
   "src/upgrade/GavetaDaFila.tsx::GavetaDaFila": 126,
   "src/upgrade/GlobalRail.tsx::GlobalRail": 239,
-  "src/upgrade/KitScreen.tsx::KitScreen": 208,
-  "src/upgrade/KitScreen.tsx::ModalDemo": 146,
   "src/upgrade/PaletaDeComandos.tsx::PaletaDeComandos": 351,
   "src/upgrade/TopBar.tsx::Seletor": 177,
   "src/upgrade/UpgradeModal.tsx::UpgradeModal": 158,

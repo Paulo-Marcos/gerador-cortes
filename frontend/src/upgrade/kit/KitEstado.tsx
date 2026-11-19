@@ -43,7 +43,7 @@ export function aplicarTemaNoDocumento(
 function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-[11px] text-fg-3">{titulo}</h3>
+      <h3 className="text-micro text-fg-3">{titulo}</h3>
       <div className="flex flex-wrap items-center gap-3">{children}</div>
     </section>
   );
@@ -55,7 +55,7 @@ function SelosDoKit() {
       {TONS_DO_SELO.map((tom) => (
         <div key={tom} className="flex flex-col items-start gap-1.5">
           <Selo tom={tom}>{ROTULO_DO_TOM[tom]}</Selo>
-          <span className="text-[11px] text-fg-3">
+          <span className="text-micro text-fg-3">
             {tom} · {SENTIDO_DO_TOM[tom]}
           </span>
         </div>
@@ -150,7 +150,7 @@ export function KitEstado() {
   return (
     <section
       aria-label="Estado e navegação"
-      className="mt-6 flex flex-col gap-8 rounded-painel border border-fio bg-app p-6 font-sans text-[13px] text-fg"
+      className="mt-6 flex flex-col gap-8 rounded-painel border border-fio bg-app p-6 font-sans text-corpo text-fg"
     >
       <header className="flex items-center justify-between gap-4">
         <h2 className="text-secao">Estado e navegação · Sala escura</h2>
