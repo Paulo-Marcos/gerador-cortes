@@ -17,8 +17,14 @@ export interface AuroraProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
   src?: string | null;
 }
 
-// Halos: duas manchas fixas (íris e info) desfocadas uma vez. Sem animação de nenhum tipo.
-const HALO = 'absolute rounded-full blur-[80px] opacity-40 [transform:translateZ(0)]';
+// Halos: duas manchas fixas desfocadas uma vez, nas cores `--cc-halo-iris` e `--cc-halo-menta`
+// (DIRECAO §2). A força de cada um já vem no alfa do token, que cai à metade no claro: por isso
+// não há `opacity` aqui. Sem animação de nenhum tipo.
+const HALO = 'absolute rounded-full blur-[80px] [transform:translateZ(0)]';
+
+// Véu para `--cc-bg` na metade de baixo: é ele que segura o contraste do texto quando a capa é
+// clara (DIRECAO §12). Fica acima da imagem e dos halos.
+const VEU = 'absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(to_bottom,transparent,var(--cc-bg))]';
 
 export const Aurora = React.forwardRef<HTMLDivElement, AuroraProps>(function Aurora(
   { src, className, ...props },
@@ -35,8 +41,8 @@ export const Aurora = React.forwardRef<HTMLDivElement, AuroraProps>(function Aur
       className={cn('pointer-events-none absolute inset-0 -z-10 overflow-hidden [transform:translateZ(0)]', className)}
       {...props}
     >
-      <span className={cn(HALO, '-left-[10%] -top-[20%] h-[55%] w-[45%] bg-iris')} />
-      <span className={cn(HALO, '-right-[8%] top-[10%] h-[45%] w-[40%] bg-[var(--cc-info)]')} />
+      <span className={cn(HALO, '-left-[10%] -top-[20%] h-[55%] w-[45%] bg-[var(--cc-halo-iris)]')} />
+      <span className={cn(HALO, '-right-[8%] top-[10%] h-[45%] w-[40%] bg-[var(--cc-halo-menta)]')} />
       {src ? (
         <img
           key={src}
@@ -51,6 +57,7 @@ export const Aurora = React.forwardRef<HTMLDivElement, AuroraProps>(function Aur
           )}
         />
       ) : null}
+      <span className={VEU} />
     </div>
   );
 });
