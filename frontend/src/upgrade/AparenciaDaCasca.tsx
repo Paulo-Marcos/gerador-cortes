@@ -1,14 +1,14 @@
 import { NOME_DA_PREFERENCIA, PREFERENCIAS, useUpgradeTheme, type Preferencia } from '@/lib/tema';
+import { Switch } from '@/components/ui/switch';
 import { Icon, type IconName } from './Icon';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O cartão "Aparência" das Configurações.
 //
 // O design reúne aqui os dois eixos da casca: TEMA (escuro, claro ou auto) e
-// SUPERFÍCIE (vidro translúcido ou sólido). O tema também está no
-// botão da barra superior, porque se troca muito; a superfície só
-// aqui, porque se escolhe uma vez — e era justamente ela que não
-// tinha onde ser trocada fora da página de Componentes.
+// EFEITOS (aurora e vidro, ou superfícies sólidas). D-1137: com a barra superior
+// fora (DIRECAO §7.0), este é o único lugar do tema; "Reduzir efeitos" tomou o
+// lugar do antigo Vidro/Sólido e passou a tirar também a aurora.
 // ─────────────────────────────────────────────────────────────────
 
 const ICONE_DA_PREFERENCIA: Record<Preferencia, IconName> = {
@@ -84,19 +84,16 @@ export function AparenciaDaCasca() {
 
         <span style={{ width: 1, height: 22, background: 'var(--line)' }} aria-hidden />
 
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>Superfície</span>
-        <Segmentado
-          valor={glass ? 'vidro' : 'solido'}
-          onEscolher={(v) => setGlass(v === 'vidro')}
-          opcoes={[
-            { id: 'vidro', texto: 'Vidro', icone: 'layout-template' },
-            { id: 'solido', texto: 'Sólido', icone: 'rows' },
-          ]}
-        />
-        <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>
+        {/* D-1137 (DIRECAO §3.6): a saída de emergência da luz. Ligado, tira a aurora
+            e troca o vidro da casca por sólido. É o vidro desligado (`upgrade-glass`). */}
+        <label className="flex items-center gap-2.5 text-corpo font-semibold text-fg">
+          <Switch checked={!glass} onCheckedChange={(reduzir) => setGlass(!reduzir)} aria-describedby="reduzir-efeitos-ajuda" />
+          Reduzir efeitos
+        </label>
+        <span id="reduzir-efeitos-ajuda" className="text-pequeno text-fg-3">
           {glass
-            ? 'translúcido sobre o fundo — mais bonito, custa GPU a cada quadro'
-            : 'superfície opaca — mais leve com o render aberto atrás'}
+            ? 'aurora e vidro ligados: mais bonito, custa GPU a cada quadro'
+            : 'sem aurora e sem vidro: superfícies sólidas, mais leve com vídeo e render'}
         </span>
       </div>
     </div>

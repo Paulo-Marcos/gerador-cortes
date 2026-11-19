@@ -198,7 +198,12 @@ export const DEFINICOES: Record<string, Definicao> = {
     // Nasce zerada. Os arquivos permitidos (button, tabs, mapa-da-live, TrilhaDeEtapas,
     // a agulha, ScreenHeader e os quatro cartões) entram aqui, um a um, com a história que os cria.
     // O botão e a aba são donos do feixe (DIRECAO §3.1): isentos por nome.
-    isentos: [...DEFINE_TOKENS, /^src\/components\/ui\/(?:button|tabs|mapa-da-live)\.tsx$/],
+    // D-1137 (H-13): a trilha (bolinha da etapa atual) e o h1 do cabeçalho de tela.
+    isentos: [
+      ...DEFINE_TOKENS,
+      /^src\/components\/ui\/(?:button|tabs|mapa-da-live)\.tsx$/,
+      /^src\/upgrade\/(?:TrilhaDeEtapas|ScreenHeader)\.tsx$/,
+    ],
     exemplos: [
       ['className="bg-feixe text-sobre-feixe"', 1],
       ['<h1><span className="text-feixe">live</span></h1> <Card className="cc-fio" />', 2],
