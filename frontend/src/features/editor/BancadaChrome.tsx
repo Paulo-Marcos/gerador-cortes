@@ -93,6 +93,10 @@ export type BancadaChromeProps = {
    *  a verdade: primário com o próximo passo, veredito à parte.
    *  Chave presente com `undefined` REMOVE a peça. */
   barra?: Partial<ChromeBarra>;
+  /** D-1150 (§7.3): o editor troca de corte pelo mapa do cabeçalho, e a lista lateral
+   *  "Cortes da live" sai. A Pós e a Revisão seguem com a lista. O J/K não muda: vem do
+   *  `atual`, que continua declarado. */
+  semLista?: boolean;
 };
 
 // A capa que a tela der; sem ela, a do export, quando já existe.
@@ -108,6 +112,11 @@ function capaDoCorteOuExport(
     undefined
   );
 }
+
+const TECLAS_DA_BANCADA = [{ teclas: ['Space'], texto: 'tocar' }, { teclas: ['W'], texto: 'por quê' }];
+/** D-1150: sem a lista, a casca não injeta o lembrete do J/K (ele vem com o seletor);
+ *  o editor, que troca de corte pelo mapa e pelo J/K, o declara. */
+const TROCAR_DE_CORTE = { teclas: ['J', 'K'], texto: 'trocar de corte' };
 
 /** O que as três telas de um corte levam à barra: o porquê dele e o que ficou em aberto. */
 function partesDoCorteNaBarra(corte: Corte) {
@@ -141,6 +150,7 @@ export function BancadaChrome({
   riscar,
   onNovoTrecho,
   barra,
+  semLista = false,
 }: BancadaChromeProps) {
   const navigate = useNavigate();
   const [editandoLeitura, setEditandoLeitura] = useState(false);
@@ -195,7 +205,7 @@ export function BancadaChrome({
       // sobrava no topo (gerar bruto) foi para o Mais.
       acoes: acoesDoEditor({ brutoPronto, brutoOcupado, onGerarBruto }),
       estado: estadoDoSalvar(salvando, sujo),
-      lista: {
+      lista: semLista ? undefined : {
         cabecalho: { titulo: tituloLive, sub: `${vivos.length} cortes · ${prontos} prontos`, thumb: capaDaLive },
         titulo: 'Cortes da live',
         resumo: `${vivos.length} · ${prontos} prontos`,
@@ -212,7 +222,7 @@ export function BancadaChrome({
         onVerTodos: () => navigate(`/projetos/${projetoId}`),
       },
       barra: {
-        teclas: [{ teclas: ['Space'], texto: 'tocar' }, { teclas: ['W'], texto: 'por quê' }],
+        teclas: semLista ? [TROCAR_DE_CORTE, ...TECLAS_DA_BANCADA] : TECLAS_DA_BANCADA,
         // D-886: a nota da IA e o porquê do corte, nas três telas de um corte.
         ...partesDoCorteNaBarra(corte),
         alternancias: [
@@ -287,9 +297,8 @@ export function BancadaChrome({
       barra?.primario?.texto,
       barra?.primario?.desabilitado,
       barra?.primario?.motivo,
-      barra?.veredito?.aprovado,
-      barra?.veredito?.ocupado,
-      riscar?.bloqueio,
+      barra?.veredito?.aprovado, barra?.veredito?.ocupado,
+      riscar?.bloqueio, semLista,
     ],
   );
 

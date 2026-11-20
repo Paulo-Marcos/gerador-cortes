@@ -199,6 +199,7 @@ export const DEFINICOES: Record<string, Definicao> = {
     // a agulha, ScreenHeader e os quatro cartões) entram aqui, um a um, com a história que os cria.
     // O botão e a aba são donos do feixe (DIRECAO §3.1): isentos por nome.
     // D-1137 (H-13): a trilha (bolinha da etapa atual) e o h1 do cabeçalho de tela.
+    // D-1150 (H-17): a agulha do editor.
     isentos: [
       ...DEFINE_TOKENS,
       /^src\/components\/ui\/(?:button|tabs|mapa-da-live)\.tsx$/,
@@ -207,6 +208,8 @@ export const DEFINICOES: Record<string, Definicao> = {
       /^src\/features\/projetos\/CartaoComFio\.tsx$/,
       // D-1149 (H-16): o cartão do mapa nos cortes da live, o que leva o fio de luz (§3.1).
       /^src\/features\/projeto-detalhe\/MapaDosCortes\.tsx$/,
+      // D-1150 (H-17): a agulha da linha do tempo do editor (rótulo no feixe, §3.3).
+      /^src\/features\/editor\/fase1\/agulhaDaOnda\.ts$/,
     ],
     exemplos: [
       ['className="bg-feixe text-sobre-feixe"', 1],

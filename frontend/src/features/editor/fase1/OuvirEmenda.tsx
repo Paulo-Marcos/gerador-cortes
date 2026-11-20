@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import { Icon } from '@/upgrade/Icon';
+import { FERRAMENTA_TEXTO } from '../salaDoEditor';
 import { segParaMmSs } from '../timeUtils';
 import type { AvisoDoTrecho } from './avisoDoTrecho';
 import { MARGEM_DA_EMENDA_SEG, ouvirEmenda } from './escutaDaEmenda';
@@ -15,13 +16,12 @@ interface Props {
 
 export function OuvirEmenda({ aviso, videoRef }: Props) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto' }}>
-      <span className="chip" style={{ background: 'var(--panel)', fontFamily: 'var(--mono)' }}>
-        emenda em {segParaMmSs(aviso.emenda)}
-      </span>
+    <div className="pointer-events-auto flex items-center gap-2">
+      <span className="font-mono text-micro text-fg-3">emenda em {segParaMmSs(aviso.emenda)}</span>
       <button
         type="button"
-        className="btn btn-sm"
+        data-sala=""
+        className={FERRAMENTA_TEXTO}
         title={`Toca ${MARGEM_DA_EMENDA_SEG} s antes do trecho, pula o que sai e toca ${MARGEM_DA_EMENDA_SEG} s depois`}
         onClick={() => {
           if (videoRef.current) ouvirEmenda(videoRef.current, aviso);

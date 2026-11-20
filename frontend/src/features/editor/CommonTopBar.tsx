@@ -65,20 +65,20 @@ export function CommonTopBar({
 
   return (
     <header
-      className="flex flex-shrink-0 items-center gap-3 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-5"
+      className="flex flex-shrink-0 items-center gap-3 border-b border-fio bg-painel-solido px-5"
       style={{ height: 56 }}
     >
       {/* Esquerda */}
       <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
         <Link
           to={`/projetos/${corte.projeto_id}`}
-          className="font-code text-[12px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
+          className="font-mono text-pequeno text-fg-3 hover:text-fg"
           aria-label="Voltar ao Studio"
         >
           #{corte.numero}
         </Link>
         <h1
-          className="truncate font-editorial text-[19px] font-medium leading-tight tracking-[-0.01em] text-[var(--wb-ink)]"
+          className="truncate text-[19px] font-medium leading-tight tracking-[-0.01em] text-[var(--wb-ink)]"
           title={titulo}
         >
           {titulo}
@@ -86,7 +86,7 @@ export function CommonTopBar({
         {statusToggles && <div className="flex items-center gap-1.5">{statusToggles}</div>}
         {statusPills && <div className="flex items-center gap-1.5">{statusPills}</div>}
         {dirty && (
-          <span className="font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--wb-warn)]">
+          <span className="font-mono text-micro font-bold tracking-[0.08em] text-aviso">
             · nao salvo
           </span>
         )}
@@ -99,7 +99,7 @@ export function CommonTopBar({
 
       {/* Direita */}
       <div className="flex shrink-0 items-center gap-1.5">
-        <div className="h-[22px] w-px bg-[var(--wb-border)]" aria-hidden />
+        <div className="h-[22px] w-px bg-fio-2" aria-hidden />
         {secondaryAction}
         {primaryAction}
         {moreMenuItems && moreMenuItems.length > 0 && <MoreMenu items={moreMenuItems} />}
@@ -130,17 +130,17 @@ function MoreMenu({ items }: { items: MoreMenuItem[] }) {
           aria-label="Mais acoes"
           aria-expanded={open}
           className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+            'flex h-8 w-8 items-center justify-center rounded-campo transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
             open
-              ? 'bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
-              : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]',
+              ? 'bg-poco text-fg'
+              : 'text-fg-2 hover:bg-vidro-2 hover:text-fg',
           )}
         >
           <Icon name="more-horizontal" size={16} />
         </button>
       </Tooltip>
       {open && (
-        <div className="absolute right-0 top-10 z-30 flex w-[220px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]">
+        <div className="absolute right-0 top-10 z-30 flex w-[220px] flex-col gap-0.5 rounded-campo border border-fio-2 bg-painel-solido p-2 shadow-pop-luz">
           {items.map((it, idx) => {
             return (
               <button
@@ -151,12 +151,12 @@ function MoreMenu({ items }: { items: MoreMenuItem[] }) {
                   if (!it.disabled) it.onClick();
                 }}
                 disabled={it.disabled}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-50"
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-pequeno text-fg transition-colors hover:bg-vidro-2 disabled:opacity-50"
               >
-                <Icon name={it.icon} className="text-[var(--wb-text-mute)]" />
+                <Icon name={it.icon} className="text-fg-2" />
                 <span className="flex-1">{it.label}</span>
                 {it.kbd && (
-                  <span className="font-code text-[10px] text-[var(--wb-text-dim)]">{it.kbd}</span>
+                  <span className="font-mono text-micro text-fg-3">{it.kbd}</span>
                 )}
               </button>
             );
@@ -222,7 +222,7 @@ export function ReadingModal({
           onSave(buildReadingPatch(draftAuthor, draftPart));
         }}
       >
-        <label className="grid gap-1.5 text-xs font-semibold text-[var(--wb-text-dim)]">
+        <label className="grid gap-1.5 text-xs font-semibold text-fg-3">
           Autor
           <input
             value={draftAuthor}
@@ -230,10 +230,10 @@ export function ReadingModal({
             disabled={disabled}
             placeholder="Autor"
             autoFocus
-            className="h-9 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-medium text-[var(--wb-text)] outline-none focus:border-info"
+            className="h-9 rounded-etiqueta border border-fio-2 bg-painel-solido px-3 text-sm font-medium text-fg outline-none focus:border-info"
           />
         </label>
-        <label className="grid gap-1.5 text-xs font-semibold text-[var(--wb-text-dim)]">
+        <label className="grid gap-1.5 text-xs font-semibold text-fg-3">
           Parte
           <input
             type="number"
@@ -241,7 +241,7 @@ export function ReadingModal({
             value={draftPart}
             onChange={(event) => setDraftPart(event.target.value)}
             disabled={disabled}
-            className="h-9 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-medium text-[var(--wb-text)] outline-none focus:border-info"
+            className="h-9 rounded-etiqueta border border-fio-2 bg-painel-solido px-3 text-sm font-medium text-fg outline-none focus:border-info"
           />
         </label>
       </form>

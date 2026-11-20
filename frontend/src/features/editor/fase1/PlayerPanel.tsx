@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CSSProperties } from 'react';
 import { hmsParaSeg } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
@@ -7,6 +7,10 @@ import { avisoDoTrechoEm } from './avisoDoTrecho';
 import { OuvirEmenda } from './OuvirEmenda';
 import type { Desvio } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
+
+/** O selo de canto do palco ("BRUTO · pronto", "sem cortes"): pílula escura sobre o quadro. */
+const SELO_DO_PALCO =
+  'pointer-events-none absolute top-2 inline-flex h-6 items-center gap-1.5 rounded-pilula bg-veu px-2.5 font-mono text-micro text-fg';
 
 export type { PlayerHandle };
 
@@ -216,41 +220,17 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
 
   // ── D-599: o palco ────────────────────────────────────────────
   // O design tira a moldura e centraliza um retângulo de proporção
-  // fixa. `container-type: inline-size` é o detalhe que faz a peça
-  // funcionar: a legenda passa a medir em `cqw`, então ela cresce e
-  // encolhe JUNTO com o palco. Legenda em px num palco elástico é
-  // legenda que mente sobre como o texto vai sair no vídeo final.
+  // fixa. `container-type: inline-size` faz o palco medir em `cqw`.
+  // D-1150 (§7.3): o motivo do trecho que sai vem numa legenda (vidro chapado,
+  // `bg-pop`, sem `backdrop-filter`: o vídeo está tocando, §3.6) com o "Sai · …",
+  // a frase e o "Ouvir a emenda". A proporção entra por variável (§9.3).
+  const geometria = { '--proporcao': proporcao } as CSSProperties;
   return (
-    <section
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        height: '100%',
-        minHeight: 0,
-      }}
-    >
-      <div
-        style={{
-          flex: 1,
-          display: 'grid',
-          placeItems: 'center',
-          minHeight: 220,
-          minWidth: 0,
-        }}
-      >
+    <section data-sala="" className="flex h-full min-h-0 flex-col gap-2">
+      <div className="grid min-h-[220px] min-w-0 flex-1 place-items-center">
         <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            maxWidth: '100%',
-            aspectRatio: proporcao,
-            borderRadius: 'var(--r3)',
-            overflow: 'hidden',
-            background: '#000',
-            boxShadow: 'var(--shadow)',
-            containerType: 'inline-size',
-          }}
+          style={geometria}
+          className="relative h-full max-w-full overflow-hidden rounded-cartao bg-palco shadow-painel-luz [aspect-ratio:var(--proporcao)] [container-type:inline-size]"
         >
           <video
             ref={videoRef}
@@ -258,39 +238,15 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
             controls
             preload="metadata"
             crossOrigin="anonymous"
-            style={{ width: '100%', height: '100%', display: 'block' }}
+            className="block h-full w-full"
           />
 
           {selo ? (
-            <span
-              className="chip"
-              style={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                background: 'rgb(0 0 0/.55)',
-                color: '#fff',
-                fontFamily: 'var(--mono)',
-                pointerEvents: 'none',
-              }}
-            >
-              {selo}
-            </span>
+            <span className={`${SELO_DO_PALCO} left-2`}>{selo}</span>
           ) : null}
 
           {smartPlay ? (
-            <span
-              className="chip"
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                background: 'rgb(0 0 0/.55)',
-                color: '#fff',
-                fontFamily: 'var(--mono)',
-                pointerEvents: 'none',
-              }}
-            >
+            <span className={`${SELO_DO_PALCO} right-2`}>
               <Icon name="scissors" />
               sem cortes
             </span>
@@ -299,50 +255,12 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           {/* D-511/D-1091: o que sai, por quê e onde emenda. Ver o que se perde no
               instante em que se perde é o que permite discordar do corte. */}
           {aviso ? (
-            <div
-              style={{
-                position: 'absolute',
-                left: '10%',
-                right: '10%',
-                bottom: '16%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 6,
-                pointerEvents: 'none',
-              }}
-            >
-              <span
-                className="chip"
-                style={{
-                  background: 'rgb(0 0 0/.75)',
-                  color: '#ff9b9b',
-                  fontFamily: 'var(--mono)',
-                  fontSize: 10,
-                  textTransform: 'uppercase',
-                  letterSpacing: '.08em',
-                }}
-              >
-                {aviso.titulo}
-              </span>
-              <p
-                style={{
-                  margin: 0,
-                  textAlign: 'center',
-                  fontWeight: 800,
-                  fontSize: '4.2cqw',
-                  lineHeight: 1.15,
-                  color: '#fff',
-                  // `paint-order: stroke` desenha o contorno ATRÁS das hastes:
-                  // sem ele o traço come as letras finas.
-                  paintOrder: 'stroke fill',
-                  WebkitTextStroke: '0.35cqw rgba(0,0,0,0.85)',
-                  textShadow: '0 2px 0 #000',
-                }}
-              >
-                {aviso.justificativa}
-              </p>
-              <OuvirEmenda aviso={aviso} videoRef={videoRef} />
+            <div className="pointer-events-none absolute inset-x-[10%] bottom-[14%] flex justify-center">
+              <div className="flex max-w-[560px] flex-col gap-1.5 rounded-bloco border border-fio-2 bg-pop px-4 py-3 text-fg shadow-pop-luz">
+                <span className="font-mono text-pequeno text-erro">{aviso.titulo}</span>
+                <p className="text-corpo text-fg">{aviso.justificativa}</p>
+                <OuvirEmenda aviso={aviso} videoRef={videoRef} />
+              </div>
             </div>
           ) : null}
         </div>

@@ -31,25 +31,25 @@ interface RiscadosDoCorteProps {
 
 function RiscadosDoCorte({ riscados, linhas, pendente, onRestaurar }: RiscadosDoCorteProps) {
   return (
-    <details open className="mt-2 border-t border-[var(--wb-border-soft)] pt-2">
-      <summary className="cursor-pointer text-[12px] font-semibold text-[var(--wb-text-mute)]">
+    <details open className="mt-2 border-t border-fio pt-2">
+      <summary className="cursor-pointer text-pequeno font-semibold text-fg-2">
         Riscados · {riscados.length}
       </summary>
       <div className="mt-1.5 flex flex-col gap-1.5">
         {riscados.map((desvio, indice) => (
           <div
             key={`${desvio.inicio_hms}-${indice}`}
-            className="flex items-start gap-2.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] px-2.5 py-2"
+            className="flex items-start gap-2.5 rounded-campo border border-dashed border-fio px-2.5 py-2"
           >
             <TempoDoTrecho desvio={desvio} />
             <div className="min-w-0 flex-1">
               <CabecalhoDoTrecho desvio={desvio} />
               {desvio.recusa ? (
-                <div className="mb-1 text-[11px] font-semibold leading-[1.4] text-[var(--wb-err-ink)]">
+                <div className="mb-1 text-micro font-semibold leading-[1.4] text-[var(--wb-err-ink)]">
                   {desvio.recusa}
                 </div>
               ) : null}
-              <div className="whitespace-pre-wrap break-words text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
+              <div className="whitespace-pre-wrap break-words text-micro leading-[1.4] text-fg-2">
                 {desvio.motivo || '—'}
               </div>
               <FalaQueSai desvio={desvio} linhas={linhas} riscada />
@@ -57,9 +57,9 @@ function RiscadosDoCorte({ riscados, linhas, pendente, onRestaurar }: RiscadosDo
             <Tooltip label="Volta para o corte" side="left">
               <IconButton
                 type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 flex-none text-[var(--wb-text-mute)]"
+                variant="fantasma"
+                size="pq"
+                className="flex-none"
                 onClick={() => onRestaurar?.(indice)}
                 disabled={pendente}
                 aria-label="Restaurar trecho"
@@ -105,7 +105,7 @@ function barraDosTrechos({ emVoo, adicionando, onGerarManual, onGerarTrechosIA, 
             type="button"
             onClick={onAdicionarNoCursor}
             disabled={adicionando}
-            className="flex h-[30px] flex-none items-center gap-1 rounded-[8px] bg-[var(--wb-accent-soft)] px-2.5 text-[12px] font-medium text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent)] hover:text-[var(--wb-accent-fg)] disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-[30px] flex-none items-center gap-1 rounded-[8px] bg-iris-suave px-2.5 text-pequeno font-medium text-iris transition-colors hover:bg-[var(--wb-accent)] hover:text-[var(--wb-accent-fg)] disabled:pointer-events-none disabled:opacity-40"
           >
             <Icon name="plus" size={14} />
             Trecho no cursor
@@ -117,7 +117,7 @@ function barraDosTrechos({ emVoo, adicionando, onGerarManual, onGerarTrechosIA, 
           type="button"
           onClick={onGerarManual}
           aria-label="Importar trechos manualmente"
-          className="ml-auto flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[8px] border border-[var(--wb-border)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+          className="ml-auto flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[8px] border border-fio-2 text-fg-2 transition-colors hover:bg-vidro-2 hover:text-fg"
         >
           <Icon name="wand-sparkles" size={16} />
         </button>
@@ -140,14 +140,14 @@ function cabecalhoDaRodada({ desvios, trechos, pendente, onDesfazer }: Cabecalho
   return (
     // Quebra em duas linhas na coluna estreita: com reticências, "Claude" era o que sumia.
     <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 pb-1 pt-1">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--wb-text-dim)]">
+      <span className="text-micro font-semibold tracking-[0.04em] text-fg-3">
         rodada da IA{provedor ? ` · ${provedor}` : ''}
       </span>
       <button
         type="button"
         onClick={onDesfazer}
         disabled={pendente}
-        className="flex flex-none items-center gap-1.5 rounded-[8px] border border-[var(--wb-border)] px-2 py-1 text-[12px] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] disabled:opacity-40"
+        className="flex flex-none items-center gap-1.5 rounded-[8px] border border-fio-2 px-2 py-1 text-pequeno text-fg-2 transition-colors hover:bg-vidro-2 hover:text-fg disabled:opacity-40"
       >
         <Icon name="undo-2" size={14} />
         Desfazer rodada · {trechos} {trechos === 1 ? 'trecho' : 'trechos'}
@@ -263,10 +263,10 @@ export const TrechosList = memo(function TrechosList({
       })}
       <div className="flex flex-col gap-1.5 px-2.5 py-1.5">
         {sortedWithOriginalIdx.length === 0 && (
-          <div className="flex flex-col items-center gap-1 py-6 text-center text-[12px] text-[var(--wb-text-dim)]">
+          <div className="flex flex-col items-center gap-1 py-6 text-center text-pequeno text-fg-3">
             <Icon name="sparkles" size={20} className="opacity-60" />
             Nenhum trecho marcado.
-            <span className="text-[11px]">Use IA / Manual / Silencios para gerar.</span>
+            <span className="text-micro">Use IA / Manual / Silencios para gerar.</span>
           </div>
         )}
         {sortedWithOriginalIdx.map(({ d, i }, sortPos) => (

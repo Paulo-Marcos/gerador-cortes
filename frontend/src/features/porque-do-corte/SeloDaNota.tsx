@@ -21,7 +21,8 @@ export function SeloDaNota({
       onClick={onAbrir}
       title={dicaDaNota(nota)}
       aria-label={`Nota da IA ${nota.texto}. Ver por que a IA escolheu este corte`}
-      style={{ flex: 'none', padding: 0, border: 0, background: 'none', cursor: 'pointer' }}
+      data-sala=""
+      className="flex-none cursor-pointer rounded-pilula border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
     >
       <SeloDeEstado tom={nota.tom} ponto={false}>
         IA {nota.texto}

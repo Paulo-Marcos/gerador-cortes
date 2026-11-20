@@ -20,11 +20,9 @@ export function FaixaDoBruto({ corte, audioOffsetMs }: Props) {
   return (
     <section
       aria-label="O bruto vai ter"
-      className="mt-2 flex flex-none flex-wrap items-center gap-x-4 gap-y-1 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-3.5 py-2 text-[13px] text-[var(--wb-text)]"
+      className="mt-2 flex flex-none flex-wrap items-center gap-x-4 gap-y-1 rounded-cartao border border-fio bg-painel-solido px-3.5 py-2 text-corpo text-fg"
     >
-      <h3 className="m-0 font-code text-[11px] font-bold tracking-[0.1em] text-[var(--wb-text-mute)]">
-        O BRUTO VAI TER
-      </h3>
+      <h3 className="m-0 text-micro text-fg-2">O bruto vai ter</h3>
       <span>
         <strong className="font-semibold">fica {fica}</strong> de {bruto}
       </span>

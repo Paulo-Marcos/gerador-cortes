@@ -71,7 +71,7 @@ export function BlocosPanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-shrink-0 items-center gap-2 border-b border-[var(--wb-border-soft)] px-3 py-2">
+      <div className="flex flex-shrink-0 items-center gap-2 border-b border-fio px-3 py-2">
         <Tooltip
           label={
             podeDividir
@@ -83,8 +83,8 @@ export function BlocosPanel({
           <span>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant="secundario"
+              size="pq"
               onClick={() => onDividir(pontoSeg)}
               disabled={!podeDividir || pendente}
             >
@@ -98,8 +98,8 @@ export function BlocosPanel({
             <span>
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="fantasma"
+                size="pq"
                 onClick={onRestaurar}
                 disabled={pendente}
               >
@@ -108,12 +108,12 @@ export function BlocosPanel({
             </span>
           </Tooltip>
         )}
-        {pendente && <Icon name="loader-2" className="animate-spin text-[var(--wb-text-dim)]" />}
+        {pendente && <Icon name="loader-2" className="animate-spin text-fg-3" />}
       </div>
 
       {arranjo?.bruto_desatualizado && (
         // Não apagamos o bruto: o contrato desta casa é avisar, não destruir.
-        <p className="flex-shrink-0 bg-[var(--wb-warn-soft)] px-3 py-1.5 text-[11px] text-[var(--wb-warn-ink)]">
+        <p className="flex-shrink-0 bg-[var(--wb-warn-soft)] px-3 py-1.5 text-micro text-[var(--wb-warn-ink)]">
           A ordem mudou — o bruto gerado ainda está na ordem antiga. Gere de novo para ver.
         </p>
       )}
@@ -140,13 +140,13 @@ export function BlocosPanel({
               className={cn(
                 'mb-1 flex items-center gap-2 rounded-[6px] border px-2 py-1.5 transition-colors',
                 alvo === indice && arrastando !== indice
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-bg-inset)]'
-                  : 'border-[var(--wb-border-soft)]',
+                  ? 'border-[var(--wb-accent)] bg-poco'
+                  : 'border-fio',
                 arrastando === indice && 'opacity-50',
               )}
             >
-              <Icon name="grip-vertical" className="flex-shrink-0 cursor-grab text-[var(--wb-text-dim)]" />
-              <span className="flex-shrink-0 rounded-[5px] bg-[var(--wb-bg-inset)] px-1.5 py-px font-code text-[10px] font-bold text-[var(--wb-text-mute)]">
+              <Icon name="grip-vertical" className="flex-shrink-0 cursor-grab text-fg-3" />
+              <span className="flex-shrink-0 rounded-[5px] bg-poco px-1.5 py-px font-mono text-micro font-bold text-fg-2">
                 {rotuloDeOrigem(bloco, blocos)}
               </span>
 
@@ -156,13 +156,13 @@ export function BlocosPanel({
                 className="flex-1 text-left"
                 title="Ir para o começo deste bloco"
               >
-                <span className="font-code text-[11.5px] text-[var(--wb-text)]">
+                <span className="font-mono text-micro text-fg">
                   {segParaMmSs(bloco.inicio_seg)} – {segParaMmSs(bloco.fim_seg)}
                 </span>
-                <span className="ml-2 text-[10.5px] text-[var(--wb-text-mute)]">
+                <span className="ml-2 text-micro text-fg-2">
                   {segParaMmSs(bloco.duracao_liquida_seg)}
                   {bloco.duracao_liquida_seg < bloco.duracao_seg - 0.5 && (
-                    <span className="ml-1 text-[var(--wb-text-dim)]">
+                    <span className="ml-1 text-fg-3">
                       (de {segParaMmSs(bloco.duracao_seg)})
                     </span>
                   )}
@@ -172,8 +172,8 @@ export function BlocosPanel({
               {/* WCAG 2.5.7: o mesmo movimento sem precisar arrastar. */}
               <IconButton
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="fantasma"
+                size="pq"
                 aria-label="Mover para cima"
                 disabled={indice === 0 || pendente}
                 onClick={() => onMover(indice, indice - 1)}
@@ -182,8 +182,8 @@ export function BlocosPanel({
               </IconButton>
               <IconButton
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="fantasma"
+                size="pq"
                 aria-label="Mover para baixo"
                 disabled={indice === blocos.length - 1 || pendente}
                 onClick={() => onMover(indice, indice + 1)}
@@ -194,8 +194,8 @@ export function BlocosPanel({
                 <span>
                   <IconButton
                     type="button"
-                    variant="ghost"
-                    size="sm"
+                    variant="fantasma"
+                    size="pq"
                     aria-label="Juntar com o bloco seguinte na live"
                     disabled={ultimoDaLive || pendente}
                     onClick={() => onFundir(indice)}
@@ -210,7 +210,7 @@ export function BlocosPanel({
       </ol>
 
       {blocos.length <= 1 && (
-        <p className="flex-shrink-0 border-t border-[var(--wb-border-soft)] px-3 py-2 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="flex-shrink-0 border-t border-fio px-3 py-2 text-micro leading-relaxed text-fg-2">
           O corte é um bloco só, na ordem da live. Leve o ponteiro até onde o assunto vira e clique{' '}
           <strong className="font-semibold">Dividir aqui</strong> — depois é só arrastar (ou usar as
           setas) para trocar a ordem.

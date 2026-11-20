@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useMemo } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -30,15 +30,13 @@ export function TempoDoTrecho({ desvio }: { desvio: Desvio }) {
   return (
     <div className="flex min-w-[52px] flex-col items-center gap-0.5 rounded text-left transition-opacity group-hover:opacity-80">
       <span
-        className="font-code text-[11px] font-bold text-[var(--wb-text)]"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
+        className="font-mono text-micro font-bold text-fg tabular-nums"
       >
         {mmssDecimo(desvio.inicio_hms)}
       </span>
-      <Icon name="chevron-down" className="text-[var(--wb-text-dim)]" />
+      <Icon name="chevron-down" className="text-fg-3" />
       <span
-        className="font-code text-[11px] text-[var(--wb-text-mute)]"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
+        className="font-mono text-micro text-fg-2 tabular-nums"
       >
         {mmssDecimo(desvio.fim_hms)}
       </span>
@@ -52,8 +50,8 @@ export function CabecalhoDoTrecho({ desvio }: { desvio: Desvio }) {
   return (
     <div className="mb-1 flex items-center gap-1.5">
       <span
-        className="inline-flex items-center rounded-full px-2 py-0.5 font-code text-[11px] font-semibold uppercase tracking-[0.04em]"
-        style={{ background: badge.bg, color: badge.fg }}
+        className="inline-flex items-center rounded-etiqueta bg-[var(--fundo)] px-2 py-0.5 font-mono text-micro text-[color:var(--tinta)]"
+        style={{ '--fundo': badge.bg, '--tinta': badge.fg } as CSSProperties}
         title={badge.titulo}
       >
         {badge.label}
@@ -61,8 +59,7 @@ export function CabecalhoDoTrecho({ desvio }: { desvio: Desvio }) {
       {/* D-871: o tempo que sai é informação, não alarme — em cinza, como no
           canvas ("cor fica para estado"). */}
       <span
-        className="font-code text-[11px] font-semibold text-[var(--wb-text-mute)]"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
+        className="font-mono text-micro font-semibold text-fg-2 tabular-nums"
       >
         −{delta.toFixed(1)}s
       </span>
@@ -73,7 +70,7 @@ export function CabecalhoDoTrecho({ desvio }: { desvio: Desvio }) {
 /** D-1089: "SAI" e "FICA", como no canvas — a fala riscada e a emenda lidas sem legenda. */
 function RotuloDaFala({ children }: { children: ReactNode }) {
   return (
-    <span className="w-[30px] flex-none font-code text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--wb-text-dim)]">
+    <span className="w-[30px] flex-none font-mono text-micro font-semibold tracking-[0.04em] text-fg-3">
       {children}
     </span>
   );
@@ -99,14 +96,14 @@ export function FalaQueSai({ desvio, linhas, riscada, silencio }: FalaQueSaiProp
   return (
     <div className="mt-1.5 flex flex-col gap-1">
       {semCitacao ? (
-        <div className="text-[11px] font-semibold leading-[1.4] text-[var(--wb-text-mute)]">
+        <div className="text-micro font-semibold leading-[1.4] text-fg-2">
           Sem citação da IA: fala estimada pelo tempo, não conferida
         </div>
       ) : null}
       <div className="flex items-baseline gap-1.5">
         {riscada ? null : <RotuloDaFala>Sai</RotuloDaFala>}
-        <div className={cn('min-w-0 break-words text-[12px] leading-[1.4] text-[var(--wb-text)]', riscada && 'line-through')}>
-          {fala.sai || <span className="text-[var(--wb-text-mute)]">pausa, sem fala</span>}
+        <div className={cn('min-w-0 break-words text-pequeno leading-[1.4] text-fg', riscada && 'line-through')}>
+          {fala.sai || <span className="text-fg-2">pausa, sem fala</span>}
         </div>
       </div>
       {riscada ? null : (
@@ -114,9 +111,9 @@ export function FalaQueSai({ desvio, linhas, riscada, silencio }: FalaQueSaiProp
           <RotuloDaFala>Fica</RotuloDaFala>
           <div
             aria-label="Como a emenda fica"
-            className="min-w-0 break-words border-l-2 border-[var(--wb-border)] pl-1.5 text-[11px] leading-[1.4] text-[var(--wb-text-mute)]"
+            className="min-w-0 break-words border-l-2 border-fio-2 pl-1.5 text-micro leading-[1.4] text-fg-2"
           >
-            …{fala.antes} <span className="font-code font-semibold text-[var(--wb-text)]">▸◂</span> {fala.depois}…
+            …{fala.antes} <span className="font-mono font-semibold text-fg">▸◂</span> {fala.depois}…
           </div>
         </div>
       )}
@@ -137,8 +134,8 @@ function SeloDaBorda({ borda }: { borda: BordaDoTrecho }) {
   return (
     <span
       className={cn(
-        'ml-auto flex-none text-[11px] font-semibold',
-        borda === 'ia' ? 'text-[var(--wb-text)]' : 'text-[var(--wb-text-mute)]',
+        'ml-auto flex-none text-micro font-semibold',
+        borda === 'ia' ? 'text-fg' : 'text-fg-2',
       )}
     >
       {ROTULO_DA_BORDA[borda]}
@@ -159,7 +156,8 @@ interface LinhaDoTrechoProps {
 }
 
 const BOTAO_DO_TRECHO =
-  'h-6 rounded-[6px] border border-[var(--wb-border-soft)] px-2 text-[11px] font-medium text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] disabled:pointer-events-none disabled:opacity-40';
+  'h-6 rounded-pilula border border-fio px-2 text-micro text-fg-2 transition-colors duration-150 hover:bg-vidro-2 hover:text-fg disabled:pointer-events-none disabled:text-fg-off motion-reduce:transition-none ' +
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco';
 
 export const LinhaDoTrecho = function LinhaDoTrecho({
   desvio,
@@ -177,14 +175,14 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
     <article
       aria-current={ativo || undefined}
       className={cn(
-        'rounded-[var(--radius-sm)] border bg-[var(--wb-bg-card-elev)] transition-colors',
-        ativo ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]' : 'border-[var(--wb-border-soft)] hover:border-[var(--wb-border)]',
+        'rounded-campo border bg-vidro-2 transition-colors',
+        ativo ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]' : 'border-fio hover:border-campo',
       )}
     >
       <button
         type="button"
         onClick={() => onSeek(hmsParaSeg(desvio.inicio_hms))}
-        className="group flex w-full cursor-pointer items-start gap-2.5 rounded-[var(--radius-sm)] px-2.5 pb-1 pt-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+        className="group flex w-full cursor-pointer items-start gap-2.5 rounded-campo px-2.5 pb-1 pt-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
         aria-label={`Pular para ${desvio.inicio_hms}`}
       >
         <TempoDoTrecho desvio={desvio} />
@@ -194,12 +192,12 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
             <SeloDaBorda borda={borda} />
           </div>
           {/* D-511: o motivo não é cortado: pela metade, ele custa uma ida e volta. */}
-          <div className="whitespace-pre-wrap break-words text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
+          <div className="whitespace-pre-wrap break-words text-micro leading-[1.4] text-fg-2">
             {desvio.motivo || '—'}
           </div>
           <FalaQueSai desvio={desvio} linhas={linhas} silencio={silencio} />
           {podeVoltar ? (
-            <div className="mt-1 text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
+            <div className="mt-1 text-micro leading-[1.4] text-fg-2">
               Desfazer a rodada não leva este trecho. "Voltar à borda da IA" o devolve à rodada.
             </div>
           ) : null}
@@ -218,7 +216,7 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
             onClick={onRiscar}
             disabled={pendente}
             aria-label="Riscar trecho"
-            className={cn(BOTAO_DO_TRECHO, 'hover:text-[var(--wb-err-ink)]')}
+            className={cn(BOTAO_DO_TRECHO, 'hover:text-erro')}
           >
             Riscar
           </button>

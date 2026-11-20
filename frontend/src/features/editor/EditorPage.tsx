@@ -13,7 +13,9 @@ import { rawEditorPath } from '@/features/post-production/postProductionNavigati
 import { estaAprovado } from '@/lib/statusDoCorte';
 import { ORIGEM_API } from '@/lib/apiBase';
 import { useEditorPage } from './useEditorPage';
-import { Icon } from '@/upgrade/Icon';
+import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { CabecalhoDoCorte } from './CabecalhoDoCorte';
 
 function appendQueryParams(url: string, params: Record<string, string>): string {
   const search = new URLSearchParams(params).toString();
@@ -28,32 +30,19 @@ export function EditorPage() {
 
   if (!corteId && !cortesQuery.isLoading && cortes.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-3 p-8 text-center text-[var(--wb-text-mute)]">
-        <h1 className="font-editorial text-3xl font-medium text-[var(--wb-text)]">
-          Este projeto ainda nao tem cortes
-        </h1>
-        <p className="max-w-md text-sm">
-          Rode a analise da live ou importe cortes para abrir o editor funcional.
-        </p>
-      </div>
+      <EstadoVazio className="h-full" icone="scissors" titulo="Esta live ainda não tem cortes"
+        descricao="Rode a análise da live ou importe cortes para abrir o editor." />
     );
   }
 
   if (corteQuery.isLoading || cortesQuery.isLoading || !corteUI) {
-    return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center text-[var(--wb-text-dim)]">
-        <Icon name="loader-2" size={20} className="mr-2 animate-spin" />
-        Carregando corte...
-      </div>
-    );
+    return <EstadoCarregando className="p-6" frase="Carregando o corte…" linhas={2} />;
   }
 
   if (corteQuery.isError) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-3 p-8 text-center text-error">
-        <h1 className="font-editorial text-3xl font-medium">Nao foi possivel carregar o corte</h1>
-        <p className="max-w-xl text-sm">{(corteQuery.error as Error).message}</p>
-      </div>
+      <EstadoDeErro className="h-full" titulo="Não foi possível carregar o corte"
+        motivo={(corteQuery.error as Error).message} />
     );
   }
 
@@ -124,10 +113,9 @@ export function EditorPage() {
     </>
   );
 
-  // ── Shell Workbench (Etapa 3): mesma orquestração, re-hospedada ──
-  // Painel CORTES retrátil + centro (player 16:9 com cap → transporte →
-  // contexto → timeline flex:1) + painel direito retrátil. O principal da barra
-  // diz o próximo passo do corte (D-1041).
+  // D-1150 (§7.3): cabeçalho com o mapa compacto (troca de corte; a lista lateral
+  // saiu) → contexto → duas colunas: palco, transporte e linha do tempo à esquerda,
+  // as abas à direita. O principal da barra diz o próximo passo do corte (D-1041).
 
   return (
     <>
@@ -164,11 +152,19 @@ export function EditorPage() {
         onAprovar={toggleAprovado}
         barra={montarBarraDoEditor({ aprovado: estaAprovado(corteUI.status), brutoPronto, brutoOcupado: brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual, salvando: atualizarCorte.isPending, brutoDefasado: Boolean(statusBruto.data?.bruto_defasado), onAlternarVeredito: toggleAprovado, onGerarBruto: handleGerarBrutoPrincipal, onIrParaPos: irParaPos })}
         riscar={{ onRiscar: riscar.riscarCorte, bloqueio: riscar.bloqueio }}
+        semLista
       />
 
-      <div
-        className="relative flex h-full min-h-0 flex-col overflow-hidden"
-      >
+      <div data-sala="" className="relative flex h-full min-h-0 flex-col overflow-hidden">
+        <CabecalhoDoCorte
+          projetoId={projetoId}
+          tituloLive={projeto.data?.titulo_live ?? 'Live'}
+          duracaoLiveSeg={projeto.data?.duracao_segundos ?? 0}
+          cortes={cortes}
+          corte={corteUI}
+          caminhoDoCorte={(item) => rawEditorPath(projetoId, item.id)}
+          comRiscados
+        />
 
         <BrutoContextStrip
           previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}

@@ -37,16 +37,15 @@ export function PerguntaDaDecisao({ numero, pergunta, resumo, assunto, children 
     // `flex-none`: na coluna que rola, a pergunta tem a altura do que mostra, sem encolher.
     <section
       aria-label={`Pergunta sobre ${assunto}`}
-      className="flex flex-none flex-col rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)]"
+      className="flex flex-none flex-col rounded-campo border border-fio"
     >
       <header className="flex items-baseline gap-2 px-3 pb-0.5 pt-2.5">
-        <h3 className="m-0 min-w-0 flex-1 text-[13px] font-semibold text-[var(--wb-text)]">
+        <h3 className="m-0 min-w-0 flex-1 text-corpo font-semibold text-fg">
           {numero} · {pergunta}
         </h3>
         {resumo ? (
           <span
-            className="flex-none font-code text-[11px] font-semibold text-[var(--wb-text-mute)]"
-            style={{ fontVariantNumeric: 'tabular-nums' }}
+            className="flex-none font-mono text-micro font-semibold text-fg-2 tabular-nums"
           >
             {resumo}
           </span>

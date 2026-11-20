@@ -37,7 +37,7 @@ const COR_VEREDITO: Record<VereditoBruto, string> = {
 };
 
 const COR_GRAVIDADE: Record<GravidadeApontamento, string> = {
-  leve: 'border-[var(--wb-border)] text-[var(--wb-text-dim)]',
+  leve: 'border-fio-2 text-fg-3',
   media: 'border-warning/50 text-warning',
   grave: 'border-error/60 text-error',
 };
@@ -57,7 +57,7 @@ function NotaEmEstrelas({ nota }: { nota: number }) {
         <Icon
           key={n}
           name="star"
-          className={cn('text-[var(--wb-text-mute)]', n <= nota && 'fill-warning text-warning')}
+          className={cn('text-fg-2', n <= nota && 'fill-warning text-warning')}
         />
       ))}
     </span>
@@ -66,25 +66,25 @@ function NotaEmEstrelas({ nota }: { nota: number }) {
 
 function Apontamento({ item }: { item: ApontamentoBruto }) {
   return (
-    <li className="rounded-md border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2 py-1.5">
+    <li className="rounded-md border border-fio-2 bg-poco px-2 py-1.5">
       <div className="flex items-center gap-1.5">
         <span
           className={cn(
-            'rounded border px-1 py-px text-[9px] font-bold uppercase tracking-wide',
+            'rounded border px-1 py-px text-micro font-bold tracking-wide',
             corDaGravidade(item.gravidade),
           )}
         >
           {item.gravidade}
         </span>
-        <span className="text-[11px] font-semibold text-[var(--wb-text)]">{item.rotulo}</span>
+        <span className="text-micro font-semibold text-fg">{item.rotulo}</span>
         {item.momento && (
-          <span className="ml-auto font-mono text-[10px] text-[var(--wb-text-dim)]">
+          <span className="ml-auto font-mono text-micro text-fg-3">
             {item.momento}
           </span>
         )}
       </div>
       {item.descricao && (
-        <p className="mt-1 text-[11px] leading-snug text-[var(--wb-text-dim)]">{item.descricao}</p>
+        <p className="mt-1 text-micro leading-snug text-fg-3">{item.descricao}</p>
       )}
     </li>
   );
@@ -93,8 +93,8 @@ function Apontamento({ item }: { item: ApontamentoBruto }) {
 function LinhaDeSerie({ avaliacao }: { avaliacao: AvaliacaoBruto }) {
   const quando = avaliacao.criado_em ? new Date(avaliacao.criado_em).toLocaleString() : '—';
   return (
-    <li className="flex items-center gap-2 text-[10.5px] text-[var(--wb-text-dim)]">
-      <span className="font-bold text-[var(--wb-text)]">{avaliacao.nota}/5</span>
+    <li className="flex items-center gap-2 text-micro text-fg-3">
+      <span className="font-bold text-fg">{avaliacao.nota}/5</span>
       <span className={corDoVeredito(avaliacao.veredito)}>{avaliacao.veredito}</span>
       <span className="ml-auto font-mono">{quando}</span>
     </li>
@@ -117,7 +117,7 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 py-2">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--wb-text-dim)]">
+        <span className="text-micro font-bold tracking-wide text-fg-3">
           Avaliação do bruto
         </span>
         <SeloDeProvider
@@ -135,15 +135,15 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
       </div>
 
       {query.isLoading && (
-        <p className="text-[11px] text-[var(--wb-text-dim)]">Carregando avaliação…</p>
+        <p className="text-micro text-fg-3">Carregando avaliação…</p>
       )}
 
       {reavaliar.isError && (
-        <p className="text-[11px] text-error">{(reavaliar.error as Error).message}</p>
+        <p className="text-micro text-error">{(reavaliar.error as Error).message}</p>
       )}
 
       {!query.isLoading && !avaliacao && (
-        <p className="text-[11px] leading-snug text-[var(--wb-text-dim)]">
+        <p className="text-micro leading-snug text-fg-3">
           Ainda sem avaliação. Ela roda sozinha ao final da próxima geração de bruto — ou use
           “reavaliar” para pedir agora.
         </p>
@@ -153,19 +153,19 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
         <>
           <div className="flex items-center gap-2">
             <NotaEmEstrelas nota={avaliacao.nota} />
-            <span className={cn('text-[11px] font-semibold', corDoVeredito(avaliacao.veredito))}>
+            <span className={cn('text-micro font-semibold', corDoVeredito(avaliacao.veredito))}>
               {rotuloDoVeredito(avaliacao.veredito)}
             </span>
           </div>
 
-          <p className="text-[10.5px] text-[var(--wb-text-dim)]">
+          <p className="text-micro text-fg-3">
             {avaliacao.duracao_hms} · {avaliacao.total_emendas} emenda
             {avaliacao.total_emendas === 1 ? '' : 's'} · {Math.round(avaliacao.removido_seg)}s
             removidos
           </p>
 
           {avaliacao.parecer && (
-            <p className="text-[11.5px] leading-snug text-[var(--wb-text)]">{avaliacao.parecer}</p>
+            <p className="text-micro leading-snug text-fg">{avaliacao.parecer}</p>
           )}
 
           {avaliacao.apontamentos.length > 0 ? (
@@ -175,13 +175,13 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
               ))}
             </ul>
           ) : (
-            <p className="text-[11px] text-success">Nenhum ponto de quebra apontado.</p>
+            <p className="text-micro text-success">Nenhum ponto de quebra apontado.</p>
           )}
 
           <button
             type="button"
             onClick={() => setHistoricoAberto((v) => !v)}
-            className="self-start text-[10.5px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline"
+            className="self-start text-micro text-fg-3 underline-offset-2 hover:underline"
           >
             {historicoAberto ? 'ocultar histórico' : 'ver histórico de notas'}
           </button>
@@ -189,7 +189,7 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
           {historicoAberto && (
             <ul className="flex flex-col gap-1">
               {historico.isLoading && (
-                <li className="text-[10.5px] text-[var(--wb-text-dim)]">carregando…</li>
+                <li className="text-micro text-fg-3">carregando…</li>
               )}
               {(historico.data ?? []).map((item) => (
                 <LinhaDeSerie key={item.id} avaliacao={item} />

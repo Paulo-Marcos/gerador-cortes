@@ -4,6 +4,7 @@ import { AudioSyncControl } from './AudioSyncControl';
 import { PerguntaDaDecisao } from './DecisoesDoCorte';
 import { formatarComSinal } from './descreverOBruto';
 import type { SomDoCorte } from './useSomDoCorte';
+import { FOCO } from '../salaDoEditor';
 
 // D-1095 (E7, canvas `03-cortes-proposta`): "3 · O som bate com a boca?". A
 // Sincronia do áudio saiu do player e virou a última pergunta do corte: o
@@ -26,9 +27,9 @@ export function PerguntaDoSom({ som }: { som: SomDoCorte }) {
       assunto="o som"
     >
       <div className="flex flex-col gap-1.5 px-2.5 pb-2.5 pt-1.5">
-        <p className="m-0 text-[12px] leading-[1.4] text-[var(--wb-text-mute)]">
-          <strong className="font-semibold text-[var(--wb-text)]">Muda:</strong> só o áudio anda.{' '}
-          <strong className="font-semibold text-[var(--wb-text)]">Fica:</strong> o vídeo, as bordas e os trechos.
+        <p className="m-0 text-pequeno leading-[1.4] text-fg-2">
+          <strong className="font-semibold text-fg">Muda:</strong> só o áudio anda.{' '}
+          <strong className="font-semibold text-fg">Fica:</strong> o vídeo, as bordas e os trechos.
         </p>
         <AudioSyncControl
           offsetMs={som.offsetMs}
@@ -43,11 +44,11 @@ export function PerguntaDoSom({ som }: { som: SomDoCorte }) {
             aria-pressed={som.certo}
             // A resposta já dada não se repete, como na pergunta 1.
             onClick={som.certo ? undefined : som.marcarCerto}
+            data-sala=""
             className={cn(
-              'h-8 flex-[2_1_auto] rounded-[8px] border px-3 text-[12.5px] font-medium transition-colors',
-              som.certo
-                ? 'border-[var(--wb-text)] bg-[var(--wb-text)] text-[var(--wb-bg-card)]'
-                : 'border-[var(--wb-border)] bg-transparent text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)]',
+              'h-8 flex-[2_1_auto] rounded-pilula border px-3 text-pequeno transition-colors duration-150 motion-reduce:transition-none',
+              FOCO,
+              som.certo ? 'border-iris-fio bg-iris-suave text-iris-2' : 'border-fio-2 bg-transparent text-fg hover:bg-vidro-2',
             )}
           >
             Está certo

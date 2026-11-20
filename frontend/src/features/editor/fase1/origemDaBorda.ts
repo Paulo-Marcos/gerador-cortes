@@ -16,21 +16,32 @@ export type ClasseDoTrecho = 'ia' | 'voce' | 'dentro';
 
 /** O texto da legenda de cada caso, na ordem em que ela os mostra. */
 export const ROTULO_DO_TRECHO: Record<ClasseDoTrecho, string> = {
-  ia: 'sai · borda da IA',
-  voce: 'sai · borda ajustada por você',
+  ia: 'sai, pela IA',
+  voce: 'sai, ajustado por você',
   dentro: 'dentro de outro (conta uma vez)',
 };
 
 /**
- * Como cada caso se desenha, na onda e no quadradinho da legenda (a mesma fonte,
- * para as duas não divergirem). A origem vai na BORDA: o preenchimento segue a
- * cor da categoria, que liga a barra ao badge do card (D-515). O trecho de dentro
- * é uma faixa mais baixa, por cima do que o contém.
+ * D-1150 (E-069 H-17, DIRECAO §3.3): o que sai leva um VÉU listrado por cima; o que fica
+ * fica aceso, sem véu. O véu é o `--cc-veu` em listras, então escurece a onda nos dois
+ * temas sem apagá-la: dá para ver o que está saindo.
  */
-export const ESTILO_DO_TRECHO: Record<ClasseDoTrecho, { border: string; top: string; height: string; zIndex: string }> = {
-  ia: { border: '1px solid var(--wb-err)', top: '0%', height: '100%', zIndex: '1' },
-  voce: { border: '2px solid var(--wb-ok)', top: '0%', height: '100%', zIndex: '1' },
-  dentro: { border: 'none', top: '30%', height: '40%', zIndex: '2' },
+export const VEU_DO_TRECHO = 'repeating-linear-gradient(135deg, var(--cc-veu) 0 3px, transparent 3px 7px)';
+
+/**
+ * Como cada caso se desenha, na onda e no quadradinho da legenda (a mesma fonte,
+ * para as duas não divergirem). Todo trecho que sai leva o véu; a origem vai na
+ * BORDA: o fio comum é da IA, o contorno íris é seu (§7.3). Por baixo do véu o
+ * preenchimento segue a cor da categoria, que liga a barra ao badge do card (D-515).
+ * O trecho de dentro é uma faixa mais baixa, por cima do que o contém.
+ */
+export const ESTILO_DO_TRECHO: Record<
+  ClasseDoTrecho,
+  { border: string; top: string; height: string; zIndex: string; backgroundImage: string }
+> = {
+  ia: { border: '1px solid var(--cc-fio-2)', top: '0%', height: '100%', zIndex: '1', backgroundImage: VEU_DO_TRECHO },
+  voce: { border: '2px solid var(--cc-iris)', top: '0%', height: '100%', zIndex: '1', backgroundImage: VEU_DO_TRECHO },
+  dentro: { border: 'none', top: '30%', height: '40%', zIndex: '2', backgroundImage: VEU_DO_TRECHO },
 };
 
 /** A mesma folga de `_TOLERANCIA_BORDA_SEG` (riscados.py): o milissegundo do hms. */

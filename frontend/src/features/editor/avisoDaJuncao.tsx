@@ -28,7 +28,12 @@ export function avisarDaJuncao({ notify, dismiss }: Toast, trazerDeVolta?: () =>
     tone: 'success',
     duracaoMs: DURACAO_DO_AVISO_DA_JUNCAO_MS,
     conteudo: trazerDeVolta ? (
-      <button type="button" className="btn btn-ghost" style={{ height: 24, fontSize: 11.5 }} onClick={() => void trazer()}>
+      <button
+        type="button"
+        data-sala=""
+        className="inline-flex h-6 items-center rounded-pilula px-2.5 text-pequeno text-fg-2 hover:bg-vidro-2 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+        onClick={() => void trazer()}
+      >
         Trazer de volta
       </button>
     ) : undefined,

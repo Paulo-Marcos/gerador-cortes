@@ -22,16 +22,14 @@ export function useDiffDoCorte(corte: Pick<Corte, 'id' | 'projeto_id'>): DiffDoC
 export function MudancasDoCorte({ diff }: { diff: DiffDoCorte | undefined }) {
   if (!diff) return null;
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--mute)' }}>O que você mudou</span>
+    <section className="flex flex-col gap-1">
+      <span className="text-micro text-fg-2">O que você mudou</span>
       {diff.situacao !== 'com_snapshot' ? (
-        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--mute)' }}>
-          Não há proposta da IA guardada para comparar.
-        </p>
+        <p className="text-corpo text-fg-2">Não há proposta da IA guardada para comparar.</p>
       ) : diff.mudancas.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 12.5 }}>Nada: o corte segue a proposta da IA.</p>
+        <p className="text-corpo text-fg">Nada: o corte segue a proposta da IA.</p>
       ) : (
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, lineHeight: 1.6 }}>
+        <ul className="list-disc pl-[18px] text-corpo text-fg">
           {diff.mudancas.map((m) => (
             <li key={m.tipo}>{m.descricao}</li>
           ))}
