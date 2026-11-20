@@ -8,11 +8,17 @@ nunca esteve coberta. Medido em 20/11/2026 com `claude -p --settings` numa
 
 Decisão do Paulo, 20/11: "Eu autorizo apenas para worktrees. Jamais para meus
 projetos em produção se eu não autorizar." Então a PROD e a árvore principal são
-negadas por caminho absoluto, que vale de qualquer sessão. A árvore principal
-inclui as pastas com banco que o `**/*.db` antigo negava numa sessão aberta nela:
-`backend`, `.guia` e `scratch`. Os `.db` de `.claude/worktrees` ficam livres.
-O `*.db*` pega também o `-wal` e o `-shm` do SQLite: o `-wal` guarda as escritas
-ainda não consolidadas no banco.
+negadas por caminho absoluto, que vale de qualquer sessão. Na árvore principal,
+o banco fica negado onde o `**/*.db` antigo o negava numa sessão aberta nela: na
+raiz, em cada pasta de primeiro nível e em `.claude`. Ficam livres só os `.db` de
+`.claude/worktrees`. O `*.db*` pega também o `-wal` e o `-shm` do SQLite: o
+`-wal` guarda as escritas ainda não consolidadas no banco.
+
+Uma regra só para a árvore inteira, menos os worktrees, não existe no motor. A
+negação `!` não abre exceção no deny, e a classe `[!.]` do gitignore não casa
+como no git: na medição, ela deixou `capturas` e `backend` livres e barrou os
+worktrees. Por isso cada pasta tem a sua trava, e um teste exige trava para toda
+pasta rastreada e para as ignoradas conhecidas.
 
 Os segredos ganharam a forma absoluta `//**/`, que vale em qualquer disco, e
 mantêm a relativa. Sem ela, o `backend/.env` da árvore principal ficava legível
@@ -20,12 +26,12 @@ numa sessão de worktree.
 
 Sintaxe do Claude Code: `//` é a raiz do disco, e o Windows normaliza
 `C:\\PRD` para `/c/PRD`. A forma `//C:/PRD` não casa com nada: na medição, ela
-deixou passar a leitura. A negação `!` não abre exceção dentro do deny, por isso
-as pastas da árvore principal são listadas uma a uma.
+deixou passar a leitura.
 """
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -35,10 +41,22 @@ ARVORE_PRINCIPAL = "//c/DEV/gerador-cortes/"
 
 TRAVAS_ABSOLUTAS = (
     "//c/PRD/**",
+    "//c/DEV/gerador-cortes/*.db*",
     "//c/DEV/gerador-cortes/instance/**",
-    "//c/DEV/gerador-cortes/backend/**/*.db*",
-    "//c/DEV/gerador-cortes/.guia/**/*.db*",
-    "//c/DEV/gerador-cortes/scratch/**/*.db*",
+    "//c/DEV/gerador-cortes/.claude/*.db*",
+)
+# Pastas que o git ignora e que existem na árvore principal. Nenhuma está no
+# `git ls-files`; `.tmp`, `.guia/tmp` e `scratch` recebem cópias dos agentes.
+PASTAS_IGNORADAS = (
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tmp",
+    "capturas",
+    "logs",
+    "n8n-workflows",
+    "node_modules",
+    "scratch",
 )
 SEGREDOS_EM_QUALQUER_DISCO = (
     "//**/.env",
@@ -66,6 +84,36 @@ def _alvo(regra: str) -> str:
     return regra[regra.index("(") + 1 : -1]
 
 
+def _pastas_rastreadas() -> set[str]:
+    saida = subprocess.run(
+        ["git", "ls-files"], cwd=RAIZ, capture_output=True, text=True, check=True, timeout=60
+    ).stdout
+    caminhos = [linha.split("/") for linha in saida.splitlines() if "/" in linha]
+    primeiro_nivel = {partes[0] for partes in caminhos} - {".claude", "instance"}
+    dentro_do_claude = {
+        f".claude/{partes[1]}"
+        for partes in caminhos
+        if partes[0] == ".claude" and len(partes) > 2 and partes[1] != "worktrees"
+    }
+    return primeiro_nivel | dentro_do_claude
+
+
+def test_toda_pasta_da_arvore_principal_tem_trava_de_banco():
+    negadas = _negadas()
+    pastas = _pastas_rastreadas() | set(PASTAS_IGNORADAS)
+
+    sem_trava = sorted(
+        pasta
+        for pasta in pastas
+        if not all(
+            f"{ferramenta}({ARVORE_PRINCIPAL}{pasta}/**/*.db*)" in negadas
+            for ferramenta in ("Read", "Edit")
+        )
+    )
+
+    assert not sem_trava, f"pasta da árvore principal sem trava de banco: {sem_trava}"
+
+
 def test_a_prod_e_a_arvore_principal_seguem_negadas_por_caminho_absoluto():
     negadas = _negadas()
 
@@ -87,6 +135,12 @@ def test_o_padrao_geral_de_banco_saiu():
     assert not relativas_de_banco, f"padrão relativo de banco ainda negado: {relativas_de_banco}"
 
 
+def _alcanca_os_worktrees(resto: str) -> bool:
+    return resto.split("/")[0] in ("**", "*") or resto.startswith(
+        (".claude/**", ".claude/*/", ".claude/worktrees")
+    )
+
+
 def test_os_worktrees_nao_sao_negados_por_uma_trava_da_arvore_inteira():
     # Uma trava como //c/DEV/gerador-cortes/** casaria também com
     # .claude/worktrees/**, e deny não aceita exceção vinda de allow.
@@ -94,7 +148,7 @@ def test_os_worktrees_nao_sao_negados_por_uma_trava_da_arvore_inteira():
         regra
         for regra in _negadas()
         if _alvo(regra).startswith(ARVORE_PRINCIPAL)
-        and _alvo(regra)[len(ARVORE_PRINCIPAL) :].split("/")[0] in ("**", "*", ".claude")
+        and _alcanca_os_worktrees(_alvo(regra)[len(ARVORE_PRINCIPAL) :])
     ]
 
     assert not largas, f"trava cobre os worktrees: {largas}"
@@ -123,6 +177,13 @@ def _negado(caminho: str) -> bool:
         "/c/DEV/gerador-cortes/backend/projetos/projetos.db-wal",
         "/c/DEV/gerador-cortes/.guia/tmp/D-1065/main/instance/settings.db",
         "/c/DEV/gerador-cortes/scratch/backup-d386-instance/settings.db",
+        "/c/DEV/gerador-cortes/projetos.db",
+        "/c/DEV/gerador-cortes/.tmp/cenas-d916/settings.db",
+        "/c/DEV/gerador-cortes/capturas/v3/settings.db",
+        "/c/DEV/gerador-cortes/logs/x.db-wal",
+        "/c/DEV/gerador-cortes/frontend/x.db",
+        "/c/DEV/gerador-cortes/.claude/copia.db",
+        "/c/DEV/gerador-cortes/.claude/rules/x.db",
         "/c/DEV/gerador-cortes/backend/.env",
         "/c/DEV/gerador-cortes/backend/client_secrets.json",
         "/d/outro/token.json",
@@ -138,6 +199,7 @@ def test_a_prod_a_arvore_principal_e_os_segredos_ficam_barrados(caminho):
         "/c/DEV/gerador-cortes/.claude/worktrees/wt/instance/settings.db",
         "/c/DEV/gerador-cortes/.claude/worktrees/wt/backend/projetos/projetos.db-wal",
         "/c/DEV/gerador-cortes/.claude/worktrees/wt/.guia/tmp/D-1148/instance/settings.db",
+        "/c/DEV/gerador-cortes/.claude/worktrees/wt/projetos.db",
         "/c/DEV/gerador-cortes/backend/app/main.py",
         "/c/DEV/gerador-cortes/backend/.env.example",
     ],
