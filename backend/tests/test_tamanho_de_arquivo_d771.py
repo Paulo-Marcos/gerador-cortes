@@ -72,7 +72,7 @@ EXCECOES = {
     "frontend/src/features/final-review/FinalReviewPage.tsx": 635,
     "frontend/src/features/metadata/MetadataCard.tsx": 928,
     "frontend/src/features/shorts/CandidatoCard.tsx": 530,
-    "frontend/src/features/shorts/DefinirPalcoModal.tsx": 781,
+    "frontend/src/features/shorts/DefinirPalcoModal.tsx": 766,
     "frontend/src/features/shorts/FireDetalhePage.tsx": 538,
     "frontend/src/features/shorts/GanchoModal.tsx": 680,
     "frontend/src/features/shorts/ReguaDeOnda.tsx": 582,
