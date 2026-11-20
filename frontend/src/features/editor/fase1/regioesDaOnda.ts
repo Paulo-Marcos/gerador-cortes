@@ -1,6 +1,7 @@
 import type RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import type { AlertaConferir, Desvio } from '@/types/models';
 import { corDoSegmento } from './trechoBadge';
+import { marcarSobAgulha } from './agulhaDaOnda';
 import { hmsParaSeg } from '../timeUtils';
 import { classificarTrechos, ESTILO_DO_TRECHO, ROTULO_DO_TRECHO, type ClasseDoTrecho } from './origemDaBorda';
 
@@ -23,6 +24,9 @@ export function drawRegions(
   locked: boolean,
   alertas: AlertaConferir[],
   corDoCorte: string,
+  /** D-1150: o trecho sob a agulha (-1 = nenhum). As regiões nascem de novo a cada
+   *  redesenho; sem isto o contorno de aviso sumia até a agulha mudar de trecho. */
+  sobAgulha = -1,
 ) {
   regions.clearRegions();
   const canMove = !locked;
@@ -40,6 +44,7 @@ export function drawRegions(
     regionEl.style.pointerEvents = 'none';
   }
   const classes = classificarTrechos(desvios);
+  const trechos: { id: string; element?: HTMLElement | null }[] = [];
   desvios.forEach((d, idx) => {
     try {
       const start = hmsParaSeg(d.inicio_hms) - offset;
@@ -57,12 +62,15 @@ export function drawRegions(
         resize: canMove,
       });
       const el = elementoDa(region);
+      trechos.push({ id: `desvio-${idx}`, element: el });
       if (el) marcarOrigem(el, classes[idx]);
       if (!canMove && el) el.style.pointerEvents = 'none';
     } catch {
       // skip malformed desvio
     }
   });
+  // As regiões nascem limpas: só há o que marcar com a agulha num trecho.
+  if (sobAgulha >= 0) marcarSobAgulha(trechos, sobAgulha);
   alertas.filter((a) => !a.conferido).forEach((a) => desenharAlerta(regions, a, offset));
 }
 

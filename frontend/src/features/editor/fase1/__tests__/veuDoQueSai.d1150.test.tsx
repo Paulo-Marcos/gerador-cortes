@@ -73,7 +73,11 @@ describe('o véu do que sai (§3.3)', () => {
 
   it('a legenda fala a língua da tela: fica aceso, sai pela IA, sai ajustado por você', () => {
     const html = renderToStaticMarkup(<LegendaDaTimeline corDoCorte="var(--cc-vidro)" />);
-    const texto = html.replace(/<[^>]+>/g, '');
+    // O texto é o que fica entre um ">" e o "<" seguinte (sem apagar tags por regex).
+    const texto = html
+      .split('>')
+      .map((parte) => parte.split('<')[0])
+      .join('');
     expect(texto).toContain('fica, aceso');
     expect(texto).toContain(`véu listrado · ${ROTULO_DO_TRECHO.ia}`);
     expect(texto).toContain(`véu com contorno íris · ${ROTULO_DO_TRECHO.voce}`);

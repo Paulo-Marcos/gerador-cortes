@@ -1,4 +1,4 @@
-import type { IconName } from '@/upgrade/Icon';
+import { ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import type { ScreenAction } from '@/upgrade/ScreenHeader';
 import type { ChromeBarra } from '@/upgrade/UpgradeChrome';
 
@@ -16,6 +16,9 @@ export function acoesDoEditor(p: {
   brutoPronto: boolean;
   brutoOcupado: boolean;
   onGerarBruto?: () => void;
+  /** D-1150: com a lista lateral fora do editor, o atalho dos metadados do corte (D-746)
+   *  mora aqui, no Mais — consulta e ajuste, sem disputar com a primária da barra. */
+  onEditarMetadados?: () => void;
 }): ScreenAction[] {
   const itens = [
     ...(p.onGerarBruto
@@ -26,6 +29,9 @@ export function acoesDoEditor(p: {
             onClick: p.onGerarBruto,
           },
         ]
+      : []),
+    ...(p.onEditarMetadados
+      ? [{ icon: ICONE_DO_CONCEITO.editar, label: 'Editar metadados deste corte', onClick: p.onEditarMetadados }]
       : []),
   ];
   return itens.length > 0 ? [{ icone: 'more-horizontal', texto: 'Mais', menu: itens }] : [];

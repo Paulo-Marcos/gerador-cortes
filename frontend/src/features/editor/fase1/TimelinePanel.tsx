@@ -373,7 +373,7 @@ function Waveform({
       setIsLoading(false);
       latestRef.current.onLoadingChange?.(false);
       const l = latestRef.current;
-      drawRegions(regions, l.inicioSeg, l.fimSeg, l.desvios, l.audioOffsetSec, l.locked, l.alertas, COR_DO_CORTE);
+      drawRegions(regions, l.inicioSeg, l.fimSeg, l.desvios, l.audioOffsetSec, l.locked, l.alertas, COR_DO_CORTE, sobAgulhaRef.current);
       requestAnimationFrame(() => {
         const cursor = queryShadow(containerRef.current, '.cursor');
         cursorRef.current = cursor;
@@ -495,7 +495,7 @@ function Waveform({
   useEffect(() => {
     const regions = regionsRef.current;
     if (!regions) return;
-    drawRegions(regions, inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas, COR_DO_CORTE);
+    drawRegions(regions, inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas, COR_DO_CORTE, sobAgulhaRef.current);
   }, [inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas]);
 
   useEffect(() => {

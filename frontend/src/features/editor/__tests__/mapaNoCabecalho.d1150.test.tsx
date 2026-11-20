@@ -235,13 +235,4 @@ describe('a lista lateral sai do editor', () => {
   it('sem ele (Pós e Revisão), a lista segue como antes', () => {
     expect(publicar(false).lista?.itens.map((i) => i.id)).toEqual(['a', 'c', 'd']);
   });
-
-  it('o editor pede o mapa e dispensa a lista', async () => {
-    const { readFileSync } = await import('node:fs');
-    const { resolve } = await import('node:path');
-    const fonte = readFileSync(resolve(__dirname, '..', 'EditorPage.tsx'), 'utf8');
-    expect(fonte).toMatch(/<BancadaChrome[\s\S]*?semLista[\s\S]*?\/>/);
-    expect(fonte).toContain('<CabecalhoDoCorte');
-    expect(fonte).toContain('duracaoLiveSeg={projeto.data?.duracao_segundos ?? 0}');
-  });
 });

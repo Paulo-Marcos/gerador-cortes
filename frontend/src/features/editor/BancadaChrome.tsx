@@ -203,7 +203,7 @@ export function BancadaChrome({
       rotulos: [tituloLive, `#${corte.numero}`],
       // D-610: Fire e Salvar desceram para a barra de ações. D-870: o que
       // sobrava no topo (gerar bruto) foi para o Mais.
-      acoes: acoesDoEditor({ brutoPronto, brutoOcupado, onGerarBruto }),
+      acoes: acoesDoEditor({ brutoPronto, brutoOcupado, onGerarBruto, onEditarMetadados: semLista ? () => setMetaDoCorte(corte) : undefined }),
       estado: estadoDoSalvar(salvando, sujo),
       lista: semLista ? undefined : {
         cabecalho: { titulo: tituloLive, sub: `${vivos.length} cortes · ${prontos} prontos`, thumb: capaDaLive },
