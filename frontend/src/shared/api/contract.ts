@@ -6178,6 +6178,8 @@ export interface components {
             handle: string;
             /** Id */
             id: string;
+            /** Lives */
+            lives?: number;
             /** Luz */
             luz?: string[];
             /** Nome */

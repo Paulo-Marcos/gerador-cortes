@@ -2388,6 +2388,10 @@
             "title": "Id",
             "type": "string"
           },
+          "lives": {
+            "title": "Lives",
+            "type": "integer"
+          },
           "luz": {
             "items": {
               "type": "string"
