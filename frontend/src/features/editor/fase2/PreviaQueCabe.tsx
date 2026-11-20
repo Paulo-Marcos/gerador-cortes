@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 // D-927: a prévia do modal ocupa o maior 16:9 que cabe no espaço que sobra —
 // largura e altura —, então fica sempre inteira na tela, sem barra de rolagem.
@@ -28,7 +28,9 @@ export function PreviaQueCabe({ reserva = 0, children }: { reserva?: number; chi
   }, [reserva]);
   return (
     <div ref={caixa} className="flex min-h-0 flex-1 items-start justify-center overflow-hidden">
-      <div style={{ width: largura ?? '100%' }}>{children}</div>
+      <div className="w-[var(--l)]" style={{ '--l': largura === null ? '100%' : `${largura}px` } as CSSProperties}>
+        {children}
+      </div>
     </div>
   );
 }

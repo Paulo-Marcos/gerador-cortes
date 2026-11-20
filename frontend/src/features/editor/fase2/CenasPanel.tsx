@@ -1,5 +1,8 @@
-import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
+import { forwardRef, useImperativeHandle, useMemo, useState, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
+import { Selo } from '@/components/ui/selo';
+import { cn } from '@/lib/utils';
+import { FOCO } from '../salaDoEditor';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { useUltimaGeracao } from '@/features/ia';
@@ -225,33 +228,30 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
   };
 
   return (
-    <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      {/* Header — v3_pos.jsx:454-585 */}
-      <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
-        {/* L1: titulo + chips + caption */}
-        <div className="mb-2 flex items-center gap-2">
-          <Icon name="film" className="text-[var(--wb-text-mute)]" />
-          <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
-            Cenas Remotion
-          </strong>
-          <span className="inline-flex items-center rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
-            {cenasDoRender.length}
-          </span>
+    <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-cartao border border-fio bg-painel-solido">
+      {/* Cabeçalho (DIRECAO §7.4): UM selo (plano validado, ou falta validar), a origem da rodada
+          e "Gerar cenas". A contagem e as fichas sem retrato são texto de metadado, não selo. */}
+      <header className="border-b border-fio p-3">
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Icon name="film" className="text-fg-2" />
+          <strong className="whitespace-nowrap text-secao text-fg">Cenas Remotion</strong>
+          <span className="num text-fg-2">{cenasDoRender.length}</span>
           {fichasSemRetrato > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-warn)]">
+            <span className="inline-flex items-center gap-1 text-pequeno text-aviso">
               <Icon name="triangle-alert" />
               {fichasSemRetrato} sem retrato
             </span>
           )}
-          {cenasValidadas && !dirty && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-ok)]"
-              data-testid="cenas-validadas-badge"
-            >
-              <Icon name="circle-check" /> plano validado
-            </span>
-          )}
           <div className="flex-1" />
+          {cenasValidadas && !dirty ? (
+            <Selo tom="ok" data-testid="cenas-validadas-badge">
+              Plano validado
+            </Selo>
+          ) : (
+            <Selo tom="convite" dica="O render final espera o plano validado" data-testid="cenas-por-validar-selo">
+              Falta validar
+            </Selo>
+          )}
         </div>
 
         {/* L2: uma única linha de ação (AUDITORIA-v4 §1) — primário
@@ -305,7 +305,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         {/* Padrões do palco — agora só aparece quando pedido pelo ⋯. Traz
             junto o card de config do renderer, que era a antiga linha fixa. */}
         {padroesOpen && (
-          <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1.5">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-campo border border-dashed border-campo bg-poco p-1.5">
             <RendererConfigControls.Card projetoId={projetoId} />
             <RendererConfigControls.Avancado projetoId={projetoId} />
           </div>
@@ -320,8 +320,8 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <div className="mt-2.5 flex justify-end">
             <Button
               type="button"
-              variant="default"
-              size="sm"
+              variant="secundario"
+              size="pq"
               onClick={handleSalvar}
               disabled={atualizar.isPending}
             >
@@ -335,7 +335,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       {/* Lista de cenas */}
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {validation.overlappingIndices.size > 0 && (
-          <div className="mx-1 mb-2.5 rounded-[var(--radius-sm)] border border-wb-err/30 bg-[var(--wb-err-soft)] p-2.5 text-xs text-[var(--wb-err)]">
+          <div className="mx-1 mb-2.5 rounded-campo border border-erro/30 bg-erro/10 p-2.5 text-pequeno text-erro">
             <div className="flex items-start gap-2">
               <Icon name="triangle-alert" className="mt-0.5" />
               <div className="flex flex-col gap-0.5">
@@ -374,31 +374,29 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       </div>
 
       {/* Footer — "Tipos disponiveis ▾" + spacer + o Validar (botaoDoValidar.ts) */}
-      <footer className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2.5">
+      <footer className="flex items-center gap-2 border-t border-fio p-2.5">
         <button
           type="button"
+          data-sala=""
           onClick={() => setShowTypes((v) => !v)}
-          className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap rounded text-[11px] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
+          className={cn('inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap rounded-pilula px-1 text-micro text-fg-2 transition-colors duration-150 hover:text-fg motion-reduce:transition-none', FOCO)}
           aria-expanded={showTypes}
           title={`${Object.keys(TIPOS_CENA).length} tipos de cena disponiveis`}
         >
           <span className="truncate">Tipos disponiveis</span>
-          <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
-            {Object.keys(TIPOS_CENA).length}
-          </span>
-          <Icon name="chevron-down" className="transition-transform" style={{ transform: showTypes ? 'rotate(180deg)' : 'none' }} />
+          <span className="num text-fg-3">{Object.keys(TIPOS_CENA).length}</span>
+          <Icon name="chevron-down" className={cn('transition-transform duration-150 motion-reduce:transition-none', showTypes && 'rotate-180')} />
         </button>
         <div className="flex-1" />
         <Tooltip label={validar.dica} side="top">
           <Button
             type="button"
-            variant="default"
-            size="sm"
+            variant="secundario"
+            size="pq"
             onClick={handleValidarCenas}
             disabled={validar.desabilitado}
             data-testid="botao-validar-cenas"
             aria-pressed={cenasValidadas}
-            className={cenasValidadas ? 'bg-[var(--wb-ok)] hover:opacity-90' : ''}
           >
             {validarCenas.isPending ? (
               <Icon name="loader-2" className="animate-spin" />
@@ -414,15 +412,15 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
 
       {/* Lista expansivel de tipos (clicar mostra/oculta) */}
       {showTypes && (
-        <div className="border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 pb-2.5">
+        <div className="border-t border-fio px-2.5 pb-2.5 pt-2">
           <div className="flex max-h-24 flex-wrap gap-1 overflow-y-auto">
             {Object.entries(TIPOS_CENA).map(([tipo, meta]) => {
-              const style = sceneTypeStyle(tipo);
+              const cor = sceneTypeStyle(tipo);
               return (
                 <span
                   key={tipo}
-                  className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
-                  style={{ background: style.soft, color: style.color, borderColor: style.border }}
+                  style={{ '--fundo': cor.soft, '--cor': cor.color, '--borda': cor.border } as CSSProperties}
+                  className="inline-flex items-center gap-1 rounded-pilula border border-[var(--borda)] bg-[var(--fundo)] px-2 py-0.5 text-micro text-[var(--cor)]"
                 >
                   <SceneTypeIcon tipo={tipo} />
                   {meta.label}
@@ -448,9 +446,9 @@ function ListaSemCenas({ emGeracao }: { emGeracao: boolean }) {
   const { titulo, dica } = emGeracao ? LISTA_GERANDO : LISTA_SEM_CENAS;
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-      <Icon name="film" ilustracao={30} className="text-[var(--wb-text-dim)]" />
-      <p className="text-sm font-medium text-[var(--wb-text)]">{titulo}</p>
-      <p className="max-w-xs text-[11px] text-[var(--wb-text-mute)]">{dica}</p>
+      <Icon name="film" ilustracao={30} className="text-fg-3" />
+      <p className="text-corpo font-semibold text-fg">{titulo}</p>
+      <p className="max-w-xs text-micro text-fg-2">{dica}</p>
     </div>
   );
 }

@@ -44,6 +44,8 @@ import { MODE_LABEL } from './youtubeLayoutPanel/shared';
 import { useYoutubeLayoutPanel } from './useYoutubeLayoutPanel';
 import { podeVoltarAHerdar } from './youtubeLayoutPadrao';
 import { Icon } from '@/upgrade/Icon';
+import { cn } from '@/lib/utils';
+import { FOCO } from '../salaDoEditor';
 
 // ─────────────────────────────────────────────────────────────
 // YoutubeLayoutPanel — replica `design_reference/src/v3_pos.jsx > TabLayout`
@@ -104,23 +106,23 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
 
 
     return (
-      <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
+      <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-cartao border border-fio bg-vidro-2">
         {/* overflow-x-hidden explícito: com só `overflow-y-auto`, o CSS
             promove o eixo X para `auto` e qualquer conteúdo largo (chip de
             padrão, rótulo de modo) criava barra horizontal no painel. */}
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           {/* Cabecalho */}
-          <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
+          <header className="border-b border-fio bg-poco p-3">
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
-              <Icon name="layers" className="flex-none text-[var(--wb-text-mute)]" />
-              <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
+              <Icon name="layers" className="flex-none text-fg-2" />
+              <strong className="whitespace-nowrap text-secao text-fg">
                 Layout YouTube
               </strong>
               {/* D-421: o chip só aparece quando o modo sob o playhead difere
                 do modo do corte (i.e. há uma região ativa). Fora disso ele
                 repetia, em outro formato, o segmented logo abaixo. */}
               {activeMode !== draft.modo_padrao && (
-                <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
+                <span className="rounded-pilula bg-info/[.13] px-2 py-0.5 text-micro text-info">
                   agora: {MODE_LABEL[activeMode]}
                 </span>
               )}
@@ -137,8 +139,8 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               >
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
+                  variant="fantasma"
+                  size="pq"
                   onClick={detectarSegmentos}
                   disabled={detectandoSegmentos}
                   aria-label="Detectar segmentos no bruto"
@@ -151,8 +153,8 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
                 <Tooltip label="Salvar layout deste corte" side="bottom">
                   <Button
                     type="button"
-                    variant="default"
-                    size="sm"
+                    variant="secundario"
+                    size="pq"
                     onClick={save}
                     disabled={atualizar.isPending}
                   >
@@ -180,24 +182,24 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
 
             {/* Stats numa linha (mesmo tratamento do CenasPanel na §2): os 3
               cards com borda eram um bloco alto para 3 números. */}
-            <div className="mt-2 flex flex-wrap items-center gap-2 font-code text-[10.5px] tabular-nums">
+            <div className="num mt-2 flex flex-wrap items-center gap-2 text-micro tabular-nums">
               <span>
-                <b className="font-bold text-[var(--wb-text)]">{draft.regioes.length}</b>{' '}
-                <span className="text-[var(--wb-text-dim)]">regiões</span>
+                <b className="font-semibold text-fg">{draft.regioes.length}</b>{' '}
+                <span className="text-fg-3">regiões</span>
               </span>
-              <span aria-hidden className="text-[var(--wb-border)]">
+              <span aria-hidden className="text-fio-2">
                 ·
               </span>
               <span>
-                <b className="font-bold text-[var(--wb-text)]">{shared.length}</b>{' '}
-                <span className="text-[var(--wb-text-dim)]">shared</span>
+                <b className="font-semibold text-fg">{shared.length}</b>{' '}
+                <span className="text-fg-3">shared</span>
               </span>
-              <span aria-hidden className="text-[var(--wb-border)]">
+              <span aria-hidden className="text-fio-2">
                 ·
               </span>
               <span>
-                <b className="font-bold text-[var(--wb-text)]">{segParaMmSs(duration, true)}</b>{' '}
-                <span className="text-[var(--wb-text-dim)]">duração</span>
+                <b className="font-semibold text-fg">{segParaMmSs(duration, true)}</b>{' '}
+                <span className="text-fg-3">duração</span>
               </span>
             </div>
           </header>
@@ -206,7 +208,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
             definir ▾". A prioridade (segmento > corte > projeto > global) era
             prosa dentro de um card colapsado; agora é a própria ordem das
             linhas, sempre visível, com o escopo vencedor marcado "em uso". */}
-          <div className="border-b border-[var(--wb-border-soft)] px-3 py-2">
+          <div className="border-b border-fio px-3 py-2">
             <EscopoLadder
               modo={modoEscada}
               onAlternarModo={setModoEscada}
@@ -243,22 +245,22 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
             dizendo "Sem intervalos manuais". Criar região segue na timeline. */}
           <div className="px-3 pb-3 pt-1">
             <button
-              type="button"
+              type="button" data-sala=""
               onClick={() => setRegioesOpen((v) => !v)}
               aria-expanded={regioesOpen}
               disabled={draft.regioes.length === 0}
-              className="flex w-full items-center gap-2 rounded-[var(--radius-xs)] px-1 py-1 text-left transition-colors hover:bg-[var(--wb-bg-inset)] disabled:pointer-events-none"
+              className={`flex w-full items-center gap-2 rounded-etiqueta px-1 py-1 text-left transition-colors duration-150 hover:bg-poco disabled:pointer-events-none motion-reduce:transition-none ${FOCO}`}
             >
-              <span className="flex-none font-code text-[9.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
+              <span className="flex-none text-micro font-semibold text-fg-3">
                 Regiões
               </span>
-              <span className="min-w-0 flex-1 truncate font-code text-[10.5px] text-[var(--wb-text-mute)]">
+              <span className="min-w-0 flex-1 truncate text-micro text-fg-2">
                 {draft.regioes.length === 0
                   ? 'nenhuma · crie na timeline ↙'
                   : `${draft.regioes.length} manuais`}
               </span>
               {draft.regioes.length > 0 && (
-                <Icon name="chevron-down" className="text-[var(--wb-text-dim)] transition-transform" style={{ transform: regioesOpen ? 'rotate(180deg)' : 'none' }} />
+                <Icon name="chevron-down" className={cn('text-fg-3 transition-transform motion-reduce:transition-none', regioesOpen && 'rotate-180')} />
               )}
             </button>
 
@@ -355,13 +357,13 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
           size="sm"
           footer={
             <>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirm(null)}>
+              <Button type="button" variant="fantasma" size="pq" onClick={() => setConfirm(null)}>
                 Cancelar
               </Button>
               <Button
                 type="button"
-                variant="default"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 onClick={() => confirm?.onConfirm()}
               >
                 {confirm?.confirmLabel ?? 'OK'}

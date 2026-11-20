@@ -5,10 +5,12 @@ import { useVelocidadePlayerPadrao } from '@/features/settings';
 import { useRenderFinal, useStudioUrl } from '@/features/editor/useRender';
 import { avisoDoFimDoRender } from './renderEtapas';
 import { useAtualizarCorte, useCorte, useCortesProjeto, useToggleFire } from '@/features/editor/useCortes';
+import { useValidarPlanoDaPos } from './useValidarPlanoDaPos';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { mensagemDaFalhaDoBruto } from '@/features/editor/editorEditState';
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import type { CenaRemotion } from '@/types/models';
 import type { PlayerHandle } from '@/features/editor/fase1/PlayerPanel';
@@ -159,6 +161,9 @@ export function ScenesPostProductionPage() {
   const studioUrl = useStudioUrl(corteId);
 
   const payload = useMemo(() => parseCenasPayload(corte?.cenas_remotion), [corte?.cenas_remotion]);
+  // D-1164: "Validar plano" é o primário da barra enquanto o plano não foi validado.
+  // As cenas editadas e ainda não salvas não entram na validação.
+  const { validarOPlano, validando } = useValidarPlanoDaPos(corteId, projetoId, cenas !== payload.cenas);
 
   useEffect(() => {
     setCenas(payload.cenas);
@@ -251,18 +256,16 @@ export function ScenesPostProductionPage() {
 
   if (!corteId && !cortesQuery.isLoading && cortes.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-3 p-8 text-center text-[var(--wb-text-mute)]">
-        <h1 className="font-editorial text-3xl font-medium text-[var(--wb-text)]">
-          Este projeto ainda nao tem cortes
-        </h1>
-        <p className="max-w-md text-sm">Gere ou importe cortes antes de abrir a fase de cenas.</p>
+      <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-3 p-8 text-center text-fg-2">
+        <h1 className="text-titulo text-fg">Este projeto ainda nao tem cortes</h1>
+        <p className="max-w-md text-corpo">Gere ou importe cortes antes de abrir a fase de cenas.</p>
       </div>
     );
   }
 
   if (corteQuery.isLoading || cortesQuery.isLoading || !corte) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center text-[var(--wb-text-dim)]">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center text-corpo text-fg-3">
         <Icon name="loader-2" size={20} className="mr-2 animate-spin" />
         Carregando cenas...
       </div>
@@ -431,41 +434,33 @@ export function ScenesPostProductionPage() {
             nuncaGerou, gerandoBruto,
             planoValidado: corte.cenas_validadas === 1,
             onRenderizar: renderizarFinal,
+            onValidar: validarOPlano,
+            validando,
             onIrAoEditor: () => navigate(rawEditorPath(projetoId, corte.id)),
           }),
         }}
       />
 
-      <div
-        className="flex h-full min-h-0 flex-col overflow-hidden"
-      >
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
 
         {exportEntry ? (
           // D-746: a mesma tira da lista de Cortes — o operador não precisa
           // voltar à lista para saber se o corte tem capa e metadados. O
           // painel de fases do render continua: ele diz o que ESTA execução
           // roda; a tira diz o estado do corte.
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: 10,
-              padding: '0 2px 8px',
-            }}
-          >
+          <div className="flex flex-wrap items-center gap-2.5 px-0.5 pb-2">
             <TiraDoCorteAp tira={montarTira(exportEntry, corte.status)} />
-            <span style={{ flex: 1 }} />
-            <button
+            <span className="flex-1" />
+            <Button
               type="button"
-              className="btn"
+              variant="secundario"
+              size="pq"
               onClick={() => setMetadataOpen(true)}
               title="Metadados do corte — abre aqui, sem sair da Pós"
-              style={{ borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' }}
             >
               <Icon name="tags" />
               Metadados
-            </button>
+            </Button>
           </div>
         ) : null}
 

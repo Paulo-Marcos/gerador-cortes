@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal } from '@/components/ui/modal';
+import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Selo } from '@/components/ui/selo';
+import { FOCO } from '@/features/editor/salaDoEditor';
+import { cn } from '@/lib/utils';
 import type { PipelineStatusResponse } from '@/types/models';
 import {
   FASES_RENDER,
@@ -58,20 +62,20 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
   }
 
   return (
-    <Modal
+    <Dialog
       open={open}
       onClose={onClose}
       title="O que renderizar"
       description="Marque as etapas a (re)processar. As etapas formam uma sequência contígua."
-      size="md"
+      tamanho="md"
     >
       {/* Atalhos rápidos */}
       <div className="mb-3 flex flex-wrap gap-2">
         {temEtapas && (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             onClick={() => onConfirm({ startFrom: 'auto', continuar: true })}
           >
             <Icon name="sparkles" /> Continuar de onde parou
@@ -79,8 +83,8 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
         )}
         <Button
           type="button"
-          variant="outline"
-          size="sm"
+          variant="secundario"
+          size="pq"
           onClick={() => {
             setSelecao(new Set(SELECAO_COMPLETA));
             setReaproveitarOverlays(false);
@@ -103,41 +107,34 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
               onClick={() => toggle(info.fase)}
               aria-pressed={marcada}
               disabled={obrigatoria}
-              className={[
-                'flex items-start gap-3 rounded-[var(--radius-sm)] border p-3 text-left transition',
-                marcada
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-bg-card-elev)]'
-                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] hover:border-[var(--wb-accent)]',
-                obrigatoria ? 'cursor-not-allowed opacity-90' : '',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-              ].join(' ')}
+              data-sala=""
+              className={cn(
+                'flex items-start gap-3 rounded-campo border p-3 text-left transition-colors motion-reduce:transition-none',
+                marcada ? 'border-iris-fio bg-iris-suave' : 'border-fio-2 bg-vidro hover:border-campo',
+                obrigatoria && 'cursor-not-allowed opacity-90',
+                FOCO,
+              )}
             >
               <span
-                className={[
-                  'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-xs)] border',
-                  marcada
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-on-accent,white)]'
-                    : 'border-[var(--wb-border)] text-transparent',
-                ].join(' ')}
+                className={cn(
+                  'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-etiqueta border',
+                  marcada ? 'border-iris bg-iris text-sobre-iris' : 'border-campo text-transparent',
+                )}
                 aria-hidden
               >
                 <Icon name="check" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-[var(--wb-text)]">{info.label}</span>
-                  {pronta && (
-                    <span className="rounded-full bg-wb-ok/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--wb-ok)]">
-                      pronta
-                    </span>
-                  )}
+                  <span className="text-linha text-fg">{info.label}</span>
+                  {pronta && <Selo tom="ok">pronta</Selo>}
                   {obrigatoria && (
-                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--wb-text-mute)]">
+                    <span className="inline-flex items-center gap-1 text-micro text-fg-2">
                       <Icon name="lock" /> intermediária
                     </span>
                   )}
                 </span>
-                <span className="mt-0.5 block text-xs leading-5 text-[var(--wb-text-mute)]">
+                <span className="mt-0.5 block text-pequeno leading-5 text-fg-2">
                   {info.descricao}
                 </span>
               </span>
@@ -148,16 +145,11 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
 
       {/* Toggle de reaproveitamento (só relevante para overlays) */}
       {overlaysNaSelecao && (
-        <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-2.5 text-xs text-[var(--wb-text)]">
-          <input
-            type="checkbox"
-            checked={reaproveitarOverlays}
-            onChange={(e) => setReaproveitarOverlays(e.target.checked)}
-            className="h-3.5 w-3.5 accent-[var(--wb-accent)]"
-          />
+        <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-campo border border-fio bg-vidro p-2.5 text-pequeno text-fg">
+          <Checkbox checked={reaproveitarOverlays} onCheckedChange={setReaproveitarOverlays} />
           <span>
             Reaproveitar overlays já renderizados
-            <span className="ml-1 text-[var(--wb-text-mute)]">
+            <span className="ml-1 text-fg-2">
               (desmarque para refazer todos os chunks do zero)
             </span>
           </span>
@@ -165,10 +157,10 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
       )}
 
       {/* Resumo do que vai acontecer */}
-      <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-[var(--wb-text-mute)]">
+      <p className="mt-3 flex items-start gap-2 text-pequeno leading-5 text-fg-2">
         {startInvalido ? (
           <>
-            <Icon name="circle-slash" className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
+            <Icon name="circle-slash" className="mt-0.5 shrink-0 text-aviso" />
             <span>A grade precisa existir para iniciar dos overlays ou do render final.</span>
           </>
         ) : (
@@ -177,13 +169,13 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
       </p>
 
       <div className="mt-4 flex justify-end gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+        <Button type="button" variant="fantasma" size="pq" onClick={onClose}>
           Cancelar
         </Button>
-        <Button type="button" size="sm" onClick={confirmarGranular} disabled={!podeConfirmar}>
+        <Button type="button" variant="secundario" size="pq" onClick={confirmarGranular} disabled={!podeConfirmar}>
           Renderizar
         </Button>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

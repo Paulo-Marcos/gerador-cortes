@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent, type RefObject } from 'react';
+import { useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { limitar } from '@/lib/limitar';
 import { SEM_GUIAS, alvosDe, encaixar, outrosNaPrevia, type Alvos, type Guias } from './guiasDeAlinhamento';
@@ -9,6 +9,24 @@ import type { YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
  * vídeo recortado, o retângulo arrastável e o arraste em si. Saíram para cá
  * quando o preview ganhou o terceiro retângulo, o dos cards (D-904).
  */
+
+/** A cor do retângulo na prévia: um token do tema (aviso do vídeo parado, não do app). */
+export type TomDoRetangulo = 'iris' | 'info' | 'aviso';
+const BORDA_DO_TOM: Record<TomDoRetangulo, string> = {
+  iris: 'border-iris',
+  info: 'border-info',
+  aviso: 'border-aviso',
+};
+const FUNDO_DO_TOM: Record<TomDoRetangulo, string> = {
+  iris: 'bg-iris/[.12]',
+  info: 'bg-info/[.12]',
+  aviso: 'bg-aviso/[.12]',
+};
+const ETIQUETA_DO_TOM: Record<TomDoRetangulo, string> = {
+  iris: 'bg-iris',
+  info: 'bg-info',
+  aviso: 'bg-aviso',
+};
 
 /** Como o retângulo cresce no canto: o padrão é livre; a tela mantém a proporção. */
 export type Redimensionar<K> = (key: K, inicial: YoutubeSharedRect, w: number, h: number) => YoutubeSharedRect;
@@ -137,7 +155,7 @@ export function AlcaDeTamanho({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className="absolute bottom-0 right-0 h-3.5 w-3.5 translate-x-1/2 translate-y-1/2 cursor-nwse-resize rounded-sm border-2 border-[var(--wb-bg-card)] bg-[var(--wb-accent)]"
+      className="absolute bottom-0 right-0 size-3.5 translate-x-1/2 translate-y-1/2 cursor-nwse-resize rounded-etiqueta border-2 border-painel-solido bg-iris"
     />
   );
 }
@@ -169,16 +187,15 @@ export function CroppedStill({
           // ignore
         }
       }}
-      style={{
-        position: 'absolute',
-        left: -crop.x * scale,
-        top: -crop.y * scale,
-        width: 1920 * scale,
-        height: 1080 * scale,
-        maxWidth: 'none',
-        maxHeight: 'none',
-        objectFit: 'fill',
-      }}
+      className="absolute left-[var(--l)] top-[var(--t)] h-[var(--h)] w-[var(--w)] max-h-none max-w-none object-fill"
+      style={
+        {
+          '--l': `${-crop.x * scale}px`,
+          '--t': `${-crop.y * scale}px`,
+          '--w': `${1920 * scale}px`,
+          '--h': `${1080 * scale}px`,
+        } as CSSProperties
+      }
     />
   );
 }
@@ -200,7 +217,7 @@ export function SlotDragOverlay({
 }: {
   rect: YoutubeSharedRect;
   label: string;
-  color: string;
+  color: TomDoRetangulo;
   selected: boolean;
   dragging: boolean;
   /** D-904: a zona automática dos cards só se vê; não se arrasta. */
@@ -226,7 +243,9 @@ export function SlotDragOverlay({
       onPointerUp={draggable ? onPointerUp : undefined}
       onPointerCancel={draggable ? onPointerCancel : undefined}
       className={cn(
-        'absolute flex flex-col items-stretch justify-end border-2 transition-colors',
+        'absolute left-[var(--left)] top-[var(--top)] h-[var(--height)] w-[var(--width)] flex flex-col items-stretch justify-end border-2 transition-colors duration-150 motion-reduce:transition-none',
+        visivel ? BORDA_DO_TOM[color] : 'border-transparent',
+        selected && FUNDO_DO_TOM[color],
         (tracejado || (!selected && contornoSempre)) && 'border-dashed',
         !draggable
           ? 'pointer-events-none border-dashed'
@@ -234,19 +253,21 @@ export function SlotDragOverlay({
             ? 'cursor-grabbing'
             : 'cursor-grab',
       )}
-      style={{
-        left: `${(rect.x / 1920) * 100}%`,
-        top: `${(rect.y / 1080) * 100}%`,
-        width: `${(rect.w / 1920) * 100}%`,
-        height: `${(rect.h / 1080) * 100}%`,
-        borderColor: visivel ? color : 'transparent',
-        background: selected ? `color-mix(in oklab, ${color} 12%, transparent)` : 'transparent',
-      }}
+      style={
+        {
+          '--left': `${(rect.x / 1920) * 100}%`,
+          '--top': `${(rect.y / 1080) * 100}%`,
+          '--width': `${(rect.w / 1920) * 100}%`,
+          '--height': `${(rect.h / 1080) * 100}%`,
+        } as CSSProperties
+      }
     >
       {visivel && (
         <span
-          className="pointer-events-none m-1 self-start rounded-sm px-1 py-0.5 font-code text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent-fg)]"
-          style={{ background: color }}
+          className={cn(
+            'pointer-events-none m-1 self-start rounded-etiqueta px-1 py-0.5 num text-micro font-bold text-sobre-iris',
+            ETIQUETA_DO_TOM[color],
+          )}
         >
           {label} {rect.w}×{rect.h}
         </span>

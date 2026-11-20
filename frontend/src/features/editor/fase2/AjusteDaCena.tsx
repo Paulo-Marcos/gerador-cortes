@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
+import { FOCO } from '@/features/editor/salaDoEditor';
+import { cn } from '@/lib/utils';
 import type { CenaRemotion } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
 import {
@@ -69,10 +71,10 @@ export function CartaoDoAjuste(props: CartaoDoAjusteProps) {
   if (props.proposta) return <PropostaDoAjuste {...props} proposta={props.proposta} />;
   if (props.pedindo) {
     return (
-      <div className="mx-2.5 mb-2 flex items-center gap-2 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1.5 text-[11px] text-[var(--wb-text-mute)]" role="status">
+      <div className="mx-2.5 mb-2 flex items-center gap-2 rounded-ladrilho border border-fio bg-poco px-2 py-1.5 text-micro text-fg-2" role="status">
         <Icon name="loader-2" className="animate-spin" />
         <span className="flex-1">Pedindo o ajuste desta cena à IA…</span>
-        <Button type="button" variant="outline" size="sm" onClick={props.cancelar} disabled={props.cancelando}>
+        <Button type="button" variant="secundario" size="pq" onClick={props.cancelar} disabled={props.cancelando}>
           {props.cancelando ? 'Cancelando…' : 'Cancelar'}
         </Button>
       </div>
@@ -90,7 +92,7 @@ function PedidoDoAjuste({ bloqueio, pedir }: { bloqueio: string | null; pedir: (
   };
   return (
     <form onSubmit={enviar} className="mx-2.5 mb-2 flex flex-col gap-1">
-      <label className="flex flex-col gap-1 text-[11px] text-[var(--wb-text-mute)]">
+      <label className="flex flex-col gap-1 text-micro text-fg-2">
         Pedir ajuste desta cena à IA
         <input
           type="text"
@@ -98,12 +100,13 @@ function PedidoDoAjuste({ bloqueio, pedir }: { bloqueio: string | null; pedir: (
           maxLength={500}
           onChange={(e) => setPedido(e.target.value)}
           placeholder="ex.: encurte para caber em duas linhas"
-          className="h-8 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[13px] text-[var(--wb-text)]"
+          data-sala=""
+          className={cn('h-8 rounded-campo border border-campo bg-poco px-2 text-corpo text-fg placeholder:text-fg-3', FOCO)}
         />
       </label>
       <div className="flex items-center justify-end gap-2">
-        {bloqueio && <span className="flex-1 text-[11px] text-[var(--wb-text-dim)]">{bloqueio}</span>}
-        <Button type="submit" variant="default" size="sm" disabled={vazio || Boolean(bloqueio)}>
+        {bloqueio && <span className="flex-1 text-micro text-fg-3">{bloqueio}</span>}
+        <Button type="submit" variant="secundario" size="pq" disabled={vazio || Boolean(bloqueio)}>
           <Icon name="wand-sparkles" />
           Pedir ajuste
         </Button>
@@ -123,21 +126,21 @@ function PropostaDoAjuste({
   return (
     <section
       aria-label="Proposta de ajuste da IA"
-      className="mx-2.5 mb-2 flex flex-col gap-1.5 rounded-[var(--radius-xs)] border border-[var(--wb-info)] bg-[var(--wb-info-soft)] p-2 text-[11px]"
+      className="mx-2.5 mb-2 flex flex-col gap-1.5 rounded-ladrilho border border-[color:var(--cc-info)] bg-[color-mix(in_srgb,var(--cc-info)_13%,transparent)] p-2 text-micro"
     >
-      <strong className="font-semibold text-[var(--wb-text)]">Proposta do {NOME_DO_PROVEDOR[proposta.provider]}</strong>
+      <strong className="font-semibold text-fg">Proposta do {NOME_DO_PROVEDOR[proposta.provider]}</strong>
       {mudancas.length === 0 ? (
-        <p className="text-[var(--wb-text-mute)]">A IA devolveu a cena sem mudanças.</p>
+        <p className="text-fg-2">A IA devolveu a cena sem mudanças.</p>
       ) : (
         <dl className="flex flex-col gap-1">
           {mudancas.map((m) => (
             <div key={m.campo}>
-              <dt className="font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">{m.rotulo}</dt>
-              <dd className="text-[var(--wb-text-mute)]">
+              <dt className="text-micro text-fg-3">{m.rotulo}</dt>
+              <dd className="text-fg-2">
                 <span className="sr-only">Antes: </span>
                 <s>{m.antes}</s>
               </dd>
-              <dd className="text-[var(--wb-text)]">
+              <dd className="text-fg">
                 <span className="sr-only">Depois: </span>
                 {m.depois}
               </dd>
@@ -145,14 +148,14 @@ function PropostaDoAjuste({
           ))}
         </dl>
       )}
-      <p className="text-[11px] text-[var(--wb-text-dim)]">
+      <p className="text-micro text-fg-3">
         {motivoParaNaoAceitar ?? 'Aceitar troca só esta cena e desfaz a validação do plano.'}
       </p>
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={descartar} disabled={aceitando}>
+        <Button type="button" variant="fantasma" size="pq" onClick={descartar} disabled={aceitando}>
           Descartar
         </Button>
-        <Button type="button" variant="default" size="sm" onClick={aceitar} disabled={aceitando || Boolean(motivoParaNaoAceitar)}>
+        <Button type="button" variant="secundario" size="pq" onClick={aceitar} disabled={aceitando || Boolean(motivoParaNaoAceitar)}>
           {aceitando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="circle-check" />}
           Aceitar
         </Button>

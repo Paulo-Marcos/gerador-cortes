@@ -4,6 +4,7 @@
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
+import { CLASSES_DO_CAMPO } from '@/components/ui/field';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
@@ -14,6 +15,18 @@ import { legendaDoModoDoCorte, MODE_LABEL, MODE_SHORT, round } from './shared';
 import type { OrigemDoTipo } from '../youtubeLayoutPadrao';
 import { limitar } from '@/lib/limitar';
 import { Icon, type IconName } from '@/upgrade/Icon';
+import { FERRAMENTA_ICONE, FOCO } from '../../salaDoEditor';
+
+/** Cor do ícone de escopo/modo: íris para o corte, info para projeto e global (DIRECAO §9.2). */
+type TomDoEscopo = 'iris' | 'info';
+const ICONE_DO_TOM: Record<TomDoEscopo, string> = {
+  iris: 'bg-iris-suave text-iris',
+  info: 'bg-info/[.13] text-info',
+};
+const TEXTO_DO_TOM: Record<TomDoEscopo, string> = { iris: 'text-iris', info: 'text-info' };
+
+/** Rótulo de seção do painel: frase, sem caixa-alta. */
+const ROTULO_DA_SECAO = 'text-micro font-semibold text-fg-3';
 
 // Collapsible removido (F-060): as secoes Fundo/Placa migraram para o modal
 // de posicionamento — fundo e placa agora pertencem ao preset/escopo.
@@ -93,22 +106,20 @@ export function EscopoLadder({
   return (
     <section>
       <div className="flex items-center gap-2">
-        <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-          Posicionamento
-        </span>
+        <span className={ROTULO_DA_SECAO}>Posicionamento</span>
         <div className="flex-1" />
         <Tooltip label={`Ver e definir os padrões de ${MODE_LABEL[outroModo]}`} side="left">
           <button
-            type="button"
+            type="button" data-sala=""
             onClick={() => onAlternarModo(outroModo)}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent-soft)]"
+            className={`inline-flex items-center gap-1 rounded-etiqueta px-1.5 py-0.5 text-micro text-iris transition-colors duration-150 hover:bg-iris-suave motion-reduce:transition-none ${FOCO}`}
           >
             {MODE_SHORT[modo]}
             <Icon name="arrow-left-right" />
           </button>
         </Tooltip>
       </div>
-      <p className="mb-1.5 mt-0.5 font-code text-[9px] text-[var(--wb-text-faint)]">
+      <p className="mb-1.5 mt-0.5 text-micro text-fg-3">
         do mais específico ao mais geral — o primeiro definido vence
       </p>
 
@@ -119,7 +130,7 @@ export function EscopoLadder({
         title="Segmento (padrão)"
         hint="base das regiões"
         icon="flag"
-        tone="var(--wb-violet)"
+        tone="info"
         definido={segmentoPadraoDefinido}
         presetNome={presetSegmentoPadraoNome}
         presetTipo={presetTipo}
@@ -131,7 +142,7 @@ export function EscopoLadder({
       <DefinirScopeRow
         title="Corte"
         icon="scissors"
-        tone="var(--wb-accent)"
+        tone="iris"
         ativo={escopoAtivo === 'corte'}
         definido={corteDefinido}
         presetNome={presetCorteNome}
@@ -143,7 +154,7 @@ export function EscopoLadder({
       <DefinirScopeRow
         title="Projeto"
         icon="folder"
-        tone="var(--wb-info)"
+        tone="info"
         ativo={escopoAtivo === 'projeto'}
         definido={projetoDefinido}
         presetNome={presetProjetoNome}
@@ -155,7 +166,7 @@ export function EscopoLadder({
       <DefinirScopeRow
         title="Global"
         icon="globe"
-        tone="var(--wb-violet)"
+        tone="info"
         ativo={escopoAtivo === 'global'}
         definido={globalDefinido}
         presetNome={presetGlobalNome}
@@ -165,7 +176,7 @@ export function EscopoLadder({
         pendingDefinir={pendingGlobal}
       />
       {escopoAtivo === 'default' && (
-        <p className="mt-1 font-code text-[9px] text-[var(--wb-text-faint)]">
+        <p className="mt-1 text-micro text-fg-3">
           nenhum escopo definido — usando o fallback da aplicação
         </p>
       )}
@@ -197,7 +208,7 @@ function DefinirScopeRow({
   presetNome: string | null;
   /** F-060: tipo de preset listado no dropdown (por modo). */
   presetTipo: LayoutPresetTipo;
-  tone: string;
+  tone: TomDoEscopo;
   /** D-421: escopo que efetivamente alimenta o corte agora. */
   ativo?: boolean;
   onDefinir: () => void;
@@ -214,33 +225,29 @@ function DefinirScopeRow({
   return (
     <div
       className={cn(
-        'mb-1 flex items-center gap-2 rounded-[var(--radius-xs)] border p-1.5 last:mb-0',
-        ativo
-          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
-          : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
+        'mb-1 flex items-center gap-2 rounded-ladrilho border p-1.5 last:mb-0',
+        ativo ? 'border-iris-fio bg-iris-suave' : 'border-fio bg-vidro',
       )}
     >
       <span
-        className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
-        style={{ background: 'color-mix(in oklab, ' + tone + ' 18%, transparent)', color: tone }}
+        className={cn(
+          'inline-flex size-6 flex-shrink-0 items-center justify-center rounded-full',
+          ICONE_DO_TOM[tone],
+        )}
       >
         <Icon name={icon} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="flex-none text-[11.5px] font-bold text-[var(--wb-text)]">{title}</span>
+          <span className="flex-none text-pequeno font-semibold text-fg">{title}</span>
           {hint && (
-            <span className="truncate font-code text-[9px] text-[var(--wb-text-faint)]">
+            <span className="truncate text-micro text-fg-3">
               {hint}
             </span>
           )}
           {ativo && (
             <span
-              className="flex-none rounded-full px-1.5 font-code text-[8.5px] font-bold uppercase tracking-[0.04em]"
-              style={{
-                background: 'color-mix(in oklab, var(--wb-accent) 16%, transparent)',
-                color: 'var(--wb-accent)',
-              }}
+              className="flex-none rounded-pilula bg-iris-suave px-1.5 text-micro text-iris"
               title="É deste escopo que o corte está lendo agora"
             >
               em uso
@@ -248,7 +255,7 @@ function DefinirScopeRow({
           )}
         </div>
         <div
-          className="truncate font-code text-[9.5px] text-[var(--wb-text-dim)]"
+          className="truncate text-micro text-fg-3"
           title={subtitulo}
         >
           {subtitulo}
@@ -264,10 +271,10 @@ function DefinirScopeRow({
       {onReset && (
         <Tooltip label="Remover este padrão (volta a herdar)" side="left">
           <button
-            type="button"
+            type="button" data-sala=""
             onClick={onReset}
             aria-label="Remover padrao"
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
+            className={cn(FERRAMENTA_ICONE, 'hover:bg-erro/13 hover:text-erro')}
           >
             <Icon name="trash-2" />
           </button>
@@ -304,22 +311,20 @@ export function ModePills({
   herdando?: boolean;
 }) {
   return (
-    <div className="inline-flex flex-none items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
+    <div className="inline-flex flex-none items-center gap-0.5 rounded-pilula border border-fio bg-poco p-0.5">
       {(['full', 'compartilhada'] as const).map((m) => {
         const pressed = !herdando && value === m;
         return (
           <button
             key={m}
-            type="button"
+            type="button" data-sala=""
             onClick={() => onChange(m)}
             disabled={pending}
             aria-pressed={pressed}
             title={MODE_LABEL[m]}
             className={cn(
-              'h-6 px-2 font-code text-[10px] font-bold uppercase tracking-[0.04em] transition-colors disabled:cursor-wait disabled:opacity-60',
-              pressed
-                ? 'bg-[var(--wb-accent)] text-white'
-                : 'bg-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+              `h-6 rounded-pilula px-2.5 text-micro transition-colors duration-150 disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none ${FOCO}`,
+              pressed ? 'bg-iris-suave text-iris-2' : 'bg-transparent text-fg-2 hover:text-fg',
             )}
           >
             {/* Rótulo curto (COMP.) como nos chips de região; o nome completo
@@ -369,13 +374,11 @@ export function ModoBlock({
   pendingProjeto: boolean;
 }) {
   return (
-    <section className="mt-2 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-2 py-1">
-      <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        Modo
-      </span>
+    <section className="mt-2 rounded-ladrilho border border-fio bg-vidro px-2 py-1">
+      <span className={ROTULO_DA_SECAO}>Modo</span>
       <ModoRow
         icon="scissors"
-        tone="var(--wb-accent)"
+        tone="iris"
         label="Este corte"
         caption={legendaDoModoDoCorte(herdando, origemTipoProjeto, tipoProjeto)}
         value={modoCorte}
@@ -386,7 +389,7 @@ export function ModoBlock({
       />
       <ModoRow
         icon="folder"
-        tone="var(--wb-info)"
+        tone="info"
         label="Novos cortes"
         caption="padrão do projeto"
         value={tipoProjeto}
@@ -413,7 +416,7 @@ function ModoRow({
   resetLabel,
 }: {
   icon: IconName;
-  tone: string;
+  tone: TomDoEscopo;
   label: string;
   caption: string;
   value: YoutubeLayoutMode;
@@ -425,22 +428,20 @@ function ModoRow({
 }) {
   return (
     <div className="flex items-center gap-1.5 py-1">
-      <Icon name={icon} className="flex-none" style={{ color: tone }} />
+      <Icon name={icon} className={cn('flex-none', TEXTO_DO_TOM[tone])} />
       <div className="min-w-0 flex-1">
-        <div className="truncate font-code text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text)]">
-          {label}
-        </div>
-        <div className="truncate font-code text-[9px] text-[var(--wb-text-faint)]" title={caption}>
+        <div className="truncate text-micro font-semibold text-fg">{label}</div>
+        <div className="truncate text-micro text-fg-3" title={caption}>
           {caption}
         </div>
       </div>
       {onReset && resetLabel && (
         <Tooltip label={resetLabel} side="left">
           <button
-            type="button"
+            type="button" data-sala=""
             onClick={onReset}
             aria-label={resetLabel}
-            className="flex h-6 w-6 flex-none items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+            className={FERRAMENTA_ICONE}
           >
             <Icon name="rotate-cw" />
           </button>
@@ -502,7 +503,7 @@ export function RegionItem({
   onAplicarPresetSegmento: (preset: LayoutPreset) => void;
 }) {
   const isShared = region.modo === 'compartilhada';
-  const color = isShared ? 'var(--wb-info)' : 'var(--wb-violet)';
+  const tom = isShared ? 'text-info' : 'text-iris';
   // F-060: regioes full tambem tem override de posicionamento ({crop, slot}).
   const hasOverride = isShared
     ? region.compartilhada !== undefined && Object.keys(region.compartilhada).length > 0
@@ -526,41 +527,37 @@ export function RegionItem({
   return (
     <li
       className={cn(
-        'rounded-[var(--radius-sm)] border p-2',
-        active
-          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] shadow-[0_0_0_2px_var(--sel-bg)]'
-          : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
+        'rounded-campo border p-2',
+        active ? 'border-iris-fio bg-iris-suave' : 'border-fio bg-vidro',
       )}
     >
       <div className="flex items-center gap-2">
-        <button type="button" onClick={onSeek} className="flex flex-1 items-center gap-2 text-left">
-          <span
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.04em]"
-            style={{ color }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+        <button
+          type="button" data-sala=""
+          onClick={onSeek}
+          className={`flex flex-1 items-center gap-2 rounded-etiqueta text-left ${FOCO}`}
+        >
+          <span className={cn('inline-flex items-center gap-1.5 text-micro', tom)}>
+            <span className="size-1.5 rounded-full bg-current" />
             {region.modo}
           </span>
-          <span
-            className="font-code text-[10.5px] text-[var(--wb-text-mute)]"
-            style={{ fontVariantNumeric: 'tabular-nums' }}
-          >
+          <span className="num text-micro tabular-nums text-fg-2">
             {segParaMmSs(region.inicio, true)} → {segParaMmSs(region.fim, true)}
           </span>
         </button>
         <Tooltip label="Remover intervalo" side="left">
           <button
-            type="button"
+            type="button" data-sala=""
             onClick={onRemove}
             aria-label="Remover intervalo"
-            className="flex h-6 w-6 items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
+            className={cn(FERRAMENTA_ICONE, 'hover:bg-erro/13 hover:text-erro')}
           >
             <Icon name="trash-2" />
           </button>
         </Tooltip>
       </div>
       <div className="mt-2 grid grid-cols-3 gap-1.5">
-        <label className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
+        <label className="flex flex-col gap-0.5 text-micro text-fg-3">
           Início
           <div className="flex items-center gap-1">
             <FineStepButton
@@ -584,7 +581,7 @@ export function RegionItem({
             </FineStepButton>
           </div>
         </label>
-        <label className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
+        <label className="flex flex-col gap-0.5 text-micro text-fg-3">
           Fim
           <div className="flex items-center gap-1">
             <FineStepButton
@@ -608,25 +605,24 @@ export function RegionItem({
             </FineStepButton>
           </div>
         </label>
-        <label className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
+        <label className="flex flex-col gap-0.5 text-micro text-fg-3">
           Modo
           <select
+            data-sala=""
             value={region.modo}
             onChange={(e) => onChangeModo(e.target.value as YoutubeLayoutMode)}
-            className="h-7 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[11px] text-[var(--wb-text)]"
+            className={cn(CLASSES_DO_CAMPO, 'h-7 px-2 text-pequeno')}
           >
             <option value="full">Full</option>
             <option value="compartilhada">Compartilhada</option>
           </select>
         </label>
       </div>
-      <div className="mt-2 flex flex-col gap-1 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1.5">
+      <div className="mt-2 flex flex-col gap-1 rounded-ladrilho border border-fio bg-poco px-2 py-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
-            Posicionamento
-          </span>
+          <span className={ROTULO_DA_SECAO}>Posicionamento</span>
           {hasOverride && (
-            <span className="rounded-full bg-[var(--wb-accent-soft)] px-1.5 py-0.5 font-code text-[8.5px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
+            <span className="rounded-pilula bg-iris-suave px-1.5 py-0.5 text-micro text-iris">
               personalizado
             </span>
           )}
@@ -641,9 +637,9 @@ export function RegionItem({
           {hasOverride && (
             <Tooltip label="Voltar ao posicionamento do corte" side="left">
               <button
-                type="button"
+                type="button" data-sala=""
                 onClick={onClearOverride}
-                className="inline-flex items-center gap-1 bg-transparent font-code text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
+                className={`inline-flex items-center gap-1 rounded-pilula bg-transparent px-1.5 text-micro text-fg-2 transition-colors duration-150 hover:text-fg motion-reduce:transition-none ${FOCO}`}
               >
                 <Icon name="rotate-cw" />
                 Reverter
@@ -652,7 +648,7 @@ export function RegionItem({
           )}
         </div>
         <span
-          className="truncate font-code text-[9.5px] text-[var(--wb-text-dim)]"
+          className="truncate text-micro text-fg-3"
           title={presetEmUsoNome ?? undefined}
         >
           {presetEmUsoNome
@@ -678,10 +674,10 @@ function FineStepButton({
   return (
     <Tooltip label={label} side="top">
       <button
-        type="button"
+        type="button" data-sala=""
         onClick={onClick}
         aria-label={label}
-        className="inline-flex h-7 w-5 flex-shrink-0 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+        className={`inline-flex h-7 w-5 flex-shrink-0 items-center justify-center rounded-etiqueta border border-fio-2 bg-vidro-2 text-fg-2 transition-colors duration-150 hover:bg-vidro-3 hover:text-fg motion-reduce:transition-none ${FOCO}`}
       >
         {children}
       </button>
@@ -746,7 +742,8 @@ function TimeField({
       onKeyDown={(event) => {
         if (event.key === 'Enter') event.currentTarget.blur();
       }}
-      className="h-7 font-code text-[11px]"
+      aparencia="sala"
+      className="num h-7 px-2 text-pequeno"
     />
   );
 }

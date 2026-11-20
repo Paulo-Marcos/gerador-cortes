@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { projetosApi } from '@/features/projetos/api';
 import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
+import { FOCO } from '../salaDoEditor';
 
 // ─────────────────────────────────────────────────────────────
 // RendererConfigControls — selects de configuracao de render do projeto.
@@ -92,7 +94,7 @@ function useRenderConfig(projetoId: string) {
 }
 
 // ── ConfigSelect · v3_pos.jsx:650-693 ────────────────────────
-// Label segmentado + select numa pill compacta. Mono UPPERCASE.
+// Label segmentado + select numa pílula compacta.
 function ConfigSelect<T extends string>({
   label,
   value,
@@ -112,18 +114,19 @@ function ConfigSelect<T extends string>({
 }) {
   return (
     <Tooltip label={title ?? label} side="bottom">
-      <label
-        className="inline-flex h-[26px] items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)]"
-        style={{ flex: '1 1 0', minWidth: 0 }}
-      >
-        <span className="inline-flex h-full items-center border-r border-[var(--wb-border-soft)] px-2 font-code text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
+      <label className="inline-flex h-7 min-w-0 flex-1 basis-0 items-center rounded-campo border border-campo bg-poco">
+        <span className="inline-flex h-full items-center border-r border-fio px-2 text-micro text-fg-3">
           {label}
         </span>
         <select
           value={value}
           onChange={(e) => onChange(e.target.value as T)}
           disabled={disabled}
-          className="h-full min-w-0 flex-1 bg-transparent px-1.5 font-code text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text)] outline-none disabled:opacity-60"
+          data-sala=""
+          className={cn(
+            'h-full min-w-0 flex-1 rounded-campo bg-transparent px-1.5 text-pequeno text-fg disabled:text-fg-off',
+            FOCO,
+          )}
         >
           {options.map((o) => (
             <option key={o} value={o}>

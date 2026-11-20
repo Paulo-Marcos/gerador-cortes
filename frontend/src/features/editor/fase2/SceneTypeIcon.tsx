@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Icon, type IconName } from '@/upgrade/Icon';
 import { metaCena, type CenaIconName } from './sceneTypes';
 
@@ -32,14 +33,20 @@ interface Props {
 
 export function SceneTypeIcon({ tipo, className }: Props) {
   const meta = metaCena(tipo);
-  return <Icon name={ICONE_DO_TIPO[meta.icon]} className={className} style={{ color: meta.color }} />;
+  // A cor do tipo vem do dado: entra por variável CSS no invólucro, e o traço do ícone
+  // (`currentColor`) a herda.
+  return (
+    <span className="inline-flex flex-none text-[color:var(--cor)]" style={{ '--cor': meta.color } as CSSProperties}>
+      <Icon name={ICONE_DO_TIPO[meta.icon]} className={className} />
+    </span>
+  );
 }
 
 export function sceneTypeStyle(tipo: string) {
   const meta = metaCena(tipo);
   return {
     color: meta.color,
-    soft: `color-mix(in oklab, ${meta.color} 16%, var(--wb-bg-card))`,
-    border: `color-mix(in oklab, ${meta.color} 58%, var(--wb-border))`,
+    soft: `color-mix(in srgb, ${meta.color} 16%, transparent)`,
+    border: `color-mix(in srgb, ${meta.color} 58%, transparent)`,
   };
 }

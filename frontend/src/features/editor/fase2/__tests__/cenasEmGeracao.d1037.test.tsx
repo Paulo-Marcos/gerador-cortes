@@ -209,7 +209,7 @@ describe('o painel enquanto gera', () => {
     const qc = new QueryClient();
     servidorDiz(qc, 'a', false);
 
-    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).not.toContain('disabled');
+    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).not.toMatch(/\sdisabled(=|\s|>)/);
   });
 });
 

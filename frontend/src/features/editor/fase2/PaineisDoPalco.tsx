@@ -6,6 +6,7 @@ import { PainelDoComponente } from '@/features/channels/PalcoDoTipoNoModal';
 import { EscolhaDoExemplo } from './ExemploDoCard';
 import type { usePalcoDoModal } from '@/features/channels/usePalcoDoModal';
 import { cn } from '@/lib/utils';
+import { FOCO } from '../salaDoEditor';
 import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/shared/palco/youtubeBackgrounds';
 import type { YoutubeBackgroundId, YoutubePlaca } from '@/shared/palco/youtubeLayout';
 
@@ -14,7 +15,8 @@ import type { YoutubeBackgroundId, YoutubePlaca } from '@/shared/palco/youtubeLa
 // padrão global o palco é o do canal e se ajusta pelo botão da tela de Canais,
 // que abre este mesmo modal no alvo `canal` (D-938).
 
-const ROTULO = 'mb-1.5 font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]';
+const ROTULO = 'mb-1.5 text-micro font-semibold text-fg-3';
+const ROTULO_DO_CAMPO = 'flex flex-col gap-0.5 text-micro text-fg-3';
 
 export interface ContextoDoPalco {
   palco: ReturnType<typeof usePalcoDoModal>;
@@ -84,9 +86,9 @@ export function AbaixoDaPrevia({ grupo, palco, global }: Pick<ContextoDoPalco, '
 
 function AjusteNoCanal() {
   return (
-    <p className="text-[12px] text-[var(--wb-text-dim)]">
+    <p className="text-pequeno text-fg-3">
       No padrão global o palco é o do canal.{' '}
-      <Link to="/canais" className="text-[var(--wb-accent)] underline-offset-2 hover:underline">
+      <Link to="/canais" className="text-iris underline-offset-2 hover:underline">
         Edite em Canais → Palco do canal
       </Link>
       .
@@ -95,7 +97,7 @@ function AjusteNoCanal() {
 }
 
 function HerdaDoCorte() {
-  return <p className="text-[12px] text-[var(--wb-text-dim)]">Neste segmento, fundo e placa vêm do corte.</p>;
+  return <p className="text-pequeno text-fg-3">Neste segmento, fundo e placa vêm do corte.</p>;
 }
 
 /** A textura do palco de sempre (o estilo atual). */
@@ -108,27 +110,26 @@ export function FundoDeSempre({ fundo, onFundo }: { fundo: YoutubeBackgroundId; 
             <button
               key={opt.id}
               type="button"
+              data-sala=""
               aria-pressed={fundo === opt.id}
               title={opt.descricao}
               onClick={() => onFundo(opt.id)}
               className={cn(
-                'flex h-[58px] flex-col items-stretch justify-between gap-1 overflow-hidden rounded-[var(--radius-xs)] border p-1.5 pt-1 text-left transition-colors',
+                `flex h-[58px] flex-col items-stretch justify-between gap-1 overflow-hidden rounded-etiqueta border p-1.5 pt-1 text-left transition-colors duration-150 motion-reduce:transition-none ${FOCO}`,
                 fundo === opt.id
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                  ? 'border-iris-fio bg-iris-suave text-iris'
+                  : 'border-fio-2 bg-vidro text-fg-2 hover:text-fg',
               )}
             >
               <span
                 className={cn(
-                  'flex flex-1 items-center justify-center overflow-hidden rounded-[3px] border border-[var(--wb-border-soft)]',
-                  fundo === opt.id
-                    ? 'bg-[var(--wb-bg-card)]'
-                    : 'bg-[var(--wb-bg-inset)]',
+                  'flex flex-1 items-center justify-center overflow-hidden rounded-etiqueta border border-fio',
+                  fundo === opt.id ? 'bg-vidro' : 'bg-poco',
                 )}
               >
                 <FundoThumb id={opt.id} />
               </span>
-              <span className="truncate text-center text-[11px] font-semibold leading-[1.05]">
+              <span className="truncate text-center text-micro leading-[1.05]">
                 {opt.label}
               </span>
             </button>
@@ -144,7 +145,7 @@ export function TextoDaPlaca({ placa, onPlaca }: { placa: YoutubePlaca; onPlaca:
     <div>
       <div className={ROTULO}>Placa de nome</div>
         <div className="grid gap-1.5">
-          <label className="flex flex-col gap-0.5 font-code text-[11px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+          <label className={ROTULO_DO_CAMPO}>
             Nome
             <Input
               value={placa.nome}
@@ -153,10 +154,11 @@ export function TextoDaPlaca({ placa, onPlaca }: { placa: YoutubePlaca; onPlaca:
               onChange={(event) =>
                 onPlaca((current) => ({ ...current, nome: event.target.value }))
               }
-              className="h-7 text-[11.5px]"
+              aparencia="sala"
+              className="h-7 px-2 text-pequeno"
             />
           </label>
-          <label className="flex flex-col gap-0.5 font-code text-[11px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+          <label className={ROTULO_DO_CAMPO}>
             Papel
             <Input
               value={placa.papel}
@@ -165,7 +167,8 @@ export function TextoDaPlaca({ placa, onPlaca }: { placa: YoutubePlaca; onPlaca:
               onChange={(event) =>
                 onPlaca((current) => ({ ...current, papel: event.target.value }))
               }
-              className="h-7 text-[11.5px]"
+              aparencia="sala"
+              className="h-7 px-2 text-pequeno"
             />
           </label>
         </div>

@@ -1,5 +1,7 @@
 import { Thumbnail } from '@remotion/player';
 import { EstiloDasCenasProvider, FrameOffsetContext, SharedCardZoneFrame, renderCenaV2 } from '@video-renderer/public-api';
+import { CLASSES_DO_CAMPO } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 import type { CenaRemotion } from '@/types/models';
 import type { YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
 
@@ -66,7 +68,7 @@ export function ExemploDoCard({ cena, estiloCenas }: PropsDoExemplo) {
       frameToDisplay={QUADRO_DO_EXEMPLO}
       durationInFrames={DURACAO_SEG * FPS}
       fps={FPS}
-      style={{ width: 1920, height: 1080 }}
+      className="h-[1080px] w-[1920px]"
     />
   );
 }
@@ -82,13 +84,14 @@ export function EscolhaDoExemplo({
   onEscolher: (tipo: string) => void;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-medium text-text-300">
+    <label className="grid gap-1 text-pequeno text-fg-3">
       Card de exemplo na prévia
       <select
         aria-label="Card de exemplo"
+        data-sala=""
         value={valor}
         onChange={(e) => onEscolher(e.target.value)}
-        className="h-8 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[13px] text-[var(--wb-text)]"
+        className={cn(CLASSES_DO_CAMPO, 'h-8 px-2')}
       >
         <option value="">Nenhum</option>
         {tipos

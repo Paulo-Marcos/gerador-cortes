@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type PointerEvent, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { limitar } from '@/lib/limitar';
 import type { YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
@@ -20,12 +21,13 @@ export function rectFromPoints(start: { x: number; y: number }, end: { x: number
   };
 }
 
-const estiloDe = (rect: YoutubeSharedRect) => ({
-  left: `${(rect.x / 1920) * 100}%`,
-  top: `${(rect.y / 1080) * 100}%`,
-  width: `${(rect.w / 1920) * 100}%`,
-  height: `${(rect.h / 1080) * 100}%`,
-});
+const geometriaDe = (rect: YoutubeSharedRect) =>
+  ({
+    '--left': `${(rect.x / 1920) * 100}%`,
+    '--top': `${(rect.y / 1080) * 100}%`,
+    '--width': `${(rect.w / 1920) * 100}%`,
+    '--height': `${(rect.h / 1080) * 100}%`,
+  }) as CSSProperties;
 
 /** Desenhar um retângulo novo arrastando sobre o quadro (o "Desenhar"). */
 function useDesenharRecorte(frameRef: RefObject<HTMLDivElement | null>, ligado: boolean, onChange: (rect: YoutubeSharedRect) => void) {
@@ -101,11 +103,11 @@ export function CropPicker({
   return (
     <div className={className}>
       <div className="mb-1.5 flex items-center gap-1.5">
-        <Button type="button" variant={drawingEnabled ? 'default' : 'outline'} size="sm" onClick={onToggleDrawing}>
+        <Button type="button" variant="secundario" size="pq" aria-pressed={drawingEnabled} onClick={onToggleDrawing}>
           <Icon name="crop" />
           Desenhar
         </Button>
-        <span className="font-code text-[11px] text-[var(--wb-text-dim)]">
+        <span className="num text-micro text-fg-3">
           {rect.x},{rect.y} {rect.w}x{rect.h}
         </span>
       </div>
@@ -116,7 +118,10 @@ export function CropPicker({
         onPointerMove={desenho.onPointerMove}
         onPointerUp={desenho.onPointerUp}
         onPointerCancel={desenho.onPointerUp}
-        className={`relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border bg-[var(--wb-bg-inset)] ${drawingEnabled ? 'cursor-crosshair border-[var(--wb-accent)]' : 'border-[var(--wb-border-soft)]'}`}
+        className={cn(
+          'relative aspect-video overflow-hidden rounded-campo border bg-poco',
+          drawingEnabled ? 'cursor-crosshair border-iris' : 'border-fio',
+        )}
       >
         <video
           ref={videoRef}
@@ -132,12 +137,15 @@ export function CropPicker({
             }
           }}
         />
-        <div className="pointer-events-none absolute border-2 border-[var(--wb-info)] shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]" style={estiloDe(desenho.rascunho ?? rect)} />
+        <div
+          className="pointer-events-none absolute left-[var(--left)] top-[var(--top)] h-[var(--height)] w-[var(--width)] border-2 border-info shadow-[0_0_0_9999px_var(--cc-veu)]"
+          style={geometriaDe(desenho.rascunho ?? rect)}
+        />
         {!drawingEnabled && (
           <SlotDragOverlay
             rect={rect}
             label="Recorte"
-            color="var(--wb-info)"
+            color="info"
             selected
             dragging={arraste.dragKey === 'recorte'}
             onPointerDown={arraste.startDrag('recorte')}

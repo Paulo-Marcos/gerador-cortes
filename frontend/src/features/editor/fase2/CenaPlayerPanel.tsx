@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import { Button } from '@/components/ui/button';
+import { Segmented } from '@/components/ui/segmented';
 import type { CenaRemotion, FontePreset } from '@/types/models';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
 import { metaCena } from './sceneTypes';
@@ -162,14 +163,9 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
   const handleAbrirStudio = useCallback(() => onAbrirStudio(), [onAbrirStudio]);
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      <div className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <span className="font-code text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
-          preview final
-        </span>
-        <span className="rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-1.5 py-0.5 font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
-          Remotion
-        </span>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-cartao border border-fio bg-painel-solido">
+      <div className="flex items-center gap-2 border-b border-fio px-3 py-2">
+        <span className="text-linha text-fg">Prévia</span>
         <div className="flex-1" />
         <CabecalhoDoTempo
           relogio={relogio}
@@ -179,7 +175,7 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
         />
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-app">
         <Player
           // Remount visual atualiza preview; initialFrame preserva tempo atual.
           key={playerKey}
@@ -196,55 +192,44 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
           clickToPlay
           doubleClickToFullscreen
           acknowledgeRemotionLicense
-          style={{ width: '100%', height: '100%' }}
+          className="size-full"
         />
 
+        {/* A legenda sobre o vídeo é sólida: a Pós toca vídeo e não tem blur (DIRECAO §3.6). */}
         <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2">
-          <span className="rounded-full border border-white/10 bg-black/70 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.06em] text-white backdrop-blur">
+          <span className="rounded-pilula bg-painel-solido px-2.5 py-1 text-pequeno font-semibold text-fg">
             {modoLabel}
           </span>
           {cenasOcultas && (
-            <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.06em] text-amber-100 backdrop-blur">
+            <span className="rounded-pilula bg-painel-solido px-2.5 py-1 text-pequeno font-semibold text-aviso">
               Bruto · sem cenas
             </span>
           )}
         </div>
+      </div>
 
-        <div className="absolute right-3 top-3 flex items-center gap-2">
-          {onToggleRemotion && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onToggleRemotion}
-              aria-pressed={!cenasOcultas}
-              title={
-                cenasOcultas
-                  ? 'Mostrar cenas + layout YT (Ctrl+Alt+R)'
-                  : 'Mostrar so o video bruto (Ctrl+Alt+R)'
-              }
-              className="border-white/20 bg-black/70 text-white backdrop-blur hover:bg-black/80"
-            >
-              {cenasOcultas ? <Icon name="eye-off" /> : <Icon name="eye" />}
-              Remotion {cenasOcultas ? 'off' : 'on'}
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAbrirStudio}
-            disabled={abrindoStudio}
-            className="border-white/20 bg-black/70 text-white backdrop-blur hover:bg-black/80"
-          >
-            {abrindoStudio ? (
-              <Icon name="loader-2" className="animate-spin" />
-            ) : (
-              <Icon name="external-link" />
-            )}
-            Studio Remotion
-          </Button>
-        </div>
+      {/* O transporte da prévia mora embaixo do vídeo, não por cima dele (DIRECAO §7.4). */}
+      <div className="flex flex-wrap items-center gap-2 border-t border-fio px-3 py-2">
+        {onToggleRemotion && (
+          <span title="Mostrar cenas e layout, ou só o vídeo bruto (Ctrl+Alt+R)">
+            <Segmented
+              aria-label="O que a prévia mostra"
+              value={cenasOcultas ? 'video' : 'cenas'}
+              onValueChange={(v) => {
+                if ((v === 'video') !== cenasOcultas) onToggleRemotion();
+              }}
+              opcoes={[
+                { valor: 'cenas', rotulo: 'Com cenas' },
+                { valor: 'video', rotulo: 'Só o vídeo' },
+              ]}
+            />
+          </span>
+        )}
+        <div className="flex-1" />
+        <Button type="button" variant="fantasma" size="pq" onClick={handleAbrirStudio} disabled={abrindoStudio}>
+          {abrindoStudio ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="external-link" />}
+          Abrir no Remotion Studio
+        </Button>
       </div>
     </section>
   );
@@ -286,31 +271,22 @@ function CabecalhoDoTempo({
 
   return (
     <>
-      <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-dim)]">
-        t={segParaMmSs(currentTime, true)}
-      </span>
-      <span className="font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
-        ·
-      </span>
+      <span className="num text-fg-3">t={segParaMmSs(currentTime, true)}</span>
       {cenaAtiva ? (
-        <span className="rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[10.5px] font-bold text-[var(--wb-ok-ink)]">
-          cena: {cenaAtivaLabel}
-        </span>
+        <span className="text-pequeno font-semibold text-ok">cena: {cenaAtivaLabel}</span>
       ) : proximaCena ? (
         <span
-          className="rounded-full border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-0.5 font-code text-[10.5px] text-[var(--wb-text-mute)]"
+          className="text-pequeno text-fg-2"
           title={`Próxima: ${proximaLabel} em ${segParaMmSs(proximaCena.inicio, true)}`}
         >
           próx: {proximaLabel} em {segundosParaProxima!.toFixed(1)}s
         </span>
       ) : (
-        <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 font-code text-[10.5px] text-warning">
+        <span className="text-pequeno text-aviso">
           sem cenas {cenas.length === 0 ? '(0 carregadas)' : ''}
         </span>
       )}
-      <span className="rounded-full border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-0.5 font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
-        {layoutAtivo === 'compartilhada' ? 'compartilhada' : 'full'}
-      </span>
+      <span className="text-pequeno text-fg-2">{layoutAtivo === 'compartilhada' ? 'compartilhada' : 'full'}</span>
     </>
   );
 }

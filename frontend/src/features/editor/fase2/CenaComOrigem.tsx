@@ -1,5 +1,6 @@
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { FOCO } from '@/features/editor/salaDoEditor';
 import { useAvisosDaCena, useAvisosDasCenas } from '@/features/editor/useCenas';
 import { cn } from '@/lib/utils';
 import type { CenaRemotion } from '@/types/models';
@@ -66,21 +67,22 @@ export function PlanoDaCena({
     return (
       <div
         data-origem="riscada"
-        className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-dashed px-2.5 py-2"
-        style={{ background: visual.soft, borderColor: visual.border }}
+        className="flex items-center gap-2 rounded-campo border border-dashed border-[color:var(--fio)] bg-[var(--fundo)] px-2.5 py-2"
+        style={{ '--fundo': visual.soft, '--fio': visual.border } as CSSProperties}
       >
         <button
           type="button"
           onClick={() => onSeek(cena.inicio)}
-          className="min-w-0 flex-1 border-0 bg-transparent text-left"
+          data-sala=""
+          className={cn('min-w-0 flex-1 rounded-ladrilho border-0 bg-transparent text-left', FOCO)}
           title="Ir para essa cena"
         >
-          <span className="block font-code text-[11px] text-[var(--wb-text-mute)]">
+          <span className="num block text-micro text-fg-2">
             {cena.inicio.toFixed(1)}s → {cena.fim.toFixed(1)}s · {metaCena(cena.tipo).label} · fora do render
           </span>
-          <s className="block truncate text-[12.5px] text-[var(--wb-text-mute)]">{cena.texto || metaCena(cena.tipo).label}</s>
+          <s className="block truncate text-corpo text-fg-2">{cena.texto || metaCena(cena.tipo).label}</s>
         </button>
-        <Button type="button" variant="outline" size="sm" onClick={onTrazerDeVolta}>
+        <Button type="button" variant="secundario" size="pq" onClick={onTrazerDeVolta}>
           <Icon name="undo-2" />
           Trazer de volta
         </Button>
@@ -88,7 +90,11 @@ export function PlanoDaCena({
     );
   }
   return (
-    <div data-origem={origem} className="border-l-[3px] pl-1" style={{ borderLeftColor: visual.border }}>
+    <div
+      data-origem={origem}
+      className="border-l-[3px] border-l-[color:var(--fio)] pl-1"
+      style={{ '--fio': visual.border } as CSSProperties}
+    >
       {children}
     </div>
   );
@@ -96,7 +102,10 @@ export function PlanoDaCena({
 
 export function SeloDaOrigem({ origem }: { origem: OrigemNoPlano }) {
   return (
-    <span className="ml-1.5 flex-shrink-0 whitespace-nowrap font-sans font-semibold" style={{ color: ORIGENS[origem].color }}>
+    <span
+      className="ml-1.5 flex-shrink-0 whitespace-nowrap font-sans font-semibold text-[color:var(--cor)]"
+      style={{ '--cor': ORIGENS[origem].color } as CSSProperties}
+    >
       · {ORIGENS[origem].rotulo}
     </span>
   );
@@ -141,13 +150,16 @@ export function IconeDaOrigem({ origem }: { origem: OrigemNoPlano }) {
 /** A legenda das cores, igual no painel e na linha do tempo. */
 export function LegendaDaOrigem({ className }: { className?: string }) {
   return (
-    <div className={cn('flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--wb-text-mute)]', className)}>
+    <div className={cn('flex flex-wrap gap-x-3 gap-y-1 text-micro text-fg-2', className)}>
       {(Object.keys(ORIGENS) as OrigemNoPlano[]).map((origem) => (
         <span key={origem} className="inline-flex items-center gap-1">
           <span
             aria-hidden
-            className={cn('inline-block h-2.5 w-2.5 rounded-[2px] border', ORIGENS[origem].tracejada && 'border-dashed')}
-            style={{ background: ORIGENS[origem].soft, borderColor: ORIGENS[origem].border }}
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm border border-[color:var(--fio)] bg-[var(--fundo)]',
+              ORIGENS[origem].tracejada && 'border-dashed',
+            )}
+            style={{ '--fundo': ORIGENS[origem].soft, '--fio': ORIGENS[origem].border } as CSSProperties}
           />
           <IconeDaOrigem origem={origem} />
           {ORIGENS[origem].legenda}
@@ -171,9 +183,9 @@ export function OrigemDaCena({
   const quemDisse = cena.quem_disse ? (NOME_DE_QUEM_DISSE[cena.quem_disse] ?? cena.quem_disse) : null;
 
   return (
-    <div className="flex flex-col gap-1 px-2.5 pb-1 pt-1 text-[11px] leading-snug">
+    <div className="flex flex-col gap-1 px-2.5 pb-1 pt-1 text-micro leading-snug">
       {avisos.map((aviso) => (
-        <p key={aviso} className="flex items-start gap-1.5 text-[var(--wb-warn)]">
+        <p key={aviso} className="flex items-start gap-1.5 text-aviso">
           <Icon name="triangle-alert" className="mt-px flex-shrink-0" />
           <span>{aviso}</span>
         </p>
@@ -182,25 +194,27 @@ export function OrigemDaCena({
         <button
           type="button"
           onClick={() => onChange({ ...cena, ancora_perdida: undefined, frase_ancora: undefined })}
-          className="self-start text-[var(--wb-text-mute)] underline"
+          data-sala=""
+          className={cn('self-start rounded-etiqueta text-fg-2 underline', FOCO)}
         >
           Manter a cena aqui
         </button>
       )}
       {cena.frase_da_fala && (
-        <p className="text-[var(--wb-text-mute)]">
-          “{cena.frase_da_fala}”{quemDisse && <span className="text-[var(--wb-text-dim)]"> — {quemDisse}</span>}
+        <p className="text-fg-2">
+          “{cena.frase_da_fala}”{quemDisse && <span className="text-fg-3"> — {quemDisse}</span>}
         </p>
       )}
       {afirma && (
-        <label className="flex items-center gap-1.5 text-[var(--wb-text-dim)]">
-          <span className="font-code text-[11px] font-bold uppercase tracking-[0.08em]">Fonte</span>
+        <label className="flex items-center gap-1.5 text-fg-3">
+          <span className="text-micro">Fonte</span>
           <input
             type="text"
             value={cena.fonte ?? ''}
             onChange={(e) => onChange({ ...cena, fonte: e.target.value || undefined })}
             placeholder="Só o que você conferiu"
-            className="h-[22px] min-w-0 flex-1 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-1.5 text-[11px] text-[var(--wb-text)]"
+            data-sala=""
+            className={cn('h-7 min-w-0 flex-1 rounded-ladrilho border border-campo bg-poco px-1.5 text-micro text-fg', FOCO)}
           />
         </label>
       )}

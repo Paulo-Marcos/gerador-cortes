@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { AbsoluteFill, Video } from 'remotion';
 import type { YoutubePlaca, YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
 import {
@@ -110,16 +110,15 @@ export function CropVideo({
     <Video
       src={videoSrc}
       muted={muted}
-      style={{
-        position: 'absolute',
-        left: -crop.x * scale,
-        top: -crop.y * scale,
-        width: 1920 * scale,
-        height: 1080 * scale,
-        maxWidth: 'none',
-        maxHeight: 'none',
-        objectFit: 'fill',
-      }}
+      className="absolute left-[var(--l)] top-[var(--t)] h-[var(--h)] w-[var(--w)] max-h-none max-w-none object-fill"
+      style={
+        {
+          '--l': `${-crop.x * scale}px`,
+          '--t': `${-crop.y * scale}px`,
+          '--w': `${1920 * scale}px`,
+          '--h': `${1080 * scale}px`,
+        } as CSSProperties
+      }
     />
   );
 }

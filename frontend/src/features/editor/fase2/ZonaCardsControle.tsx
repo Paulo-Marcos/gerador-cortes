@@ -19,16 +19,16 @@ export function ZonaCardsControle({
   return (
     <section
       data-testid="zona-cards"
-      className="rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2"
+      className="rounded-campo border border-fio bg-poco p-2"
     >
-      <div className="mb-1.5 font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+      <div className="mb-1.5 text-micro font-semibold text-fg-3">
         Posição dos cards
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         <ModePicker active={!manual} label="Automática" onClick={onAutomatica} />
         <ModePicker active={manual} label="Manual" onClick={onManual} />
       </div>
-      <p className="mt-1.5 text-[11px] leading-snug text-[var(--wb-text-dim)]">
+      <p className="mt-1.5 text-micro leading-snug text-fg-3">
         {manual
           ? 'Arraste o retângulo Cards no palco e ajuste largura e altura aqui. O card encolhe para caber nele.'
           : 'O card fica à esquerda, acima da tela menor, e cresce conforme as telas deixam espaço. Passe para Manual para escolher a coluna.'}

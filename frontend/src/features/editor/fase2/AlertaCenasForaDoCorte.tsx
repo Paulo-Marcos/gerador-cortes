@@ -27,9 +27,9 @@ export function AlertaCenasForaDoCorte({ fora, duracaoCorte }: Props) {
   return (
     <div
       role="alert"
-      className="rounded-[var(--radius-xs)] border border-error/40 bg-error/10 px-3 py-2 text-[12px] text-[var(--wb-text)]"
+      className="rounded-ladrilho border border-erro/40 bg-erro/10 px-3 py-2 text-pequeno text-fg"
     >
-      <b className="font-bold text-error">
+      <b className="font-bold text-erro">
         {fora.length} cena(s) com tempo fora do corte
       </b>{' '}
       — o corte termina em {hms(duracaoCorte)} e a cena {pior.indice + 1} comeca em{' '}

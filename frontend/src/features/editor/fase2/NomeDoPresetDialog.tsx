@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Icon, type IconName } from '@/upgrade/Icon';
 
@@ -31,49 +32,47 @@ export function NomeDoPresetDialog({
   pending: boolean;
 }) {
   return (
-    <div
-      className="absolute inset-0 z-[90] flex items-center justify-center bg-[color-mix(in_oklab,var(--wb-ink)_40%,transparent)]"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full max-w-sm rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-4 shadow-[var(--wb-shadow)]">
-        <strong className="block font-editorial text-[14px] text-[var(--wb-ink)]">{titulo}</strong>
-        <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">{descricao}</p>
-        <label className="mt-3 flex flex-col gap-1">
-          <span className="font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-            Nome
-          </span>
-          <Input
-            autoFocus
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
-            maxLength={120}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && value.trim()) {
-                event.preventDefault();
-                onConfirm();
-              }
-            }}
-          />
-        </label>
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+    <Dialog
+      open
+      onClose={onClose}
+      tamanho="sm"
+      title={titulo}
+      description={descricao}
+      footer={
+        <>
+          <Button type="button" variant="fantasma" size="pq" onClick={onClose}>
             Cancelar
           </Button>
           <Button
             type="button"
-            variant="default"
-            size="sm"
+            variant="secundario"
+            size="pq"
             onClick={onConfirm}
             disabled={!value.trim() || pending}
           >
             {pending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={confirmIcon} />}
             {confirmLabel}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <label className="flex flex-col gap-1">
+        <span className="text-micro text-fg-3">Nome</span>
+        <Input
+          aparencia="sala"
+          autoFocus
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          maxLength={120}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && value.trim()) {
+              event.preventDefault();
+              onConfirm();
+            }
+          }}
+        />
+      </label>
+    </Dialog>
   );
 }

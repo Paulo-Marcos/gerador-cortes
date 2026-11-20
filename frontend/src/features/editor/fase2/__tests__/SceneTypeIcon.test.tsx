@@ -19,7 +19,7 @@ describe('SceneTypeIcon', () => {
       // o ícone do tipo, pelo nome inteiro (a aspa impede `list` casar com
       // `list-checks`), e na cor do tipo
       expect(svg(html)).toContain(`lucide-${kebab(icone)}"`);
-      expect(svg(html)).toContain(`color:${metaCena(tipo).color}`);
+      expect(html).toContain(`--cor:${metaCena(tipo).color}`);
       expect(html).not.toMatch(/\p{Extended_Pictographic}/u);
     },
   );

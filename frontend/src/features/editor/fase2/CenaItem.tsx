@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import type { CenaRemotion } from '@/types/models';
 import { salvarRetratoDeUrl } from '@/features/editor/useCenas';
+import { FOCO } from '@/features/editor/salaDoEditor';
 import { metaCena, TIPOS_CENA } from './sceneTypes';
 import { SceneTypeIcon } from './SceneTypeIcon';
 import { Icon } from '@/upgrade/Icon';
@@ -23,7 +24,7 @@ import { Icon } from '@/upgrade/Icon';
 //   - Caption "Visual da cena (sobrescreve padrao do projeto)"
 //   - Grid 3 ConfigSelect: Sombra / Layout / Modelo (todos com Auto)
 //   - Se ficha_biografica: bloco retrato (avatar/status + Trocar/URL)
-//   - Acoes: Ir (outline) · spacer · Aplicar (accent) → fecha
+//   - Acoes: Ir (fantasma) · spacer · Aplicar (secundário) → fecha
 // D-1070: o lixo virou Riscar (a cena fica no plano, fora do render) e o selo da
 // origem vem de quem monta o plano (CenaComOrigem).
 // ─────────────────────────────────────────────────────────────
@@ -57,27 +58,20 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
     cena.tipo === 'comparativo_contraponto' || cena.tipo === 'comparativo_enfase';
   const semRetrato = isFicha && !cena.retrato_url;
 
-  // Borda + fundo dependem de ativa/sobreposta. Conforme v3_pos.jsx:712-720:
-  // ativa = bg color-mix(meta.color 10%) + border meta.color + sombra
-  // inativa = bg --wb-bg-card-elev + border --wb-border-soft
-  // sobreposta tem prioridade visual (warn outline) para chamar atencao.
-  const containerStyle: React.CSSProperties = sobreposta
-    ? {
-        background: 'var(--wb-err-soft)',
-        borderColor: 'var(--wb-err)',
-      }
+  // Borda + fundo dependem de ativa/sobreposta:
+  // ativa = fundo e fio na cor do tipo (variável `--cor`, que vem do dado) + brilho do topo
+  // inativa = vidro e fio de repouso
+  // sobreposta tem prioridade visual (erro) para chamar atencao.
+  const aparenciaDoCartao = sobreposta
+    ? 'border-erro bg-erro/10'
     : ativa
-      ? {
-          background: `color-mix(in oklab, ${meta.color} 10%, var(--wb-bg-card))`,
-          borderColor: meta.color,
-          boxShadow: 'var(--wb-shadow)',
-        }
-      : { background: 'var(--wb-bg-card-elev)', borderColor: 'var(--wb-border-soft)' };
+      ? 'border-[color:var(--cor)] bg-[color-mix(in_srgb,var(--cor)_10%,transparent)] shadow-topo'
+      : 'border-fio bg-vidro-2';
 
   return (
     <div
-      className="overflow-hidden rounded-[var(--radius-sm)] border transition-colors"
-      style={containerStyle}
+      className={cn('overflow-hidden rounded-campo border transition-colors motion-reduce:transition-none', aparenciaDoCartao)}
+      style={{ '--cor': meta.color } as CSSProperties}
     >
       {/* Header — clique no card SEEKa pro inicio; chevron alterna expander.
           Riscar visivel mesmo no colapsado (decisao Paulo, D-1070). */}
@@ -85,16 +79,12 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
         <button
           type="button"
           onClick={() => onSeek(cena.inicio)}
-          className="flex min-w-0 flex-1 items-center gap-2.5 border-0 bg-transparent text-left transition-opacity hover:opacity-90"
+          data-sala=""
+          className={cn('flex min-w-0 flex-1 items-center gap-2.5 rounded-ladrilho border-0 bg-transparent text-left transition-opacity hover:opacity-90 motion-reduce:transition-none', FOCO)}
           title="Ir para essa cena"
         >
           <span
-            className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-xs)] border"
-            style={{
-              background: `color-mix(in oklab, ${meta.color} 18%, var(--wb-bg-card))`,
-              borderColor: `color-mix(in oklab, ${meta.color} 50%, var(--wb-border))`,
-              color: meta.color,
-            }}
+            className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-etiqueta border border-[color-mix(in_srgb,var(--cor)_50%,transparent)] bg-[color-mix(in_srgb,var(--cor)_18%,transparent)] text-[color:var(--cor)]"
             title={meta.label}
           >
             <SceneTypeIcon tipo={cena.tipo} />
@@ -102,19 +92,19 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span
-                className="truncate text-[12.5px] font-semibold text-[var(--wb-text)]"
+                className="truncate text-corpo font-semibold text-fg"
                 title={cena.texto || meta.label}
               >
                 {cena.texto || meta.label}
               </span>
               {semRetrato && (
                 <Tooltip label="Ficha biografica sem retrato" side="top">
-                  <Icon name="triangle-alert" className="flex-shrink-0 text-[var(--wb-warn)]" />
+                  <Icon name="triangle-alert" className="flex-shrink-0 text-aviso" />
                 </Tooltip>
               )}
               {sobreposta && (
                 <Tooltip label="Sobreposicao com outra cena" side="top">
-                  <Icon name="triangle-alert" className="flex-shrink-0 text-[var(--wb-err)]" />
+                  <Icon name="triangle-alert" className="flex-shrink-0 text-erro" />
                 </Tooltip>
               )}
             </div>
@@ -123,41 +113,34 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
                 o intervalo pros tipos de nome longo ("Card de informacao");
                 o ícone à esquerda (cor + forma por tipo, tooltip com o nome)
                 já é a identificação primária, sem duplicar em texto. */}
-            <div
-              className="mt-0.5 flex min-w-0 font-code text-[10px] text-[var(--wb-text-dim)]"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
-            >
+            <div className="num mt-0.5 flex min-w-0 text-micro text-fg-3">
               <span className="truncate">{cena.inicio.toFixed(1)}s → {cena.fim.toFixed(1)}s · {(cena.fim - cena.inicio).toFixed(1)}s</span>
               {selo}
             </div>
           </div>
         </button>
         <Tooltip label="Riscar: fica no plano, fora do render" side="left">
-          <button
-            type="button"
-            onClick={onRiscar}
-            aria-label="Riscar cena"
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
-          >
+          <Button variant="fantasma" size="icon-sm" onClick={onRiscar} aria-label="Riscar cena">
             <Icon name="eye-off" />
-          </button>
+          </Button>
         </Tooltip>
         <Tooltip label={aberto ? 'Recolher' : 'Editar cena'} side="left">
-          <button
+          <Button
             type="button"
+            variant="fantasma"
+            size="icon-sm"
             onClick={() => setAberto((v) => !v)}
             aria-expanded={aberto}
             aria-label={aberto ? 'Recolher cena' : 'Editar cena'}
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
           >
             {aberto ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
-          </button>
+          </Button>
         </Tooltip>
       </div>
 
       {/* Body expandido — controles por-cena */}
       {aberto && (
-        <div className="border-t border-dashed border-[var(--wb-border-soft)] px-3 pb-3 pt-2">
+        <div className="border-t border-dashed border-fio px-3 pb-3 pt-2">
           {/* Grid 4: Inicio / Fim / Tipo / Texto */}
           <div className="grid grid-cols-[1fr_1fr_1fr_2fr] gap-1.5">
             <FieldNum label="Inicio" value={cena.inicio} onChange={(v) => set({ inicio: v })} />
@@ -226,7 +209,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           )}
 
           {/* Caption Visual */}
-          <div className="mb-1 mt-3 font-code text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
+          <div className="mb-1 mt-3 text-micro text-fg-2">
             Visual da cena (sobrescreve padrao do projeto)
           </div>
 
@@ -263,14 +246,14 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           {/* Acoes — Riscar mora no header colapsado. */}
           <div className="mt-3 flex items-center gap-1.5">
             <Tooltip label="Ir para essa cena no player" side="top">
-              <Button type="button" variant="outline" size="sm" onClick={() => onSeek(cena.inicio)}>
+              <Button type="button" variant="fantasma" size="pq" onClick={() => onSeek(cena.inicio)}>
                 <Icon name="target" />
                 Ir
               </Button>
             </Tooltip>
             <div className="flex-1" />
             <Tooltip label="Fechar editor" side="top">
-              <Button type="button" variant="default" size="sm" onClick={() => setAberto(false)}>
+              <Button type="button" variant="secundario" size="pq" onClick={() => setAberto(false)}>
                 <Icon name="save" />
                 Aplicar
               </Button>
@@ -285,14 +268,11 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
 // ── FieldMini editavel · v3_pos.jsx:869-897 + edicao ─────────
 function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-1 font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-      {children}
-    </div>
+    <div className="mb-1 text-micro text-fg-3">{children}</div>
   );
 }
 
-const fieldInputClass =
-  'h-[26px] w-full rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[11.5px] text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)]';
+const fieldInputClass = `h-7 w-full rounded-ladrilho border border-campo bg-poco px-2 text-pequeno text-fg transition-colors hover:border-fg/60 focus-visible:border-iris motion-reduce:transition-none ${FOCO}`;
 
 function FieldText({
   label,
@@ -313,6 +293,7 @@ function FieldText({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        data-sala=""
         className={fieldInputClass}
       />
     </div>
@@ -336,8 +317,8 @@ function FieldNum({
         step="0.1"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={cn(fieldInputClass, 'font-code')}
-        style={{ fontVariantNumeric: 'tabular-nums' }}
+        data-sala=""
+        className={cn(fieldInputClass, 'num')}
       />
     </div>
   );
@@ -362,7 +343,8 @@ function FieldSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={cn(fieldInputClass, 'pr-1 font-code uppercase')}
+        data-sala=""
+        className={cn(fieldInputClass, 'pr-1')}
         title={title}
       >
         {options.map((o) => (
@@ -427,31 +409,22 @@ function RetratoBlock({
   };
 
   return (
-    <div className="mt-2.5 flex items-center gap-2.5 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2.5">
+    <div className="mt-2.5 flex items-center gap-2.5 rounded-campo border border-fio bg-poco p-2.5">
       <div
-        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full"
-        style={
-          tem
-            ? {
-                background: 'linear-gradient(135deg, oklch(0.7 0.15 60), oklch(0.5 0.18 30))',
-                color: '#fff',
-              }
-            : {
-                background: 'var(--wb-bg-card)',
-                border: '1.5px dashed var(--wb-border)',
-                color: 'var(--wb-text-dim)',
-              }
-        }
+        className={cn(
+          'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border',
+          tem ? 'border-ok/40 bg-ok/10 text-ok' : 'border-dashed border-fio-2 bg-painel-solido text-fg-3',
+        )}
         aria-hidden
       >
         {tem ? <Icon name="check" size={20} /> : <Icon name="image" size={20} />}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[11.5px] font-semibold text-[var(--wb-text)]">
+        <div className="text-pequeno font-semibold text-fg">
           {tem ? 'Retrato preenchido' : 'Sem retrato'}
         </div>
         <div
-          className="mt-0.5 truncate font-code text-[10px] text-[var(--wb-text-mute)]"
+          className="num mt-0.5 truncate text-micro text-fg-2"
           title={cena.retrato_url ?? undefined}
         >
           {cena.retrato_url ?? 'use Retratos (global) ou cole URL'}
@@ -460,8 +433,8 @@ function RetratoBlock({
       <Tooltip label={tem ? 'Trocar retrato' : 'Colar URL do retrato'} side="left">
         <Button
           type="button"
-          variant={tem ? 'outline' : 'secondary'}
-          size="sm"
+          variant={tem ? 'fantasma' : 'secundario'}
+          size="pq"
           onClick={handleColarUrl}
           disabled={persistindo}
         >

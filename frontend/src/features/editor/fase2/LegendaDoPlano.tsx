@@ -29,8 +29,8 @@ export function AvisoDasDescartadas({ quantas }: { quantas: number }) {
   const frase = descreverDescartadas(quantas);
   if (!frase) return null;
   return (
-    <p role="status" className="mt-2 flex items-center gap-1.5 text-[11px] text-[var(--wb-text-dim)]">
-      <Icon name="pen" className="text-[var(--wb-ok-ink)]" />
+    <p role="status" className="mt-2 flex items-center gap-1.5 text-micro text-fg-3">
+      <Icon name="pen" className="text-ok" />
       {frase}
     </p>
   );

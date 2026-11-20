@@ -71,6 +71,7 @@ import {
 } from '@/shared/palco/youtubeLayout';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 import { ICONE_DO_CONCEITO, Icon } from '@/upgrade/Icon';
+import { FOCO } from '../salaDoEditor';
 
 /** Resultado da confirmação do modal (F-060: inclui fundo e placa). */
 export interface PosicionamentoModalResult {
@@ -423,26 +424,26 @@ export function PosicionamentoModal({
       role="dialog"
       aria-modal="true"
       aria-label={`Posicionamento ${modeLabel} — ${scopeLabel}`}
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-6"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-veu p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex h-full max-h-[920px] w-full max-w-7xl flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <div className="flex h-full max-h-[920px] w-full max-w-7xl flex-col overflow-hidden rounded-dialogo border border-fio-2 bg-painel-solido shadow-pop-luz">
         {/* Header */}
-        <header className="flex items-center gap-3 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-5 py-3">
-          <strong className="font-editorial text-[16px] font-medium text-[var(--wb-ink)]">
+        <header className="flex items-center gap-3 border-b border-fio bg-app px-5 py-3">
+          <strong className="text-secao text-fg">
             Posicionamento — {scopeLabel}
           </strong>
-          <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
+          <span className="rounded-pilula bg-info/[.13] px-2 py-0.5 text-micro text-info">
             {modeLabel}
           </span>
           <div className="flex-1" />
           <button
-            type="button"
+            type="button" data-sala=""
             onClick={onClose}
             aria-label="Fechar modal"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+            className={`inline-flex size-7 items-center justify-center rounded-pilula text-fg-2 transition-colors duration-150 hover:bg-vidro-2 hover:text-fg motion-reduce:transition-none ${FOCO}`}
           >
             <Icon name="x" size={16} />
           </button>
@@ -460,7 +461,7 @@ export function PosicionamentoModal({
         {/* D-927: menu de grupos | ajustes do grupo | prévia parada, que cabe inteira. */}
         <div className="grid min-h-0 flex-1 grid-cols-[84px_minmax(0,300px)_minmax(0,1fr)] overflow-hidden">
           <MenuDoModal grupos={grupos} ativo={grupoAtivo} onEscolher={setGrupo} />
-          <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto overflow-x-hidden border-r border-[var(--wb-border-soft)] p-3">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto overflow-x-hidden border-r border-fio p-3">
             {grupoAtivo === 'telas' ? (
               <PainelDasTelas
                 isFullMode={isFullMode}
@@ -509,7 +510,7 @@ export function PosicionamentoModal({
               )}
             </PreviaQueCabe>
             <AbaixoDaPrevia grupo={grupoAtivo} palco={palco} global={alvoDoEstilo === 'global'} />
-            <p className="font-code text-[11px] leading-snug text-[var(--wb-text-dim)]">
+            <p className="text-micro leading-snug text-fg-3">
               {cropNaPrevia
                 ? 'Quadro do vídeo no tempo atual: clique Desenhar e arraste para definir o recorte.'
                 : 'Arraste para mover; a alça no canto redimensiona. Clique no cabeçalho ou na placa para editá-los.'}
@@ -518,7 +519,7 @@ export function PosicionamentoModal({
         </div>
 
         {/* Footer */}
-        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-5 py-3">
+        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-fio bg-app px-5 py-3">
           {/* F-048: editar preset existente — so aparece se ha preset selecionado
               e o config foi modificado em cima dele. */}
           {presetSelecionadoObj && (
@@ -533,8 +534,7 @@ export function PosicionamentoModal({
               <span>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
+                  variant="secundario" size="pq"
                   onClick={handleAtualizarPreset}
                   disabled={!presetTemMudancas || updatePreset.isPending}
                 >
@@ -550,18 +550,17 @@ export function PosicionamentoModal({
           )}
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="secundario" size="pq"
             onClick={() => setSalvarPresetOpen(true)}
           >
             <Icon name="bookmark" />
             Salvar como novo
           </Button>
           <div className="flex-1" />
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          <Button type="button" variant="fantasma" size="pq" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="button" variant="default" size="sm" onClick={handleConfirm}>
+          <Button type="button" variant="secundario" size="pq" onClick={handleConfirm}>
             <Icon name="save" />
             Aplicar e fechar
           </Button>

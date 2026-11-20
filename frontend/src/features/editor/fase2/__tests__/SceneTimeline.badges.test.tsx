@@ -61,8 +61,7 @@ describe('SceneTimeline · badges de sucesso (D-396 / AUDITORIA-v2 §10)', () =>
   it('cenasRenderizadas=true troca o badge de cenas para o estilo de sucesso com check', () => {
     const html = renderTimeline({ cenasRenderizadas: true });
 
-    expect(html).toContain('var(--wb-ok-soft)');
-    expect(html).toContain('var(--wb-ok-ink)');
+    expect(html).toContain('text-ok');
     expect(html).toContain('lucide-check');
     expect(html).toContain('1 cenas');
   });

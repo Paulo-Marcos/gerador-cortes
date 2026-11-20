@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { YoutubeSharedRect } from '@/shared/palco/youtubeLayout';
 
 // D-928: alinhar um objeto aos outros enquanto se arrasta. As bordas e o meio
@@ -100,16 +101,16 @@ export function GuiasNaPrevia({ guias, quadro = QUADRO_DO_VIDEO }: { guias: Guia
         <span
           aria-hidden
           data-guia="vertical"
-          className="pointer-events-none absolute top-0 h-full w-px bg-[var(--wb-info)]"
-          style={{ left: `${(guias.x / quadro.largura) * 100}%` }}
+          className="pointer-events-none absolute left-[var(--left)] top-0 h-full w-px bg-info"
+          style={{ '--left': `${(guias.x / quadro.largura) * 100}%` } as CSSProperties}
         />
       )}
       {guias.y !== null && (
         <span
           aria-hidden
           data-guia="horizontal"
-          className="pointer-events-none absolute left-0 h-px w-full bg-[var(--wb-info)]"
-          style={{ top: `${(guias.y / quadro.altura) * 100}%` }}
+          className="pointer-events-none absolute left-0 top-[var(--top)] h-px w-full bg-info"
+          style={{ '--top': `${(guias.y / quadro.altura) * 100}%` } as CSSProperties}
         />
       )}
     </>

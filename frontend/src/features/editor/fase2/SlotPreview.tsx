@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import type { ComponentesDoPalco } from '@/shared/palco/palcoLimpo';
 import {
   sharedVerticalCardZone,
@@ -12,7 +12,7 @@ import { ExemploDoCard } from './ExemploDoCard';
 import { GuiasNaPrevia } from './guiasDeAlinhamento';
 import { PalcoDoSlotPreview } from './PalcoDoSlotPreview';
 import type { SharedRectKey } from './posicionamentoControls';
-import { SlotDragOverlay, redimensionarNoPalco, useArrastarRetangulo } from './SlotPreviewPartes';
+import { SlotDragOverlay, redimensionarNoPalco, useArrastarRetangulo, type TomDoRetangulo } from './SlotPreviewPartes';
 
 // A prévia do palco no modal de posição: o palco em 1920x1080 escalado para o
 // container, e por cima os retângulos que se arrastam e redimensionam (janelas,
@@ -40,10 +40,10 @@ interface Props {
   onChangeSlot: (key: DragRectKey, rect: YoutubeSharedRect) => void;
 }
 
-const ROTULOS: Record<DragRectKey, { label: string; color: string }> = {
-  slot_tela: { label: 'Tela', color: 'var(--wb-accent)' },
-  slot_facecam: { label: 'Facecam', color: 'var(--wb-info)' },
-  zona_card: { label: 'Cards', color: 'var(--wb-warn)' },
+const ROTULOS: Record<DragRectKey, { label: string; color: TomDoRetangulo }> = {
+  slot_tela: { label: 'Tela', color: 'iris' },
+  slot_facecam: { label: 'Facecam', color: 'info' },
+  zona_card: { label: 'Cards', color: 'aviso' },
 };
 
 /** A escala que faz o palco de 1920x1080 caber no container 16:9. */
@@ -83,11 +83,11 @@ export function SlotPreview(props: Props) {
 
   return (
     <div className={className}>
-      <div ref={frameRef} className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)]">
+      <div ref={frameRef} className="relative aspect-video overflow-hidden rounded-campo border border-fio-2 bg-poco">
         {/* O palco em 1920x1080, escalado; sem eventos para não tapar os retângulos. */}
         <div
-          className="pointer-events-none absolute left-0 top-0"
-          style={{ width: 1920, height: 1080, transform: `scale(${escala})`, transformOrigin: '0 0' }}
+          className="pointer-events-none absolute left-0 top-0 h-[1080px] w-[1920px] origin-top-left scale-[var(--escala)]"
+          style={{ '--escala': escala } as CSSProperties}
         >
           <PalcoDoSlotPreview
             config={config}
