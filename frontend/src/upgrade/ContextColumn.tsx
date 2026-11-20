@@ -1,4 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
+import { IconButton } from '@/components/ui/icon-button';
+import { cn } from '@/lib/utils';
 import { Icon } from './Icon';
 import { TiraMini } from './TiraDoCorteAp';
 import type { ChromeLista, ItemDeLista } from './UpgradeChrome';
@@ -21,6 +25,10 @@ import type { ChromeLista, ItemDeLista } from './UpgradeChrome';
 //     cinza idênticos gastando 38 px de largura para não dizer nada;
 //   · o contrato duplo: agora entra UMA `lista`, a mesma que o painel
 //     do seletor recebe.
+//
+// D-1144 (E-069 H-14) · na Sala escura: coluna e linhas em `vidro` CHAPADO (sem
+// `backdrop-filter`: lista é painel de trabalho, DIRECAO §3.6), filtros são `Chip`, a ação do
+// rodapé é `Button`. A cor da bolinha de estado vem da tela e entra por variável CSS.
 // ─────────────────────────────────────────────────────────────────
 
 /** Miniatura + nome da live. Reaproveitada no painel do seletor. */
@@ -34,54 +42,15 @@ export function IdentidadeDaLive({
   thumb?: string;
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+    <div className="flex items-start gap-2.5">
       {thumb ? (
-        <span
-          style={{
-            width: 44,
-            height: 26,
-            flex: 'none',
-            borderRadius: 'var(--r1)',
-            overflow: 'hidden',
-            background: 'var(--inset)',
-          }}
-          aria-hidden
-        >
-          <img
-            src={thumb}
-            alt=""
-            loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
+        <span className="h-[26px] w-11 flex-none overflow-hidden rounded-[6px] bg-poco" aria-hidden>
+          <img src={thumb} alt="" loading="lazy" className="block size-full object-cover" />
         </span>
       ) : null}
-      <span style={{ minWidth: 0 }}>
-        <span
-          style={{
-            display: 'block',
-            fontSize: 12.5,
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {titulo}
-        </span>
-        {sub ? (
-          <span
-            style={{
-              display: 'block',
-              fontSize: 11,
-              color: 'var(--mute)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {sub}
-          </span>
-        ) : null}
+      <span className="min-w-0">
+        <span className="block truncate text-corpo font-bold text-fg">{titulo}</span>
+        {sub ? <span className="block truncate text-micro text-fg-3">{sub}</span> : null}
       </span>
     </div>
   );
@@ -96,27 +65,16 @@ export function CabecalhoDeLista({
 }: {
   titulo: string;
   resumo?: string;
+  /** O respiro do cabeçalho, como um `padding` CSS (o painel do seletor usa o seu). */
   padding?: string;
   /** Controle à direita do resumo (o "recolher" da coluna). */
   depois?: ReactNode;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding,
-        borderBottom: '1px solid var(--line2)',
-      }}
-    >
-      <span className="lbl">{titulo}</span>
-      <span style={{ flex: 1 }} />
-      {resumo ? (
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-          {resumo}
-        </span>
-      ) : null}
+    <div style={{ '--pad': padding } as CSSProperties} className="flex items-center gap-1.5 border-b border-fio p-[var(--pad)]">
+      <span className="text-micro text-fg-3">{titulo}</span>
+      <span className="flex-1" />
+      {resumo ? <span className="font-mono text-micro text-fg-3">{resumo}</span> : null}
       {depois}
     </div>
   );
@@ -125,31 +83,11 @@ export function CabecalhoDeLista({
 /** Filtros da lista, quando a tela os declara. */
 export function FiltrosDaLista({ filtros }: { filtros: NonNullable<ChromeLista['filtros']> }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '9px 11px' }}>
+    <div className="flex flex-wrap gap-1.5 px-3 py-2.5">
       {filtros.map((f) => (
-        <button
-          key={f.texto}
-          type="button"
-          onClick={f.onClick}
-          aria-pressed={f.ativo}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-            height: 24,
-            padding: '0 8px',
-            border: `1px solid ${f.ativo ? 'var(--sel-line)' : 'var(--line)'}`,
-            borderRadius: 'var(--r1)',
-            background: f.ativo ? 'var(--sel-bg)' : 'var(--panel)',
-            color: f.ativo ? 'var(--sel-ink)' : 'var(--mute)',
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
+        <Chip key={f.texto} pressionado={Boolean(f.ativo)} contagem={f.n} onClick={f.onClick}>
           {f.texto}
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.75 }}>{f.n}</span>
-        </button>
+        </Chip>
       ))}
     </div>
   );
@@ -161,37 +99,10 @@ function MiniaturaDaLinha({ thumb, dur }: { thumb: string; dur?: string }) {
   const [quebrou, setQuebrou] = useState(false);
   if (quebrou) return null;
   return (
-    <span
-      style={{
-        position: 'relative',
-        width: 38,
-        height: 22,
-        flex: 'none',
-        borderRadius: 'var(--r1)',
-        overflow: 'hidden',
-        background: 'var(--inset)',
-      }}
-    >
-      <img
-        src={thumb}
-        alt=""
-        loading="lazy"
-        onError={() => setQuebrou(true)}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-      />
+    <span className="relative h-[22px] w-[38px] flex-none overflow-hidden rounded-[6px] bg-poco">
+      <img src={thumb} alt="" loading="lazy" onError={() => setQuebrou(true)} className="block size-full object-cover" />
       {dur ? (
-        <span
-          style={{
-            position: 'absolute',
-            inset: 'auto 1px 1px auto',
-            padding: '0 2px',
-            borderRadius: 2,
-            background: 'rgb(0 0 0/.55)',
-            fontFamily: 'var(--mono)',
-            fontSize: 9,
-            color: '#fff',
-          }}
-        >
+        <span className="absolute bottom-px right-px rounded-etiqueta bg-painel-solido px-0.5 font-mono text-micro text-fg">
           {dur}
         </span>
       ) : null}
@@ -204,67 +115,31 @@ function MiniaturaDaLinha({ thumb, dur }: { thumb: string; dur?: string }) {
  *  D-746: o botão de navegar e a ação da linha são IRMÃOS — botão dentro de
  *  botão não existe em HTML, e o clique no { } abriria o corte junto. */
 export function LinhaDeLista({ item }: { item: ItemDeLista }) {
+  const bolinha = { '--dot': item.dot } as CSSProperties;
   return (
     <div
-      className="row"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        marginBottom: 2,
-        border: `1px solid ${item.ativo ? 'var(--sel-line)' : 'transparent'}`,
-        borderRadius: 'var(--r2)',
-        background: item.ativo ? 'var(--sel-bg)' : 'transparent',
-      }}
+      className={cn(
+        'mb-0.5 flex items-center gap-0.5 rounded-[10px] border border-transparent transition-colors duration-150 hover:bg-vidro motion-reduce:transition-none',
+        item.ativo && 'border-fio-2 bg-vidro-2 shadow-topo',
+      )}
     >
       <button
         type="button"
+        data-sala=""
         // Linha de lista só NAVEGA: com o foco nela, o Enter ainda é da casca.
         data-navegacao
         onClick={item.onClick}
         aria-current={item.ativo ? 'true' : undefined}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          flex: 1,
-          minWidth: 0,
-          padding: 7,
-          border: 0,
-          background: 'transparent',
-          cursor: 'pointer',
-          textAlign: 'left',
-        }}
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] p-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco"
       >
         {item.thumb ? <MiniaturaDaLinha thumb={item.thumb} dur={item.dur} /> : null}
-        <span style={{ minWidth: 0, flex: 1 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-            <span
-              style={{
-                minWidth: 0,
-                fontSize: 11.5,
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {item.titulo}
-            </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="min-w-0 truncate text-pequeno font-semibold text-fg">{item.titulo}</span>
             {item.selo}
           </span>
           {item.legenda || item.dur ? (
-            <span
-              style={{
-                display: 'block',
-                fontFamily: 'var(--mono)',
-                fontSize: 11,
-                color: 'var(--mute)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
+            <span className="block truncate font-mono text-micro text-fg-3">
               {/* Sem miniatura, a duração perde o selo do canto e vem para a
                   legenda: ela é informação, não enfeite da imagem. */}
               {[item.legenda, item.thumb ? null : item.dur].filter(Boolean).join(' · ')}
@@ -273,23 +148,20 @@ export function LinhaDeLista({ item }: { item: ItemDeLista }) {
           {item.tira ? <TiraMini tira={item.tira} /> : null}
         </span>
         {item.tira ? null : (
-          <span
-            style={{ width: 7, height: 7, flex: 'none', borderRadius: 99, background: item.dot }}
-            aria-hidden
-          />
+          <span style={bolinha} className="size-[7px] flex-none rounded-full bg-[var(--dot)]" aria-hidden />
         )}
       </button>
       {item.acao ? (
-        <button
-          type="button"
-          className="btn btn-icon"
+        <IconButton
+          variant="fantasma"
+          size="pq"
           title={item.acao.titulo}
           aria-label={item.acao.titulo}
           onClick={item.acao.onClick}
-          style={{ width: 24, height: 24, marginRight: 4, flex: 'none', color: 'var(--accent)' }}
+          className="mr-1 flex-none"
         >
           <Icon name={item.acao.icone} />
-        </button>
+        </IconButton>
       ) : null}
     </div>
   );
@@ -299,27 +171,16 @@ export function LinhaDeLista({ item }: { item: ItemDeLista }) {
  *  clique no seletor da barra superior; a tira só devolve a coluna. */
 export function ColunaRecolhida({ titulo, onAbrir }: { titulo: string; onAbrir: () => void }) {
   return (
-    <aside
-      className="gl"
-      style={{
-        display: 'flex',
-        flex: 'none',
-        width: 36,
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingTop: 8,
-        borderRight: '1px solid var(--line)',
-      }}
-    >
-      <button
-        type="button"
-        className="btn btn-icon btn-ghost"
+    <aside className="flex w-9 flex-none flex-col items-center border-r border-fio bg-vidro pt-2">
+      <IconButton
+        variant="fantasma"
+        size="pq"
         onClick={onAbrir}
         title={`Mostrar ${titulo.toLowerCase()}`}
         aria-label={`Mostrar ${titulo.toLowerCase()}`}
       >
         <Icon name="panel-left" />
-      </button>
+      </IconButton>
     </aside>
   );
 }
@@ -332,24 +193,10 @@ export function ContextColumn({
   onRecolher?: () => void;
 }) {
   return (
-    <aside
-      className="gl ctx"
-      style={{
-        display: 'flex',
-        flex: 'none',
-        width: 250,
-        flexDirection: 'column',
-        borderRight: '1px solid var(--line)',
-        minHeight: 0,
-      }}
-    >
+    <aside className="flex min-h-0 w-[250px] flex-none flex-col border-r border-fio bg-vidro">
       {lista.cabecalho ? (
-        <div style={{ padding: 12, borderBottom: '1px solid var(--line2)' }}>
-          <IdentidadeDaLive
-            titulo={lista.cabecalho.titulo}
-            sub={lista.cabecalho.sub}
-            thumb={lista.cabecalho.thumb}
-          />
+        <div className="border-b border-fio p-3">
+          <IdentidadeDaLive titulo={lista.cabecalho.titulo} sub={lista.cabecalho.sub} thumb={lista.cabecalho.thumb} />
         </div>
       ) : null}
 
@@ -358,23 +205,23 @@ export function ContextColumn({
         resumo={lista.resumo}
         depois={
           onRecolher ? (
-            <button
-              type="button"
-              className="btn btn-icon btn-ghost"
+            <IconButton
+              variant="fantasma"
+              size="pq"
               onClick={onRecolher}
               title={`Recolher ${lista.titulo.toLowerCase()}`}
               aria-label={`Recolher ${lista.titulo.toLowerCase()}`}
-              style={{ width: 24, height: 24, marginRight: -4 }}
+              className="-mr-1"
             >
               <Icon name="panel-left" />
-            </button>
+            </IconButton>
           ) : null
         }
       />
 
       {lista.filtros?.length ? <FiltrosDaLista filtros={lista.filtros} /> : null}
 
-      <div style={{ flex: 1, overflow: 'auto', padding: 6 }}>
+      <div className="flex-1 overflow-auto p-1.5">
         {lista.itens.map((c) => (
           <LinhaDeLista key={c.id} item={c} />
         ))}
@@ -382,23 +229,11 @@ export function ContextColumn({
       </div>
 
       {lista.acao ? (
-        <div
-          style={{
-            display: 'flex',
-            gap: 6,
-            padding: '10px 12px',
-            borderTop: '1px solid var(--line2)',
-          }}
-        >
-          <button
-            type="button"
-            className="btn"
-            style={{ flex: 1, justifyContent: 'center' }}
-            onClick={lista.acao.onClick}
-          >
+        <div className="flex gap-1.5 border-t border-fio px-3 py-2.5">
+          <Button variant="secundario" size="pq" className="flex-1" onClick={lista.acao.onClick}>
             <Icon name="plus" />
             {lista.acao.texto}
-          </button>
+          </Button>
         </div>
       ) : null}
     </aside>

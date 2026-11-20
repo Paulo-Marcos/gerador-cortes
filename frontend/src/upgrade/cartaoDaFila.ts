@@ -1,5 +1,5 @@
 import type { LotePublicacao } from '@/features/shorts/shortsApi';
-import type { QueueJob } from '@/shared/filaGlobal/useWorkbenchQueue';
+import type { GrupoFila, QueueJob } from '@/shared/filaGlobal/useWorkbenchQueue';
 import type { FilaDoTrilho } from './GlobalRail';
 
 // D-897 · o lote de publicação conta como trabalho da fila.
@@ -93,4 +93,36 @@ export function filaDoTrilho(
     progresso: rodando.progresso,
     onAbrir,
   };
+}
+
+/** DIRECAO §7.11: os três grupos da gaveta. Desfecho que não é "pronto" (erro, perdido, cancelado) fica em Prontos, com o selo do próprio tom. */
+export interface GruposDaGaveta {
+  agora: GrupoFila[];
+  esperando: GrupoFila[];
+  prontos: GrupoFila[];
+}
+
+export function dividirNosTresGrupos(grupos: GrupoFila[]): GruposDaGaveta {
+  return {
+    agora: grupos.filter((g) => g.estado === 'rodando'),
+    esperando: grupos.filter((g) => g.estado === 'aguardando'),
+    prontos: grupos.filter((g) => g.estado !== 'rodando' && g.estado !== 'aguardando'),
+  };
+}
+
+/** "1 renderizando · 2 esperando · 1 pronto": a linha sob o título da gaveta (§7.11). Só nomeia o que existe. */
+export function resumoDaFila(grupos: GrupoFila[], comLote: boolean): string {
+  const { agora, esperando, prontos } = dividirNosTresGrupos(grupos);
+  const partes = [
+    agora.length > 0 && `${agora.length} em curso`,
+    esperando.length > 0 && `${esperando.length} esperando`,
+    prontos.length > 0 && `${prontos.length} ${prontos.length === 1 ? 'pronto' : 'prontos'}`,
+    comLote && 'lote de publicação',
+  ].filter(Boolean);
+  return partes.length > 0 ? partes.join(' · ') : 'nada na fila';
+}
+
+/** A posição na fila, em selo: "1º", "2º". */
+export function posicaoNaFila(indice: number): string {
+  return `${indice + 1}º`;
 }

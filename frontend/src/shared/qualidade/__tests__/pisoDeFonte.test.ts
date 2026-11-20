@@ -120,9 +120,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/shorts/ShortsProntosPage.tsx": 2,
   "src/features/shorts/WorkspaceDoFirePage.tsx": 4,
   "src/features/thumbnail-padroes/ThumbnailPadroesPage.tsx": 2,
-  "src/upgrade/ContextColumn.tsx": 1,
-  "src/upgrade/GavetaDaFila.tsx": 4,
-  "src/upgrade/PaletaDeComandos.tsx": 1,
   "src/upgrade/UpgradeModal.tsx": 3,
   "src/upgrade/upgrade.css": 2,
 };

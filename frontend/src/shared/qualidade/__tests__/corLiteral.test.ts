@@ -83,13 +83,8 @@ const EXCECOES: Record<string, number> = {
   "src/hooks/usePalette.ts": 5,
   "src/shared/palco/youtubeBackgrounds.tsx": 44,
   "src/shared/palco/youtubeChrome.tsx": 21,
-  "src/upgrade/ContextColumn.tsx": 2,
-  "src/upgrade/GavetaDaFila.tsx": 2,
-  "src/upgrade/MolduraDeVideo.tsx": 5,
-  "src/upgrade/PaletaDeComandos.tsx": 2,
   "src/upgrade/SeloDeEstado.tsx": 3,
   "src/upgrade/UpgradeModal.tsx": 2,
-  "src/upgrade/UpgradeToast.tsx": 1,
 };
 
 function contarCoresSoltas(): Record<string, number> {

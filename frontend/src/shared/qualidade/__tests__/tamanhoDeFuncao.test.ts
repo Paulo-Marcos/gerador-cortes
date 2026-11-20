@@ -126,8 +126,6 @@ const EXCECOES: Record<string, number> = {
   "src/shared/palco/youtubeBackgrounds.tsx::FundoThumb": 110,
   "src/shared/palco/youtubeLayout.ts::normalizeYoutubeLayout": 106,
   "src/upgrade/ActionBar.tsx::ActionBar": 122,
-  "src/upgrade/GavetaDaFila.tsx::GavetaDaFila": 126,
-  "src/upgrade/PaletaDeComandos.tsx::PaletaDeComandos": 351,
   "src/upgrade/UpgradeModal.tsx::UpgradeModal": 158,
   "src/upgrade/UpgradeShell.tsx::Casca": 116,
 };

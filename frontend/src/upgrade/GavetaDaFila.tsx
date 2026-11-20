@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
+import { IconButton } from '@/components/ui/icon-button';
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
+import { Progresso } from '@/components/ui/progresso';
+import { Selo, type TomDoSelo } from '@/components/ui/selo';
 import {
   ehAtivo,
   useWorkbenchQueue,
@@ -7,33 +13,21 @@ import {
   type MarcoJob,
   type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
-import { resumoDaGaveta } from './cartaoDaFila';
+import { dividirNosTresGrupos, posicaoNaFila, resumoDaFila } from './cartaoDaFila';
 import { Icon } from './Icon';
 import { LoteNaFila, useLoteDaFila } from './LoteNaFila';
-import { SeloDeEstado, type TomDoSelo } from './SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────
-// D-746 · RODADA 3 · a fila deixa de ser um desvio de rota.
+// D-746 · a fila é uma CONSULTA, não um destino: gaveta sobre a tela atual.
+// O operador reclamava de ir "para outra pasta" só para ver o progresso, e de
+// não haver um X porque não havia o que fechar. Consultar não é navegar.
 //
-// A queixa: "eu abro e é como se eu tivesse ido para outra pasta e para
-// voltar fica uma tortura. A fila era para ser só um modal ou off-canvas."
-//
-// Estava literalmente assim: o cartão do trilho e o sino da barra faziam
-// `navigate('/fila')` (UpgradeShell.tsx → `filaDoTrilho().to` e
-// `onAbrirAvisos`). Consultar o progresso custava a tela, a rolagem e o
-// corte selecionado — e não havia um X, porque não havia o que fechar.
-//
-// Consultar não é navegar. A fila é uma CONSULTA: dura cinco segundos,
-// acontece no meio de outra coisa, e o destino depois dela é sempre de
-// onde a pessoa veio. Isso é gaveta, não rota.
-//
-// DUAS COISAS QUE O PATCH NÃO INVENTA, porque já existem:
-//   · `cancelJob(id)` já pede o cancelamento real ao backend (D-426) e já
-//     faz a marca otimista. A gaveta CHAMA isso — não é um X decorativo.
-//   · a fila se desenha por GRUPO, não por job: `agruparFila` junta tudo
-//     do mesmo alvo numa linha ("265 · corte 7" com render + capa + meta).
-//     Renderizar `jobs` cru encheria a gaveta de linhas quase idênticas,
-//     que é o que o D-425 já tinha resolvido.
+// D-1144 (E-069 H-14, DIRECAO §7.11): a gaveta é o `Dialog lateral` da Sala
+// escura (foco preso, Esc, foco de volta, véu) com os três grupos: Agora,
+// Esperando e Prontos nesta sessão. O que NÃO muda, porque já existia:
+//   · `cancelJob(id)` pede o cancelamento real ao backend (D-426);
+//   · a fila se desenha por GRUPO, não por job (`agruparFila`, D-425): tudo do
+//     mesmo alvo numa linha ("265 · corte 7" com render + capa + meta).
 // ─────────────────────────────────────────────────────────────────
 
 /**
@@ -42,20 +36,21 @@ import { SeloDeEstado, type TomDoSelo } from './SeloDeEstado';
  * o operador precisa ver, "cancelado" é desfecho que ele mesmo pediu.
  */
 const TOM_DO_JOB: Record<JobEstado, TomDoSelo> = {
-  rodando: 'info',
+  rodando: 'curso',
   aguardando: 'inerte',
   concluido: 'ok',
   erro: 'erro',
-  perdido: 'aviso',
+  perdido: 'convite',
   cancelado: 'inerte',
 };
 
-const COR_DA_BARRA: Record<TomDoSelo, string> = {
-  info: 'var(--info)',
-  ok: 'var(--ok)',
-  erro: 'var(--err)',
-  aviso: 'var(--warn)',
-  inerte: 'var(--dim)',
+const COR_DO_PERCENTUAL: Record<TomDoSelo, string> = {
+  curso: 'text-info',
+  ok: 'text-ok',
+  erro: 'text-erro',
+  convite: 'text-aviso',
+  inerte: 'text-fg-3',
+  neutro: 'text-fg-3',
 };
 
 const TEXTO_DO_JOB: Record<JobEstado, string> = {
@@ -67,13 +62,9 @@ const TEXTO_DO_JOB: Record<JobEstado, string> = {
   cancelado: 'cancelado',
 };
 
-// D-769 · o detalhe por execução voltou.
-//
-// A casca antiga (D-435) abria um modal com os tempos e a linha do tempo de
-// cada job do alvo; a gaveta da R3 herdou só o resumo, e com ele sumiu o
-// único jeito de ver as várias execuções de um mesmo corte. Tudo ainda está
-// no estado da fila (`historico`, `atualizadoEm`) — faltava de novo o lugar.
-// Aqui ele se abre DENTRO da linha, sem outro diálogo sobre a gaveta.
+// D-769 · o detalhe por execução: os tempos e a linha do tempo de cada job do
+// alvo. Tudo está no estado da fila (`historico`, `atualizadoEm`); ele se abre
+// DENTRO da linha, sem outro diálogo sobre a gaveta.
 
 const TEXTO_PERDIDO =
   'O backend parou de publicar esta execução sem informar o desfecho — em geral porque foi reiniciado. Confira o resultado na tela correspondente.';
@@ -104,21 +95,19 @@ function useAgora(): number {
   return agora;
 }
 
-const MONO_PEQUENO = { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--mute)' } as const;
-
 function LinhaDoTempo({ marcos }: { marcos: MarcoJob[] }) {
   if (marcos.length === 0) {
-    return <span style={MONO_PEQUENO}>Sem etapas registradas ainda.</span>;
+    return <span className="font-mono text-micro text-fg-3">Sem etapas registradas ainda.</span>;
   }
   return (
-    <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <ol className="m-0 flex list-none flex-col gap-1 p-0">
       {marcos.map((marco, indice) => (
-        <li key={`${marco.em}-${indice}`} style={{ display: 'flex', alignItems: 'baseline', gap: 7, fontSize: 11, lineHeight: 1.4 }}>
-          <span style={{ ...MONO_PEQUENO, flex: 'none' }}>{horaDe(marco.em)}</span>
-          <span style={{ ...MONO_PEQUENO, flex: 'none', width: 32, textAlign: 'right', fontWeight: 700, color: COR_DA_BARRA[TOM_DO_JOB[marco.estado]] }}>
+        <li key={`${marco.em}-${indice}`} className="flex items-baseline gap-2 text-pequeno">
+          <span className="flex-none font-mono text-micro text-fg-3">{horaDe(marco.em)}</span>
+          <span className={`w-9 flex-none text-right font-mono text-micro font-bold ${COR_DO_PERCENTUAL[TOM_DO_JOB[marco.estado]]}`}>
             {Math.round(marco.progresso)}%
           </span>
-          <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{marco.etapa || TEXTO_DO_JOB[marco.estado]}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{marco.etapa || TEXTO_DO_JOB[marco.estado]}</span>
         </li>
       ))}
     </ol>
@@ -128,18 +117,16 @@ function LinhaDoTempo({ marcos }: { marcos: MarcoJob[] }) {
 /** Uma execução por extenso: estado, tempos, erro completo e por onde passou. */
 function ExecucaoDoJob({ job, agora }: { job: QueueJob; agora: number }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 9px', borderRadius: 'var(--r2)', background: 'var(--inset)' }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-        <strong style={{ flex: 1, minWidth: 0, fontSize: 11.5 }}>{job.rotuloTipo || job.tipo}</strong>
-        <SeloDeEstado tom={TOM_DO_JOB[job.estado]}>{TEXTO_DO_JOB[job.estado]}</SeloDeEstado>
+    <section className="flex flex-col gap-1.5 rounded-[12px] bg-poco p-2.5">
+      <span className="flex items-center gap-2">
+        <strong className="min-w-0 flex-1 text-pequeno">{job.rotuloTipo || job.tipo}</strong>
+        <Selo tom={TOM_DO_JOB[job.estado]}>{TEXTO_DO_JOB[job.estado]}</Selo>
       </span>
-      <span style={MONO_PEQUENO}>
+      <span className="font-mono text-micro text-fg-3">
         {`na fila há ${duracaoHumana(agora - job.iniciadoEm)} · último avanço ${horaDe(job.atualizadoEm)} (há ${duracaoHumana(agora - job.atualizadoEm)})`}
       </span>
-      {job.estado === 'perdido' ? <span style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--mute)' }}>{TEXTO_PERDIDO}</span> : null}
-      {job.erro ? (
-        <span style={{ ...MONO_PEQUENO, lineHeight: 1.45, color: 'var(--err)', overflowWrap: 'anywhere' }}>{job.erro}</span>
-      ) : null}
+      {job.estado === 'perdido' ? <span className="text-pequeno text-fg-2">{TEXTO_PERDIDO}</span> : null}
+      {job.erro ? <span className="font-mono text-micro text-erro [overflow-wrap:anywhere]">{job.erro}</span> : null}
       <LinhaDoTempo marcos={job.historico} />
     </section>
   );
@@ -150,7 +137,7 @@ export function DetalheDasExecucoes({ jobs }: { jobs: QueueJob[] }) {
   const agora = useAgora();
   const ordenados = [...jobs].sort((a, b) => b.iniciadoEm - a.iniciadoEm);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="flex flex-col gap-1.5">
       {ordenados.map((job) => (
         <ExecucaoDoJob key={job.id} job={job} agora={agora} />
       ))}
@@ -158,105 +145,171 @@ export function DetalheDasExecucoes({ jobs }: { jobs: QueueJob[] }) {
   );
 }
 
-function LinhaDaFila({ grupo }: { grupo: GrupoFila }) {
+/** O que a linha diz em baixo: o erro tem precedência, porque é ele que resolve o problema. */
+const textoDaEtapa = (job: QueueJob) => job.erro || job.etapa || job.rotuloTipo;
+
+/** Quem encerra o grupo: cancela o que anda no servidor, ou tira da lista o que já terminou. */
+function useEncerrarGrupo(grupo: GrupoFila) {
   const { cancelJob, removeJob } = useWorkbenchQueue();
-  const job = grupo.destaque;
   const ativo = ehAtivo(grupo.estado);
-  const tom = TOM_DO_JOB[grupo.estado];
-  const [aberta, setAberta] = useState(false);
+  const encerrar = () => {
+    if (ativo) void cancelJob(grupo.destaque.id).catch(() => undefined);
+    else grupo.jobs.forEach((j) => removeJob(j.id));
+  };
+  return { ativo, encerrar };
+}
 
+function TituloDoGrupo({ grupo, aberta, aoAlternar }: { grupo: GrupoFila; aberta: boolean; aoAlternar: () => void }) {
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '10px 11px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button
-          type="button"
-          onClick={() => setAberta((v) => !v)}
-          aria-expanded={aberta}
-          title={aberta ? 'Recolher o detalhe' : 'Ver o detalhe de cada execução'}
-          style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, padding: 0, border: 0, background: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
-        >
-          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} style={{ flex: 'none', color: 'var(--mute)' }} />
-          <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {grupo.rotulo}
-          </span>
-          {/* Mais de um job no mesmo alvo: o número evita a linha mentir. */}
-          {grupo.jobs.length > 1 ? (
-            <span className="lbl">{grupo.jobs.length} jobs</span>
-          ) : null}
-        </button>
-        <SeloDeEstado tom={tom}>{TEXTO_DO_JOB[grupo.estado]}</SeloDeEstado>
-        <button
-          type="button"
-          className="btn btn-icon"
-          style={{ width: 24, height: 24, color: ativo ? 'var(--err)' : 'var(--mute)' }}
-          title={
-            ativo
-              ? `Cancelar ${job.rotulo} (${job.etapa}) — o processo para no servidor`
-              : 'Tirar da lista (já terminou)'
-          }
-          aria-label={ativo ? 'Cancelar o job' : 'Tirar da lista'}
-          onClick={() => {
-            if (ativo) void cancelJob(job.id).catch(() => undefined);
-            else grupo.jobs.forEach((j) => removeJob(j.id));
-          }}
-        >
-          <Icon name={ativo ? 'ban' : 'x'} />
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ flex: 1, height: 4, borderRadius: 2, background: 'var(--inset)' }} aria-hidden>
-          <span
-            style={{
-              display: 'block',
-              height: '100%',
-              width: `${Math.max(0, Math.min(100, job.progresso))}%`,
-              borderRadius: 2,
-              // Progresso é estado, não ação: a barra fala a língua do selo.
-              background: COR_DA_BARRA[tom],
-            }}
-          />
-        </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--mute)', width: 34, textAlign: 'right' }}>
-          {Math.round(job.progresso)}%
-        </span>
-      </div>
-
-      {/* `erro` tem precedência sobre `etapa`: num job que falhou, "overlay
-          4/7" é onde ele estava, e a mensagem é o que resolve o problema. */}
-      <span
-        style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 10,
-          lineHeight: 1.45,
-          color: job.erro ? 'var(--err)' : 'var(--mute)',
-        }}
-      >
-        {job.erro || job.etapa || job.rotuloTipo}
-      </span>
-
-      {aberta ? <DetalheDasExecucoes jobs={grupo.jobs} /> : null}
-    </div>
+    <button
+      type="button"
+      data-sala=""
+      onClick={aoAlternar}
+      aria-expanded={aberta}
+      title={aberta ? 'Recolher o detalhe' : 'Ver o detalhe de cada execução'}
+      className="flex min-w-0 flex-1 items-center gap-1.5 rounded-[8px] text-left text-corpo font-semibold text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+    >
+      <Icon name={aberta ? 'chevron-down' : 'chevron-right'} className="flex-none text-fg-3" />
+      <span className="min-w-0 flex-1 truncate">{grupo.rotulo}</span>
+      {/* Mais de um job no mesmo alvo: o número evita a linha mentir. */}
+      {grupo.jobs.length > 1 ? <span className="flex-none font-mono text-micro text-fg-3">{grupo.jobs.length} jobs</span> : null}
+    </button>
   );
 }
 
-/** D-897: o lote de publicação no topo, os jobs embaixo. "Nada rodando" só sem nenhum dos dois. */
+const CARTAO_DA_LINHA = 'flex list-none flex-col gap-2 rounded-[14px] border border-fio bg-vidro p-3';
+
+/** Agora: o selo em curso, a barra com o percentual, a etapa e "Cancelar". */
+function LinhaAgora({ grupo }: { grupo: GrupoFila }) {
+  const [aberta, setAberta] = useState(false);
+  const { encerrar } = useEncerrarGrupo(grupo);
+  const job = grupo.destaque;
+  return (
+    <li className={CARTAO_DA_LINHA}>
+      <div className="flex items-center gap-2">
+        <TituloDoGrupo grupo={grupo} aberta={aberta} aoAlternar={() => setAberta((v) => !v)} />
+        <Selo tom={TOM_DO_JOB[grupo.estado]}>{TEXTO_DO_JOB[grupo.estado]}</Selo>
+      </div>
+      <Progresso valor={job.progresso} rotulo={`Andamento de ${grupo.rotulo}`} />
+      <div className="flex items-center gap-2">
+        <span className={`min-w-0 flex-1 text-pequeno ${job.erro ? 'text-erro' : 'text-fg-3'}`}>{textoDaEtapa(job)}</span>
+        <Button variant="destrutivo" size="pq" onClick={encerrar} title={`Cancelar ${job.rotulo} (${job.etapa}): o processo para no servidor`}>
+          Cancelar
+        </Button>
+      </div>
+      {aberta ? <DetalheDasExecucoes jobs={grupo.jobs} /> : null}
+    </li>
+  );
+}
+
+/** Esperando: a posição na fila num selo inerte e o ⋯ com o que se pode fazer. */
+function LinhaEsperando({ grupo, posicao }: { grupo: GrupoFila; posicao: number }) {
+  const [aberta, setAberta] = useState(false);
+  const { encerrar } = useEncerrarGrupo(grupo);
+  return (
+    <li className={CARTAO_DA_LINHA}>
+      <div className="flex items-center gap-2">
+        <TituloDoGrupo grupo={grupo} aberta={aberta} aoAlternar={() => setAberta((v) => !v)} />
+        <Selo tom="inerte" dica="Posição na fila">{posicaoNaFila(posicao)}</Selo>
+        <Menu>
+          <MenuTrigger asChild>
+            <IconButton variant="fantasma" size="pq" aria-label={`Mais ações de ${grupo.rotulo}`}>
+              <Icon name="more-horizontal" />
+            </IconButton>
+          </MenuTrigger>
+          <MenuContent align="end">
+            <MenuItem icone="ban" perigo onSelect={encerrar}>
+              Tirar da fila
+            </MenuItem>
+          </MenuContent>
+        </Menu>
+      </div>
+      <span className="text-pequeno text-fg-3">{textoDaEtapa(grupo.destaque)}</span>
+      {aberta ? <DetalheDasExecucoes jobs={grupo.jobs} /> : null}
+    </li>
+  );
+}
+
+/** Prontos nesta sessão: o selo do desfecho, "Ver" o detalhe e tirar da lista. */
+function LinhaPronta({ grupo }: { grupo: GrupoFila }) {
+  const [aberta, setAberta] = useState(false);
+  const { encerrar } = useEncerrarGrupo(grupo);
+  return (
+    <li className={CARTAO_DA_LINHA}>
+      <div className="flex items-center gap-2">
+        <TituloDoGrupo grupo={grupo} aberta={aberta} aoAlternar={() => setAberta((v) => !v)} />
+        <Selo tom={TOM_DO_JOB[grupo.estado]}>{TEXTO_DO_JOB[grupo.estado]}</Selo>
+        <Button variant="fantasma" size="pq" onClick={() => setAberta((v) => !v)}>
+          {aberta ? 'Recolher' : 'Ver'}
+        </Button>
+        <IconButton variant="fantasma" size="pq" aria-label={`Tirar ${grupo.rotulo} da lista`} title="Tirar da lista (já terminou)" onClick={encerrar}>
+          <Icon name="x" />
+        </IconButton>
+      </div>
+      {grupo.destaque.erro ? <span className="text-pequeno text-erro">{grupo.destaque.erro}</span> : null}
+      {aberta ? <DetalheDasExecucoes jobs={grupo.jobs} /> : null}
+    </li>
+  );
+}
+
+function GrupoDaGaveta({ titulo, quantos, children }: { titulo: string; quantos: number; children: ReactNode }) {
+  if (quantos === 0) return null;
+  return (
+    <section aria-label={titulo} className="flex flex-col gap-2">
+      <h3 className="flex items-baseline gap-2 text-micro text-fg-3">
+        {titulo}
+        <span className="font-mono font-medium tabular-nums">{quantos}</span>
+      </h3>
+      <ul className="m-0 flex flex-col gap-2 p-0">{children}</ul>
+    </section>
+  );
+}
+
+/** D-897: o lote de publicação no topo, os três grupos embaixo. "Nada rodando" só sem nenhum dos dois. */
 function ConteudoDaFila({ grupos }: { grupos: GrupoFila[] }) {
   // Lido aqui, e não recebido da gaveta: este conteúdo monta a cada abertura,
   // e é essa montagem que pergunta de novo ao backend (lote disparado em outra aba).
   const lote = useLoteDaFila();
+  const { agora, esperando, prontos } = dividirNosTresGrupos(grupos);
   return (
-    <>
+    <div className="flex flex-col gap-4 pb-2">
       <LoteNaFila lote={lote} />
       {grupos.length === 0 && !lote ? (
-        <p style={{ margin: 0, padding: '28px 12px', textAlign: 'center', fontSize: 12, color: 'var(--mute)' }}>
-          Nada rodando agora.
-        </p>
-      ) : (
-        grupos.map((g) => <LinhaDaFila key={g.chave} grupo={g} />)
-      )}
-    </>
+        <p className="m-0 px-3 py-7 text-center text-corpo text-fg-3">Nada rodando agora.</p>
+      ) : null}
+      <GrupoDaGaveta titulo="Agora" quantos={agora.length}>
+        {agora.map((g) => (
+          <LinhaAgora key={g.chave} grupo={g} />
+        ))}
+      </GrupoDaGaveta>
+      <GrupoDaGaveta titulo="Esperando" quantos={esperando.length}>
+        {esperando.map((g, i) => (
+          <LinhaEsperando key={g.chave} grupo={g} posicao={i} />
+        ))}
+      </GrupoDaGaveta>
+      <GrupoDaGaveta titulo="Prontos nesta sessão" quantos={prontos.length}>
+        {prontos.map((g) => (
+          <LinhaPronta key={g.chave} grupo={g} />
+        ))}
+      </GrupoDaGaveta>
+    </div>
   );
+}
+
+/** ⌘J também fecha: com a gaveta aberta o teclado da casca se cala (há um diálogo na tela). */
+function useFecharComCtrlJ(aberta: boolean, aoFechar: () => void) {
+  useEffect(() => {
+    if (!aberta) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        e.stopPropagation();
+        aoFechar();
+      }
+    };
+    document.addEventListener('keydown', aoTeclar, true);
+    return () => document.removeEventListener('keydown', aoTeclar, true);
+  }, [aberta, aoFechar]);
 }
 
 export function GavetaDaFila({
@@ -271,117 +324,30 @@ export function GavetaDaFila({
   /** Conteúdo alternativo (vitrines/teste). Em uso normal, omitir. */
   children?: ReactNode;
 }) {
-  const painel = useRef<HTMLElement>(null);
-  const gatilho = useRef<Element | null>(null);
-  const { grupos, jobs } = useWorkbenchQueue();
+  const { grupos } = useWorkbenchQueue();
   const lote = useLoteDaFila();
+  useFecharComCtrlJ(aberta, aoFechar);
 
-  useEffect(() => {
-    if (!aberta) return;
-    gatilho.current = document.activeElement;
-    painel.current?.querySelector<HTMLElement>('button')?.focus();
-
-    const aoTeclar = (e: KeyboardEvent) => {
-      // ⌘J também fecha: com a gaveta aberta o teclado da casca se cala
-      // (há um diálogo na tela), então o segundo ⌘J só chega aqui.
-      const alternou = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
-      if (e.key === 'Escape' || alternou) {
-        // Para aqui: sem isso o Esc segue para os listeners de documento e
-        // fecha o diálogo que estiver atrás (o mesmo bug da paleta na R2).
-        e.preventDefault();
-        e.stopPropagation();
-        aoFechar();
-        return;
-      }
-      // Armadilha de foco: sem isso o Tab passeia pela tela de trás, que
-      // está inerte atrás do véu — e o operador digita no escuro.
-      if (e.key !== 'Tab') return;
-      const focaveis = painel.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focaveis?.length) return;
-      const primeiro = focaveis[0];
-      const ultimo = focaveis[focaveis.length - 1];
-      if (e.shiftKey && document.activeElement === primeiro) {
-        e.preventDefault();
-        ultimo.focus();
-      } else if (!e.shiftKey && document.activeElement === ultimo) {
-        e.preventDefault();
-        primeiro.focus();
-      }
-    };
-
-    document.addEventListener('keydown', aoTeclar, true);
-    return () => {
-      document.removeEventListener('keydown', aoTeclar, true);
-      // Devolve o foco ao botão que abriu: quem usa teclado não pode
-      // reaparecer no começo do documento.
-      (gatilho.current as HTMLElement | null)?.focus?.();
-    };
-  }, [aberta, aoFechar]);
-
-  if (!aberta) return null;
-
-  const resumo = resumoDaGaveta(jobs, Boolean(lote));
-
-  // Sem portal: montada dentro da `.ap`, a gaveta herda tema, vidro e
-  // paleta. Num portal para o <body> ela sairia branca no tema escuro.
+  // Sempre montada: o `Dialog` fechado não desenha nada, e é ele que devolve o foco a quem a
+  // abriu (o cartão do trilho, o sino). Desmontar ao fechar pularia essa devolução.
   return (
-    <div className="gaveta-raiz" style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', justifyContent: 'flex-end' }}>
-      <div
-        role="presentation"
-        onClick={aoFechar}
-        className="gaveta-veu"
-        // Sem blur: a promessa é "a tela atrás fica intacta" — escurecer
-        // basta para separar, e a lista continua legível durante a consulta.
-        style={{ position: 'absolute', inset: 0, background: 'rgb(8 11 18/.32)' }}
-      />
-      <aside
-        ref={painel}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Fila de processamento"
-        className="gaveta-painel"
-        style={{
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          width: 'min(404px, 100vw)',
-          height: '100%',
-          borderLeft: '1px solid var(--line)',
-          background: 'var(--solid)',
-          boxShadow: '-18px 0 44px rgb(8 11 18/.32)',
-        }}
-      >
-        <header style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 12px', borderBottom: '1px solid var(--line)' }}>
-          <span style={{ display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 'var(--r2)', background: 'var(--accent-soft)', color: 'var(--accent2)', flex: 'none' }}>
-            <Icon name="loader" />
-          </span>
-          <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.2 }}>
-            <strong style={{ fontSize: 12.5 }}>Fila de processamento</strong>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--mute)' }}>{resumo}</span>
-          </span>
-          <span style={{ flex: 1 }} />
-          <button type="button" className="btn" style={{ height: 26, padding: '0 8px', fontSize: 11 }} onClick={aoAbrirTelaCheia} title="Abrir a fila em tela cheia (/fila)">
+    <Dialog
+      open={aberta}
+      onClose={aoFechar}
+      tamanho="lateral"
+      title="Fila de processamento"
+      description={resumoDaFila(grupos, Boolean(lote))}
+      footer={
+        <div className="flex w-full items-center gap-3">
+          <p className="m-0 min-w-0 flex-1 text-pequeno text-fg-3">Os renders seguem com a gaveta fechada.</p>
+          <Button variant="secundario" size="pq" onClick={aoAbrirTelaCheia} title="Abrir a fila em tela cheia (/fila)">
             <Icon name="maximize" />
             Tela cheia
-          </button>
-          <button type="button" className="btn btn-icon" style={{ width: 26, height: 26 }} onClick={aoFechar} title="Fechar (Esc)" aria-label="Fechar a fila">
-            <Icon name="x" />
-          </button>
-        </header>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 11, flex: 1, minHeight: 0, overflow: 'auto' }}>
-          {children ?? <ConteudoDaFila grupos={grupos} />}
+          </Button>
         </div>
-
-        <footer style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderTop: '1px solid var(--line)', fontSize: 11, color: 'var(--mute)' }}>
-          <kbd>Esc</kbd> fechar
-          <kbd>⌘J</kbd> abrir/fechar
-          <span style={{ flex: 1 }} />
-          <span>a tela atrás fica intacta</span>
-        </footer>
-      </aside>
-    </div>
+      }
+    >
+      {children ?? <ConteudoDaFila grupos={grupos} />}
+    </Dialog>
   );
 }
