@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type ComponentProps, type PointerEvent as ReactPointerEvent } from 'react';
 import { usePalcoParaPrevia } from '@/features/channels/useChannels';
 import { lugarArrastado, lugarEfetivo, paginaEm, paginasDoTrecho } from './previaLegenda';
+import { ParagrafoNaFonte } from './ParagrafoNaFonte';
 import { comOffsets, noShort, type Segmento } from './segmentosDoShort';
 import type { LugarDaLegenda } from './previaLegenda';
 import type { PalavraTranscrita } from './shortsApi';
@@ -235,7 +236,7 @@ export function LegendaPrevia({
           minHeight: pagina ? undefined : '8%',
         }}
       >
-        <p
+        <ParagrafoNaFonte
           // D-568: `7.47cqw` é o tamanho do ARQUIVO, convertido.
           //
           // O render usa `height * 0.042` — 81px num quadro de 1920 de altura,
@@ -276,7 +277,7 @@ export function LegendaPrevia({
               </span>
             );
           })}
-        </p>
+        </ParagrafoNaFonte>
       </div>
     </div>
   );
