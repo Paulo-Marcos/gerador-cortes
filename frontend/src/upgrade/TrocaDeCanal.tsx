@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useToast } from '@/components/ui/toaster';
 import type { Canal } from '@/features/channels/api/canais';
 import { useCanais, useSelecionarCanal } from '@/features/channels/useChannels';
-import { luzDoCanal, type LuzDoCanal } from '@/lib/luzDoCanal';
+import { luzDoCanalDe, type LuzDoCanal } from '@/lib/luzDoCanal';
 import { mensagemErro } from '@/lib/mensagemErro';
 import { useUpgradeTheme, type Tema } from '@/lib/tema';
 import { cn } from '@/lib/utils';
@@ -22,10 +22,10 @@ import { Icon } from './Icon';
 // CutCut e não mudam; a biblioteca, as skills e a aurora são do canal e mudam.
 // ─────────────────────────────────────────────────────────────────
 
-/** A luz do anel do avatar: a paleta cadastrada, senão a amostra das capas (B-3). */
+/** A luz do anel do avatar no tema da tela: a paleta cadastrada, senão a amostra das capas
+ *  (`luzDoCanalDe`, D-1131). */
 export function luzDaFicha(canal: Pick<Canal, 'paleta' | 'luz'>, tema: Tema): LuzDoCanal | null {
-  const [a, b] = canal.luz ?? [];
-  return luzDoCanal({ paleta: canal.paleta, amostra: a ? { a, b: b ?? a } : null }, tema === 'dark' ? 'escuro' : 'claro');
+  return luzDoCanalDe(canal, tema === 'dark' ? 'escuro' : 'claro');
 }
 
 const LINHA_DO_MENU =

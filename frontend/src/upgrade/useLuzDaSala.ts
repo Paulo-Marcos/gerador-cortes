@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { miniaturaDaCapa } from '@/lib/miniaturaDaCapa';
+import { useMiniaturaDaCapa } from '@/hooks/useMiniaturaDaCapa';
 import { useUpgradeTheme } from '@/lib/tema';
 import { thumbnailUrl } from '@/lib/utils';
 import { luzDaSala, type LuzDaSala } from './luzDaSala';
@@ -45,14 +44,7 @@ export function useLuzDaSala(tela: TelaId, projetoId: string | null, foco: boole
   // "Reduzir efeitos" é o vidro desligado: a mesma preferência, gravada em `upgrade-glass`.
   const luz = luzDaSala({ tela, temCapa: Boolean(capa), reduzirEfeitos: !glass, transparenciaReduzida: reduzida, foco });
   const comCapa = luz.aurora === 'capa' && capa !== null;
-  // Uma miniatura por capa, para sempre nesta aba: `miniaturaDaCapa` já guarda o `blob:`.
-  const miniatura = useQuery({
-    queryKey: ['miniatura-da-capa', capa],
-    queryFn: () => miniaturaDaCapa(capa as string),
-    enabled: comCapa,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    retry: false,
-  });
-  return { ...luz, src: comCapa ? (miniatura.data ?? null) : null };
+  // A mesma consulta da miniatura que o resto do app usa (D-1131): uma busca por capa.
+  const miniatura = useMiniaturaDaCapa(comCapa ? capa : null);
+  return { ...luz, src: miniatura };
 }
