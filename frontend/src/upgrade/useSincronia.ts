@@ -22,17 +22,21 @@ export function useSincroniaBruta(): Sincronia {
   return useSyncExternalStore((avisar) => cache.subscribe(avisar), ler, ler);
 }
 
-/** Erro e "em dia" valem na hora; "atualizando" só depois de `esperaMs` ininterruptos. */
+/** Decide o que mostrar quando o estado bruto muda: erro e "em dia" valem na hora;
+ *  "atualizando" só depois de `esperaMs` ininterruptos (se o bruto mudar antes, o
+ *  chamador cancela). Devolve o cancelamento. Fora do hook para testar com timers falsos. */
+export function agendarSincronia(bruta: Sincronia, aplicar: (s: Sincronia) => void, esperaMs = ESPERA_DO_ATUALIZANDO_MS): () => void {
+  if (bruta !== 'atualizando') {
+    aplicar(bruta);
+    return () => undefined;
+  }
+  const t = setTimeout(() => aplicar('atualizando'), esperaMs);
+  return () => clearTimeout(t);
+}
+
 export function useSincronia(esperaMs = ESPERA_DO_ATUALIZANDO_MS): Sincronia {
   const bruta = useSincroniaBruta();
   const [mostrada, setMostrada] = useState<Sincronia>(bruta === 'atualizando' ? 'sincronizado' : bruta);
-  useEffect(() => {
-    if (bruta !== 'atualizando') {
-      setMostrada(bruta);
-      return;
-    }
-    const t = setTimeout(() => setMostrada('atualizando'), esperaMs);
-    return () => clearTimeout(t);
-  }, [bruta, esperaMs]);
+  useEffect(() => agendarSincronia(bruta, setMostrada, esperaMs), [bruta, esperaMs]);
   return mostrada;
 }
