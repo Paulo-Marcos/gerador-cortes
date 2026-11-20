@@ -14,6 +14,7 @@ import {
   cortesDoMapa,
   diasDaRegua,
   esperandoVoce,
+  motivoDoErro,
   noArHaPouco,
 } from '@/features/projetos/regrasDaBiblioteca';
 import { SalaDaBiblioteca, type SalaDaBibliotecaProps } from '@/features/projetos/SalaDaBiblioteca';
@@ -111,7 +112,7 @@ export default function BibliotecaPage() {
   const estado: EstadoDaBiblioteca = isLoading
     ? { tipo: 'carregando' }
     : isError
-      ? { tipo: 'erro', motivo: (error as Error).message, tentar: () => void refetch() }
+      ? { tipo: 'erro', motivo: motivoDoErro(error), tentar: () => void refetch() }
       : vazia
         ? { tipo: 'vazio', destino, onBuscarLives: () => navigate('/buscar-lives'), onLigarCanal: () => navigate('/canais') }
         : {

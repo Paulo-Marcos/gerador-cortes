@@ -49,6 +49,9 @@ export function proximoPasso(p: Projeto): ProximoPasso {
 
   // Daqui para baixo a live está analisada: as contagens dizem onde ela parou.
   if (p.total_cortes === 0) return { texto: 'Propor os cortes', to: `${live}/cortes` };
+  // Toda no ar não pede mais nada: as contagens de render e metadados podem estar
+  // atrás (mídia limpa, metadados escritos no YouTube) sem que falte trabalho.
+  if (estaProntoPraYoutube(p)) return { texto: 'Ver os cortes no ar', to: `${live}/cortes` };
   const aprovados = p.total_aprovados;
   if (aprovados === 0) return { texto: `Revisar ${cortes(p.total_cortes)}`, to: `${live}/cortes` };
   if (p.total_video_pronto < aprovados) {

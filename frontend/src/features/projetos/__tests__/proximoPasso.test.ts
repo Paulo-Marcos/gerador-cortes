@@ -64,4 +64,9 @@ describe('proximoPasso', () => {
   ])('%s → "%s"', (_, p, texto, to) => {
     expect(proximoPasso(p)).toEqual({ texto, to });
   });
+
+  it('live toda no ar não pede metadados nem render, mesmo com as contagens atrás', () => {
+    const noAr = projeto({ total_cortes: 4, total_aprovados: 4, total_publicados: 4 });
+    expect(proximoPasso(noAr)).toEqual({ texto: 'Ver os cortes no ar', to: '/projetos/p1/cortes' });
+  });
 });

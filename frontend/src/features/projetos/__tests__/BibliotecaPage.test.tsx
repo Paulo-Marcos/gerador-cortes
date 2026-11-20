@@ -188,10 +188,12 @@ describe('a roupa da sala (§8.2)', () => {
   ].map((n) => readFileSync(resolve(__dirname, '..', `${n}.tsx`), 'utf8'));
 
   it('nenhum style de aparência: só a geometria por variável CSS (--p, --inicio)', () => {
-    for (const html of telas) {
-      // O `<svg>` do Icon compartilhado leva `flex-shrink:0` inline; ele não é desta tela.
-      for (const [, estilo] of html.matchAll(/<(?!svg)[a-z]+[^>]*style="([^"]*)"/g)) {
-        expect(estilo.split(';').filter(Boolean).filter((d) => !d.trim().startsWith('--'))).toEqual([]);
+    // A lista inteira fica de fora do HTML: o Select do Radix escreve o próprio `style` (o
+    // `<select>` escondido para o leitor de tela). O `<svg>` do Icon compartilhado leva
+    // `flex-shrink:0`. Nenhum dos dois é desta tela; a fonte dela está coberta logo abaixo.
+    for (const html of [telas[0], telas[2], telas[3]]) {
+      for (const [, estilo] of html.matchAll(/<(?!svg)[a-z]+[^>]* style="([^"]*)"/g)) {
+        expect(estilo.split(';').filter((d) => d && !d.trim().startsWith('--'))).toEqual([]);
       }
     }
     for (const fonte of FONTES) expect(fonte).not.toMatch(/style=\{\{/);

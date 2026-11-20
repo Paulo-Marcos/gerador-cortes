@@ -6,6 +6,7 @@ import {
   diasDaRegua,
   esperandoVoce,
   estadoDaCasa,
+  motivoDoErro,
   noArHaPouco,
   saudacao,
 } from '../regrasDaBiblioteca';
@@ -123,5 +124,15 @@ describe('mini-mapa do "Continue"', () => {
     expect(mapa.map((c) => c.estado)).toEqual(['pronto', 'pronto', 'riscado', 'proposto']);
     expect(mapa[3].nome).toBe('juros');
     expect(mapa[0]).toMatchObject({ inicioSeg: 600, fimSeg: 1200, href: '/projetos/p1/cortes/a' });
+  });
+});
+
+describe('motivo do erro', () => {
+  it('a falha de rede vira uma frase do operador; o resto passa como veio', () => {
+    expect(motivoDoErro(new TypeError('Failed to fetch'))).toBe(
+      'O app não conseguiu falar com o backend. Confira se ele está rodando.',
+    );
+    expect(motivoDoErro(new Error('Canal sem banco'))).toBe('Canal sem banco');
+    expect(motivoDoErro(null)).toBe('A lista de lives não chegou.');
   });
 });

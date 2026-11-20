@@ -116,3 +116,9 @@ export function cortesDoMapa(cortes: Corte[], projetoId: string): CorteDoMapa[] 
     href: `/projetos/${projetoId}/cortes/${c.id}`,
   }));
 }
+
+/** O motivo do erro em palavras do operador: a falha de rede chega como "Failed to fetch". */
+export function motivoDoErro(erro: unknown): string {
+  if (erro instanceof TypeError) return 'O app não conseguiu falar com o backend. Confira se ele está rodando.';
+  return erro instanceof Error && erro.message ? erro.message : 'A lista de lives não chegou.';
+}

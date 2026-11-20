@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Busca } from '@/components/ui/busca';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
@@ -36,6 +36,12 @@ export function ListaCompleta({ projetos, onVoltar }: { projetos: Projeto[]; onV
   const [filtro, setFiltro] = useState<FilterKey>(preferencia.filtro);
   const [ordem, setOrdem] = useState<SortKey>(preferencia.ordem);
   const [busca, setBusca] = useState('');
+  const topo = useRef<HTMLElement>(null);
+
+  // Abrir a lista desde o pé da sala deixava a rolagem lá embaixo, no meio da grade.
+  useEffect(() => {
+    topo.current?.scrollIntoView({ block: 'start' });
+  }, []);
 
   useEffect(() => {
     try {
@@ -49,7 +55,7 @@ export function ListaCompleta({ projetos, onVoltar }: { projetos: Projeto[]; onV
   const contagens = useMemo(() => contarPorFiltro(projetos), [projetos]);
 
   return (
-    <section aria-label="Todas as lives" className="flex flex-col gap-4">
+    <section ref={topo} aria-label="Todas as lives" className="flex scroll-mt-6 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="fantasma" size="md" onClick={onVoltar}>
           Voltar à sala

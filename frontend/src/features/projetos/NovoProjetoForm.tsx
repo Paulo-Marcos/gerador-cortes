@@ -81,7 +81,6 @@ export function NovoProjetoForm({ primaria = false, onClose, className }: Props)
           variant={primaria ? 'primario' : 'secundario'}
           size="md"
           carregando={criar.isPending}
-          disabled={!url.trim()}
         >
           {criar.isPending ? 'Baixando…' : 'Baixar a live'}
         </Button>
