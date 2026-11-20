@@ -11,7 +11,7 @@ import type { Projeto } from '@/types/models';
 // - QUAL live: a mais recente do histórico da casca (`historicoDaCasca`, o
 //   mesmo "Onde eu estava" do ⌘K) que ainda tem trabalho. Live toda no ar não
 //   pede nada, então não vira destaque. Sem histórico (navegador novo), vale a
-//   mais recente das que não foram publicadas.
+//   mais recente das que não foram publicadas; com todas no ar, a mais recente.
 // - QUE passo: o primeiro buraco na ordem do fluxo (RN do ciclo da live:
 //   baixar → analisar → aprovar → renderizar → metadados → publicar), lido das
 //   contagens que a listagem já traz. Nenhuma busca a mais.
