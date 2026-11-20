@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -46,10 +48,23 @@ describe('a contagem no popover de troca de canal', () => {
     expect(html).not.toMatch(/\blives?</);
   });
 
-  it('não faz requisição própria: a lista só monta com a API que já veio', () => {
-    const buscar = vi.spyOn(globalThis, 'fetch');
-    lista([canal({ ativo: true, lives: 3 })]);
-    expect(buscar).not.toHaveBeenCalled();
-    buscar.mockRestore();
+  it('não consulta a API para contar: o número é o que já veio no canal', () => {
+    // renderToStaticMarkup não roda efeitos, então um fetch num useEffect passaria despercebido.
+    // O que garante "nenhuma requisição extra" é a fonte: a lista só lê `c.lives`, sem query,
+    // fetch nem efeito próprios (a única chamada de rede dali é a mutação de selecionar, no clique).
+    const fonte = readFileSync(resolve(__dirname, '../TrocaDeCanal.tsx'), 'utf8');
+    expect(fonte).not.toMatch(/fetch\(|useQuery\(|useEffect\(|api\.(GET|POST)/);
+    expect(fonte).toContain('c.lives');
+    const cliente = new QueryClient();
+    renderToStaticMarkup(
+      <QueryClientProvider client={cliente}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ListaDeCanais canais={[canal({ ativo: true, lives: 3 })]} tema="dark" fechar={vi.fn()} />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(cliente.getQueryCache().getAll()).toHaveLength(0);
   });
 });

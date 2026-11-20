@@ -6,6 +6,7 @@ Pedido → teste:
   test_banco_sem_a_tabela_conta_zero, test_banco_ilegivel_conta_zero
 - contar não cria banco onde não há → test_contar_nao_cria_banco
 - o payload da lista traz `lives` de cada canal → test_lista_de_canais_traz_as_lives
+- a leitura do banco sai do event loop (to_thread) → test_a_leitura_vai_para_uma_thread
 """
 
 from __future__ import annotations
@@ -75,3 +76,29 @@ def test_lista_de_canais_traz_as_lives(tmp_path, monkeypatch):
     r = TestClient(app).get("/api/channels")
     assert r.status_code == 200
     assert {c["id"]: c["lives"] for c in r.json()["canais"]} == {"a": 2, "b": 0, "c": 0}
+
+
+def test_a_leitura_vai_para_uma_thread(tmp_path, monkeypatch):
+    """SQLite é síncrono: a rota não pode contar no event loop (D-1136)."""
+    import asyncio
+
+    from app.domain.canal.identidade import Canal, Paleta
+    from app.main import app
+    from app.services import channels as channels_service
+    from app.services.canal import ficha_do_canal as ficha
+    from fastapi.testclient import TestClient
+
+    chamadas: list[object] = []
+    real = asyncio.to_thread
+
+    async def espia(fn, *a, **k):
+        chamadas.append(fn)
+        return await real(fn, *a, **k)
+
+    monkeypatch.setattr("app.routers.channels.asyncio.to_thread", espia)
+    monkeypatch.setattr("app.services.canal.lives_do_canal.instance_root", lambda: tmp_path)
+    monkeypatch.setattr("app.services.canal.luz_do_canal.instance_root", lambda: tmp_path)
+    canal = Canal(id="a", handle="@a", nome="a", credito="", paleta=Paleta(), ativo=True)
+    monkeypatch.setattr(channels_service, "listar_canais", lambda *a, **k: [canal])
+    assert TestClient(app).get("/api/channels").status_code == 200
+    assert ficha.ficha_do_canal in chamadas

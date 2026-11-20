@@ -41,6 +41,7 @@ from app.services import (
     studio_youtube,
 )
 from app.services.canal import faixa_do_short, ficha_do_canal, motivos_de_exclusao
+from app.services.canal.ficha_do_canal import FICHA_VAZIA, FichaDoCanal
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -438,7 +439,7 @@ class SelecionarCanalResponse(BaseModel):
     requer_restart: bool
 
 
-def _para_response(canal: Canal, ficha: dict[str, object] | None = None) -> CanalResponse:
+def _para_response(canal: Canal, ficha: FichaDoCanal = FICHA_VAZIA) -> CanalResponse:
     return CanalResponse(
         id=canal.id,
         handle=canal.handle,
@@ -447,7 +448,8 @@ def _para_response(canal: Canal, ficha: dict[str, object] | None = None) -> Cana
         youtube_channel_id=canal.youtube_channel_id,
         paleta=PaletaModel(**asdict(canal.paleta)),
         ativo=canal.ativo,
-        **(ficha or {}),
+        luz=ficha.luz,
+        lives=ficha.lives,
     )
 
 
