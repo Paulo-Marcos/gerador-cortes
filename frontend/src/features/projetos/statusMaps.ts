@@ -1,3 +1,4 @@
+import type { TomDoSelo } from '@/components/ui/selo';
 import { estaProntoPraYoutube } from '@/features/projetos/useProjetos';
 import type { Projeto } from '@/types/models';
 
@@ -89,3 +90,32 @@ export function estadoDoProjeto(projeto: Projeto): EstadoProjeto {
   const comMetadados = projeto.total_com_meta >= alvo;
   return renderizado && comMetadados ? ESTADOS['pronto-publicar'] : ESTADOS.editando;
 }
+
+// D-1148 (E-069 H-15; DIRECAO §5) · O selo da live na Sala escura: um tom por estado,
+// e cada tom tem forma além da cor. O rótulo do selo é o da tela ("No ar"); o
+// `label` acima segue sendo a chave que os testes e o filtro já usam.
+export const TOM_DO_ESTADO: Record<EstadoProjetoKey, TomDoSelo> = {
+  aguardando: 'inerte',
+  baixando: 'curso',
+  transcrevendo: 'curso',
+  analise: 'curso',
+  publicando: 'curso',
+  analisado: 'neutro',
+  editando: 'neutro',
+  'pronto-publicar': 'convite',
+  publicado: 'ok',
+  erro: 'erro',
+};
+
+export const ROTULO_DO_SELO: Record<EstadoProjetoKey, string> = {
+  aguardando: 'Aguardando',
+  baixando: 'Baixando',
+  transcrevendo: 'Transcrevendo',
+  analise: 'Em análise',
+  publicando: 'Publicando',
+  analisado: 'Analisada',
+  editando: 'Em edição',
+  'pronto-publicar': 'Pronta para publicar',
+  publicado: 'No ar',
+  erro: 'Erro',
+};

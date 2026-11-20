@@ -22,12 +22,12 @@ export const FILTERS: Array<{
     // F-059: backlog de trabalho — nenhum corte ainda foi para a nuvem/YouTube
     // (total_publicados conta cortes com youtube_video_id preenchido).
     key: 'nao_publicados',
-    label: 'Nao publicados',
+    label: 'Não publicados',
     matches: (projeto) => projeto.total_publicados === 0,
   },
   {
     key: 'analise',
-    label: 'Em analise',
+    label: 'Em análise',
     matches: (projeto) => ['pronto', 'analisando'].includes(projeto.status),
   },
   {
@@ -48,7 +48,7 @@ export const FILTERS: Array<{
     // D-399: fila de manutenção de disco — projetos cuja mídia pesada ainda
     // ocupa espaço. Isola quem pode ser limpo sem caçar card a card.
     key: 'nao_limpos',
-    label: 'Nao limpos',
+    label: 'Não limpos',
     matches: (projeto) => !projeto.arquivos_limpos,
   },
 ];

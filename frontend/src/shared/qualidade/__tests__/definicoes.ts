@@ -203,6 +203,8 @@ export const DEFINICOES: Record<string, Definicao> = {
       ...DEFINE_TOKENS,
       /^src\/components\/ui\/(?:button|tabs|mapa-da-live)\.tsx$/,
       /^src\/upgrade\/(?:TrilhaDeEtapas|ScreenHeader)\.tsx$/,
+      // D-1148 (H-15): o fio de luz da Biblioteca ("Continue") e do canal novo ("Cole o link").
+      /^src\/features\/projetos\/CartaoComFio\.tsx$/,
     ],
     exemplos: [
       ['className="bg-feixe text-sobre-feixe"', 1],

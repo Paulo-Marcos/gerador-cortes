@@ -1,287 +1,157 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Card } from '@/components/ui/card';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { EstadoCarregando } from '@/components/ui/estado-vazio';
 import { useToast } from '@/components/ui/toaster';
+import { useCanais } from '@/features/channels/useChannels';
+import { CanalNovo } from '@/features/projetos/CanalNovo';
+import { ListaCompleta } from '@/features/projetos/ListaCompleta';
 import { NovoProjetoForm } from '@/features/projetos/NovoProjetoForm';
+import { liveDoDestaque } from '@/features/projetos/proximoPasso';
 import {
-  contarPorFiltro,
-  filtrarProjetos,
-  FILTERS,
-  lerPreferenciaDaBiblioteca,
-  PREFERENCIA_BIBLIOTECA_KEY,
-  SORTS,
-  type FilterKey,
-  type SortKey,
-} from '@/features/projetos/bibliotecaFiltros';
-import { estadoDoProjeto } from '@/features/projetos/statusMaps';
+  cabecalhoDaBiblioteca,
+  cortesDoMapa,
+  diasDaRegua,
+  esperandoVoce,
+  motivoDoErro,
+  noArHaPouco,
+} from '@/features/projetos/regrasDaBiblioteca';
+import { SalaDaBiblioteca, type SalaDaBibliotecaProps } from '@/features/projetos/SalaDaBiblioteca';
+import { SincroniaDaBiblioteca, type Sincronia } from '@/features/projetos/SincroniaDaBiblioteca';
+import { useCortesDoDestaque, useNomeDoOperador } from '@/features/projetos/useSalaDaBiblioteca';
 import { temFalhados, useProjetos, useReiniciarFalhados } from '@/features/projetos/useProjetos';
-import { Icon } from '@/upgrade/Icon';
+import type { Projeto } from '@/types/models';
+import type { ScreenAction } from '@/upgrade/ScreenHeader';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { ProjetoCardAp } from './ProjetoCardAp';
+import { useHistoricoDaCasca } from '@/upgrade/historicoDaCasca';
 
 // ─────────────────────────────────────────────────────────────────
-// D-599 Etapa 2 · a Biblioteca na linguagem nova.
+// D-599 · A Biblioteca, primeira tela da casca. D-1148 (E-069 H-15; DIRECAO §7.1 e
+// §7.12): a sala de entrada. O cabeçalho é a saudação (o `h1` do `ScreenHeader`, com
+// o primeiro nome do operador no feixe) e a frase do estado da casa. Abaixo, um dos
+// quatro estados: carregando, erro, vazio (o canal novo) ou cheio (a sala, ou a lista
+// inteira com `?ver=todas`, que o "voltar" do navegador desfaz).
 //
-// Primeira tela de verdade dentro da casca, e por isso a que define o
-// molde: cabeçalho vem da casca (título, subtítulo com número, ações),
-// a tela fica só com a barra de filtros e a grade. Workspace, Shorts e
-// Prateleira vão repetir exatamente esta divisão.
-//
-// Os dados e as regras de filtro são os mesmos da tela atual — ver
-// `bibliotecaFiltros`. Aqui não há lógica nova de negócio; se houvesse,
-// as duas Bibliotecas já estariam divergindo.
+// Esta função só junta dados e escolhe o estado; o que se vê está em
+// `ConteudoDaBiblioteca`, que os testes renderizam sem rede.
 // ─────────────────────────────────────────────────────────────────
 
-function CardEsqueleto() {
-  return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <span style={{ aspectRatio: '16/9', background: 'var(--inset)' }} />
-      <span style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 11 }}>
-        <span style={{ height: 11, width: '70%', borderRadius: 'var(--r1)', background: 'var(--inset)' }} />
-        <span style={{ height: 22, borderRadius: 'var(--r1)', background: 'var(--inset)' }} />
-        <span style={{ height: 9, width: '50%', borderRadius: 'var(--r1)', background: 'var(--inset)' }} />
-      </span>
-    </div>
-  );
-}
+export type EstadoDaBiblioteca =
+  | { tipo: 'carregando' }
+  | { tipo: 'erro'; motivo: string; tentar: () => void }
+  | { tipo: 'vazio'; destino?: string; onBuscarLives: () => void; onLigarCanal: () => void }
+  | { tipo: 'cheio'; sala: SalaDaBibliotecaProps; verTodas: boolean; projetos: Projeto[]; onVoltar: () => void };
 
-function Vazio({ onCriar, onExplorar }: { onCriar: () => void; onExplorar: () => void }) {
-  return (
-    <div
-      className="card"
-      style={{ display: 'grid', placeItems: 'center', gap: 7, padding: 22, textAlign: 'center' }}
-    >
-      <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
-      <span style={{ fontSize: 12.5, fontWeight: 700 }}>Nenhuma live ainda</span>
-      <span style={{ fontSize: 11.5, color: 'var(--mute)', maxWidth: 240, lineHeight: 1.5 }}>
-        Busque no canal ou cole uma URL para o app baixar e analisar a primeira live.
-      </span>
-      <span style={{ display: 'flex', gap: 6, marginTop: 3 }}>
-        <button type="button" className="btn" onClick={onExplorar}>
-          <Icon name="radio" />
-          Buscar lives
-        </button>
-        <button type="button" className="btn btn-pri" onClick={onCriar}>
-          <Icon name="plus" />
-          Nova live
-        </button>
-      </span>
-    </div>
-  );
-}
-
-function lerPreferenciaSalva() {
-  try {
-    return lerPreferenciaDaBiblioteca(window.localStorage.getItem(PREFERENCIA_BIBLIOTECA_KEY));
-  } catch {
-    return lerPreferenciaDaBiblioteca(null);
+/** O que a tela mostra em cada um dos quatro estados (DIRECAO §3.4). Com a lista na
+ *  mão (vazia ou cheia), o status de sincronização vem por cima; carregando e erro já
+ *  dizem o estado da lista com as próprias palavras. */
+export function ConteudoDaBiblioteca({ estado, sincronia }: { estado: EstadoDaBiblioteca; sincronia?: Sincronia }) {
+  if (sincronia && (estado.tipo === 'vazio' || estado.tipo === 'cheio')) {
+    return (
+      <>
+        <SincroniaDaBiblioteca sincronia={sincronia} />
+        <ConteudoDaBiblioteca estado={estado} />
+      </>
+    );
   }
+  switch (estado.tipo) {
+    case 'carregando':
+      return <EstadoCarregando frase="Buscando as lives…" linhas={3} />;
+    case 'erro':
+      return <EstadoDeErro titulo="Não deu para carregar as lives" motivo={estado.motivo} aoTentar={estado.tentar} />;
+    case 'vazio':
+      return <CanalNovo destino={estado.destino} onBuscarLives={estado.onBuscarLives} onLigarCanal={estado.onLigarCanal} />;
+    default:
+      return estado.verTodas ? (
+        <ListaCompleta projetos={estado.projetos} onVoltar={estado.onVoltar} />
+      ) : (
+        <SalaDaBiblioteca {...estado.sala} />
+      );
+  }
+}
+
+function useReiniciarFalhadosComAviso() {
+  const reiniciar = useReiniciarFalhados();
+  const { notify } = useToast();
+  return () =>
+    reiniciar.mutate(undefined, {
+      onSuccess: (r) =>
+        notify(
+          r.total === 0 ? 'Nenhum projeto com falha de download para reiniciar.' : `${r.total} download(s) reiniciado(s).`,
+          { tone: r.total === 0 ? 'info' : 'success' },
+        ),
+      onError: (err) => notify(err instanceof Error ? err.message : 'Erro ao reiniciar downloads.', { tone: 'error' }),
+    });
+}
+
+/** O canal ativo: o "@" para onde os cortes vão, quando ele está ligado ao YouTube. */
+function useDestino(): string | undefined {
+  const { data } = useCanais();
+  const ativo = data?.canais.find((c) => c.id === data.ativo) ?? data?.canais.find((c) => c.ativo);
+  return ativo?.youtube_channel_id && ativo.handle ? ativo.handle : undefined;
 }
 
 export default function BibliotecaPage() {
   const navigate = useNavigate();
-  const { notify } = useToast();
-  const { data, isLoading, isError, error, refetch, isFetching } = useProjetos();
-  const reiniciar = useReiniciarFalhados();
-
+  const [params, setParams] = useSearchParams();
   const [formAberto, setFormAberto] = useState(false);
-  const [preferencia] = useState(lerPreferenciaSalva);
-  const [filtro, setFiltro] = useState<FilterKey>(preferencia.filtro);
-  const [busca, setBusca] = useState('');
-  const [ordem, setOrdem] = useState<SortKey>(preferencia.ordem);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(PREFERENCIA_BIBLIOTECA_KEY, JSON.stringify({ filtro, ordem }));
-    } catch {
-      // sem localStorage a Biblioteca só não lembra — nada quebra
-    }
-  }, [filtro, ordem]);
+  const { data, isLoading, isError, error, refetch, isFetching } = useProjetos();
+  const nome = useNomeDoOperador();
+  const destino = useDestino();
+  const { lugares } = useHistoricoDaCasca();
+  const reiniciarFalhados = useReiniciarFalhadosComAviso();
 
   const projetos = useMemo(() => data ?? [], [data]);
-  const visiveis = useMemo(
-    () => filtrarProjetos(projetos, { filtro, busca, ordem }),
-    [projetos, filtro, busca, ordem],
-  );
-  const contagens = useMemo(() => contarPorFiltro(projetos), [projetos]);
-  const falhados = useMemo(() => temFalhados(projetos), [projetos]);
+  const destaque = useMemo(() => liveDoDestaque(projetos, lugares), [projetos, lugares]);
+  const { data: cortes } = useCortesDoDestaque(destaque?.id);
+  const cabecalho = cabecalhoDaBiblioteca(new Date(), nome, data);
+  const vazia = !isLoading && !isError && projetos.length === 0;
 
-  // O subtítulo do design nunca é decorativo: "6 projetos · 2 em análise ·
-  // 1 com disco cheio". Aqui ele é calculado, não escrito.
-  const sub = useMemo(() => {
-    const emAnalise = projetos.filter((p) => estadoDoProjeto(p).key === 'analise').length;
-    const naoLimpos = contagens.nao_limpos;
-    return [
-      `${projetos.length} ${projetos.length === 1 ? 'projeto' : 'projetos'}`,
-      emAnalise > 0 ? `${emAnalise} em análise` : null,
-      naoLimpos > 0 ? `${naoLimpos} com mídia em disco` : null,
-    ]
-      .filter(Boolean)
-      .join(' · ');
-  }, [projetos, contagens]);
+  const acoes: ScreenAction[] = [
+    ...(temFalhados(projetos) ? [{ icone: 'rotate-ccw' as const, texto: 'Reiniciar falhados', onClick: reiniciarFalhados }] : []),
+    // "Nova live" é secundária (§7.1): a primária é o próximo passo do "Continue".
+    ...(vazia ? [] : [{ icone: 'plus' as const, texto: 'Nova live', onClick: () => setFormAberto((a) => !a) }]),
+  ];
+  useDefinirChrome({ titulo: cabecalho.titulo, sub: cabecalho.sub, acoes }, [
+    cabecalho.titulo,
+    cabecalho.sub,
+    acoes.length,
+    vazia,
+  ]);
 
-  const explorar = () => navigate('/buscar-lives');
-
-  const reiniciarFalhados = () =>
-    reiniciar.mutate(undefined, {
-      onSuccess: (r) =>
-        notify(
-          r.total === 0
-            ? 'Nenhum projeto com falha de download para reiniciar.'
-            : `${r.total} download(s) reiniciado(s).`,
-          { tone: r.total === 0 ? 'info' : 'success' },
-        ),
-      onError: (err) =>
-        notify(err instanceof Error ? err.message : 'Erro ao reiniciar downloads.', {
-          tone: 'error',
-        }),
-    });
-
-  useDefinirChrome(
-    {
-      sub,
-      acoes: [
-        ...(falhados
-          ? [
-              {
-                icone: 'rotate-ccw' as const,
-                texto: 'Reiniciar falhados',
-                onClick: reiniciarFalhados,
-              },
-            ]
-          : []),
-        { icone: 'radio' as const, texto: 'Explorar YouTube', onClick: explorar },
-        { icone: 'plus' as const, texto: 'Nova live', forte: true, onClick: () => setFormAberto(true) },
-      ],
-      estado: isFetching
-        ? { texto: 'atualizando', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' }
-        : { texto: 'sincronizado', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' },
-    },
-    [sub, falhados, isFetching],
-  );
+  const estado: EstadoDaBiblioteca = isLoading
+    ? { tipo: 'carregando' }
+    : isError
+      ? { tipo: 'erro', motivo: motivoDoErro(error), tentar: () => void refetch() }
+      : vazia
+        ? { tipo: 'vazio', destino, onBuscarLives: () => navigate('/buscar-lives'), onLigarCanal: () => navigate('/canais') }
+        : {
+            tipo: 'cheio',
+            projetos,
+            verTodas: params.get('ver') === 'todas',
+            onVoltar: () => setParams({}),
+            sala: {
+              total: projetos.length,
+              destaque,
+              cortesDoDestaque: destaque && cortes ? cortesDoMapa(cortes, destaque.id) : [],
+              destino,
+              dias: diasDaRegua(projetos, new Date()),
+              esperando: esperandoVoce(projetos, destaque?.id),
+              noAr: noArHaPouco(projetos),
+              ir: navigate,
+              onVerTodas: () => setParams({ ver: 'todas' }),
+            },
+          };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-        <label className="fld" style={{ width: 260 }}>
-          <Icon name="search" style={{ color: 'var(--dim)' }} />
-          <input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="buscar por título da live"
-            style={{
-              minWidth: 0,
-              flex: 1,
-              border: 0,
-              outline: 'none',
-              background: 'transparent',
-              fontSize: 12,
-            }}
-          />
-        </label>
-
-        {FILTERS.map((f) => {
-          const ativo = f.key === filtro;
-          return (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setFiltro(f.key)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                height: 30,
-                padding: '0 10px',
-                border: `1px solid ${ativo ? 'var(--sel-line)' : 'var(--line)'}`,
-                borderRadius: 'var(--r2)',
-                background: ativo ? 'var(--sel-bg)' : 'var(--panel)',
-                color: ativo ? 'var(--sel-ink)' : 'var(--mute)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              {f.label}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.7 }}>
-                {contagens[f.key]}
-              </span>
-            </button>
-          );
-        })}
-
-        <div style={{ flex: 1 }} />
-
-        <label className="fld">
-          <Icon name="list-filter" style={{ color: 'var(--mute)' }} />
-          <select
-            value={ordem}
-            onChange={(e) => setOrdem(e.target.value as SortKey)}
-            aria-label="Ordenar projetos"
-            style={{
-              border: 0,
-              outline: 'none',
-              background: 'transparent',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {SORTS.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <NovoProjetoForm open={formAberto} onClose={() => setFormAberto(false)} />
-
-      {isError ? (
-        <div
-          className="card"
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 9,
-            padding: '11px 12px',
-            borderColor: 'var(--err-soft)',
-          }}
-        >
-          <Icon name="triangle-alert" style={{ color: 'var(--err)' }} />
-          <span style={{ minWidth: 0, flex: 1 }}>
-            <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700 }}>
-              Não foi possível carregar a lista real
-            </span>
-            <span
-              style={{ display: 'block', marginTop: 2, fontSize: 11.5, lineHeight: 1.5, color: 'var(--mute)' }}
-            >
-              {(error as Error).message}
-            </span>
-          </span>
-          <button type="button" className="btn" style={{ height: 24, fontSize: 11 }} onClick={() => refetch()}>
-            Tentar de novo
-          </button>
-        </div>
-      ) : null}
-
-      <div
-        style={{
-          display: 'grid',
-          gap: 10,
-          gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))',
-        }}
-      >
-        {isLoading
-          ? Array.from({ length: 8 }).map((_, i) => <CardEsqueleto key={i} />)
-          : visiveis.map((projeto, i) => (
-              <ProjetoCardAp key={projeto.id} projeto={projeto} index={i} />
-            ))}
-      </div>
-
-      {!isLoading && visiveis.length === 0 ? (
-        <Vazio onCriar={() => setFormAberto(true)} onExplorar={explorar} />
-      ) : null}
+    <div className="flex flex-col gap-6">
+      {formAberto && !vazia && (
+        <Card variante="vidro" className="p-4">
+          <NovoProjetoForm onClose={() => setFormAberto(false)} />
+        </Card>
+      )}
+      <ConteudoDaBiblioteca estado={estado} sincronia={isFetching ? 'atualizando' : 'sincronizado'} />
     </div>
   );
 }

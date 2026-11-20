@@ -1,135 +1,39 @@
-// D-987 · A primeira das três alturas de leitura do card: a miniatura, que
-// diz QUE live é. Saiu de `ProjetoCardAp` quando o card ganhou os chips de
-// rede e a função bateu no teto da catraca de tamanho (D-772) — e a costura
-// já estava desenhada pelo comentário de lá: miniatura, fita, números.
+// D-987 · A primeira altura de leitura do card: a capa, que diz QUE live é.
 //
-// Tudo o que só esta altura usa veio junto: a arte, o selo de estado, a nota
-// do ranking, a duração e a barra de download.
-import { useState } from 'react';
-import { estadoDoProjeto } from '@/features/projetos/statusMaps';
-import { formatarDuracao, thumbnailUrl } from '@/lib/utils';
+// D-1148 (E-069 H-15; DIRECAO §6 "CardDeLive"): a capa é a `Miniatura` da sala, que
+// nunca distorce e queima a duração no canto. O selo de estado, a nota e a barra do
+// download desceram para o corpo do cartão: um selo por cartão (§7.1), e nada de texto
+// solto sobre a arte. A capa abre a live, como o título.
+import { Miniatura } from '@/components/ui/miniatura';
+import { cn, thumbnailUrl } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
-import { Icon } from '@/upgrade/Icon';
-import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { SeloDeEstado, TOM_DO_PROJETO } from '@/upgrade/SeloDeEstado';
-
-const HUES = [22, 280, 160, 340, 240, 60, 200, 100];
 
 export function CapaDoProjetoCard({
   projeto,
-  index,
   abrir,
+  className,
 }: {
   projeto: Projeto;
-  index: number;
   abrir: () => void;
+  className?: string;
 }) {
-  const [thumbErro, setThumbErro] = useState(false);
-
-  const estado = estadoDoProjeto(projeto);
-  const thumb = thumbnailUrl(projeto.youtube_url, 'mq');
-  const hue = HUES[index % HUES.length];
-  const baixando = projeto.status === 'baixando';
-  const nota = Math.round(projeto.pontuacao_ranking);
-
-  // D-746: moldura em três camadas (passe-partout, bisel, vinheta) — a R2 era
-  // só respiro + filete, e a arte da live parecia colada.
   return (
-    <MolduraDeVideo
-      mat={8}
-      proporcao="16/9"
+    <button
+      type="button"
+      data-sala=""
       onClick={abrir}
-      rotulo={`Abrir projeto ${projeto.titulo_live} — ${estado.label}`}
+      aria-label={`Abrir a live ${projeto.titulo_live || 'sem título'}`}
+      className={cn(
+        'block flex-none rounded-capa focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
+        className,
+      )}
     >
-      {/* O gradiente mora DENTRO da moldura: live sem miniatura continua
-            emoldurada, só troca a arte. */}
-      <span
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: `linear-gradient(135deg,oklch(0.6 0.06 ${hue}),oklch(0.3 0.05 ${hue}))`,
-        }}
+      <Miniatura
+        grande
+        src={thumbnailUrl(projeto.youtube_url, 'mq') ?? undefined}
+        duracaoSeg={projeto.duracao_segundos > 0 ? projeto.duracao_segundos : undefined}
+        className="w-full"
       />
-      {thumb && !thumbErro ? (
-        <img
-          src={thumb}
-          alt=""
-          loading="lazy"
-          onError={() => setThumbErro(true)}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-          }}
-        />
-      ) : null}
-
-      <span style={{ position: 'absolute', top: 8, left: 8 }}>
-        <SeloDeEstado tom={TOM_DO_PROJETO[estado.key]} sobreArte>
-          {estado.label}
-          {baixando ? ` ${Math.round(projeto.progresso_download)}%` : ''}
-        </SeloDeEstado>
-      </span>
-
-      {nota > 0 ? (
-        <span
-          className="chip gl"
-          title={`Nota do projeto no ranking de lives: ${nota}/100`}
-          style={{ position: 'absolute', top: 8, right: 8, fontFamily: 'var(--mono)' }}
-        >
-          <Icon name="trophy" />
-          {nota}
-        </span>
-      ) : null}
-
-      {projeto.duracao_segundos > 0 ? (
-        <span
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            right: 8,
-            fontFamily: 'var(--mono)',
-            fontSize: 11,
-            color: '#fff',
-            background: 'rgb(10 14 24 / 0.68)',
-            padding: '2px 6px',
-            borderRadius: 'var(--r1)',
-          }}
-        >
-          {formatarDuracao(projeto.duracao_segundos)}
-        </span>
-      ) : null}
-
-      {baixando ? <BarraDeDownload progresso={projeto.progresso_download} /> : null}
-    </MolduraDeVideo>
-  );
-}
-
-/** A régua do download rodando no pé da arte — some assim que a live baixa. */
-function BarraDeDownload({ progresso }: { progresso: number }) {
-  return (
-    <span
-      style={{
-        position: 'absolute',
-        insetInline: 0,
-        bottom: 0,
-        height: 3,
-        background: 'rgb(0 0 0/.3)',
-      }}
-      aria-hidden
-    >
-      <span
-        style={{
-          display: 'block',
-          height: '100%',
-          width: `${Math.max(0, Math.min(100, progresso))}%`,
-          background: 'var(--warn)',
-        }}
-      />
-    </span>
+    </button>
   );
 }
