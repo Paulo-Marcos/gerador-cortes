@@ -6,6 +6,7 @@ import {
   useWorkbenchQueueOptional,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { overlayAberto } from '@/shared/atalhos/shortcuts';
+import { useSincronia } from './useSincronia';
 import { useAvisosDasNovidades } from '@/features/novidades/useNovidades';
 import { useUpgradeTheme } from '@/lib/tema';
 import { cn } from '@/lib/utils';
@@ -150,8 +151,8 @@ type CascaProps = {
 
 /** D-922: o trilho com o ponto de "tem novidade" e a ficha do canal. Fora da
  *  `Casca`, e o trilho em si continua sem buscar dado nenhum. */
-function TrilhoComAvisos(props: Omit<GlobalRailProps, 'avisos' | 'ficha'>) {
-  return <GlobalRail {...props} avisos={useAvisosDasNovidades()} ficha={<FichaDoCanal expandido={props.expandido} />} />;
+function TrilhoComAvisos(props: Omit<GlobalRailProps, 'avisos' | 'ficha' | 'sincronia'>) {
+  return <GlobalRail {...props} avisos={useAvisosDasNovidades()} ficha={<FichaDoCanal expandido={props.expandido} />} sincronia={useSincronia()} />;
 }
 
 /** O primeiro link da página: com o Tab, pula o trilho e a linha do topo (§8.2). */

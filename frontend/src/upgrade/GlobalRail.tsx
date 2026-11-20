@@ -1,8 +1,10 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { AvisoDeSincronia } from './AvisoDeSincronia';
 import { Icon } from './Icon';
 import type { DestinoDeMenu, Grupo, TelaId } from './upgradeRoutes';
+import type { Sincronia } from './useSincronia';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O trilho global.
@@ -51,6 +53,8 @@ export type GlobalRailProps = {
   avisos?: Partial<Record<TelaId, string>>;
   /** A ficha do canal (`FichaDoCanal`). O trilho não busca dado nenhum: a casca a monta. */
   ficha?: ReactNode;
+  /** D-1160: o aviso de sincronização no pé. Ausente, o pé não o desenha (as vitrines). */
+  sincronia?: Sincronia;
 };
 
 const FOCO = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-foco';
@@ -169,7 +173,7 @@ function Marca({ expandido }: { expandido: boolean }) {
 }
 
 export function GlobalRail(props: GlobalRailProps) {
-  const { expandido, onAlternar, menu, fila, filaAtiva = false, filaComErro = false, ficha } = props;
+  const { expandido, onAlternar, menu, fila, filaAtiva = false, filaComErro = false, ficha, sincronia } = props;
   return (
     <aside
       aria-label="Trilho"
@@ -198,6 +202,7 @@ export function GlobalRail(props: GlobalRailProps) {
 
       <div className="flex flex-none flex-col gap-0.5 border-t border-fio pt-1.5">
         <Bloco itens={menu.ferramentas} props={props} />
+        {sincronia ? <AvisoDeSincronia sincronia={sincronia} expandido={expandido} /> : null}
         <Marca expandido={expandido} />
       </div>
     </aside>
