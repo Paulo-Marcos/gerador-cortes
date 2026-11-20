@@ -1,5 +1,13 @@
+import * as RD from '@radix-ui/react-dialog';
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Busca } from '@/components/ui/busca';
+import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
+import { devolverFoco, guardarOrigem, type OrigemDoFoco } from '@/components/ui/dialog';
+import { Kbd } from '@/components/ui/kbd';
+import { PELE_FLUTUANTE } from '@/components/ui/superficie-flutuante';
+import { cn } from '@/lib/utils';
 import { useFires } from '@/features/shorts/useFires';
 import { useCortesProjeto } from '@/features/editor/useCortes';
 import { useProjetos } from '@/features/projetos/useProjetos';
@@ -94,7 +102,122 @@ function useItensDaPaleta(): ItemDaPaleta[] {
   }, [projetos, fires, cortes, projetoId]);
 }
 
-export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFechar: () => void }) {
+/** Os chips de escopo: "Tudo", lives, shorts… O Tab gira entre eles, então o clique não entra na ordem do teclado. */
+function EscoposDaPaleta({ escopo, aoEscolher }: { escopo: EscopoDaPaleta; aoEscolher: (id: EscopoDaPaleta) => void }) {
+  return (
+    <div role="group" aria-label="Onde procurar" className="flex flex-wrap items-center gap-1.5 border-b border-fio px-3 py-2">
+      {ESCOPOS.map((e) => (
+        <Chip key={e.id} pressionado={e.id === escopo} tabIndex={-1} onClick={() => aoEscolher(e.id)}>
+          {e.prefixo ? <span className="font-mono opacity-70">{e.prefixo}</span> : null}
+          {e.rotulo}
+        </Chip>
+      ))}
+      <span className="flex-1" />
+      <span className="text-micro text-fg-3">
+        <Kbd>Tab</Kbd> troca
+      </span>
+    </div>
+  );
+}
+
+function SemResultado({ vazio, escopo, aoProcurarEmTudo }: { vazio: boolean; escopo: EscopoDaPaleta; aoProcurarEmTudo: () => void }) {
+  const nomeDoEscopo = ESCOPOS.find((e) => e.id === escopo)?.rotulo ?? 'Tudo';
+  return (
+    <div className="px-2.5 py-[18px] text-center text-corpo text-fg-3">
+      {vazio ? (
+        'Digite para procurar. As últimas buscas e os lugares recentes aparecem aqui.'
+      ) : escopo === 'tudo' ? (
+        'Nada com esse nome.'
+      ) : (
+        <>
+          Nada em <strong className="text-fg">{nomeDoEscopo}</strong> com esse nome.{' '}
+          <Button variant="secundario" size="pq" className="ml-1.5" onClick={aoProcurarEmTudo}>
+            Procurar em tudo
+          </Button>
+          {escopo === 'cortes' ? (
+            <span className="mt-2 block text-micro text-fg-3">
+              Cortes vêm da live aberta — abra uma live para procurar nos cortes dela.
+            </span>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ResultadosDaPaleta({
+  grupos,
+  indice,
+  aoPassar,
+  aoEscolher,
+}: {
+  grupos: GrupoDaPaleta[];
+  indice: number;
+  aoPassar: (i: number) => void;
+  aoEscolher: (item: ItemDaPaleta) => void;
+}) {
+  let posicao = -1;
+  return grupos.map((g) => (
+    <div key={g.titulo || 'resultados'}>
+      {g.titulo ? (
+        <span className="flex items-center gap-1.5 px-2.5 pb-1 pt-2 text-micro text-fg-3">
+          <Icon name={g.icone} />
+          {g.titulo}
+        </span>
+      ) : null}
+      {g.itens.map((d) => {
+        posicao += 1;
+        const i = posicao;
+        const ativo = i === indice;
+        return (
+          <button
+            key={d.id}
+            type="button"
+            data-sala=""
+            data-ativo={ativo || undefined}
+            onMouseEnter={() => aoPassar(i)}
+            onClick={() => aoEscolher(d)}
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-[10px] border border-transparent px-2.5 py-2 text-left text-fg',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco',
+              ativo && 'border-iris-fio bg-iris-suave',
+            )}
+          >
+            <Icon name={d.icone} className={cn('flex-none', ativo ? 'text-iris-2' : 'text-fg-3')} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-corpo font-semibold">{d.rotulo}</span>
+              {d.contexto ? <span className="block truncate text-micro text-fg-3">{d.contexto}</span> : null}
+            </span>
+            {g.titulo ? null : <span className="flex-none text-micro text-fg-3">{DICA_DO_ESCOPO[d.escopo]}</span>}
+          </button>
+        );
+      })}
+    </div>
+  ));
+}
+
+function RodapeDaPaleta() {
+  return (
+    <div className="flex items-center gap-3 border-t border-fio px-3 py-2 text-micro text-fg-3">
+      <span className="inline-flex items-center gap-1.5">
+        <Kbd>↑</Kbd>
+        <Kbd>↓</Kbd>
+        escolher
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Kbd>↵</Kbd>
+        ir
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Kbd>Tab</Kbd>
+        escopo
+      </span>
+    </div>
+  );
+}
+
+/** O estado da paleta: o termo, o escopo, o item escolhido e o que o teclado faz (setas, Tab, Enter). */
+function usePaleta(aberta: boolean, onFechar: () => void) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const itens = useItensDaPaleta();
@@ -104,6 +227,9 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
   const [indice, setIndice] = useState(0);
   const [buscas, setBuscas] = useState<string[]>([]);
   const campo = useRef<HTMLInputElement>(null);
+  const origem = useRef<OrigemDoFoco | null>(null);
+  // Quem abriu a paleta é guardado ANTES de o miolo montar: o foco ainda está nele.
+  if (aberta && typeof document !== 'undefined') origem.current = guardarOrigem(origem.current, document.activeElement);
 
   useEffect(() => {
     if (!aberta) return;
@@ -111,7 +237,6 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
     setEscopoEscolhido('tudo');
     setIndice(0);
     setBuscas(lerBuscas());
-    requestAnimationFrame(() => campo.current?.focus());
   }, [aberta]);
 
   // O prefixo digitado manda sobre o chip: "@sermão" é short mesmo com
@@ -138,8 +263,6 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
     fecharSeAberta();
   }, [pathname]);
 
-  if (!aberta) return null;
-
   const girarEscopo = (passo: 1 | -1) => {
     const i = ESCOPOS.findIndex((e) => e.id === escopo);
     const proximo = ESCOPOS[(i + passo + ESCOPOS.length) % ESCOPOS.length];
@@ -162,286 +285,81 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
     onFechar();
   };
 
-  const nomeDoEscopo = ESCOPOS.find((e) => e.id === escopo)?.rotulo ?? 'Tudo';
-  let posicao = -1;
+  const aoTeclar = (e: React.KeyboardEvent) => {
+    // O Esc é do Radix: fecha só a paleta, e o diálogo de trás fica.
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      // Sem parar aqui, o foco preso do Radix trata o Shift+Tab como "volta ao fim do diálogo"
+      // e tira o foco do campo: o Tab da paleta gira o escopo, não passeia pela tela.
+      e.stopPropagation();
+      girarEscopo(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIndice((i) => Math.min(i + 1, lista.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIndice((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      escolher(lista[indice]);
+    }
+  };
+
+  const escolherEscopo = (id: EscopoDaPaleta) => {
+    setEscopoEscolhido(id);
+    if (termo !== termoLimpo) setTermo(termoLimpo);
+    campo.current?.focus();
+  };
+
+  return { termo, setTermo, escopo, vazio, grupos, lista, indice, setIndice, campo, origem, aoTeclar, escolher, escolherEscopo };
+}
+
+export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFechar: () => void }) {
+  const { termo, setTermo, escopo, vazio, grupos, lista, indice, setIndice, campo, origem, aoTeclar, escolher, escolherEscopo } =
+    usePaleta(aberta, onFechar);
 
   return (
-    <div
-      role="presentation"
-      onClick={onFechar}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 65,
-        display: 'grid',
-        justifyItems: 'center',
-        alignItems: 'start',
-        paddingTop: '12vh',
-        background: 'rgb(10 12 18/.5)',
-        backdropFilter: 'blur(3px)',
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Buscar live, short, corte, tela ou ação"
-        className="card"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 'min(600px, calc(100vw - 32px))',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgb(0 0 0/.35)',
+    <RD.Root open={aberta} onOpenChange={(a) => !a && onFechar()}>
+      <RD.Overlay className="fixed inset-0 z-[65] bg-veu" />
+      <RD.Content
+        data-sala=""
+        aria-describedby={undefined}
+        onOpenAutoFocus={(evento) => {
+          evento.preventDefault();
+          campo.current?.focus();
         }}
+        onCloseAutoFocus={(evento) => {
+          evento.preventDefault();
+          devolverFoco(origem.current);
+          origem.current = null;
+        }}
+        className={cn(
+          'fixed left-1/2 top-[12vh] z-[65] flex max-h-[76dvh] w-[min(600px,calc(100vw-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-dialogo outline-none',
+          PELE_FLUTUANTE,
+        )}
       >
-        <label
-          className="campo"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '11px 13px',
-            borderBottom: '1px solid var(--line2)',
-          }}
-        >
-          <Icon name="command" style={{ color: 'var(--dim)' }} />
-          <input
+        <RD.Title className="sr-only">Buscar live, short, corte, tela ou ação</RD.Title>
+        <div className="flex items-center gap-2 border-b border-fio p-3" onKeyDown={aoTeclar}>
+          <Busca
             ref={campo}
             value={termo}
-            onChange={(e) => setTermo(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                // O Esc é da paleta, e só dela: sem parar aqui ele segue para
-                // os listeners de documento e fecha o diálogo de trás junto.
-                e.preventDefault();
-                e.stopPropagation();
-                onFechar();
-                return;
-              }
-              if (e.key === 'Tab') {
-                e.preventDefault();
-                girarEscopo(e.shiftKey ? -1 : 1);
-                return;
-              }
-              if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setIndice((i) => Math.min(i + 1, lista.length - 1));
-              }
-              if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setIndice((i) => Math.max(i - 1, 0));
-              }
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                e.stopPropagation();
-                escolher(lista[indice]);
-              }
-            }}
+            aoMudar={setTermo}
             placeholder="Buscar live, short, corte ou tela…  (@ shorts · # cortes · > ações)"
             aria-label="Buscar live, short, corte, tela ou ação"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              border: 0,
-              // O anel de foco fica no `.campo` (ver upgrade.css): dentro de
-              // uma caixa com borda, o anel no input desenharia dois retângulos.
-              outline: 'none',
-              background: 'transparent',
-              fontSize: 14,
-            }}
           />
-          <kbd>Esc</kbd>
-        </label>
-
-        <div
-          role="tablist"
-          aria-label="Onde procurar"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 5,
-            padding: '7px 11px',
-            borderBottom: '1px solid var(--line2)',
-          }}
-        >
-          {ESCOPOS.map((e) => {
-            const ativo = e.id === escopo;
-            return (
-              <button
-                key={e.id}
-                type="button"
-                role="tab"
-                aria-selected={ativo}
-                tabIndex={-1}
-                onClick={() => {
-                  setEscopoEscolhido(e.id);
-                  if (termo !== termoLimpo) setTermo(termoLimpo);
-                  campo.current?.focus();
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  height: 22,
-                  padding: '0 8px',
-                  border: `1px solid ${ativo ? 'var(--sel-line)' : 'var(--line)'}`,
-                  borderRadius: 99,
-                  background: ativo ? 'var(--sel-bg)' : 'transparent',
-                  color: ativo ? 'var(--sel-ink)' : 'var(--mute)',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                }}
-              >
-                {e.prefixo ? (
-                  <span style={{ fontFamily: 'var(--mono)', opacity: 0.7 }}>{e.prefixo}</span>
-                ) : null}
-                {e.rotulo}
-              </button>
-            );
-          })}
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 10.5, color: 'var(--dim)' }}>
-            <kbd>Tab</kbd> troca
-          </span>
+          <Kbd>Esc</Kbd>
         </div>
-
-        <div style={{ maxHeight: 380, overflow: 'auto', padding: 6 }}>
+        <EscoposDaPaleta escopo={escopo} aoEscolher={escolherEscopo} />
+        <div className="max-h-[380px] overflow-auto p-1.5">
           {lista.length === 0 ? (
-            <div style={{ padding: '18px 10px', textAlign: 'center', color: 'var(--mute)', fontSize: 12.5 }}>
-              {vazio ? (
-                'Digite para procurar. As últimas buscas e os lugares recentes aparecem aqui.'
-              ) : escopo === 'tudo' ? (
-                'Nada com esse nome.'
-              ) : (
-                <>
-                  Nada em <strong>{nomeDoEscopo}</strong> com esse nome.{' '}
-                  <button
-                    type="button"
-                    className="btn"
-                    style={{ height: 24, marginLeft: 6, fontSize: 11.5 }}
-                    onClick={() => {
-                      setEscopoEscolhido('tudo');
-                      setTermo(termoLimpo);
-                      campo.current?.focus();
-                    }}
-                  >
-                    Procurar em tudo
-                  </button>
-                  {escopo === 'cortes' ? (
-                    <span style={{ display: 'block', marginTop: 8, fontSize: 11, color: 'var(--dim)' }}>
-                      Cortes vêm da live aberta — abra uma live para procurar nos cortes dela.
-                    </span>
-                  ) : null}
-                </>
-              )}
-            </div>
+            <SemResultado vazio={vazio} escopo={escopo} aoProcurarEmTudo={() => escolherEscopo('tudo')} />
           ) : (
-            grupos.map((g) => (
-              <div key={g.titulo || 'resultados'}>
-                {g.titulo ? (
-                  <span
-                    className="lbl"
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 9px 4px' }}
-                  >
-                    <Icon name={g.icone} />
-                    {g.titulo}
-                  </span>
-                ) : null}
-                {g.itens.map((d) => {
-                  posicao += 1;
-                  const i = posicao;
-                  const ativo = i === indice;
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onMouseEnter={() => setIndice(i)}
-                      onClick={() => escolher(d)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        width: '100%',
-                        padding: '7px 9px',
-                        border: `1px solid ${ativo ? 'var(--sel-line)' : 'transparent'}`,
-                        borderRadius: 'var(--r2)',
-                        background: ativo ? 'var(--sel-bg)' : 'transparent',
-                        color: 'var(--ink)',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Icon
-                        name={d.icone}
-                        style={{ color: ativo ? 'var(--sel-ink)' : 'var(--mute)', flex: 'none' }}
-                      />
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span
-                          style={{
-                            display: 'block',
-                            fontSize: 12.5,
-                            fontWeight: 600,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {d.rotulo}
-                        </span>
-                        {d.contexto ? (
-                          <span
-                            style={{
-                              display: 'block',
-                              fontSize: 11,
-                              color: 'var(--mute)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {d.contexto}
-                          </span>
-                        ) : null}
-                      </span>
-                      {g.titulo ? null : <span className="lbl">{DICA_DO_ESCOPO[d.escopo]}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            ))
+            <ResultadosDaPaleta grupos={grupos} indice={indice} aoPassar={setIndice} aoEscolher={escolher} />
           )}
         </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '8px 13px',
-            borderTop: '1px solid var(--line2)',
-            fontSize: 11,
-            color: 'var(--mute)',
-          }}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <kbd>↑</kbd>
-            <kbd>↓</kbd>
-            escolher
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <kbd>↵</kbd>
-            ir
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <kbd>Tab</kbd>
-            escopo
-          </span>
-        </div>
-      </div>
-    </div>
+        <RodapeDaPaleta />
+      </RD.Content>
+    </RD.Root>
   );
 }

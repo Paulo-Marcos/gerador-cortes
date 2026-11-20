@@ -92,28 +92,30 @@ describe('montarTira', () => {
   });
 });
 
-// D-859: a tira está no piso de 11 px (era 9), e a mini quebra entre os
-// grupos para caber na coluna da lista — os oito pips passavam da borda.
-describe('a tira no piso de 11 px', () => {
+// D-1144 (H-14, DIRECAO §5): as siglas saíram; a tira é o MedidorDeEtapas (oito traços e a
+// frase), sem sigla e sem style inline. (Era o describe "a tira no piso de 11 px", D-859.)
+describe('a tira é o medidor de etapas', () => {
   const tira = montarTira(status({ raw_pronto: true }));
-  const fontes = (html: string) => [...html.matchAll(/font-size:([\d.]+)px/g)].map((m) => Number(m[1]));
+  const SIGLAS = ['>BRU<', '>CEN<', '>GRD<', '>OVL<', '>FIN<', '>THU<', '>MET<', '>YT<'];
+  const semIcones = (html: string) => html.replace(/<svg[\s\S]*?<\/svg>/g, '');
 
-  it('TiraDoCorteAp: nenhum texto abaixo de 11 px', () => {
-    const html = renderToStaticMarkup(createElement(TiraDoCorteAp, { tira }));
-    expect(fontes(html).length).toBeGreaterThan(0);
-    expect(Math.min(...fontes(html))).toBeGreaterThanOrEqual(11);
+  it.each([
+    ['TiraDoCorteAp', TiraDoCorteAp],
+    ['TiraMini', TiraMini],
+  ])('%s: oito traços nomeados, sem sigla e sem style', (_nome, Tira) => {
+    const html = renderToStaticMarkup(createElement(Tira, { tira }));
+    expect(html.match(/data-etapa="/g)).toHaveLength(8);
+    expect(html).toContain('role="img"');
+    for (const sigla of SIGLAS) expect(html).not.toContain(sigla);
+    expect(semIcones(html)).not.toContain('style=');
   });
 
-  it('TiraMini: siglas a 11 px, e a fileira quebra entre os grupos, não dentro', () => {
-    const html = renderToStaticMarkup(createElement(TiraMini, { tira }));
-    expect(fontes(html).length).toBe(8);
-    expect(Math.min(...fontes(html))).toBeGreaterThanOrEqual(11);
-    const [fileira, ...resto] = html.match(/<span[^>]*style="[^"]*"/g) ?? [];
-    expect(fileira).toContain('flex-wrap:wrap');
-    // os três grupos (CENAS · RENDER · PUBLICAÇÃO), cada um um bloco sem quebra própria
-    const grupos = resto.filter((s) => !s.includes('data-estado'));
-    expect(grupos).toHaveLength(3);
-    for (const g of grupos) expect(g).not.toContain('flex-wrap');
+  it('TiraDoCorteAp leva a frase; TiraMini a guarda só no aria-label (a coluna tem 145 px)', () => {
+    const frase = resumoDaLinha(tira);
+    expect(renderToStaticMarkup(createElement(TiraDoCorteAp, { tira }))).toContain(`>${frase}</span>`);
+    const mini = renderToStaticMarkup(createElement(TiraMini, { tira }));
+    expect(mini).toContain(`aria-label="Etapas do corte: ${frase}"`);
+    expect(mini).not.toContain(`>${frase}</span>`);
   });
 });
 

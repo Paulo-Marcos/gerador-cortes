@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from 'react';
+import { IconButton } from '@/components/ui/icon-button';
+import { Selo, type TomDoSelo } from '@/components/ui/selo';
 import { PainelDoLote } from '@/features/shorts/PainelDoLote';
 import type { LotePublicacao } from '@/features/shorts/shortsApi';
 import { useCancelarLote, useLoteAtual } from '@/features/shorts/useLotePublicacao';
 import { resumoDoLote, textoDoLote, type ResumoDoLote } from './cartaoDaFila';
 import { Icon, ICONE_DO_CONCEITO } from './Icon';
-import { SeloDeEstado, type TomDoSelo } from './SeloDeEstado';
 
 // D-897 · o envio em lote dentro da gaveta da fila.
 //
@@ -49,8 +50,8 @@ export function useLoteDaFila(): LotePublicacao | null {
 }
 
 function seloDoLote(resumo: ResumoDoLote): [TomDoSelo, string] {
-  if (resumo.emCurso) return resumo.cancelado ? ['inerte', 'cancelando'] : ['info', 'publicando'];
-  if (resumo.comVoce > 0) return ['aviso', 'com você'];
+  if (resumo.emCurso) return resumo.cancelado ? ['inerte', 'cancelando'] : ['curso', 'publicando'];
+  if (resumo.comVoce > 0) return ['convite', 'com você'];
   return resumo.cancelado ? ['inerte', 'cancelado'] : ['ok', 'terminou'];
 }
 
@@ -62,42 +63,38 @@ export function LoteNaFila({ lote }: { lote: LotePublicacao | null }) {
   const [tom, estado] = seloDoLote(resumo);
 
   return (
-    <section className="card" aria-label="Publicação em lote" style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 11px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Icon name={ICONE_DO_CONCEITO.publicar} style={{ flex: 'none', color: 'var(--mute)' }} />
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-          <strong style={{ fontSize: 11.5 }}>Publicação em lote</strong>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>{textoDoLote(resumo)}</span>
+    <section aria-label="Publicação em lote" className="flex flex-col gap-2 rounded-[14px] border border-fio bg-vidro p-3">
+      <div className="flex items-center gap-2">
+        <Icon name={ICONE_DO_CONCEITO.publicar} className="flex-none text-fg-3" />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <strong className="text-corpo">Publicação em lote</strong>
+          <span className="font-mono text-micro text-fg-3">{textoDoLote(resumo)}</span>
         </span>
-        <SeloDeEstado tom={tom}>{estado}</SeloDeEstado>
+        <Selo tom={tom}>{estado}</Selo>
         {resumo.emCurso ? (
-          <button
-            type="button"
-            className="btn btn-icon"
-            style={{ width: 24, height: 24, color: 'var(--err)' }}
+          <IconButton
+            variant="destrutivo"
+            size="pq"
             disabled={cancelar.isPending || resumo.cancelado}
             title="Cancelar o lote: o item em curso termina, os que esperavam são cancelados"
             aria-label="Cancelar o lote"
             onClick={() => cancelar.mutate()}
           >
             <Icon name="ban" />
-          </button>
+          </IconButton>
         ) : (
-          <button
-            type="button"
-            className="btn btn-icon"
-            style={{ width: 24, height: 24, color: 'var(--mute)' }}
+          <IconButton
+            variant="fantasma"
+            size="pq"
             title="Tirar da lista (o lote já terminou)"
             aria-label="Tirar o lote da lista"
             onClick={() => dispensarLote(lote.lote_id)}
           >
             <Icon name="x" />
-          </button>
+          </IconButton>
         )}
       </div>
-      {cancelar.isError ? (
-        <span style={{ fontSize: 11, color: 'var(--err)' }}>não consegui cancelar, tente de novo</span>
-      ) : null}
+      {cancelar.isError ? <span className="text-pequeno text-erro">não consegui cancelar, tente de novo</span> : null}
       <PainelDoLote raias={lote.raias} empilhado />
     </section>
   );
