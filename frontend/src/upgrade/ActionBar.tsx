@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Icon, ICONE_DO_CONCEITO } from './Icon';
 import type { ChromeBarra } from './UpgradeChrome';
 
@@ -140,17 +141,15 @@ function atributosDoSecundario(botao: NonNullable<ChromeBarra['secundario']>) {
 
 export function ActionBar({ barra }: { barra: ChromeBarra }) {
   return (
+    // D-1137 (E-069 H-13; DIRECAO §7.0): a barra é uma pílula de vidro no rodapé,
+    // a 12 px da janela. Sobre o vídeo (Editor e Pós) o vidro vira sólido pela sala
+    // (`data-vidro`, `luzDaSala`), não por aqui.
     <div
-      className="gl"
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap', // D-1086: rede de segurança; antes de quebrar, os textos (base 0) cedem
-        alignItems: 'center',
-        gap: 8,
-        flex: 'none',
-        padding: '10px 18px',
-        borderTop: '1px solid var(--line)',
-      }}
+      className="cc-vidro-casca flex min-h-[62px] flex-none items-center gap-2 rounded-pilula py-2.5 pl-5 pr-3"
+      // D-1086: rede de segurança; antes de quebrar, os textos (base 0) cedem.
+      style={{ flexWrap: 'wrap' }}
+      role="toolbar"
+      aria-label="Ações da tela"
     >
       {barra.extra}
       {barra.teclas?.map((t) => (
@@ -240,9 +239,9 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       {barra.primario.desabilitado && barra.primario.motivo ? (
         <MotivoDoPrimario motivo={barra.primario.motivo} />
       ) : null}
-      <button
+      <Button
         type="button"
-        className="btn btn-pri"
+        variant="primario"
         data-decisao
         aria-keyshortcuts={
           barra.primario.desabilitado || barra.primario.semEnter ? undefined : 'Enter'
@@ -256,17 +255,9 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         <Icon name={barra.primario.icone} />
         {barra.primario.texto}
         {barra.primario.desabilitado || barra.primario.semEnter ? null : (
-          <kbd
-            style={{
-              background: 'rgb(255 255 255/.2)',
-              borderColor: 'transparent',
-              color: 'inherit',
-            }}
-          >
-            ↵
-          </kbd>
+          <kbd className="border-transparent bg-[color-mix(in_srgb,currentColor_18%,transparent)] text-[inherit]">↵</kbd>
         )}
-      </button>
+      </Button>
     </div>
   );
 }

@@ -2,22 +2,20 @@ import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { OverflowMenu, type OverflowMenuItem } from '@/components/ui/overflow-menu';
 import type { ProviderIA } from '@/lib/providerIa';
 import { Icon, type IconName } from './Icon';
+import { BotaoDeBusca } from './PontaDaBarra';
+import { menuDoTrilho, type Grupo, type Migalha, type TelaId } from './upgradeRoutes';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O cabeçalho de tela.
 //
-// Uma linha só, sempre com a mesma gramática: ícone em acento, título
-// que responde "onde estou", subtítulo que responde "como estão as
-// coisas aqui" e, à direita, as ações da tela inteira. O subtítulo nunca
-// é decorativo — ele carrega número ("14 cortes · 3 fire · 412 MB"). É o
-// painel de instrumentos da tela, não a legenda dela.
+// O subtítulo nunca é decorativo: ele carrega número ("14 cortes · 3 fire ·
+// 412 MB"). É o painel de instrumentos da tela, não a legenda dela. Nas telas
+// densas esta faixa não é montada: subtítulo e ações sobem para a linha do topo.
 //
-// RODADA 2 · nas telas densas (Bancada, Pós, Revisão) esta faixa não é
-// montada: subtítulo e ações vão para a barra superior, e o título sai —
-// a trilha já termina em "#7" e o título dizia "Corte #7 — …" 40 px
-// abaixo. Eram ~46 px de moldura repetindo informação numa tela cujo
-// trabalho é olhar vídeo. Por isso as ações viraram um componente
-// próprio: um desenho, dois lugares.
+// D-1137 (E-069 H-13; DIRECAO §7.0): fora de uma live não há barra no topo, e o
+// cabeçalho é a tela se apresentando: o sobretítulo em íris (o grupo do trilho,
+// ou a live), o `h1` em display (peso 300) com UMA palavra em 800 no feixe — um
+// dos lugares marcados do feixe (§3.1) —, a busca Ctrl K em pílula e as ações.
 // ─────────────────────────────────────────────────────────────────
 
 export type ScreenAction = {
@@ -32,17 +30,41 @@ export type ScreenAction = {
   ia?: { emVoo: ProviderIA | null; onGerar: (provider: ProviderIA) => void };
   /** D-867: ação que abre um menu — o "Mais" (⋯) das ações raras da tela.
    *  Com isto, `onClick` é ignorado e o `texto` vira o rótulo do gatilho.
-   *  Nas telas densas é a própria barra superior que junta as ações simples
+   *  Nas telas densas é a própria linha do topo que junta as ações simples
    *  num Mais quando aperta (D-877, `juntarNoMais`); o painel desce porque
-   *  a barra corta só de lado (D-876). */
+   *  a linha corta só de lado (D-876). */
   menu?: OverflowMenuItem[];
 };
 
+const NOME_DO_GRUPO: Record<Grupo, string> = {
+  producao: 'Produção',
+  inteligencia: 'Inteligência',
+  ferramentas: 'Ferramentas',
+};
+
+/** O sobretítulo: o grupo do trilho a que a tela pertence (a Fila de render mora em
+ *  Produção). Fora de qualquer grupo, a migalha de cima. */
+export function sobretituloDaTela(tela: TelaId, trilha: Migalha[]): string | undefined {
+  const menu = menuDoTrilho();
+  const grupo: Grupo | undefined =
+    tela === 'fila' ? 'producao' : (Object.keys(menu) as Grupo[]).find((g) => menu[g].some((i) => i.telas.includes(tela)));
+  if (grupo) return NOME_DO_GRUPO[grupo];
+  return trilha.length > 1 ? trilha[trilha.length - 2].texto : undefined;
+}
+
+/** O título em duas partes: o que fica em 300 e a última palavra, que vai em 800 no feixe. */
+export function partesDoTitulo(titulo: string): [inicio: string, destaque: string] {
+  const corte = titulo.trimEnd().lastIndexOf(' ');
+  return corte < 0 ? ['', titulo.trim()] : [titulo.slice(0, corte + 1), titulo.slice(corte + 1).trim()];
+}
+
 type ScreenHeaderProps = {
-  icone: IconName;
   titulo: string;
+  sobretitulo?: string;
   sub?: string;
   acoes?: ScreenAction[];
+  /** Fora de uma live a busca mora aqui; dentro, na linha do topo. */
+  onAbrirBusca?: () => void;
 };
 
 export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
@@ -80,50 +102,22 @@ export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
   );
 }
 
-export function ScreenHeader({ icone, titulo, sub, acoes = [] }: ScreenHeaderProps) {
+export function ScreenHeader({ titulo, sobretitulo, sub, acoes = [], onAbrirBusca }: ScreenHeaderProps) {
+  const [inicio, destaque] = partesDoTitulo(titulo);
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: 10,
-        flex: 'none',
-        padding: '14px 18px 10px',
-      }}
-    >
-      <Icon name={icone} size={16} style={{ color: 'var(--accent)' }} />
-      <span style={{ minWidth: 0 }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 16,
-            fontWeight: 700,
-            letterSpacing: '-.01em',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {titulo}
+    <div className="flex flex-none flex-wrap items-end gap-x-4 gap-y-3 px-6 pb-4 pt-6">
+      <div className="min-w-0 flex-1">
+        {sobretitulo ? <p className="mb-1 truncate text-pequeno font-semibold text-iris">{sobretitulo}</p> : null}
+        <h1 className="truncate text-display font-light">
+          {inicio}
+          <span className="font-extrabold text-feixe">{destaque}</span>
         </h1>
-        {sub ? (
-          <p
-            style={{
-              margin: '1px 0 0',
-              fontSize: 12,
-              color: 'var(--mute)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {sub}
-          </p>
-        ) : null}
-      </span>
-      <div style={{ flex: 1 }} />
-      <AcoesDaTela acoes={acoes} />
+        {sub ? <p className="mt-1 truncate text-corpo text-fg-2">{sub}</p> : null}
+      </div>
+      {onAbrirBusca ? <BotaoDeBusca larga onAbrir={onAbrirBusca} /> : null}
+      <div className="flex flex-none flex-wrap items-center gap-2">
+        <AcoesDaTela acoes={acoes} />
+      </div>
     </div>
   );
 }

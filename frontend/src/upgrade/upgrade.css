@@ -22,8 +22,10 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .ap {
-  --sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
-  --mono: 'Geist Mono', ui-monospace, monospace;
+  /* D-1137: a casca usa as fontes da Sala, que vêm do `index.css` (`--font-sans`
+     e `--font-mono`, carregadas pelo `index.html`); a pilha do sistema é a reserva. */
+  --sans: var(--font-sans, ui-sans-serif, system-ui, 'Segoe UI', sans-serif);
+  --mono: var(--font-mono, ui-monospace, Consolas, monospace);
 
   /* D-1128 (E-069 H-03): os tokens da casca leem a Sala escura (DIRECAO.md §9.2).
      O tema vem dos `--cc-*` (styles/tokens.css), então não há mais bloco por tema
@@ -598,15 +600,13 @@
 }
 
 /* ─── Tipografia das telas não migradas ────────────────────────────
-   O design inteiro é Geist e Geist Mono — não há serifa em lugar nenhum
-   do handoff. As telas antigas usam `--font-serif` (Newsreader) em
-   títulos editoriais e `--font-mono` (JetBrains Mono) em números. Dentro
-   da casca as três variáveis passam a apontar para as duas famílias do
-   design: uma manchete serifada ao lado de um cabeçalho em Geist lia
-   como duas marcas diferentes na mesma janela. */
+   Não há serifa no design. As telas antigas usam `--font-serif` (Newsreader)
+   em títulos editoriais: dentro da casca ela aponta para a sans, porque uma
+   manchete serifada ao lado de um cabeçalho sem serifa lia como duas marcas
+   diferentes na mesma janela. `--font-sans` e `--font-mono` não são
+   redefinidas aqui (D-1137): vêm do `index.css`, e redefini-las por `--sans`
+   faria as duas variáveis se referirem uma à outra. */
 
 .ap {
-  --font-sans: var(--sans);
   --font-serif: var(--sans);
-  --font-mono: var(--mono);
 }

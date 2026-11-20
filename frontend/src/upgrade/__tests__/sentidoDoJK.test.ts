@@ -42,7 +42,7 @@ describe('J e K no mesmo sentido em todo o app', () => {
   // Título, atalho anunciado ao leitor de tela e clique moram no mesmo botão:
   // a regex exige os três juntos, para um não virar sem o outro.
   it('o seletor do topo diz o mesmo que a tecla faz', () => {
-    const topo = fonte('../TopBar.tsx');
+    const topo = fonte('../SeletorDoCorte.tsx');
     expect(topo).toMatch(
       /title="Item anterior · J"[^>]*aria-keyshortcuts="J"[^>]*onClick=\{atual\.onAnterior\}/,
     );

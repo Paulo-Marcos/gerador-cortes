@@ -297,14 +297,28 @@
     pointer-events: none;
   }
 
-  /* O único lugar com backdrop-filter na casca (§3.6). */
+  /* O único lugar com backdrop-filter na casca (§3.6). Fundo e desfoque vêm de duas
+     variáveis para a sala poder apagá-los sem escrever outro `backdrop-filter` (D-1137). */
   .cc-vidro-casca {
-    background: var(--cc-painel);
+    background: var(--cc-casca-fundo, var(--cc-painel));
     border: 1px solid var(--cc-fio);
     box-shadow:
       inset 0 1px 0 var(--cc-fio-topo),
       var(--cc-sombra-painel);
-    -webkit-backdrop-filter: blur(30px) saturate(1.5);
-    backdrop-filter: blur(30px) saturate(1.5);
+    -webkit-backdrop-filter: var(--cc-casca-desfoque, blur(30px) saturate(1.5));
+    backdrop-filter: var(--cc-casca-desfoque, blur(30px) saturate(1.5));
+  }
+
+  /* Vidro sem blur: Editor e Pós (vídeo tocando), "Reduzir efeitos" e o modo foco
+     (`upgrade/luzDaSala.ts`). O vidro vira o painel sólido. */
+  [data-vidro='0'] {
+    --cc-casca-fundo: var(--cc-painel-solido);
+    --cc-casca-desfoque: none;
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root {
+      --cc-casca-fundo: var(--cc-painel-solido);
+      --cc-casca-desfoque: none;
+    }
   }
 }
