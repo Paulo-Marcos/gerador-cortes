@@ -18,6 +18,7 @@ import {
   noArHaPouco,
 } from '@/features/projetos/regrasDaBiblioteca';
 import { SalaDaBiblioteca, type SalaDaBibliotecaProps } from '@/features/projetos/SalaDaBiblioteca';
+import { SincroniaDaBiblioteca, type Sincronia } from '@/features/projetos/SincroniaDaBiblioteca';
 import { useCortesDoDestaque, useNomeDoOperador } from '@/features/projetos/useSalaDaBiblioteca';
 import { temFalhados, useProjetos, useReiniciarFalhados } from '@/features/projetos/useProjetos';
 import type { Projeto } from '@/types/models';
@@ -42,8 +43,18 @@ export type EstadoDaBiblioteca =
   | { tipo: 'vazio'; destino?: string; onBuscarLives: () => void; onLigarCanal: () => void }
   | { tipo: 'cheio'; sala: SalaDaBibliotecaProps; verTodas: boolean; projetos: Projeto[]; onVoltar: () => void };
 
-/** O que a tela mostra em cada um dos quatro estados (DIRECAO §3.4). */
-export function ConteudoDaBiblioteca({ estado }: { estado: EstadoDaBiblioteca }) {
+/** O que a tela mostra em cada um dos quatro estados (DIRECAO §3.4). Com a lista na
+ *  mão (vazia ou cheia), o status de sincronização vem por cima; carregando e erro já
+ *  dizem o estado da lista com as próprias palavras. */
+export function ConteudoDaBiblioteca({ estado, sincronia }: { estado: EstadoDaBiblioteca; sincronia?: Sincronia }) {
+  if (sincronia && (estado.tipo === 'vazio' || estado.tipo === 'cheio')) {
+    return (
+      <>
+        <SincroniaDaBiblioteca sincronia={sincronia} />
+        <ConteudoDaBiblioteca estado={estado} />
+      </>
+    );
+  }
   switch (estado.tipo) {
     case 'carregando':
       return <EstadoCarregando frase="Buscando as lives…" linhas={3} />;
@@ -85,7 +96,7 @@ export default function BibliotecaPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [formAberto, setFormAberto] = useState(false);
-  const { data, isLoading, isError, error, refetch } = useProjetos();
+  const { data, isLoading, isError, error, refetch, isFetching } = useProjetos();
   const nome = useNomeDoOperador();
   const destino = useDestino();
   const { lugares } = useHistoricoDaCasca();
@@ -140,7 +151,7 @@ export default function BibliotecaPage() {
           <NovoProjetoForm onClose={() => setFormAberto(false)} />
         </Card>
       )}
-      <ConteudoDaBiblioteca estado={estado} />
+      <ConteudoDaBiblioteca estado={estado} sincronia={isFetching ? 'atualizando' : 'sincronizado'} />
     </div>
   );
 }
