@@ -205,6 +205,8 @@ export const DEFINICOES: Record<string, Definicao> = {
       /^src\/upgrade\/(?:TrilhaDeEtapas|ScreenHeader)\.tsx$/,
       // D-1148 (H-15): o fio de luz da Biblioteca ("Continue") e do canal novo ("Cole o link").
       /^src\/features\/projetos\/CartaoComFio\.tsx$/,
+      // D-1149 (H-16): o cartão do mapa nos cortes da live, o que leva o fio de luz (§3.1).
+      /^src\/features\/projeto-detalhe\/MapaDosCortes\.tsx$/,
     ],
     exemplos: [
       ['className="bg-feixe text-sobre-feixe"', 1],

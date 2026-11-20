@@ -50,7 +50,7 @@ function clicarEmEditar(status: Partial<StatusExportCorte>, corte: Partial<Corte
   function Sonda() {
     const artigo = CorteLinhaAp(props);
     const botao = elementos(artigo).find(
-      (e) => e.type === 'button' && [e.props.children].flat(2).includes('Editar'),
+      (e) => e.type === 'button' && [e.props.children].flat(2).includes('Corte'),
     );
     expect(botao).toBeDefined();
     botao!.props.onClick!();

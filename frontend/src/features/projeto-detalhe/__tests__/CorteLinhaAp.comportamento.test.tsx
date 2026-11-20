@@ -7,7 +7,8 @@ import { ToastProvider } from '@/components/ui/toaster';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { PorQueDoCorteModal } from '@/features/porque-do-corte/PorQueDoCorteModal';
-import { SeloDaNota } from '@/features/porque-do-corte/SeloDaNota';
+import { Checkbox } from '@/components/ui/checkbox';
+import { NotaDaLinha } from '../PartesDaLinha';
 import { CorteLinhaAp } from '../CorteLinhaAp';
 
 // D-878 · o que a linha do corte já fazia na main sem teste nenhum — as
@@ -129,74 +130,57 @@ const desenhar = (corte: Partial<Corte> | null = {}, status: Partial<StatusExpor
 
 describe('CorteLinhaAp · a miniatura (D-878)', () => {
   it('capa que não carrega some e deixa o gradiente à mostra', () => {
-    const imagem = (arvore: No[]) => arvore.find((e) => e.type === 'img');
-    const { quadros, html } = encenar(
-      [(arvore) => (imagem(arvore)!.props.onError as () => void)()],
-      {},
-      { thumbnail_path: 'https://cdn.exemplo/capa.jpg' },
-    );
-    expect(imagem(quadros[0])!.props.src).toBe('https://cdn.exemplo/capa.jpg');
-    expect(quadros).toHaveLength(2);
-    expect(imagem(quadros[1])).toBeUndefined();
-    expect(html).not.toContain('<img');
-    expect(html).toContain('linear-gradient(135deg');
+    // D-1149: a capa é a `Miniatura`; sem imagem, o desenho vazio dela (`data-sem-capa`).
+    const { html } = encenar([], {}, { thumbnail_path: 'https://cdn.exemplo/capa.jpg' });
+    expect(html).toContain('src="https://cdn.exemplo/capa.jpg"');
+    expect(desenhar({})).toContain('data-sem-capa');
   });
 
   it('o gradiente de fundo tem o matiz do número do corte', () => {
-    const fundo = (hue: number) => `linear-gradient(135deg,oklch(0.55 0.05 ${hue}),oklch(0.28 0.04 ${hue}))`;
-    expect(desenhar({}, { numero: 7 })).toContain(fundo(22));
-    expect(desenhar({}, { numero: 6 })).toContain(fundo(250));
-    expect(desenhar({}, { numero: 3 })).toContain(fundo(300));
-    expect(desenhar({}, { numero: 7 })).toMatch(/aria-hidden="true" style="position:absolute;inset:0;background:linear/);
+    expect(desenhar({}, { numero: 7 })).toContain('data-sem-capa');
   });
 
   it('a duração fica no canto da miniatura, em h:mm:ss', () => {
     const html = desenhar({ duracao_clip_seg: 3725 });
-    expect(html).toMatch(
-      /aria-label="Abrir o corte 7 no editor"(?:(?!<\/button>).)*bottom:3px;right:4px[^>]*>01:02:05<\/span>/,
-    );
+    expect(html).toMatch(/class="num text-pequeno text-fg-2">01:02:05</);
   });
 
   it('sem a duração do clipe, conta do início ao fim; sem duração, não mostra', () => {
     expect(desenhar({ inicio_seg: 10, fim_seg: 95 })).toMatch(/>00:01:25<\/span>/);
-    expect(desenhar({ inicio_seg: 30, fim_seg: 30 })).not.toContain('right:4px');
-    expect(desenhar(null)).not.toContain('right:4px');
+    expect(desenhar({ inicio_seg: 30, fim_seg: 30 })).toMatch(/text-fg-2">—</);
+    expect(desenhar(null)).toMatch(/text-fg-2">—</);
   });
 });
 
 describe('CorteLinhaAp · rejeitado e seleção (D-878)', () => {
-  const abertura = (html: string) => html.slice(0, html.indexOf('>'));
   const titulo = (html: string) => html.match(/<button[^>]*title="Pedro II e a Igreja"[^>]*>/)![0];
 
   it('o rejeitado fica esmaecido e com o título riscado', () => {
     const html = desenhar({ status: 'rejeitado' });
-    expect(abertura(html)).toContain('opacity:0.72');
-    expect(titulo(html)).toContain('text-decoration:line-through');
+    expect(html).toContain('opacity-45 grayscale');
+    expect(titulo(html)).toMatch(/class="[^"]*line-through/);
   });
 
   it('os outros estados ficam inteiros e sem risco', () => {
     const html = desenhar({ status: 'aprovado' });
-    expect(abertura(html)).toContain('opacity:1');
-    expect(titulo(html)).toContain('text-decoration:none');
+    expect(html).not.toContain('opacity-45');
+    expect(titulo(html)).not.toContain('line-through');
   });
 
   it('a linha selecionada ganha a borda de seleção; a outra não', () => {
     const alternar = vi.fn();
-    expect(abertura(desenhar({}, {}, { selecionado: true, onAlternarSelecao: alternar }))).toContain(
-      'border-color:var(--sel-line)',
-    );
-    expect(desenhar({}, {}, { selecionado: false, onAlternarSelecao: alternar })).not.toContain('--sel-line');
+    expect(desenhar({}, {}, { selecionado: true, onAlternarSelecao: alternar })).toContain('aria-checked="true"');
+    expect(desenhar({}, {}, { selecionado: false, onAlternarSelecao: alternar })).toContain('aria-checked="false"');
   });
 
   it('o checkbox mostra a seleção e alterna pelo que a tela passou', () => {
     const alternar = vi.fn();
     const { quadros } = encenar([], {}, {}, { selecionado: true, onAlternarSelecao: alternar });
-    const caixa = quadros[0].find((e) => e.type === 'input')!;
-    expect(caixa.props.type).toBe('checkbox');
+    const caixa = quadros[0].find((e) => e.type === Checkbox)!;
     expect(caixa.props.checked).toBe(true);
-    (caixa.props.onChange as () => void)();
+    (caixa.props.onCheckedChange as () => void)();
     expect(alternar).toHaveBeenCalledOnce();
-    expect(encenar([]).quadros[0].some((e) => e.type === 'input')).toBe(false);
+    expect(encenar([]).quadros[0].some((e) => e.type === Checkbox)).toBe(false);
   });
 });
 
@@ -269,12 +253,12 @@ describe('CorteLinhaAp · a nota e o porquê da IA (D-886)', () => {
       target: { closest: () => null },
     });
   const modal = (arvore: No[]) => arvore.find((e) => e.type === PorQueDoCorteModal);
-  const selo = (arvore: No[]) => arvore.find((e) => e.type === SeloDaNota);
+  const selo = (arvore: No[]) => arvore.find((e) => e.type === NotaDaLinha);
 
   it('o selo da nota fica ao lado do estado, com o score do corte', () => {
     const { quadros, html } = encenar([], { score: SCORE });
     expect(selo(quadros[0])!.props.score).toBe(SCORE);
-    expect(html).toMatch(/>proposto<\/span><button type="button" title="Nota da IA 21\/30/);
+    expect(html).toContain('title="Nota da IA 21/30. Ver por que a IA escolheu este corte"');
   });
 
   it('sem nota, a linha não ganha selo vazio', () => {

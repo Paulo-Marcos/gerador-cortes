@@ -62,7 +62,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/final-review/FinalReviewPage.tsx": 6,
   "src/features/lives/RankingEmbasamentoPanel.tsx": 1,
   "src/features/metadata/MetadadosDoCorteModal.tsx": 2,
-  "src/features/projeto-detalhe/CorteLinhaAp.tsx": 4,
   "src/features/shorts/BlocosArrastaveis.tsx": 5,
   "src/features/shorts/CandidatoCard.tsx": 2,
   "src/features/shorts/CapaModal.tsx": 4,

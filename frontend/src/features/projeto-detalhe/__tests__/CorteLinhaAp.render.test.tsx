@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/ui/toaster';
 import type { OverflowMenuItem } from '@/components/ui/overflow-menu';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { LinkDeAcao } from '@/components/ui/link-de-acao';
 import { colunasDaLinha, CorteLinhaAp } from '../CorteLinhaAp';
 
 // D-868 · a linha desenhada de verdade: selo, barra de 8 passos com o verbo,
@@ -181,7 +182,7 @@ describe('CorteLinhaAp (D-868)', () => {
 
   it('uma ação por linha: Editar e o principal com rótulo, o resto no ⋯', () => {
     const html = linha(desenhar({}));
-    expect(html).toMatch(/>Editar<\/button>/);
+    expect(html.match(/data-variant="link-de-acao"/g)).toHaveLength(1);
     expect(html).toMatch(/>Aprovar<\/button>/);
     expect(html).toContain('aria-label="Mais ações do corte 7"');
     for (const antigo of ['title="Pós-produção"', 'aria-label="Metadados do corte"', 'title="Abrir a pasta do corte"'])
@@ -190,8 +191,7 @@ describe('CorteLinhaAp (D-868)', () => {
 
   it('alvos de 32 px: Editar, o principal e o ⋯ (grande)', () => {
     const html = linha(desenhar({}));
-    expect(html).toMatch(/style="height:32px"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?Editar/);
-    expect(html).toMatch(/style="height:32px"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?Aprovar/);
+    expect(html).toMatch(/data-variant="link-de-acao"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?Aprovar/);
     expect(h.mais!.grande).toBe(true);
   });
 
@@ -203,7 +203,7 @@ describe('CorteLinhaAp (D-868)', () => {
     expect(html).toContain('Abrir o corte 7 no editor');
     expect(html).toContain('>Pedro II e a Igreja</button>');
     expect(html).toContain('title="Marcado como fire"');
-    expect(html).toContain('>proposto<');
+    expect(html).toContain('>Proposto<');
     expect(html).toContain('00:06:44 → 00:19:59');
   });
 });
@@ -226,13 +226,13 @@ describe('CorteLinhaAp · o principal faz o que diz (D-868)', () => {
   });
 
   it('Editar abre o corte no editor', () => {
-    botao(arvoreDaLinha(), 'Editar').props.onClick!();
+    botao(arvoreDaLinha(), 'Pedro II e a Igreja').props.onClick!();
     expect(h.navegar).toHaveBeenCalledWith('/projetos/p1/cortes/c7');
   });
 
   it('o principal forte é o do botão primário; Aprovar é o comum', () => {
-    expect(botao(arvoreDaLinha({ status: 'aprovado' }), 'Gerar bruto no editor').props.className).toBe('btn btn-pri');
-    expect(botao(arvoreDaLinha(), 'Aprovar').props.className).toBe('btn');
+    expect(arvoreDaLinha({ status: 'aprovado' }).find((e) => e.type === LinkDeAcao)).toBeDefined();
+    expect(arvoreDaLinha().some((e) => /btn-pri/.test(e.props.className ?? ''))).toBe(false);
   });
 
   it('aprovar que falha avisa (D-746)', () => {
@@ -318,16 +318,16 @@ describe('CorteLinhaAp · o ⋯ (D-868)', () => {
     desenhar({});
     expect(typeof h.mais!.onAbertoMudou).toBe('function');
     expect(fonte).toContain('onAbertoMudou={setMaisAberto}');
-    expect(fonte).toMatch(/position: 'relative',\s*zIndex: maisAberto \? 3 : undefined,/);
+    expect(fonte).toContain("maisAberto && 'relative z-[3]'");
   });
 });
 
 describe('CorteLinhaAp · a barra e a largura (D-868)', () => {
   it('cada passo tem cor E forma: feito cheio, agora vazado, falta no traço da linha', () => {
     const html = linha(desenhar({}, { raw_pronto: true }));
-    expect(html).toMatch(/data-estado="feito"[^>]*background:var\(--ok\)/);
-    expect(html).toMatch(/data-estado="agora"[^>]*box-shadow:inset 0 0 0 1.5px var\(--warn\)/);
-    expect(html).toMatch(/data-estado="falta"[^>]*background:var\(--line\)/);
+    expect(html).toMatch(/data-estado="feito"[^>]*class="[^"]*bg-fg-2/);
+    expect(html).toMatch(/data-estado="agora"[^>]*class="[^"]*bg-aviso/);
+    expect(html).toMatch(/data-estado="falta"[^>]*class="[^"]*shadow-\[inset_0_0_0_1px_var\(--cc-fio-campo\)\]/);
   });
 
   it('a frase não corta: quebra, e fica inteira no hover', () => {
@@ -343,28 +343,28 @@ describe('CorteLinhaAp · a barra e a largura (D-868)', () => {
       }),
     );
     const frase = '6 de 8 · próximo: completar metadados';
-    expect(html).toContain(`title="${frase}"`);
+    expect(html).toContain(`aria-label="Etapas do corte: ${frase}"`);
     expect(html).toContain(`>${frase}</span>`);
     expect(html).not.toMatch(/text-overflow:ellipsis[^>]*>6 de 8/);
   });
 
   it('os passos têm 6 px e ficam fora do leitor de tela — a frase diz o mesmo', () => {
     const html = linha(desenhar({}));
-    expect(html.match(/data-estado="[a-z]+"[^>]*height:6px/g)).toHaveLength(8);
-    expect(html).toMatch(/<span aria-hidden="true"[^>]*>(?:<span data-estado)/);
+    expect(html.match(/data-etapa="/g)).toHaveLength(8);
+    expect(html).toMatch(/<span role="img" aria-label="Etapas do corte: [^"]+"[^>]*>(?:<span data-grupo="[^"]+"[^>]*>)<b data-etapa/);
   });
 
   it('o corte rejeitado pinta o passo de erro e diz isso', () => {
     const html = linha(desenhar({ status: 'rejeitado' }));
-    expect(html).toMatch(/data-estado="rejeitado"[^>]*background:var\(--err\)/);
-    expect(html).toContain('corte rejeitado');
+    expect(html).toMatch(/data-estado="falha"[^>]*class="[^"]*bg-erro/);
+    expect(html).toContain('corte riscado');
   });
 
   it('janela larga: a barra tem coluna própria', () => {
-    expect(colunasDaLinha(true, true)).toBe('16px 24px 96px minmax(0, 1fr) 190px auto');
+    expect(colunasDaLinha(true, true)).toBe('18px 48px 112px minmax(0, 1fr) 64px 34px 208px 84px 168px 32px');
     const html = linha(desenhar({}));
-    expect(html).toContain('grid-template-columns:16px 24px 96px minmax(0, 1fr) 190px auto');
-    expect(html).not.toContain('max-width:260px');
+    expect(html).toContain('grid-cols-subgrid');
+    expect(html).not.toContain('max-w-[300px]');
   });
 
   it('a régua da largura é a de 1200 px, e a barra aparece uma vez só nos dois layouts', () => {
@@ -376,16 +376,16 @@ describe('CorteLinhaAp · a barra e a largura (D-868)', () => {
   });
 
   it('janela estreita: a barra desce para baixo do título, que não perde espaço', () => {
-    expect(colunasDaLinha(false, false)).toBe('24px 96px minmax(0, 1fr) auto');
+    expect(colunasDaLinha(false, false)).toBe('48px 112px minmax(0, 1fr) 64px 34px 84px 168px 32px');
     h.janelaLarga = false;
     const html = linha(desenhar({}));
-    expect(html).toContain('grid-template-columns:16px 24px 96px minmax(0, 1fr) auto');
+    expect(html).toContain('grid-cols-subgrid');
     const timecode = html.indexOf('00:06:44');
-    const barra = html.indexOf('max-width:260px');
+    const barra = html.indexOf('max-w-[300px]');
     expect(timecode).toBeGreaterThan(-1);
     expect(barra).toBeGreaterThan(timecode);
     expect(html.indexOf('data-estado')).toBeGreaterThan(barra);
-    expect(html.indexOf('data-estado')).toBeLessThan(html.indexOf('Editar'));
+    expect(html.indexOf('data-estado')).toBeLessThan(html.indexOf('Aprovar'));
   });
 });
 

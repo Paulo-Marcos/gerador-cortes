@@ -1,6 +1,7 @@
 import { CLAUDE_BRAND, ClaudeIcon } from '@/components/ui/claude-button';
 import { GEMINI_BRAND, GeminiIcon } from '@/components/ui/gemini-button';
 import { Icon } from '@/upgrade/Icon';
+import type * as React from 'react';
 import type { ReactNode } from 'react';
 
 // D-988: quem propôs o corte, num ícone ao lado do título. É o que deixa o
@@ -28,7 +29,9 @@ export function SeloDaOrigem({ origem }: { origem: string | null | undefined }) 
       role="img"
       title={visual.dica}
       aria-label={visual.dica}
-      style={{ display: 'inline-flex', flex: 'none', color: visual.cor }}
+      // A cor é a da marca de quem propôs (dado, não aparência da tela): entra por variável.
+      style={{ '--cor-da-origem': visual.cor } as React.CSSProperties}
+      className="inline-flex flex-none text-[color:var(--cor-da-origem)]"
     >
       {visual.icone}
     </span>

@@ -7,51 +7,41 @@ import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { ShortsDesteCorte } from '@/features/shorts/ShortsDesteCorte';
 import { useCapaDaLinha } from './useCapaDaLinha';
 import { useFocoDaLinhaNaUrl } from './useFocoDaLinhaNaUrl';
-import { formatarDuracaoHMS } from '@/lib/utils';
+import { cn, formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { Checkbox } from '@/components/ui/checkbox';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
-import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
-import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { SeloDeEstado, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
-import { montarTira } from '@/upgrade/tiraDoCorte';
+import { Icon } from '@/components/ui/icon';
+import { LinkDeAcao } from '@/components/ui/link-de-acao';
+import { MedidorDeEtapas } from '@/components/ui/medidor-de-etapas';
+import { Selo } from '@/components/ui/selo';
+import { montarTira, resumoDaLinha } from '@/upgrade/tiraDoCorte';
 import { MetadadosDoCorteModal } from '@/features/metadata/MetadadosDoCorteModal';
-import { BarraDoCorte } from '@/upgrade/BarraDoCorte';
 import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
 import { estadoDaLinha, maisDaLinha, ondeJaSubiu, primarioDaLinha, montarProximoDaLinha } from './acoesDaLinha';
 import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
-import { SeloDaNota } from '@/features/porque-do-corte/SeloDaNota';
+import { idDaLinha, SELO_DO_CORTE } from './leituraDoMapa';
+import { CapaDaLinha, NotaDaLinha, OrdemDaLinha } from './PartesDaLinha';
 import { SeloDaOrigem } from './SeloDaOrigem';
 import { PorQueDoCorteModal } from '@/features/porque-do-corte/PorQueDoCorteModal';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A linha do corte no Workspace.
 //
-// O protótipo troca o card por LINHA, e a troca tem uma razão: numa
-// live de 14 cortes a pergunta não é "como é este corte?" e sim "qual
-// deles ainda me deve alguma coisa?". Linha deixa comparar de cima a
-// baixo; grade obriga a varrer.
+// Numa live de 14 cortes a pergunta não é "como é este corte?" e sim "qual deles ainda me
+// deve alguma coisa?". Linha deixa comparar de cima a baixo; grade obriga a varrer.
 //
-// A leitura vai da esquerda para a direita e termina na decisão:
-// miniatura → identidade → o que falta → o que fazer agora.
-//
-// D-868 (Onda 3, notas 3 e 4): o "o que falta" eram 11 siglas e virou uma
-// barra de 8 passos com "N de 8 · próximo: verbo"; o "o que fazer" eram seis
-// ícones e virou Editar e o principal, com rótulo, mais um "⋯" com o resto
-// (acoesDaLinha). Alvos de 32 px.
+// D-1149 (E-069 H-16, DIRECAO §7.2): a linha é a da `Lista` da Sala escura, e as colunas
+// são as do cabeçalho: seleção · nº · capa · Corte · Duração · Nota · Etapas · Estado ·
+// ação · ⋯. O "o que falta" é o `MedidorDeEtapas` (oito traços e a frase, no lugar da barra
+// da D-868 e das siglas de antes). A linha não tem botão: a ação é texto, uma só, e o resto
+// vai para o "⋯". O título e a capa abrem o corte no editor. A linha é um `<article>`
+// focável que ocupa a grade da `<li>` por `subgrid`: quem a desenha é a tela.
 // ─────────────────────────────────────────────────────────────────
 
-const GRADIENTES = [250, 22, 160, 300, 60, 200];
-
-/**
- * D-868: as colunas da linha. Com janela larga a barra tem coluna própria;
- * abaixo de BARRA_EM_COLUNA_MIN_PX ela desce para baixo do título — a
- * coluna de 190 px tirava o espaço do título, que a 1024 px chegava a 0.
- */
-export function colunasDaLinha(comSelecao: boolean, barraEmColuna: boolean): string {
-  return [comSelecao && '16px', '24px', '96px', 'minmax(0, 1fr)', barraEmColuna && '190px', 'auto']
-    .filter(Boolean)
-    .join(' ');
-}
+// As colunas moram em `colunasDaLista` (a tela as lê sem montar a linha); o nome segue
+// exportado daqui, onde o teste da linha (D-868) o busca.
+export { colunasDaLinha } from './colunasDaLista';
 
 type CorteLinhaApProps = {
   projetoId: string;
@@ -68,7 +58,10 @@ type CorteLinhaApProps = {
   /** D-746: seleção em lote (Aprovar N / Devolver N na tela da live). */
   selecionado?: boolean;
   onAlternarSelecao?: () => void;
+  /** D-1149: a linha recebeu o foco — o mapa acende o corte dela. */
+  onAbrir?: () => void;
 };
+
 
 type TriagemPeloTeclado = {
   projetoId: string;
@@ -157,6 +150,7 @@ export function CorteLinhaAp({
   enviando,
   selecionado = false,
   onAlternarSelecao,
+  onAbrir,
 }: CorteLinhaApProps) {
   const navigate = useNavigate();
   const abrirPasta = useAbrirPasta();
@@ -172,16 +166,22 @@ export function CorteLinhaAp({
     });
 
   const estado = estadoDaLinha(corte, status);
+  const riscado = estado === 'rejeitado';
   const capa = useCapaDaLinha(projetoId, status.thumbnail_path);
-  const [capaErro, setCapaErro] = useState(false);
   const [metaAberto, setMetaAberto] = useState(false);
   const [porQueAberto, setPorQueAberto] = useState(false);
   const fecharMeta = useCallback(() => setMetaAberto(false), []);
-  const hue = GRADIENTES[status.numero % GRADIENTES.length];
   const tira = montarTira(status, corte?.status);
   const durSeg = corte?.duracao_clip_seg || (corte ? corte.fim_seg - corte.inicio_seg : 0);
+  const selo = SELO_DO_CORTE[estado];
 
   const irEditor = () => navigate(`/projetos/${projetoId}/cortes/${status.corte_id}`);
+  // D-1149: o diálogo devolve o foco a quem o abriu, e o item do ⋯ some junto com o menu
+  // (o foco caía no <body>). Antes de abrir, a linha toma o foco: é a ela que ele volta.
+  const pelaLinha = (abrir: () => void) => () => {
+    refDaLinha.current?.focus({ preventScroll: true });
+    abrir();
+  };
 
   const primario = primarioDaLinha(estado, {
     aprovar: () => aprovar.mutate(undefined, { onError: avisarFalha('aprovar') }),
@@ -198,13 +198,12 @@ export function CorteLinhaAp({
       navigate(`/projetos/${projetoId}/post-production?corte=${status.corte_id}`),
     metadados: () => setMetaAberto(true),
     abrirPasta: () => abrirPasta.mutate(status.corte_id),
-    informarUrl: onInformarUrl,
-    liberarPublicacao: onLiberarPublicacao,
+    informarUrl: pelaLinha(onInformarUrl),
+    liberarPublicacao: pelaLinha(onLiberarPublicacao),
   });
 
-  // D-868: o vidro de cada linha é um contexto de empilhamento, e a de baixo
-  // pintava por cima do ⋯ aberto. A linha sobe enquanto o SEU ⋯ está aberto
-  // (amarrar ao foco falhava: K ou Tab levavam o foco e o menu ficava aberto).
+  // D-868: com o ⋯ aberto a linha sobe de camada (o menu é absoluto e a de baixo pintava
+  // por cima). Amarrar ao foco falhava: K ou Tab levavam o foco e o menu ficava aberto.
   const [maisAberto, setMaisAberto] = useState(false);
   const barraEmColuna = useJanelaMin(BARRA_EM_COLUNA_MIN_PX);
   const aoTeclar = useTriagemPeloTeclado({
@@ -216,164 +215,95 @@ export function CorteLinhaAp({
     avisarFalha,
     explicar: () => setPorQueAberto(true),
   });
+  const enviandoEste = enviando && estado === 'pronto';
+  // Os traços em cima e a frase embaixo, inteira (a coluna não comporta os dois lado a lado
+  // sem roubar o título). O medidor segue com a frase no `aria-label`.
+  const medidor = (
+    <span className="flex min-w-0 flex-col gap-1.5">
+      <MedidorDeEtapas tira={tira} comFrase={false} />
+      <span className={cn('text-pequeno', riscado ? 'text-erro' : 'text-fg-3')}>{resumoDaLinha(tira)}</span>
+    </span>
+  );
 
   return (
     <article
       ref={refDaLinha}
-      className="card row"
+      id={idDaLinha(status.corte_id)}
+      data-sala=""
       tabIndex={0}
       onKeyDown={aoTeclar}
+      onFocus={onAbrir}
       aria-label={`Corte #${status.numero} — ${status.titulo}`}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: colunasDaLinha(Boolean(onAlternarSelecao), barraEmColuna),
-        gap: 12,
-        alignItems: 'center',
-        padding: '9px 11px',
-        opacity: estado === 'rejeitado' ? 0.72 : 1,
-        borderColor: selecionado ? 'var(--sel-line)' : undefined,
-        position: 'relative',
-        zIndex: maisAberto ? 3 : undefined,
-      }}
+      className={cn(
+        'col-span-full grid grid-cols-subgrid items-center rounded-bloco',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foco',
+        maisAberto && 'relative z-[3]',
+      )}
     >
       {onAlternarSelecao ? (
-        <input
-          type="checkbox"
+        <Checkbox
           checked={selecionado}
-          onChange={onAlternarSelecao}
+          onCheckedChange={onAlternarSelecao}
           aria-label={`Selecionar o corte #${status.numero}`}
-          style={{ width: 15, height: 15, margin: 0, accentColor: 'var(--accent)', cursor: 'pointer' }}
         />
       ) : null}
-      {/* Reordenar fica antes da miniatura: é a única ação que muda a
-          LISTA e não o corte, e misturá-la com as outras à direita
-          confundia os dois tipos de gesto. */}
-      <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <button
-          type="button"
-          onClick={() => onMover(-1)}
-          disabled={!podeSubir || reordenando}
-          aria-label={`Mover corte ${status.numero} para cima`}
-          style={botaoOrdem}
-        >
-          <Icon name="chevron-up" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onMover(1)}
-          disabled={!podeDescer || reordenando}
-          aria-label={`Mover corte ${status.numero} para baixo`}
-          style={botaoOrdem}
-        >
-          <Icon name="chevron-down" />
-        </button>
-      </span>
+      <OrdemDaLinha
+        numero={status.numero}
+        podeSubir={podeSubir}
+        podeDescer={podeDescer}
+        reordenando={reordenando}
+        onMover={onMover}
+      />
+      <CapaDaLinha numero={status.numero} src={capa ?? undefined} riscada={riscado} onAbrir={irEditor} />
 
-      <MolduraDeVideo
-        mat={4}
-        proporcao="16/9"
-        onClick={irEditor}
-        rotulo={`Abrir o corte ${status.numero} no editor`}
-      >
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: `linear-gradient(135deg,oklch(0.55 0.05 ${hue}),oklch(0.28 0.04 ${hue}))`,
-          }}
-        />
-        {capa && !capaErro ? (
-          <img
-            src={capa}
-            alt=""
-            loading="lazy"
-            // A limpeza de mídia apaga a capa do disco: sem isto o card
-            // mostrava o ícone de imagem quebrada sobre o gradiente.
-            onError={() => setCapaErro(true)}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-            }}
-          />
-        ) : null}
-        {durSeg > 0 ? (
-          <span style={DURACAO_NA_MINIATURA}>{formatarDuracaoHMS(durSeg)}</span>
-        ) : null}
-      </MolduraDeVideo>
-
-      <span style={{ minWidth: 0 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--dim)' }}>
-            #{status.numero}
-          </span>
+      <span className="flex min-w-0 flex-col gap-1">
+        <span className="flex min-w-0 items-center gap-2">
           <button
             type="button"
+            data-sala=""
             onClick={irEditor}
             title={status.titulo ?? undefined}
-            style={{
-              ...TITULO,
-              textDecoration: estado === 'rejeitado' ? 'line-through' : 'none',
-            }}
+            className={cn(
+              'min-h-6 min-w-0 truncate rounded-md border-0 bg-transparent p-0 text-left text-linha text-fg hover:text-iris-2',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
+              riscado && 'text-fg-3 line-through',
+            )}
           >
             {status.titulo || `Corte #${status.numero}`}
           </button>
-          {corte?.is_fire ? (
-            <ShortsDesteCorte corteId={status.corte_id} />
-          ) : null}
-          <SeloDeEstado tom={TOM_DO_CORTE[estado]}>{estado}</SeloDeEstado>
           <SeloDaOrigem origem={corte?.origem_analise} />
-          <SeloDaNota score={corte?.score} onAbrir={() => setPorQueAberto(true)} />
         </span>
-
-        {corte ? (
-          <span
-            style={{
-              display: 'block',
-              marginTop: 6,
-              fontFamily: 'var(--mono)',
-              fontSize: 11,
-              color: 'var(--dim)',
-            }}
-          >
-            {corte.inicio_hms} → {corte.fim_hms}
-          </span>
-        ) : null}
-        {barraEmColuna ? null : (
-          <span style={{ display: 'block', marginTop: 6, maxWidth: 260 }}>
-            <BarraDoCorte tira={tira} />
-          </span>
-        )}
+        {/* O fire e os shorts dele vão na linha do intervalo: ao lado do título, roubavam o espaço dele. */}
+        <span className="flex min-w-0 items-center gap-3">
+          {corte ? (
+            <span className="num text-micro text-fg-3">
+              {corte.inicio_hms} → {corte.fim_hms}
+            </span>
+          ) : null}
+          {corte?.is_fire ? <ShortsDesteCorte corteId={status.corte_id} /> : null}
+        </span>
+        {barraEmColuna ? null : <span className="mt-1 block max-w-[300px]">{medidor}</span>}
       </span>
 
-      {barraEmColuna ? <BarraDoCorte tira={tira} /> : null}
-
-      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <button type="button" className="btn" style={ALVO} onClick={irEditor}>
-          <Icon name={ICONE_DO_CONCEITO.editar} />
-          Editar
-        </button>
-        <button
-          type="button"
-          className={primario.forte ? 'btn btn-pri' : 'btn'}
-          style={ALVO}
-          onClick={primario.acao}
-          disabled={enviando && estado === 'pronto'}
-        >
-          <Icon name={enviando && estado === 'pronto' ? 'loader' : primario.icone} />
-          {primario.texto}
-        </button>
-        <OverflowMenu
-          items={mais}
-          label={`Mais ações do corte ${status.numero}`}
-          grande
-          onAbertoMudou={setMaisAberto}
-        />
+      <span className="num text-pequeno text-fg-2">{durSeg > 0 ? formatarDuracaoHMS(durSeg) : '—'}</span>
+      <span className="flex justify-center">
+        <NotaDaLinha score={corte?.score} onAbrir={() => setPorQueAberto(true)} />
       </span>
+      {barraEmColuna ? medidor : null}
+      <span>
+        <Selo tom={selo.tom}>{selo.texto}</Selo>
+      </span>
+
+      <LinkDeAcao onClick={primario.acao} disabled={enviandoEste} aria-busy={enviandoEste || undefined}>
+        <Icon name={enviandoEste ? 'loader' : primario.icone} />
+        {primario.texto}
+      </LinkDeAcao>
+      <OverflowMenu
+        items={mais}
+        label={`Mais ações do corte ${status.numero}`}
+        grande
+        onAbertoMudou={setMaisAberto}
+      />
       {porQueAberto && corte ? (
         <PorQueDoCorteModal corte={corte} aoFechar={() => setPorQueAberto(false)} />
       ) : null}
@@ -389,48 +319,3 @@ export function CorteLinhaAp({
     </article>
   );
 }
-
-const DURACAO_NA_MINIATURA = {
-  position: 'absolute',
-  bottom: 3,
-  right: 4,
-  zIndex: 1,
-  fontFamily: 'var(--mono)',
-  fontSize: 9.5,
-  color: '#fff',
-  textShadow: '0 1px 2px rgb(0 0 0/.8)',
-} as const;
-
-// D-868: os alvos das ações da linha têm 32 px (o `.btn` tem 30).
-const ALVO = { height: 32 } as const;
-
-const TITULO = {
-  minWidth: 0,
-  // R4: o título abre o corte e media 20 px de altura clicável.
-  minHeight: 24,
-  padding: 0,
-  border: 0,
-  background: 'none',
-  fontSize: 13,
-  fontWeight: 700,
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  textAlign: 'left',
-  cursor: 'pointer',
-} as const;
-
-// R4: reordenar é o menor alvo da casca e o gesto que erra mais caro — ele
-// muda a LISTA, não o corte. Sobe para o piso de alvo clicável.
-const botaoOrdem = {
-  display: 'grid',
-  placeItems: 'center',
-  width: 24,
-  height: 24,
-  padding: 0,
-  border: '1px solid var(--line)',
-  borderRadius: 'var(--r1)',
-  background: 'var(--inset)',
-  color: 'var(--mute)',
-  cursor: 'pointer',
-} as const;
