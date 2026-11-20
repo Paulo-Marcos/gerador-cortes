@@ -19,10 +19,10 @@ class DefinirNomeDoOperador(BaseModel):
 
 
 @router.get("", response_model=NomeDoOperador)
-async def ler_nome():
+def ler_nome():
     return NomeDoOperador(nome=operador.ler_nome())
 
 
 @router.put("", response_model=NomeDoOperador)
-async def definir_nome(body: DefinirNomeDoOperador):
+def definir_nome(body: DefinirNomeDoOperador):
     return NomeDoOperador(nome=operador.definir_nome(body.nome))

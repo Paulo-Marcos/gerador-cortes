@@ -19,7 +19,7 @@ _DDL = """
 """
 
 
-def _connect(db_path: Path) -> sqlite3.Connection:
+def abrir_banco(db_path: Path) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
@@ -29,7 +29,7 @@ def _connect(db_path: Path) -> sqlite3.Connection:
 
 
 def ler_nome(db_path: Path) -> str:
-    conn = _connect(db_path)
+    conn = abrir_banco(db_path)
     try:
         linha = conn.execute("SELECT nome FROM operador WHERE id = 1").fetchone()
     finally:
@@ -38,7 +38,7 @@ def ler_nome(db_path: Path) -> str:
 
 
 def gravar_nome(db_path: Path, nome: str) -> None:
-    conn = _connect(db_path)
+    conn = abrir_banco(db_path)
     try:
         conn.execute(
             "INSERT INTO operador (id, nome) VALUES (1, ?) "
