@@ -64,15 +64,18 @@ type CorteLinhaApProps = {
 
 
 /**
- * D-1149: a linha vizinha na lista, para J/K e para o foco depois do R. Na lista da Sala
- * escura cada `<article>` mora sozinho na sua `<li>` (e a primeira `<li>` é o cabeçalho,
- * sem linha): a vizinha é o `<article>` da `<li>` ao lado. Fora de uma `<li>`, o irmão.
+ * D-1149: o item da lista que leva a linha. Na lista da Sala escura cada `<article>` mora
+ * sozinho na sua `<li>`, e a vizinha se procura entre as `<li>`; fora de uma lista, o item é
+ * o próprio `<article>`.
  */
-export function linhaVizinha(linha: Element, sentido: 1 | -1): HTMLElement | null {
-  const item = linha.parentElement?.tagName === 'LI' ? linha.parentElement : null;
-  if (!item) return (sentido === 1 ? linha.nextElementSibling : linha.previousElementSibling) as HTMLElement | null;
-  const aoLado = sentido === 1 ? item.nextElementSibling : item.previousElementSibling;
-  return aoLado?.querySelector<HTMLElement>('article') ?? null;
+export function itemDaLinha(artigo: Element): Element {
+  return artigo.parentElement?.tagName === 'LI' ? artigo.parentElement : artigo;
+}
+
+/** A linha (o `<article>`) de um item vizinho. A `<li>` do cabeçalho não tem linha: nada. */
+export function linhaDoItem(item: Element | null): HTMLElement | null {
+  if (!item) return null;
+  return item.tagName === 'LI' ? item.querySelector<HTMLElement>('article') : (item as HTMLElement);
 }
 
 type TriagemPeloTeclado = {
@@ -127,18 +130,19 @@ function useTriagemPeloTeclado({
     const acao = acaoDaTeclaNaLinha(e.key, corte?.status);
     if (!acao) return;
     e.preventDefault();
-    const linha = e.currentTarget;
+    const artigo = e.currentTarget;
+    const linha = itemDaLinha(artigo);
     if (acao === 'aprovar') aprovar.mutate(undefined, { onError: avisarFalha('aprovar') });
     else if (acao === 'devolver')
       atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('devolver') });
     else if (acao === 'explicar') explicar();
     else if (acao === 'riscar') {
-      linhaQuePediu.current = linha;
-      vizinhaAoRiscar.current = linhaVizinha(linha, 1) ?? linhaVizinha(linha, -1);
+      linhaQuePediu.current = artigo;
+      vizinhaAoRiscar.current = linhaDoItem(linha.nextElementSibling) ?? linhaDoItem(linha.previousElementSibling);
       riscar.riscarCorte();
     } else {
       e.stopPropagation();
-      const vizinha = linhaVizinha(linha, acao === 'descer' ? 1 : -1);
+      const vizinha = linhaDoItem(acao === 'descer' ? linha.nextElementSibling : linha.previousElementSibling);
       vizinha?.focus();
     }
   };
