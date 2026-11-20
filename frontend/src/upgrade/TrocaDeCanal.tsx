@@ -28,6 +28,11 @@ export function luzDaFicha(canal: Pick<Canal, 'paleta' | 'luz'>, tema: Tema): Lu
   return luzDoCanalDe(canal, tema === 'dark' ? 'escuro' : 'claro');
 }
 
+/** "0 lives", "1 live", "219 lives" — a contagem vem pronta no payload da lista de canais (D-1141). */
+export function rotuloDeLives(lives: number): string {
+  return `${lives.toLocaleString('pt-BR')} ${lives === 1 ? 'live' : 'lives'}`;
+}
+
 const LINHA_DO_MENU =
   'flex w-full items-center gap-2.5 rounded-[10px] px-2.5 text-left text-corpo text-fg hover:bg-vidro-2 ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco';
@@ -63,6 +68,9 @@ export function ListaDeCanais({ canais, tema, fechar }: { canais: Canal[]; tema:
             <span className="block truncate font-semibold">{c.nome || c.id}</span>
             <span className="block truncate text-micro font-medium text-fg-3">{c.handle}</span>
           </span>
+          {typeof c.lives === 'number' ? (
+            <span className="flex-none text-micro font-medium tabular-nums text-fg-3">{rotuloDeLives(c.lives)}</span>
+          ) : null}
           {c.ativo ? <Icon name="check" size={16} className="flex-none text-iris" /> : null}
         </button>
       ))}
