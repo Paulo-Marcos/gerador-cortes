@@ -202,14 +202,14 @@ describe('o painel enquanto gera', () => {
     const qc = new QueryClient();
     servidorDiz(qc, 'a', true);
 
-    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).toContain('disabled');
+    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).toMatch(/\sdisabled(=|\s|>)/);
   });
 
   it('sem geração, validar segue livre', () => {
     const qc = new QueryClient();
     servidorDiz(qc, 'a', false);
 
-    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).not.toContain('disabled');
+    expect(painel(qc, 'a', [cena]).match(validar)?.[0]).not.toMatch(/\sdisabled(=|\s|>)/);
   });
 });
 

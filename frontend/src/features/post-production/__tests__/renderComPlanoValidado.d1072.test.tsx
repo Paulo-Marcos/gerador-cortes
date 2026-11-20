@@ -154,7 +154,7 @@ describe('D-1072 · a Pós na página', () => {
     const qc = new QueryClient({ defaultOptions: { queries: { enabled: false } } });
     qc.setQueryData(corteKey('c1'), CORTE);
 
-    expect(desenhar(qc)).toMatchObject({ desabilitado: true, motivo: MOTIVO_PLANO_NAO_VALIDADO });
+    expect(desenhar(qc)).toMatchObject({ texto: 'Validar plano', desabilitado: false });
 
     // É o que `useValidarCenasRemotion` faz no sucesso: o corte da resposta vai
     // para `corteKey`, e a tela relê dali, sem buscar nada de novo.
@@ -170,6 +170,6 @@ describe('D-1072 · a Pós na página', () => {
     expect(desenhar(qc).desabilitado).toBe(false);
 
     qc.setQueryData(corteKey('c1'), { ...CORTE, cenas_validadas: 0 });
-    expect(desenhar(qc).desabilitado).toBe(true);
+    expect(desenhar(qc).texto).toBe('Validar plano');
   });
 });

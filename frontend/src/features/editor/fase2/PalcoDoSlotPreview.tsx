@@ -40,7 +40,7 @@ export function PalcoDoSlotPreview(props: Props) {
           return videoSrc ? (
             <CroppedStill videoSrc={videoSrc} currentTime={currentTime} crop={crop} renderW={w} renderH={h} />
           ) : (
-            <div className="h-full w-full bg-[var(--wb-bg-inset)]" />
+            <div className="h-full w-full bg-poco" />
           );
         }}
       />
@@ -75,7 +75,7 @@ function PalcoDeSempre({ config, videoSrc, currentTime, fundo, placa }: Props) {
           renderH={telaH}
         />
       ) : (
-        <div className="h-full w-full bg-[var(--wb-bg-inset)]" />
+        <div className="h-full w-full bg-poco" />
       )}
     </ImageFrame>
     {hasFacecam && (
@@ -94,7 +94,7 @@ function PalcoDeSempre({ config, videoSrc, currentTime, fundo, placa }: Props) {
             renderH={faceH}
           />
         ) : (
-          <div className="h-full w-full bg-[var(--wb-bg-inset)]" />
+          <div className="h-full w-full bg-poco" />
         )}
       </ImageFrame>
     )}

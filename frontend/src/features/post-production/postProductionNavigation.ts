@@ -84,6 +84,13 @@ export function montarPrimarioDaPos(p: {
   planoValidado: boolean;
   onRenderizar: () => void;
   onIrAoEditor: () => void;
+  /**
+   * D-1164 (DIRECAO §5): o primário da Pós é "Validar plano" enquanto o plano não foi
+   * validado, para a tela sempre ter um passo que se pode dar (o render continua travado
+   * até validar, decisão de 06/11). Sem este callback o primário é o de antes.
+   */
+  onValidar?: () => void;
+  validando?: boolean;
 }) {
   if (p.brutoAusente && p.gerandoBruto && !p.rodando) {
     return {
@@ -99,6 +106,15 @@ export function montarPrimarioDaPos(p: {
       texto: 'Gerar bruto no editor',
       icone: 'scissors' as const,
       onClick: p.onIrAoEditor,
+      semEnter: true,
+    };
+  }
+  if (p.onValidar && !p.planoValidado && !p.rodando && !p.brutoAusente) {
+    return {
+      texto: p.validando ? 'Validando…' : 'Validar plano',
+      icone: p.validando ? ('loader' as const) : ('circle-check' as const),
+      onClick: p.onValidar,
+      desabilitado: false,
       semEnter: true,
     };
   }

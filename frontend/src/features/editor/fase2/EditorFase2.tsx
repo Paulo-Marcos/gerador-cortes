@@ -17,6 +17,7 @@ import { PanelShell } from '@/components/workbench/PanelShell';
 import { useEditorFase2 } from './useEditorFase2';
 import { PainelLateralComPiso } from './PainelLateralComPiso';
 import { Icon } from '@/upgrade/Icon';
+import { FOCO } from '../salaDoEditor';
 
 // D-1072: a aba Filtros saiu: o filtro é do canal (RN-25) e aparece como linha.
 export type AbaDireita = 'cenas' | 'layout';
@@ -85,7 +86,7 @@ export function EditorFase2(props: Props) {
           id="cenas"
           side="left"
           title={`CENAS · ${cenas.length}`}
-          indicator={<span aria-hidden className="h-2 w-2 rounded-full bg-[var(--wb-accent)]" />}
+          indicator={<span aria-hidden className="size-2 rounded-pilula bg-iris" />}
         >
           <div className="flex min-h-0 flex-1 flex-col">
             <AberturaEditorial
@@ -304,14 +305,14 @@ export function EditorFase2(props: Props) {
           </div>
         </div>
       </Panel>
-      <PanelResizeHandle className="w-1 bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--wb-accent)_50%,transparent)]" />
+      <PanelResizeHandle className="w-1 bg-fio transition-colors duration-150 hover:bg-iris-fio motion-reduce:transition-none" />
       <PainelLateralComPiso grupoId={GRUPO_DOS_PAINEIS}>
         <div className="flex h-full min-h-0 flex-col">
           {/* Tabs header — replica v3_pos.jsx:385-432. D-1072: Cenas e Layout. D-1086: o filtro do canal (RN-25)
               é um chip nesta linha, FORA do tablist (o ARIA só admite abas nele), não uma faixa fixa. */}
           <div
             data-testid="linha-das-abas"
-            className="flex shrink-0 items-center gap-1 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2"
+            className="flex shrink-0 flex-wrap items-center gap-1 border-b border-fio bg-painel-solido px-3 py-2"
           >
             <div role="tablist" aria-label="Painel lateral" className="flex items-center gap-1">
               <AbaButton
@@ -396,27 +397,28 @@ function FontePresetPanel({ value, pending, onChange }: FontePresetPanelProps) {
   const ativo = FONT_PRESET_OPTIONS.find((opt) => opt.id === value);
 
   return (
-    <section className="shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
+    <section className="shrink-0 border-b border-fio bg-painel-solido">
       <button
         type="button"
+        data-sala=""
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[var(--wb-bg-card)]"
+        className={cn('flex w-full items-center gap-2 px-3 py-2 text-left transition-colors duration-150 hover:bg-vidro-2 motion-reduce:transition-none', FOCO)}
         aria-expanded={expanded}
         aria-controls="fonte-preset-grid"
       >
         {expanded ? (
-          <Icon name="chevron-down" className="text-[var(--wb-text-mute)]" />
+          <Icon name="chevron-down" className="text-fg-2" />
         ) : (
-          <Icon name="chevron-right" className="text-[var(--wb-text-mute)]" />
+          <Icon name="chevron-right" className="text-fg-2" />
         )}
-        <Icon name="type" className="text-[var(--wb-text-mute)]" />
-        <strong className="font-editorial text-[13px] font-medium text-[var(--wb-text)]">
+        <Icon name="type" className="text-fg-2" />
+        <strong className="text-corpo font-semibold text-fg">
           Fonte dos cards
         </strong>
         {!expanded && ativo && (
           <span className="ml-auto inline-flex items-center gap-1.5 truncate">
-            <span className="text-[11px] font-bold text-[var(--wb-text)]">{ativo.label}</span>
-            <span className="font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+            <span className="text-micro font-bold text-fg">{ativo.label}</span>
+            <span className="num text-micro text-fg-3">
               {ativo.stack}
             </span>
           </span>
@@ -430,19 +432,21 @@ function FontePresetPanel({ value, pending, onChange }: FontePresetPanelProps) {
               <button
                 key={option.id}
                 type="button"
+                data-sala=""
                 disabled={pending}
                 onClick={() => onChange(option.id)}
                 className={cn(
-                  'min-h-[42px] rounded-[var(--radius-xs)] border px-2 py-1.5 text-left transition-colors disabled:cursor-wait disabled:opacity-60',
+                  'min-h-[42px] rounded-campo border px-2 py-1.5 text-left transition-colors duration-150 disabled:cursor-wait disabled:text-fg-off motion-reduce:transition-none',
                   active
-                    ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--wb-text)]'
-                    : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
+                    ? 'border-iris-fio bg-iris-suave text-iris-2'
+                    : 'border-campo bg-vidro-2 text-fg-2 hover:bg-vidro-3 hover:text-fg',
+                  FOCO,
                 )}
                 aria-pressed={active}
                 title={option.stack}
               >
-                <span className="block text-[11px] font-bold leading-none">{option.label}</span>
-                <span className="mt-1 block truncate font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+                <span className="block text-micro font-bold">{option.label}</span>
+                <span className="num text-micro mt-1 block truncate text-fg-3">
                   {option.stack}
                 </span>
               </button>
@@ -466,13 +470,13 @@ function AbaButton({ ativo, onClick, icon, label }: AbaButtonProps) {
     <button
       type="button"
       role="tab"
+      data-sala=""
       aria-selected={ativo}
       onClick={onClick}
       className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-xs)] border px-2.5 py-1 text-[11px] uppercase tracking-[0.04em] transition-colors',
-        ativo
-          ? 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] font-bold text-[var(--wb-ink)] shadow-sm'
-          : 'border-transparent font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+        'inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pilula px-3 text-pequeno transition-colors duration-150 motion-reduce:transition-none',
+        ativo ? 'bg-vidro-3 font-bold text-fg' : 'font-semibold text-fg-2 hover:bg-vidro-2 hover:text-fg',
+        FOCO,
       )}
     >
       {icon}

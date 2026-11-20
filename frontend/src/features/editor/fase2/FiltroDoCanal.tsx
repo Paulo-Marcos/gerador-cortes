@@ -39,14 +39,14 @@ export function FiltroDoCanal({ className }: { className?: string }) {
       data-testid="filtro-do-canal"
       title={`Filtro do canal (global): ${nome}. Alterar em Canais → Aplicação`}
       className={cn(
-        'inline-flex min-w-0 max-w-[50%] items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-0.5 text-[11px] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)]',
+        'inline-flex min-w-0 max-w-[50%] items-center gap-1 rounded-etiqueta px-1.5 py-0.5 text-micro text-fg-2 transition-colors duration-150 hover:bg-vidro-2 hover:text-fg motion-reduce:transition-none',
         className,
       )}
     >
       <Icon name="sliders-horizontal" className="shrink-0" />
       <span className="sr-only">Filtro do canal (global):</span>
       <span aria-hidden className="shrink-0">filtro</span>
-      <strong className="truncate font-semibold text-[var(--wb-text)]">{nome}</strong>
+      <strong className="truncate font-semibold text-fg">{nome}</strong>
     </Link>
   );
 }

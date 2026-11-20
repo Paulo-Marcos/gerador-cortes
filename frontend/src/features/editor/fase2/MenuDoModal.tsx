@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { FOCO } from '../salaDoEditor';
 import { Icon, type IconName } from '@/upgrade/Icon';
 
 // D-927: o modal de posição em grupos. Um menu na coluna da esquerda troca o
@@ -38,18 +39,20 @@ export function MenuDoModal({
   onEscolher: (grupo: GrupoDoModal) => void;
 }) {
   return (
-    <nav aria-label="Grupos de ajustes" className="flex flex-col gap-1 border-r border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-2">
+    <nav aria-label="Grupos de ajustes" className="flex flex-col gap-1 border-r border-fio bg-app p-2">
       {grupos.map((grupo) => (
         <button
           key={grupo}
           type="button"
+          data-sala=""
           aria-current={ativo === grupo ? 'page' : undefined}
           onClick={() => onEscolher(grupo)}
           className={cn(
-            'flex flex-col items-center gap-1 rounded-[var(--radius-sm)] px-1 py-2 text-[11px] font-semibold transition-colors',
+            'flex flex-col items-center gap-1 rounded-campo px-1 py-2 text-micro transition-colors duration-150 motion-reduce:transition-none',
+            FOCO,
             ativo === grupo
-              ? 'bg-[var(--sel-bg)] text-[var(--sel-ink)]'
-              : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]',
+              ? 'bg-vidro-3 text-fg'
+              : 'text-fg-2 hover:bg-vidro-2 hover:text-fg',
           )}
         >
           <Icon name={ROTULOS[grupo].icone} size={20} />

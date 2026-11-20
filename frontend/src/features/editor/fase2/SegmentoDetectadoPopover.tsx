@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import { segParaMmSs } from '../timeUtils';
 import type { DecisaoSegmentoDetectado, SegmentoDetectado } from '@/types/models';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/upgrade/Icon';
+import { FOCO } from '../salaDoEditor';
 
 // F-054: popover ancorado num ponto da timeline, mostrando as 3 opções neutras
 // (Rejeitar / FULL / Compartilhada) lado a lado. Sem pré-seleção — decisão
@@ -58,29 +60,26 @@ export function SegmentoDetectadoPopover({
       ref={containerRef}
       role="dialog"
       aria-label="Decidir segmento detectado"
-      className="absolute z-[60] flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-lg"
-      style={{
-        left: anchor.left,
-        top: anchor.top,
-        // Centraliza horizontalmente no ponto âncora e sobe um pouco pra não
-        // tampar o segmento. O parent é position:relative — left/top em px.
-        transform: 'translate(-50%, -100%)',
-        minWidth: 240,
-      }}
+      // Centraliza horizontalmente no ponto âncora e sobe um pouco pra não
+      // tampar o segmento. O parent é position:relative — left/top em px.
+      className="absolute left-[var(--x)] top-[var(--y)] z-[60] flex min-w-60 -translate-x-1/2 -translate-y-full flex-col gap-2 rounded-bloco border border-fio-2 bg-painel-solido p-2 shadow-pop-luz"
+      style={{ '--x': `${anchor.left}px`, '--y': `${anchor.top}px` } as CSSProperties}
     >
       <header className="flex items-center gap-1.5">
-        <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
-          Segmento detectado
-        </span>
-        <span className="font-code text-[10px] text-[var(--wb-text-mute)]">
+        <span className="text-micro text-fg-3">Segmento detectado</span>
+        <span className="num text-micro text-fg-2">
           · {segParaMmSs(segmento.inicio, true)} → {segParaMmSs(segmento.fim, true)}
         </span>
         <div className="flex-1" />
         <button
           type="button"
+          data-sala=""
           aria-label="Fechar"
           onClick={onFechar}
-          className="flex h-5 w-5 items-center justify-center rounded text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+          className={cn(
+            'flex size-6 items-center justify-center rounded-pilula text-fg-2 transition-colors duration-150 hover:bg-vidro-2 hover:text-fg motion-reduce:transition-none',
+            FOCO,
+          )}
         >
           <Icon name="x" />
         </button>
@@ -109,37 +108,34 @@ export function SegmentoDetectadoPopover({
   );
 }
 
+// A cor diz a decisão: erro rejeita, íris é o FULL (era o violeta), info é a compartilhada.
+const TOM_DA_DECISAO = {
+  err: 'border-erro/45 bg-erro/[.13] text-erro',
+  violet: 'border-iris-fio bg-iris-suave text-iris-2',
+  info: 'border-info/45 bg-info/[.13] text-info',
+} as const;
+
 function DecisaoButton({
   tone,
   label,
   disabled,
   onClick,
 }: {
-  tone: 'err' | 'violet' | 'info';
+  tone: keyof typeof TOM_DA_DECISAO;
   label: string;
   disabled: boolean;
   onClick: () => void;
 }) {
-  const toneMap = {
-    err: { bg: 'var(--wb-err-soft)', text: 'var(--wb-err)', border: 'var(--wb-err)' },
-    violet: { bg: 'var(--wb-violet-soft)', text: 'var(--wb-violet)', border: 'var(--wb-violet)' },
-    info: { bg: 'var(--wb-info-soft)', text: 'var(--wb-info)', border: 'var(--wb-info)' },
-  }[tone];
   return (
-    <button
+    <Button
       type="button"
+      variant="secundario"
+      size="pq"
       onClick={onClick}
       disabled={disabled}
-      className={cn(
-        'inline-flex h-7 items-center justify-center rounded-[var(--radius-xs)] border px-2 font-code text-[10px] font-extrabold uppercase tracking-[0.04em] transition-opacity disabled:cursor-wait disabled:opacity-50 hover:opacity-85',
-      )}
-      style={{
-        background: toneMap.bg,
-        color: toneMap.text,
-        borderColor: `color-mix(in oklab, ${toneMap.border} 45%, transparent)`,
-      }}
+      className={cn('w-full px-2 shadow-none disabled:cursor-wait', TOM_DA_DECISAO[tone])}
     >
       {label}
-    </button>
+    </Button>
   );
 }

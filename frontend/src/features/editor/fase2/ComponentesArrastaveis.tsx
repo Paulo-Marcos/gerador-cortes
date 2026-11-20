@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type Dispatch, type PointerEvent, type RefObject, type SetStateAction } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type Dispatch, type PointerEvent, type RefObject, type SetStateAction } from 'react';
 import type { RascunhoDoPalco } from '@/features/channels/PalcoComponentesSection';
 import { limitar } from '@/lib/limitar';
 import { cn } from '@/lib/utils';
@@ -105,19 +105,21 @@ export function ComponentesArrastaveis({
             onPointerUp={arraste.soltar}
             onPointerCancel={arraste.soltar}
             className={cn(
-              'absolute cursor-grab border-2 border-dashed transition-colors',
-              selecionado ? 'border-[var(--sel-line)]' : 'border-transparent hover:border-[var(--wb-border)]',
+              'absolute left-[var(--left)] top-[var(--top)] h-[var(--height)] w-[var(--width)] cursor-grab border-2 border-dashed transition-colors duration-150 motion-reduce:transition-none',
+              selecionado ? 'border-iris' : 'border-transparent hover:border-fio-2',
             )}
-            style={{
-              left: `${(caixa.x / quadro.largura) * 100}%`,
-              top: `${(caixa.y / quadro.altura) * 100}%`,
-              width: `${(caixa.w / quadro.largura) * 100}%`,
-              height: `${(caixa.h / quadro.altura) * 100}%`,
-            }}
+            style={
+              {
+                '--left': `${(caixa.x / quadro.largura) * 100}%`,
+                '--top': `${(caixa.y / quadro.altura) * 100}%`,
+                '--width': `${(caixa.w / quadro.largura) * 100}%`,
+                '--height': `${(caixa.h / quadro.altura) * 100}%`,
+              } as CSSProperties
+            }
           >
             {selecionado && (
               <>
-                <span className="pointer-events-none absolute -top-5 left-0 rounded-sm bg-[var(--sel-bg)] px-1 font-code text-[11px] font-bold text-[var(--sel-ink)]">
+                <span className="pointer-events-none absolute -top-5 left-0 rounded-etiqueta bg-iris px-1 num text-micro font-bold text-sobre-iris">
                   {NOMES[componente]} {rotuloDoTamanho(edicao, componente)}
                 </span>
                 <AlcaDeTamanho

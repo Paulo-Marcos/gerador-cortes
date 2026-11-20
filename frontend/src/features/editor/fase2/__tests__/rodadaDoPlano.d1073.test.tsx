@@ -185,9 +185,9 @@ describe('D-1073 · o Desfazer rodada', () => {
   });
 
   it('na tela: desabilitado sem anterior e durante a geração; habilitado com a anterior', () => {
-    expect(botao(painel(DUAS), 'desfazer-rodada')).not.toContain('disabled');
-    expect(botao(painel(SO_A_ATUAL), 'desfazer-rodada')).toContain('disabled');
-    expect(botao(painel(DUAS, { emGeracao: true }), 'desfazer-rodada')).toContain('disabled');
+    expect(botao(painel(DUAS), 'desfazer-rodada')).not.toMatch(/\sdisabled(=|\s|>)/);
+    expect(botao(painel(SO_A_ATUAL), 'desfazer-rodada')).toMatch(/\sdisabled(=|\s|>)/);
+    expect(botao(painel(DUAS, { emGeracao: true }), 'desfazer-rodada')).toMatch(/\sdisabled(=|\s|>)/);
   });
 });
 
@@ -196,7 +196,7 @@ describe('D-1073 · Comparar com a rodada anterior', () => {
     const semAnterior = painel(SO_A_ATUAL);
     expect(semAnterior).not.toContain('comparar-rodadas');
     expect(semAnterior).not.toContain('Comparar com a rodada anterior');
-    expect(botao(painel(DUAS), 'comparar-rodadas')).not.toContain('disabled');
+    expect(botao(painel(DUAS), 'comparar-rodadas')).not.toMatch(/\sdisabled(=|\s|>)/);
   });
 
   it('resume o que entrou, saiu e mudou; iguais, diz que são iguais', () => {

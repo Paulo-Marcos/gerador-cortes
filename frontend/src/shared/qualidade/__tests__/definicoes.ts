@@ -210,6 +210,8 @@ export const DEFINICOES: Record<string, Definicao> = {
       /^src\/features\/projeto-detalhe\/MapaDosCortes\.tsx$/,
       // D-1150 (H-17): a agulha da linha do tempo do editor (rótulo no feixe, §3.3).
       /^src\/features\/editor\/fase1\/agulhaDaOnda\.ts$/,
+      // D-1164 (H-18): a agulha da Pós (rótulo no feixe) e o traço da cena sob ela (§3.1, §7.4).
+      /^src\/features\/editor\/fase2\/agulhaDaPos\.tsx$/,
     ],
     exemplos: [
       ['className="bg-feixe text-sobre-feixe"', 1],

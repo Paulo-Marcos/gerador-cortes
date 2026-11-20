@@ -18,6 +18,7 @@ import {
   type YoutubeSharedScreenCount,
 } from '@/shared/palco/youtubeLayout';
 import { Icon } from '@/upgrade/Icon';
+import { FOCO } from '../salaDoEditor';
 
 // D-928: a prévia e o recorte moraram aqui; quem importa por este caminho continua valendo.
 export { SlotPreview, type DragRectKey } from './SlotPreview';
@@ -106,22 +107,24 @@ export function SharedScreenCountToggle({
   onChange: (value: YoutubeSharedScreenCount) => void;
 }) {
   return (
-    <div className="mb-2 flex items-center gap-2 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1.5">
-      <span className="flex min-w-0 flex-1 font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+    <div className="mb-2 flex items-center gap-2 rounded-campo border border-fio bg-poco px-2 py-1.5">
+      <span className="flex min-w-0 flex-1 text-micro text-fg-3">
         Telas
       </span>
-      <div className="inline-flex items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
+      <div className="inline-flex items-center gap-0.5 rounded-pilula border border-fio bg-painel-solido p-0.5">
         {([1, 2] as const).map((count) => (
           <button
             key={count}
             type="button"
+            data-sala=""
             onClick={() => onChange(count)}
             aria-pressed={value === count}
             className={cn(
-              'h-6 px-2.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] transition-colors',
+              'h-6 rounded-pilula px-2.5 text-micro transition-colors duration-150 motion-reduce:transition-none',
+              FOCO,
               value === count
-                ? 'bg-[var(--wb-accent)] text-white'
-                : 'bg-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                ? 'bg-iris-suave text-iris-2'
+                : 'bg-transparent text-fg-2 hover:text-fg',
             )}
           >
             {count} tela{count === 1 ? '' : 's'}
@@ -144,14 +147,16 @@ export function ModePicker({
   return (
     <button
       type="button"
+      data-sala=""
       aria-pressed={active}
       onClick={onClick}
       className={cn(
         // D-928: o rótulo quebra linha em vez de passar da borda do botão (coluna estreita do modal).
-        'min-h-[30px] rounded-[var(--radius-xs)] border px-2 py-1 text-[11px] font-bold uppercase leading-tight tracking-[0.04em] transition-colors',
+        'min-h-[30px] rounded-campo border px-2 py-1 text-micro leading-tight transition-colors duration-150 motion-reduce:transition-none',
+        FOCO,
         active
-          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--sel-ink)]'
-          : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+          ? 'border-iris-fio bg-iris-suave text-iris-2'
+          : 'border-fio-2 bg-vidro-2 text-fg-2 hover:bg-vidro-3 hover:text-fg',
       )}
     >
       {label}
@@ -170,7 +175,7 @@ function IconControl({
 }) {
   return (
     <Tooltip label={label} side="bottom">
-      <Button type="button" variant="outline" size="icon-sm" onClick={onClick}>
+      <Button type="button" variant="secundario" size="icon-sm" onClick={onClick}>
         {children}
       </Button>
     </Tooltip>
@@ -224,7 +229,7 @@ export function SharedRectEditor({
         {(['x', 'y'] as const).map((field) => (
           <label
             key={field}
-            className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]"
+            className="flex flex-col gap-0.5 text-micro text-fg-3"
           >
             {field}
             <Input
@@ -233,12 +238,12 @@ export function SharedRectEditor({
               value={rect[field]}
               onChange={(event) => setValueDraft(field, Number(event.target.value))}
               onBlur={onCommit}
-              className="h-7 font-code text-[11px]"
+              aparencia="sala" className="h-7 num text-micro"
             />
           </label>
         ))}
         {baseRect ? (
-          <label className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+          <label className="flex flex-col gap-0.5 text-micro text-fg-3">
             escala
             <Input
               type="number"
@@ -246,14 +251,14 @@ export function SharedRectEditor({
               value={scalePercent}
               onChange={(event) => setScaleDraft(Number(event.target.value))}
               onBlur={onCommit}
-              className="h-7 font-code text-[11px]"
+              aparencia="sala" className="h-7 num text-micro"
             />
           </label>
         ) : (
           (['w', 'h'] as const).map((field) => (
             <label
               key={field}
-              className="flex flex-col gap-0.5 font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]"
+              className="flex flex-col gap-0.5 text-micro text-fg-3"
             >
               {field}
               <Input
@@ -262,7 +267,7 @@ export function SharedRectEditor({
                 value={rect[field]}
                 onChange={(event) => setValueDraft(field, Number(event.target.value))}
                 onBlur={onCommit}
-                className="h-7 font-code text-[11px]"
+                aparencia="sala" className="h-7 num text-micro"
               />
             </label>
           ))
@@ -285,7 +290,7 @@ export function SharedRectEditor({
             <Icon name="arrow-right" />
           </IconControl>
         </div>
-        <div className="h-9 w-px bg-[var(--wb-border-soft)]" />
+        <div className="h-9 w-px bg-fio" />
         {baseRect ? (
           <div className="grid grid-cols-2 gap-1">
             <IconControl label="Diminuir tamanho" onClick={() => setScale(scalePercent - 5)}>
@@ -297,16 +302,16 @@ export function SharedRectEditor({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-1">
-            <Button type="button" variant="outline" size="sm" onClick={() => resize(-10, 0)}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => resize(-10, 0)}>
               W-
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => resize(10, 0)}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => resize(10, 0)}>
               W+
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => resize(0, -10)}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => resize(0, -10)}>
               H-
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => resize(0, 10)}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => resize(0, 10)}>
               H+
             </Button>
           </div>

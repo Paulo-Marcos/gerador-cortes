@@ -235,7 +235,7 @@ describe('o card', () => {
     expect(html).toContain('Pergunta riscada');
     expect(html).toContain('fora do render');
     // O texto da linha do intervalo passa de 4.5:1: `--wb-text-dim` ficava entre 2.96 e 3.63.
-    expect(html).toMatch(/text-\[var\(--wb-text-mute\)\]">[^<]*fora do render/);
+    expect(html).toMatch(/text-fg-2">[^<]*fora do render/);
     expect(html).not.toContain('editor');
     procurarBotao(elemento, 'Trazer de volta')?.props.onClick();
     expect(onTrazerDeVolta).toHaveBeenCalledOnce();
@@ -246,7 +246,7 @@ describe('o card', () => {
       PlanoDaCena({ origem: 'manual', cena: cena('x'), onSeek: vi.fn(), onTrazerDeVolta: vi.fn(), children: <span>editor</span> }),
     );
     expect(html).toContain('data-origem="manual"');
-    expect(html).toContain('var(--wb-ok)');
+    expect(html).toContain('var(--cc-ok)');
     expect(html).toContain('editor');
   });
 
@@ -286,10 +286,10 @@ describe('a mesma cor na linha do tempo', () => {
 
   it('na Pós, cada bloco tem a cor da origem do card, e a riscada é tracejada', () => {
     const [conferida, conferir, manual, riscada] = blocos(timeline('c1'));
-    expect(conferida).toContain('var(--wb-info)');
-    expect(conferir).toContain('var(--wb-warn)');
-    expect(manual).toContain('var(--wb-ok)');
-    expect(riscada).toContain('border-style:dashed');
+    expect(conferida).toContain('--cor:var(--cc-info)');
+    expect(conferir).toContain('--cor:var(--cc-aviso)');
+    expect(manual).toContain('--cor:var(--cc-ok)');
+    expect(riscada).toContain('data-tracejada');
   });
 
   it('na Pós, traz a legenda', () => {

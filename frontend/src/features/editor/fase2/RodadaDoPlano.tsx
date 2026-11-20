@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
+import { Dialog } from '@/components/ui/dialog';
 import { Tooltip } from '@/components/ui/tooltip';
+import type { CSSProperties } from 'react';
+import { cn } from '@/lib/utils';
 import { Icon } from '@/upgrade/Icon';
 import { IconeDaOrigem } from './CenaComOrigem';
 import { ORIGENS } from './planoDasCenas';
@@ -21,7 +23,7 @@ import { useRodadaDoPlano } from './useRodadaDoPlano';
 // A rodada no cabeçalho do plano de cenas (D-1073): quem gerou e quando, o "Desfazer
 // rodada" (que também refaz) e o "Comparar com a rodada anterior".
 //
-// A comparação abre no Modal do app, como o Studio Remotion e o posicionamento desta
+// A comparação abre no Dialog do app, como o Studio Remotion e o posicionamento desta
 // mesma Pós. O painel do plano tem de 320 a 420 px e é onde o operador edita: um painel
 // embutido empurraria a lista para baixo e espremeria o diff numa coluna estreita. A
 // comparação é um momento de ler e decidir, que fecha no Esc e não sai da tela.
@@ -33,7 +35,7 @@ export function RodadaDoPlano({ corteId, projetoId, dirty }: { corteId: string; 
   const { rodadas, falhou, agora, botao, desfazer, comparando, setComparando } = useRodadaDoPlano(corteId, projetoId, dirty);
   if (falhou && !rodadas) {
     return (
-      <p role="status" className="mt-2 flex items-center gap-1 text-[11px] text-[var(--wb-warn)]">
+      <p role="status" className="mt-2 flex items-center gap-1 text-micro text-aviso">
         <Icon name="triangle-alert" />
         Não foi possível ler as rodadas das cenas: desfazer e comparar voltam quando a leitura der certo.
       </p>
@@ -46,7 +48,7 @@ export function RodadaDoPlano({ corteId, projetoId, dirty }: { corteId: string; 
     // compactos à direita. O motivo do Desfazer desligado segue à vista, logo abaixo (D-1073).
     <div className="mt-1.5 flex flex-col gap-1" data-testid="rodada-do-plano">
       <div className="flex items-center gap-2">
-        <p className="flex min-w-0 flex-1 items-center gap-1 text-[11px] text-[var(--wb-text-mute)]" title={linha}>
+        <p className="flex min-w-0 flex-1 items-center gap-1 text-micro text-fg-2" title={linha}>
           <Icon name="history" className="shrink-0" />
           <span className="truncate">{linha}</span>
         </p>
@@ -57,7 +59,7 @@ export function RodadaDoPlano({ corteId, projetoId, dirty }: { corteId: string; 
             <Tooltip label="Comparar com a rodada anterior" side="top">
               <Button
                 type="button"
-                variant="outline"
+                variant="fantasma"
                 size="icon-sm"
                 onClick={() => setComparando(true)}
                 aria-label="Comparar com a rodada anterior"
@@ -70,27 +72,27 @@ export function RodadaDoPlano({ corteId, projetoId, dirty }: { corteId: string; 
         </div>
       </div>
       {botao.motivo && (
-        <p id={`motivo-da-rodada-${corteId}`} className="text-[11px] text-[var(--wb-text-mute)]">
+        <p id={`motivo-da-rodada-${corteId}`} className="text-micro text-fg-2">
           {botao.motivo}
         </p>
       )}
-      <Modal
+      <Dialog
         open={comparando}
         onClose={() => setComparando(false)}
-        size="lg"
+        tamanho="lg"
         title="Comparar com a rodada anterior"
         description={descreverAsDuas(rodadas, agora)}
         footer={
           <>
             <BotaoDesfazer botao={botao} onClick={desfazer} />
-            <Button type="button" variant="outline" size="sm" onClick={() => setComparando(false)}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => setComparando(false)}>
               Fechar
             </Button>
           </>
         }
       >
         <ComparacaoDasRodadas rodadas={rodadas} />
-      </Modal>
+      </Dialog>
     </div>
   );
 }
@@ -116,8 +118,8 @@ function BotaoDesfazer({
     <Tooltip label={botao.dica} side="top">
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant="secundario"
+        size="pq"
         onClick={onClick}
         disabled={botao.desabilitado}
         aria-label={botao.motivo ? botao.rotulo : `${botao.rotulo}. ${botao.dica}`}
@@ -135,8 +137,8 @@ function BotaoDesfazer({
 export function ComparacaoDasRodadas({ rodadas }: { rodadas: RodadasDasCenas }) {
   const { entraram, sairam, mudaram } = rodadas.diferencas;
   return (
-    <div className="flex flex-col gap-3 text-[13px]" data-testid="comparacao-das-rodadas">
-      <p className="font-semibold text-[var(--wb-text)]">{resumirDiferencas(rodadas.diferencas)}</p>
+    <div className="flex flex-col gap-3 text-corpo" data-testid="comparacao-das-rodadas">
+      <p className="font-semibold text-fg">{resumirDiferencas(rodadas.diferencas)}</p>
       <Grupo titulo="Entraram (só na atual)" vazio={entraram.length === 0}>
         {entraram.map((cena, i) => (
           <CenaDaComparacao key={`e-${i}`} cena={cena} />
@@ -150,7 +152,7 @@ export function ComparacaoDasRodadas({ rodadas }: { rodadas: RodadasDasCenas }) 
       <Grupo titulo="Mudaram" vazio={mudaram.length === 0}>
         {mudaram.map((m, i) => (
           <CenaDaComparacao key={`m-${i}`} cena={m.atual}>
-            <ul className="mt-1 flex flex-col gap-0.5 text-[12px] text-[var(--wb-text-mute)]">
+            <ul className="mt-1 flex flex-col gap-0.5 text-pequeno text-fg-2">
               {m.campos.map((campo) => (
                 <li key={campo}>{descreverCampo(campo, m.anterior, m.atual)}</li>
               ))}
@@ -166,7 +168,7 @@ function Grupo({ titulo, vazio, children }: { titulo: string; vazio: boolean; ch
   if (vazio) return null;
   return (
     <section className="flex flex-col gap-1.5">
-      <h3 className="font-code text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">{titulo}</h3>
+      <h3 className="text-micro text-fg-3">{titulo}</h3>
       <ul className="flex flex-col gap-1.5">{children}</ul>
     </section>
   );
@@ -180,15 +182,21 @@ function CenaDaComparacao({ cena, children }: { cena: Cena; children?: React.Rea
   return (
     <li
       data-origem={origem ?? 'ia'}
-      className="rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] border-l-[3px] px-2.5 py-2"
-      style={origem ? { borderLeftColor: ORIGENS[origem].border, background: ORIGENS[origem].soft } : undefined}
+      className={cn(
+        'rounded-campo border border-l-[3px] border-fio px-2.5 py-2',
+        origem && 'border-l-[color:var(--fio)] bg-[var(--fundo)]',
+      )}
+      style={origem ? ({ '--fio': ORIGENS[origem].border, '--fundo': ORIGENS[origem].soft } as CSSProperties) : undefined}
     >
-      <div className="flex justify-between gap-2 font-code text-[11px] text-[var(--wb-text-mute)]">
+      <div className="num flex justify-between gap-2 text-micro text-fg-2">
         <span>
           {inicio}s → {fim}s · {tipo}
         </span>
         {origem ? (
-          <span className="font-sans font-semibold" style={{ color: ORIGENS[origem].color }}>
+          <span
+            className="font-sans font-semibold text-[color:var(--cor)]"
+            style={{ '--cor': ORIGENS[origem].color } as CSSProperties}
+          >
             <IconeDaOrigem origem={origem} />
             {ORIGENS[origem].rotulo}
           </span>
@@ -196,7 +204,7 @@ function CenaDaComparacao({ cena, children }: { cena: Cena; children?: React.Rea
           <span className="font-sans">da IA</span>
         )}
       </div>
-      <span className="block text-[13px] font-semibold text-[var(--wb-text)]">{String(cena.texto ?? '') || tipo}</span>
+      <span className="block text-corpo font-semibold text-fg">{String(cena.texto ?? '') || tipo}</span>
       {children}
     </li>
   );

@@ -26,55 +26,70 @@ export interface TipoMeta {
   tone: string;
 }
 
+// Sala escura (DIRECAO §9.2): os 17 tipos dividem os tons de estado e a íris, e o que
+// distingue um do outro é o ícone e o rótulo, nunca só a cor (WCAG 1.4.1). Cada tom tem
+// a cor (`color`, um token) e a receita de classes (`tone`: fundo a 10%, fio a 40%).
+// As classes ficam por extenso porque o Tailwind só gera o que lê escrito no arquivo.
+const TOM_IRIS = {
+  color: 'var(--cc-iris)',
+  tone: 'border-iris/40 bg-iris/10 text-iris-2',
+};
+const TOM_INFO = {
+  color: 'var(--cc-info)',
+  tone: 'border-[color-mix(in_srgb,var(--cc-info)_40%,transparent)] bg-[color-mix(in_srgb,var(--cc-info)_10%,transparent)] text-[color:var(--cc-info)]',
+};
+const TOM_AVISO = {
+  color: 'var(--cc-aviso)',
+  tone: 'border-aviso/40 bg-aviso/10 text-aviso',
+};
+const TOM_OK = {
+  color: 'var(--cc-ok)',
+  tone: 'border-ok/40 bg-ok/10 text-ok',
+};
+const TOM_ERRO = {
+  color: 'var(--cc-erro)',
+  tone: 'border-erro/40 bg-erro/10 text-erro',
+};
+
 // As duas perguntas — a de transição e a do chat (D-910) — são da mesma família
 // de cor; o ícone as distingue.
-const CORES_DE_PERGUNTA = {
-  color: 'oklch(0.54 0.16 32)',
-  tone: 'border-orange-500/40 bg-orange-500/10 text-orange-200',
-};
+const CORES_DE_PERGUNTA = TOM_IRIS;
 
 export const TIPOS_CENA: Record<CenaTipo, TipoMeta> = {
   tela_cheia: {
     label: 'Tela cheia',
     icon: 'Film',
-    color: 'oklch(0.55 0.12 245)',
-    tone: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
+    ...TOM_INFO,
   },
   barra_inferior: {
     label: 'Barra inferior',
     icon: 'PanelBottom',
-    color: 'oklch(0.56 0.13 195)',
-    tone: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200',
+    ...TOM_INFO,
   },
   card_informacao: {
     label: 'Card de informacao',
     icon: 'FileText',
-    color: 'oklch(0.54 0.11 75)',
-    tone: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+    ...TOM_AVISO,
   },
   destaque_numerico: {
     label: 'Destaque numerico',
     icon: 'Hash',
-    color: 'oklch(0.58 0.15 115)',
-    tone: 'border-lime-500/40 bg-lime-500/10 text-lime-200',
+    ...TOM_OK,
   },
   comparativo_enfase: {
     label: 'Contraponto legado',
     icon: 'GitCompareArrows',
-    color: 'oklch(0.55 0.14 285)',
-    tone: 'border-violet-500/40 bg-violet-500/10 text-violet-200',
+    ...TOM_IRIS,
   },
   comparativo_contraponto: {
     label: 'Contraponto',
     icon: 'GitCompareArrows',
-    color: 'oklch(0.55 0.14 285)',
-    tone: 'border-violet-500/40 bg-violet-500/10 text-violet-200',
+    ...TOM_IRIS,
   },
   enfase: {
     label: 'Enfase',
     icon: 'Sparkles',
-    color: 'oklch(0.58 0.16 85)',
-    tone: 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200',
+    ...TOM_AVISO,
   },
   pergunta_transicao: {
     label: 'Pergunta',
@@ -84,50 +99,42 @@ export const TIPOS_CENA: Record<CenaTipo, TipoMeta> = {
   chamada_final: {
     label: 'Chamada final',
     icon: 'Rocket',
-    color: 'oklch(0.56 0.15 18)',
-    tone: 'border-red-500/40 bg-red-500/10 text-red-200',
+    ...TOM_ERRO,
   },
   ficha_biografica: {
     label: 'Ficha biografica',
     icon: 'AtSign',
-    color: 'oklch(0.52 0.12 330)',
-    tone: 'border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-200',
+    ...TOM_IRIS,
   },
   marco_historico: {
     label: 'Marco historico',
     icon: 'CalendarDays',
-    color: 'oklch(0.55 0.12 155)',
-    tone: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+    ...TOM_OK,
   },
   citacao_autor: {
     label: 'Citacao',
     icon: 'BookOpen',
-    color: 'oklch(0.50 0.11 260)',
-    tone: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-200',
+    ...TOM_INFO,
   },
   linha_tempo: {
     label: 'Linha do tempo',
     icon: 'List',
-    color: 'oklch(0.57 0.12 220)',
-    tone: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
+    ...TOM_INFO,
   },
   definicao_termo: {
     label: 'Definicao',
     icon: 'Brain',
-    color: 'oklch(0.53 0.12 55)',
-    tone: 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200',
+    ...TOM_AVISO,
   },
   fonte_referencia: {
     label: 'Fonte',
     icon: 'Tag',
-    color: 'oklch(0.48 0.10 145)',
-    tone: 'border-green-500/40 bg-green-500/10 text-green-200',
+    ...TOM_OK,
   },
   lista_enumerada: {
     label: 'Lista',
     icon: 'Check',
-    color: 'oklch(0.52 0.12 185)',
-    tone: 'border-teal-500/40 bg-teal-500/10 text-teal-200',
+    ...TOM_OK,
   },
   pergunta_chat: {
     label: 'Pergunta do chat',
@@ -137,8 +144,7 @@ export const TIPOS_CENA: Record<CenaTipo, TipoMeta> = {
   mostrar_imagem: {
     label: 'Imagem',
     icon: 'Image',
-    color: 'oklch(0.55 0.10 260)',
-    tone: 'border-violet-500/40 bg-violet-500/10 text-violet-200',
+    ...TOM_IRIS,
   },
 };
 
@@ -147,8 +153,8 @@ export function metaCena(tipo: string): TipoMeta {
     TIPOS_CENA[tipo as CenaTipo] ?? {
       label: tipo,
       icon: 'Film',
-      color: 'var(--wb-text-mute)',
-      tone: 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
+      color: 'var(--cc-fg-2)',
+      tone: 'border-fio-2 bg-poco text-fg-2',
     }
   );
 }

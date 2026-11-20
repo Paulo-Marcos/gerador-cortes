@@ -97,6 +97,21 @@ export function CenasManualModal({ open, onClose, corteId }: Props) {
       size="lg"
       title="Cenas Remotion — manual (IA externa)"
       description="Copie o prompt, cole numa IA externa, e importe o JSON gerado."
+      footer={
+        <>
+          <Button type="button" variant="fantasma" onClick={onClose} disabled={importar.isPending}>
+            Cancelar
+          </Button>
+          <Button type="button" variant="secundario" onClick={onImportar} disabled={!todasColadas || importar.isPending}>
+            {importar.isPending ? (
+              <Icon name="loader-2" className="animate-spin" />
+            ) : (
+              <Icon name="circle-check" />
+            )}
+            Importar cenas{totalPartes > 1 ? ` (${partesColadas}/${totalPartes})` : ''}
+          </Button>
+        </>
+      }
     >
       <PromptManualPanel
         prompt={prompt}
@@ -108,20 +123,6 @@ export function CenasManualModal({ open, onClose, corteId }: Props) {
           '{\n  "cenas": [ { "tipo": "tela_cheia", "inicio": 0, "fim": 3, "texto": "..." } ]\n}'
         }
       />
-
-      <div className="mt-4 flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose} disabled={importar.isPending}>
-          Cancelar
-        </Button>
-        <Button type="button" onClick={onImportar} disabled={!todasColadas || importar.isPending}>
-          {importar.isPending ? (
-            <Icon name="loader-2" className="animate-spin" />
-          ) : (
-            <Icon name="circle-check" />
-          )}
-          Importar cenas{totalPartes > 1 ? ` (${partesColadas}/${totalPartes})` : ''}
-        </Button>
-      </div>
     </Modal>
   );
 }

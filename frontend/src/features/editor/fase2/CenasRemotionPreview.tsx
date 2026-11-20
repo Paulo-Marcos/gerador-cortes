@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, type CSSProperties } from 'react';
 import { AbsoluteFill, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 // V1 (renderCena de OverlayScene) está desativada — preview usa apenas V2.
 // Só pela porta pública do renderer (D-725).
@@ -90,7 +90,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
           <Video
             src={videoSrc}
             muted={false}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            className="h-full w-full object-cover"
           />
         ) : null}
       </AbsoluteFill>
@@ -188,7 +188,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
           <Video
             src={videoSrc}
             muted={false}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            className="h-full w-full object-cover"
           />
         </AbsoluteFill>
       ) : null}
@@ -209,7 +209,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
       {/* Camada 2: fundo editorial "palco" — aparece JUNTO com a cena ativa e
           some quando não há cena. Sua opacity é a sombra efetiva da cena. */}
       {palcoOpacity > 0 && (
-        <AbsoluteFill style={{ opacity: palcoOpacity }}>
+        <AbsoluteFill className="opacity-[var(--o)]" style={{ '--o': palcoOpacity } as CSSProperties}>
           <YoutubeBackground fundo={palcoProps.fundo} />
         </AbsoluteFill>
       )}
