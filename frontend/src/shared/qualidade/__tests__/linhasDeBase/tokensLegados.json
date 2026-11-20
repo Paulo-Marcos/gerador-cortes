@@ -226,7 +226,7 @@
   "src/upgrade/PaletaDeComandos.tsx": 20,
   "src/upgrade/SeloDeEstado.tsx": 17,
   "src/upgrade/TiraDoCorteAp.tsx": 19,
-  "src/upgrade/upgrade.css": 119,
+  "src/upgrade/upgrade.css": 117,
   "src/upgrade/UpgradeModal.tsx": 30,
   "src/upgrade/UpgradeShellDemoPage.tsx": 10,
   "src/upgrade/UpgradeToast.tsx": 3
