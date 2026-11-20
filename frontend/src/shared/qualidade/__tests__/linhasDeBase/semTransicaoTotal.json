@@ -18,7 +18,6 @@
   "src/features/metadata/ThumbnailAvaliacaoPanel.tsx": 1,
   "src/features/projeto-detalhe/AnaliseIaModal.tsx": 1,
   "src/features/projeto-detalhe/WorkspaceProjetoPage.tsx": 3,
-  "src/features/projetos/BibliotecaPage.tsx": 2,
   "src/features/settings/AppSettingsControls.tsx": 1,
   "src/features/settings/ModelosDeIa.tsx": 1,
   "src/features/settings/NavegadorDoRobo.tsx": 1,

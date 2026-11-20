@@ -4,35 +4,32 @@
 // Mesmo desenho e mesmo vocabulário dos chips do cartão do Fire (D-905), para
 // o operador ler as duas telas do mesmo jeito: aceso é "já está", apagado é
 // "falta". A diferença é a altura da pergunta — lá o corte, aqui a live.
+// D-1148 (E-069 H-15): a roupa da Sala escura — `Etiqueta` (ladrilho de 6), sem caixa-alta;
+// aceso leva o visto e o texto cheio, apagado leva o círculo tracejado e o texto em fg-3.
+import { Etiqueta } from '@/components/ui/etiqueta';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { sinaisDasRedesDoProjeto } from '@/features/projetos/sinaisDasRedesDoProjeto';
 import type { Projeto } from '@/types/models';
-import { Icon } from '@/upgrade/Icon';
 
 export function RedesDoProjeto({ projeto }: { projeto: Projeto }) {
   // Live sem corte pronto não tem o que dizer: dois chips mortos em todo card
-  // recém-baixado seriam ruído, e a fita de etapas já conta que a publicação
-  // nem começou. O cartão do Fire mostra sempre porque todo Fire tem shorts.
+  // recém-baixado seriam ruído.
   if (projeto.total_video_pronto === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-1" aria-label="Redes onde todos os cortes prontos já estão">
       {sinaisDasRedesDoProjeto(projeto).map((rede) => (
-        <span
+        <Etiqueta
           key={rede.id}
           data-rede={rede.id}
           data-ativa={rede.ativa ? 'sim' : 'nao'}
-          className={cn(
-            'inline-flex items-center gap-0.5 rounded-[4px] px-1.5 py-0.5 font-code text-[11px] uppercase tracking-wide',
-            rede.ativa
-              ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
-              : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] opacity-60',
-          )}
           title={rede.titulo}
+          className={cn('gap-1', rede.ativa ? 'text-fg' : 'text-fg-3')}
         >
-          <Icon name={rede.ativa ? 'check' : 'circle-dashed'} />
+          <Icon name={rede.ativa ? 'check' : 'circle-dashed'} className="size-3" />
           {rede.rotulo}
-        </span>
+        </Etiqueta>
       ))}
     </div>
   );
