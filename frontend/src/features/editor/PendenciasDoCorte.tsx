@@ -76,19 +76,10 @@ export function PendenciasDoCorte({ corte }: { corte: Corte }) {
   return (
     <span
       title={`Em aberto, sem bloquear: ${texto}`}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        minWidth: 64,
-        flex: '1000 1 0',
-        maxWidth: 'max-content',
-        fontSize: 12,
-        color: 'var(--warn)',
-      }}
+      className="inline-flex min-w-16 max-w-max flex-[1000_1_0] items-center gap-1.5 text-pequeno text-aviso"
     >
       <Icon name="triangle-alert" />
-      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{texto}</span>
+      <span className="min-w-0 truncate">{texto}</span>
     </span>
   );
 }

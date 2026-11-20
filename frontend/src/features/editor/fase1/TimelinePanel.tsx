@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from 'react';
@@ -14,6 +15,15 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import type { AlertaConferir, Desvio } from '@/types/models';
 import { drawRegions, type RegionsInstance } from './regioesDaOnda';
+import {
+  ATRIBUTO_DA_AGULHA,
+  TOKEN_DA_AGULHA,
+  atualizarRotuloDaAgulha,
+  criarRotuloDaAgulha,
+  marcarSobAgulha,
+  textoDaAgulha,
+  trechoSobAgulha,
+} from './agulhaDaOnda';
 import { AlertasConferir } from './AlertasConferir';
 import { LegendaDaTimeline } from './LegendaDaTimeline';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
@@ -22,6 +32,7 @@ import { fetchWaveformPeaks } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { segParaHms, segParaMmSs } from '../timeUtils';
 import { Icon } from '@/upgrade/Icon';
+import { FERRAMENTA_ICONE, FERRAMENTA_TEXTO, FOCO, ITEM_DE_MENU, LIGADO, ROTULO_DE_GRUPO } from '../salaDoEditor';
 
 // ─────────────────────────────────────────────────────────────
 // TimelinePanel — header refatorado conforme
@@ -82,23 +93,11 @@ interface Props {
   proximoNumero?: number;
 }
 
-const WB = {
-  bgPanel: 'var(--wb-bg-panel)',
-  bgCard: 'var(--wb-bg-card)',
-  bgInset: 'var(--wb-bg-inset)',
-  border: 'var(--wb-border)',
-  borderSoft: 'var(--wb-border-soft)',
-  text: 'var(--wb-text)',
-  textMute: 'var(--wb-text-mute)',
-  textDim: 'var(--wb-text-dim)',
-  accent: 'var(--wb-accent)',
-  // D-412: cor da marca do proximo corte (limite que nao deveria ser cruzado).
-  err: 'var(--wb-err)',
-};
 
 // Estável: um `[]` novo a cada render redesenharia as regiões a cada tique.
 const SEM_ALERTAS: AlertaConferir[] = [];
-const COR_DO_CORTE = 'oklch(0.58 0.13 225 / 0.18)';
+// D-1150 (§3.3): o que fica é aceso, sem véu; só um vidro leve marca a janela do corte.
+const COR_DO_CORTE = 'var(--cc-vidro)';
 const TIMECODE_SLOTS = 7;
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 20;
@@ -132,7 +131,7 @@ function criarMarcaProximoCorte(numero?: number): HTMLElement {
     'top:0',
     'bottom:0',
     'width:0',
-    `border-left:2px dashed ${WB.err}`,
+    'border-left:2px dashed var(--cc-erro)',
     'pointer-events:none',
     'z-index:4',
   ].join(';');
@@ -143,10 +142,10 @@ function criarMarcaProximoCorte(numero?: number): HTMLElement {
     'position:absolute',
     'top:2px',
     'left:3px',
-    `background:${WB.err}`,
-    'color:#fff',
+    'background:var(--cc-erro-cheio)',
+    'color:var(--cc-sobre-erro)',
     'font-family:var(--font-mono)',
-    'font-size:8px',
+    'font-size:11px',
     'font-weight:700',
     'line-height:1',
     'padding:2px 3px',
@@ -222,6 +221,8 @@ function Waveform({
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLElement | null>(null);
+  // D-1150: o trecho sob a agulha ganha o contorno `cc-aviso` (§7.3); -1 = no que fica.
+  const sobAgulhaRef = useRef(-1);
   const wsRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<RegionsInstance | null>(null);
   const wsReadyRef = useRef(false);
@@ -323,14 +324,12 @@ function Waveform({
     let cancelled = false;
 
     const root = getComputedStyle(document.documentElement);
-    const accentColor = root.getPropertyValue('--wb-accent').trim() || '#facc15';
-    // AUDITORIA-v2 §8 (CP8): onda densa (barras menores e mais proximas), com
-    // a cor do token --wb-text-dim lido ao vivo — funciona em claro e escuro.
-    const dimColor = root.getPropertyValue('--wb-text-dim').trim();
-    const waveColor =
-      dimColor ? withAlpha(dimColor, 0.85) : 'oklch(0.58 0.13 225 / 0.82)';
-    const progressColor =
-      dimColor ? withAlpha(dimColor, 0.42) : 'oklch(0.58 0.13 225 / 0.45)';
+    // D-1150: a agulha é traço claro (`--cc-foco`) e a onda usa o `--cc-fg-3`, lidos ao
+    // vivo — funcionam em claro e escuro.
+    const corDaAgulha = root.getPropertyValue(TOKEN_DA_AGULHA).trim() || '#ffffff';
+    const dimColor = root.getPropertyValue('--cc-fg-3').trim();
+    const waveColor = withAlpha(dimColor || 'gray', 0.85);
+    const progressColor = withAlpha(dimColor || 'gray', 0.42);
 
     const regions = RegionsPlugin.create();
     regionsRef.current = regions;
@@ -339,7 +338,7 @@ function Waveform({
       container: containerRef.current,
       waveColor,
       progressColor,
-      cursorColor: accentColor,
+      cursorColor: corDaAgulha,
       cursorWidth: 2,
       barWidth: 1.5,
       barGap: 0.6,
@@ -374,27 +373,13 @@ function Waveform({
       setIsLoading(false);
       latestRef.current.onLoadingChange?.(false);
       const l = latestRef.current;
-      drawRegions(regions, l.inicioSeg, l.fimSeg, l.desvios, l.audioOffsetSec, l.locked, l.alertas, COR_DO_CORTE);
+      drawRegions(regions, l.inicioSeg, l.fimSeg, l.desvios, l.audioOffsetSec, l.locked, l.alertas, COR_DO_CORTE, sobAgulhaRef.current);
       requestAnimationFrame(() => {
         const cursor = queryShadow(containerRef.current, '.cursor');
         cursorRef.current = cursor;
-        if (!cursor || cursor.querySelector('[data-playhead-dot]')) return;
+        if (!cursor || cursor.querySelector(`[${ATRIBUTO_DA_AGULHA}]`)) return;
         cursor.style.overflow = 'visible';
-        const dot = document.createElement('div');
-        dot.dataset.playheadDot = '1';
-        dot.style.cssText = [
-          'position:absolute',
-          'left:50%',
-          'top:50%',
-          'width:8px',
-          'height:8px',
-          'border-radius:50%',
-          `background:${accentColor}`,
-          'transform:translate(-50%,-50%)',
-          'pointer-events:none',
-          `box-shadow:0 0 0 2px ${accentColor}33`,
-        ].join(';');
-        cursor.appendChild(dot);
+        cursor.appendChild(criarRotuloDaAgulha());
       });
     });
 
@@ -443,26 +428,9 @@ function Waveform({
       if (!cursor || !cursor.isConnected) {
         cursor = queryShadow(containerRef.current, '.cursor');
         cursorRef.current = cursor;
-        if (cursor && !cursor.querySelector('[data-playhead-dot]')) {
+        if (cursor && !cursor.querySelector(`[${ATRIBUTO_DA_AGULHA}]`)) {
           cursor.style.overflow = 'visible';
-          const accent =
-            getComputedStyle(document.documentElement).getPropertyValue('--wb-accent').trim() ||
-            '#facc15';
-          const dot = document.createElement('div');
-          dot.dataset.playheadDot = '1';
-          dot.style.cssText = [
-            'position:absolute',
-            'left:50%',
-            'top:50%',
-            'width:8px',
-            'height:8px',
-            'border-radius:50%',
-            `background:${accent}`,
-            'transform:translate(-50%,-50%)',
-            'pointer-events:none',
-            `box-shadow:0 0 0 2px ${accent}33`,
-          ].join(';');
-          cursor.appendChild(dot);
+          cursor.appendChild(criarRotuloDaAgulha());
         }
       }
       if (!cursor) return;
@@ -477,6 +445,12 @@ function Waveform({
       // na onda), e uma cópia local ficaria velha — o cursor grudaria.
       const left = `${progress * 100}%`;
       if (cursor.style.left !== left) cursor.style.left = left;
+      atualizarRotuloDaAgulha(cursor, textoDaAgulha(videoTime, latestRef.current.inicioSeg));
+      const sob = trechoSobAgulha(latestRef.current.desvios, videoTime);
+      if (sob !== sobAgulhaRef.current) {
+        sobAgulhaRef.current = sob;
+        marcarSobAgulha(regionsRef.current?.getRegions() ?? [], sob);
+      }
 
       const prev = lastVideoTimeRef.current;
       lastVideoTimeRef.current = videoTime;
@@ -521,7 +495,7 @@ function Waveform({
   useEffect(() => {
     const regions = regionsRef.current;
     if (!regions) return;
-    drawRegions(regions, inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas, COR_DO_CORTE);
+    drawRegions(regions, inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas, COR_DO_CORTE, sobAgulhaRef.current);
   }, [inicioSeg, fimSeg, desvios, audioOffsetSec, locked, alertas]);
 
   useEffect(() => {
@@ -596,48 +570,17 @@ function Waveform({
   }
 
   return (
-    <div
-      ref={wrapperRef}
-      style={{
-        position: 'relative',
-        background: WB.bgInset,
-        borderRadius: 8,
-        border: `1px solid ${WB.borderSoft}`,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
+    <div ref={wrapperRef} className="relative flex h-full flex-col overflow-hidden rounded-campo border border-fio bg-poco">
       {isLoading && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: WB.textDim,
-            fontSize: 11,
-            fontFamily: 'var(--font-mono)',
-            zIndex: 10,
-            background: WB.bgInset,
-            borderRadius: 8,
-            pointerEvents: 'none',
-          }}
-        >
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-campo bg-poco font-mono text-micro text-fg-3">
           carregando áudio…
         </div>
       )}
 
-      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+      <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            cursor: pointer ? 'crosshair' : dragging ? 'grabbing' : 'grab',
-          }}
+          className={cn('absolute inset-0', pointer ? 'cursor-crosshair' : dragging ? 'cursor-grabbing' : 'cursor-grab')}
         />
         {!pointer && (
           <div
@@ -645,33 +588,12 @@ function Waveform({
             onPointerMove={onPanMove}
             onPointerUp={onPanUp}
             onPointerCancel={onPanUp}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 5,
-              cursor: dragging ? 'grabbing' : 'grab',
-              touchAction: 'none',
-              background: 'transparent',
-            }}
+            className={cn('absolute inset-0 z-[5] touch-none bg-transparent', dragging ? 'cursor-grabbing' : 'cursor-grab')}
           />
         )}
       </div>
 
-      <div
-        style={{
-          height: 16,
-          borderTop: `1px solid ${WB.borderSoft}`,
-          background: WB.bgPanel,
-          display: 'flex',
-          alignItems: 'center',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9,
-          color: WB.textDim,
-          padding: '0 8px',
-          justifyContent: 'space-between',
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex h-4 flex-none items-center justify-between border-t border-fio bg-painel-solido px-2 font-mono text-micro text-fg-3">
         {timecodes.map((timecode, idx) => (
           <span key={`tc-${idx}`}>{timecode}</span>
         ))}
@@ -692,31 +614,27 @@ const TransportGroup = memo(function TransportGroup({
   onSkipEnd: () => void;
 }) {
   // D-610: só início, play e fim — o ±5s já mora nas setas do teclado.
-  // v2_bruto.jsx:216-222 — bloco bg-inset, gap 2, padding 2
-  const btn =
-    'flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)] transition-colors';
+  // D-1150 (§7.3): tocar é o círculo claro; início e fim são ferramentas fantasma.
   return (
-    <div className="flex items-center gap-0.5 rounded-[var(--radius-sm)] bg-[var(--wb-bg-inset)] p-0.5">
+    <div className="flex items-center gap-1">
       <Tooltip label="Inicio do corte" side="bottom">
-        <button type="button" onClick={onSkipStart} aria-label="Inicio" className={btn}>
+        <button type="button" data-sala="" onClick={onSkipStart} aria-label="Inicio" className={FERRAMENTA_ICONE}>
           <Icon name="chevrons-left" />
         </button>
       </Tooltip>
       <Tooltip label="Play/Pause" side="bottom">
         <button
           type="button"
+          data-sala=""
           onClick={onPlay}
           aria-label="Play/Pause"
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--wb-ink)] text-[var(--wb-ink-fg)] hover:opacity-90 transition-opacity"
-          // Inline porque, dentro da casca nova, a cor de botão da `.ap` vence a
-          // classe e o ícone sumia no fundo escuro.
-          style={{ color: 'var(--wb-ink-fg)' }}
+          className={`inline-grid size-8 place-items-center rounded-pilula bg-fg text-app shadow-topo transition-transform duration-[120ms] active:scale-[.97] motion-reduce:transition-none ${FOCO}`}
         >
           <Icon name="play" />
         </button>
       </Tooltip>
       <Tooltip label="Fim do corte" side="bottom">
-        <button type="button" onClick={onSkipEnd} aria-label="Fim" className={btn}>
+        <button type="button" data-sala="" onClick={onSkipEnd} aria-label="Fim" className={FERRAMENTA_ICONE}>
           <Icon name="chevrons-right" />
         </button>
       </Tooltip>
@@ -736,16 +654,15 @@ function SpeedDisplay({
   playbackRate: number;
   onAlternar?: () => void;
 }) {
+  // D-871: sem âmbar — velocidade é um ajuste, não um aviso.
   const classes =
-    // D-871: sem âmbar — velocidade é um ajuste, não um aviso.
-    'flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 font-code text-[11px] font-bold text-[var(--wb-text)]';
-  const numero = { fontVariantNumeric: 'tabular-nums' } as const;
+    'inline-flex h-7 items-center gap-1 rounded-pilula border border-fio bg-poco px-2.5 font-mono text-micro tabular-nums text-fg';
   const rotulo = <><Icon name="gauge" />{playbackRate.toFixed(2)}×</>;
 
   if (!onAlternar) {
     return (
       <Tooltip label="Velocidade atual (use Ctrl + J/K)" side="bottom">
-        <span className={classes} style={numero}>
+        <span className={classes}>
           {rotulo}
         </span>
       </Tooltip>
@@ -765,9 +682,9 @@ function SpeedDisplay({
       <button
         type="button"
         onClick={onAlternar}
+        data-sala=""
         aria-label="Alternar velocidade"
-        className={cn(classes, 'transition-colors hover:border-[var(--wb-border)]')}
-        style={numero}
+        className={cn(classes, 'transition-colors duration-150 hover:border-campo motion-reduce:transition-none', FOCO)}
       >
         {rotulo}
       </button>
@@ -818,6 +735,17 @@ function posicionarMenu(rect: DOMRect, alturaTela: number, larguraTela: number):
     return { bottom: alturaTela - rect.top + MENU_MARGEM, right, maxHeight: Math.max(acima, 0) };
   }
   return { top: rect.bottom + MENU_MARGEM, right, maxHeight: Math.max(abaixo, 0) };
+}
+
+/** A posição medida do menu entra só como variável de geometria (DIRECAO §9.3). */
+function posicaoDoMenu(pos: PosicaoMenu): CSSProperties {
+  const px = (n?: number) => (n === undefined ? 'auto' : `${n}px`);
+  return {
+    '--topo': px(pos.top),
+    '--base': px(pos.bottom),
+    '--direita': px(pos.right),
+    '--altura': px(pos.maxHeight),
+  } as CSSProperties;
 }
 
 // AdvancedMenu — auto-contido, renderiza via createPortal pra escapar
@@ -911,9 +839,8 @@ function AdvancedMenu({
   }, [open]);
 
   // v2_bruto.jsx:257-326
-  const item =
-    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)] transition-colors';
-  const kbd = 'font-code text-[10px] text-[var(--wb-text-dim)]';
+  const item = ITEM_DE_MENU;
+  const kbd = 'font-mono text-micro text-fg-3';
 
   function close() {
     setOpen(false);
@@ -928,12 +855,8 @@ function AdvancedMenu({
           onClick={() => setOpen((v) => !v)}
           aria-label="Ferramentas avancadas"
           aria-expanded={open}
-          className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border transition-colors',
-            open
-              ? 'border-transparent bg-[var(--wb-ink)] text-[var(--wb-ink-fg)]'
-              : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-          )}
+          data-sala=""
+          className={cn(FERRAMENTA_ICONE, open && 'bg-vidro-3 text-fg')}
         >
           <Icon name="settings" />
         </button>
@@ -943,24 +866,14 @@ function AdvancedMenu({
         createPortal(
           <div
             ref={menuRef}
-            style={{
-              position: 'fixed',
-              top: pos.top,
-              bottom: pos.bottom,
-              right: pos.right,
-              zIndex: 100,
-              maxHeight: pos.maxHeight,
-            }}
-            className="flex w-[240px] flex-col gap-0.5 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]"
+            data-sala=""
+            style={posicaoDoMenu(pos)}
+            className="fixed bottom-[var(--base)] right-[var(--direita)] top-[var(--topo)] z-[100] flex max-h-[var(--altura)] w-[240px] flex-col gap-0.5 overflow-y-auto rounded-bloco border border-fio-2 bg-pop p-2 text-fg shadow-pop-luz"
           >
-            <div className="px-2 pb-1 pt-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
-              Avancado
-            </div>
+            <div className={ROTULO_DE_GRUPO}>Avançado</div>
             {onChangeSpeed && playbackRate !== undefined && (
               <>
-                <div className="px-2 pb-1 pt-0.5 font-code text-[8.5px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
-                  Velocidade
-                </div>
+                <div className={ROTULO_DE_GRUPO}>Velocidade</div>
                 <div className="grid grid-cols-4 gap-1 px-2 pb-1.5">
                   {SPEED_OPTIONS.map((speed) => {
                     const active = Math.abs(speed - playbackRate) < 0.01;
@@ -973,11 +886,13 @@ function AdvancedMenu({
                           onChangeSpeed(speed - playbackRate);
                         }}
                         aria-pressed={active}
+                        data-sala=""
                         className={cn(
-                          'rounded-md py-1 text-center font-code text-[10px] font-bold transition-colors',
+                          'rounded-pilula py-1 text-center font-mono text-micro transition-colors duration-150 motion-reduce:transition-none',
+                          FOCO,
                           active
-                            ? 'bg-[var(--sel-ink)] text-[var(--sel-on)]'
-                            : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                            ? 'bg-iris text-sobre-iris'
+                            : 'bg-poco text-fg-2 hover:text-fg',
                         )}
                       >
                         {speed}×
@@ -993,9 +908,9 @@ function AdvancedMenu({
                 close();
                 onZoomOut();
               }}
-              className={item}
+              data-sala="" className={item}
             >
-              <Icon name="zoom-out" className="text-[var(--wb-text-mute)]" />
+              <Icon name="zoom-out" className="text-fg-2" />
               <span className="flex-1">Diminuir zoom</span>
               <span className={kbd}>Ctrl + −</span>
             </button>
@@ -1005,9 +920,9 @@ function AdvancedMenu({
                 close();
                 onZoomIn();
               }}
-              className={item}
+              data-sala="" className={item}
             >
-              <Icon name="zoom-in" className="text-[var(--wb-text-mute)]" />
+              <Icon name="zoom-in" className="text-fg-2" />
               <span className="flex-1">Aumentar zoom</span>
               <span className={kbd}>Ctrl + +</span>
             </button>
@@ -1017,10 +932,10 @@ function AdvancedMenu({
                 close();
                 onToggleSmartPlay?.();
               }}
-              className={item}
+              data-sala="" className={item}
               aria-pressed={!!smartPlay}
             >
-              <Icon name="scissors" className={smartPlay ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'} />
+              <Icon name="scissors" className={smartPlay ? 'text-iris' : 'text-fg-2'} />
               <span className="flex-1">Reproducao sem trechos{smartPlay ? ' · ativo' : ''}</span>
               <span className={kbd}>Ctrl + B</span>
             </button>
@@ -1030,10 +945,10 @@ function AdvancedMenu({
                 close();
                 onTogglePointer?.();
               }}
-              className={item}
+              data-sala="" className={item}
               aria-pressed={!!pointer}
             >
-              <Icon name="mouse-pointer-2" className={pointer ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'} />
+              <Icon name="mouse-pointer-2" className={pointer ? 'text-iris' : 'text-fg-2'} />
               <span className="flex-1">{pointer ? 'Modo ponteiro · ativo' : 'Modo ponteiro'}</span>
               <span className={kbd}>Ctrl + P</span>
             </button>
@@ -1043,13 +958,13 @@ function AdvancedMenu({
                 close();
                 onToggleLocked?.();
               }}
-              className={item}
+              data-sala="" className={item}
               aria-pressed={!!locked}
             >
               {locked ? (
-                <Icon name="lock" className="text-[var(--wb-accent)]" />
+                <Icon name="lock" className="text-iris" />
               ) : (
-                <Icon name="unlock" className="text-[var(--wb-text-mute)]" />
+                <Icon name="unlock" className="text-fg-2" />
               )}
               <span className="flex-1">{locked ? 'Destravar trecho' : 'Trecho destravado'}</span>
               <span className={kbd}>Ctrl + L</span>
@@ -1061,10 +976,10 @@ function AdvancedMenu({
                   close();
                   onTogglePinned();
                 }}
-                className={item}
+                data-sala="" className={item}
                 aria-pressed={!!pinned}
               >
-                <Icon name="pin" className={pinned ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'} />
+                <Icon name="pin" className={pinned ? 'text-iris' : 'text-fg-2'} />
                 <span className="flex-1">
                   {pinned ? 'Liberar altura' : 'Fixar altura da timeline'}
                 </span>
@@ -1072,7 +987,7 @@ function AdvancedMenu({
             )}
             {(onDividirAqui || onJuntarProximo || onAddSegment || onRefreshAudio) && (
               <>
-                <div className="my-1 h-px bg-[var(--wb-border-soft)]" />
+                <div className="my-1 h-px bg-fio" />
                 {onDividirAqui && (
                   <button
                     type="button"
@@ -1081,9 +996,9 @@ function AdvancedMenu({
                       onDividirAqui();
                     }}
                     disabled={dividindo}
-                    className={item}
+                    data-sala="" className={item}
                   >
-                    <Icon name="split-square-horizontal" className="text-[var(--wb-text-mute)]" />
+                    <Icon name="split-square-horizontal" className="text-fg-2" />
                     <span className="flex-1">Dividir corte aqui</span>
                     <span className={kbd}>D</span>
                   </button>
@@ -1096,9 +1011,9 @@ function AdvancedMenu({
                       onJuntarProximo();
                     }}
                     disabled={juntando}
-                    className={item}
+                    data-sala="" className={item}
                   >
-                    <Icon name="merge" className="text-[var(--wb-text-mute)]" />
+                    <Icon name="merge" className="text-fg-2" />
                     <span className="flex-1">Juntar com o proximo corte</span>
                     <span className={kbd}>^⌥J</span>
                   </button>
@@ -1110,9 +1025,9 @@ function AdvancedMenu({
                       close();
                       onAddSegment();
                     }}
-                    className={item}
+                    data-sala="" className={item}
                   >
-                    <Icon name="plus" className="text-[var(--wb-text-mute)]" />
+                    <Icon name="plus" className="text-fg-2" />
                     <span className="flex-1">Trecho aqui</span>
                     <span className={kbd}>Ctrl+Alt+T</span>
                   </button>
@@ -1125,9 +1040,9 @@ function AdvancedMenu({
                       onRefreshAudio();
                     }}
                     disabled={refreshing}
-                    className={item}
+                    data-sala="" className={item}
                   >
-                    <Icon name="rotate-cw" className={cn('text-[var(--wb-text-mute)]', refreshing && 'animate-spin')} />
+                    <Icon name="rotate-cw" className={cn('text-fg-2', refreshing && 'animate-spin')} />
                     <span className="flex-1">
                       {refreshing ? 'Atualizando onda…' : 'Atualizar onda de áudio'}
                     </span>
@@ -1135,8 +1050,8 @@ function AdvancedMenu({
                 )}
               </>
             )}
-            <div className="my-1 h-px bg-[var(--wb-border-soft)]" />
-            <div className="px-2 py-0.5 font-code text-[10px] text-[var(--wb-text-dim)]">
+            <div className="my-1 h-px bg-fio" />
+            <div className="px-2 py-0.5 font-mono text-micro text-fg-3">
               Zoom {zoomLabel} · Velocidade {rateLabel}
             </div>
           </div>,
@@ -1244,26 +1159,18 @@ export function TimelinePanel({
   const tempoLabel = `${segParaMmSs(Math.max(0, currentTime - inicioSeg), true)} / ${segParaMmSs(Math.max(0, fimSeg - inicioSeg), true)}`;
 
   return (
-    <section
-      className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]"
-      style={{ overflow: 'visible' }}
-    >
+    <section className="flex h-full flex-col overflow-visible rounded-cartao border border-fio bg-painel-solido">
       {/* Header — v2_bruto.jsx:209-329 (Panel + toolbar) */}
       {/* Em coluna estreita o cabecalho quebra em duas linhas em vez de
           esconder o ⚙. */}
-      <header className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
+      <header className="m-2 flex flex-shrink-0 flex-wrap items-center gap-2 rounded-pilula border border-fio bg-poco px-2 py-1">
         {/* AUDITORIA-v2 §7 (CP7): tempo, transporte, In/Out, cadeado e o menu ⚙.
             Velocidade/dividir/trecho/onda foram para o AdvancedMenu; o badge de
             trechos saiu (já aparece em Tempos/CP6). */}
         {/* D-610: na casca nova o transporte voltou para cá. A barra própria
             acima gastava uma linha inteira do player para cinco controles
             que cabem folgados neste cabeçalho. */}
-        <span
-          className="flex-none font-code text-[10px] font-semibold text-[var(--wb-text-mute)]"
-          style={{ fontVariantNumeric: 'tabular-nums' }}
-        >
-          {tempoLabel}
-        </span>
+        <span className="flex-none pl-2 font-mono text-micro tabular-nums text-fg-2">{tempoLabel}</span>
 
         <TransportGroup onSkipStart={irParaInicio} onPlay={alternarPlay} onSkipEnd={irParaFim} />
 
@@ -1274,9 +1181,10 @@ export function TimelinePanel({
             onClick={onSetInicioAqui}
             disabled={!onSetInicioAqui}
             aria-label="Marcar inicio aqui"
-            className="flex h-7 flex-none items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2.5 text-[12px] font-medium text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-40"
+            data-sala=""
+            className={FERRAMENTA_TEXTO}
           >
-            <span className="font-code font-semibold">[</span>
+            <span className="font-mono font-semibold">[</span>
             Início aqui
           </button>
         </Tooltip>
@@ -1286,10 +1194,11 @@ export function TimelinePanel({
             onClick={onSetFimAqui}
             disabled={!onSetFimAqui}
             aria-label="Marcar fim aqui"
-            className="flex h-7 flex-none items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2.5 text-[12px] font-medium text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-40"
+            data-sala=""
+            className={FERRAMENTA_TEXTO}
           >
             Fim aqui
-            <span className="font-code font-semibold">]</span>
+            <span className="font-mono font-semibold">]</span>
           </button>
         </Tooltip>
 
@@ -1302,12 +1211,8 @@ export function TimelinePanel({
             onClick={toggleLocked}
             aria-pressed={locked}
             aria-label={locked ? 'Destravar trecho' : 'Travar trecho'}
-            className={cn(
-              'flex h-7 w-7 flex-none items-center justify-center rounded-[var(--radius-sm)] transition-colors',
-              locked
-                ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
-                : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-            )}
+            data-sala=""
+            className={cn(FERRAMENTA_ICONE, LIGADO)}
           >
             {locked ? <Icon name="lock" /> : <Icon name="unlock" />}
           </button>
@@ -1347,7 +1252,7 @@ export function TimelinePanel({
 
       {corteId && <AlertasConferir corteId={corteId} alertas={alertas} onSeek={handleSeek} />}
 
-      <div className="flex flex-1 flex-col p-3" style={{ minHeight: 0 }}>
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
         <Waveform
           audioSrc={audioSrc}
           waveformPeaksSrc={_waveformPeaksSrc}

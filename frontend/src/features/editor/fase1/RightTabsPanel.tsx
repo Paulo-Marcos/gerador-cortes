@@ -13,6 +13,7 @@ import { useDiarizarCorte, useFalantes } from '@/features/diarizacao/useDiarizac
 import type { FalantesMap } from '@/features/diarizacao/api';
 import type { Corte, Desvio, TranscricaoLinha } from '@/types/models';
 import { Icon } from '@/upgrade/Icon';
+import { FOCO } from '../salaDoEditor';
 
 // ─────────────────────────────────────────────────────────────
 // RightTabsPanel — replica `design_reference/src/v2_bruto.jsx:405-624`.
@@ -120,9 +121,7 @@ export function RightTabsPanel({
   const diarizar = useDiarizarCorte(corteId, projetoId);
 
   return (
-    <section
-      className="card flex h-full flex-col overflow-hidden"
-    >
+    <section data-sala="" className="flex h-full flex-col overflow-hidden rounded-cartao border border-fio bg-painel-solido">
       <CabecalhoDoPainel
         onRecolher={onRecolher}
         onAtualizarTranscricao={onAtualizarTranscricao}
@@ -200,15 +199,15 @@ function CabecalhoDoPainel({
     // (a coluna numa tela de 1440); mais estreita, quebram em duas fileiras,
     // legíveis — reticências viravam quatro "Tr…". Os dois ícones ficam: 26 px
     // é o piso da casca.
-    <header className="flex flex-shrink-0 items-center gap-0.5 border-b border-[var(--line2)] px-2 py-2">
+    <header className="flex flex-shrink-0 items-center gap-0.5 border-b border-fio px-2 py-2">
       {/* Primeiro da faixa: com quatro abas numa coluna estreita, no fim ele
           ficava fora de vista. */}
       {onRecolher ? (
         <Tooltip label="Recolher a coluna" side="bottom">
           <IconButton
             type="button"
-            variant="ghost"
-            size="sm"
+            variant="fantasma"
+            size="pq"
             onClick={onRecolher}
             aria-label="Recolher a coluna de trechos"
           >
@@ -219,23 +218,15 @@ function CabecalhoDoPainel({
       <div
         role="tablist"
         aria-label="Painel do corte"
-        style={{
-          flex: '1 1 0',
-          minWidth: 0,
-          display: 'flex',
-          flexWrap: 'wrap',
-          padding: 2,
-          borderRadius: 6,
-          background: 'var(--wb-bg-inset)',
-        }}
+        className="flex min-w-0 flex-1 flex-wrap gap-0.5 rounded-pilula bg-poco p-0.5"
       >
         {children}
       </div>
       <Tooltip label={refreshTitle} side="bottom">
         <IconButton
           type="button"
-          variant="outline"
-          size="sm"
+          variant="fantasma"
+          size="pq"
           onClick={onAtualizarTranscricao}
           disabled={transcricaoAtualizando}
           aria-label={refreshTitle}
@@ -264,22 +255,12 @@ function TabButton({ active, onClick, label }: { active: boolean; onClick: () =>
       aria-selected={active}
       onClick={onClick}
       title={label}
-      style={{
-        maxWidth: '100%',
-        height: 28,
-        padding: '0 5px',
-        border: 0,
-        borderRadius: 4,
-        background: active ? 'var(--wb-bg-card)' : 'transparent',
-        boxShadow: active ? 'var(--shadow-sm)' : 'none',
-        color: active ? 'var(--wb-text)' : 'var(--mute)',
-        fontSize: 12,
-        fontWeight: active ? 600 : 500,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        cursor: 'pointer',
-      }}
+      data-sala=""
+      className={cn(
+        'h-7 max-w-full truncate whitespace-nowrap rounded-pilula border-0 px-2.5 text-pequeno transition-colors duration-150 motion-reduce:transition-none',
+        active ? 'bg-vidro-3 text-fg shadow-topo' : 'bg-transparent text-fg-2 hover:text-fg',
+        FOCO,
+      )}
     >
       {label}
     </button>
@@ -338,16 +319,16 @@ function TranscriptList({
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Busca — v2_bruto.jsx:553-582 */}
-      <div className="flex-shrink-0 space-y-2 border-b border-[var(--wb-border-soft)] px-3 py-2.5">
-        <div className="flex h-[30px] items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5">
-          <Icon name="search" className="text-[var(--wb-text-dim)]" />
+      <div className="flex-shrink-0 space-y-2 border-b border-fio px-3 py-2.5">
+        <div className="flex h-[30px] items-center gap-2 rounded-campo border border-fio bg-poco px-2.5">
+          <Icon name="search" className="text-fg-3" />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar palavra..."
-            className="flex-1 bg-transparent text-[12.5px] text-[var(--wb-text)] outline-none placeholder:text-[var(--wb-text-dim)]"
+            className="flex-1 bg-transparent text-pequeno text-fg outline-none placeholder:text-fg-3"
           />
-          <span className="font-code text-[10px] text-[var(--wb-text-dim)]">⌘F</span>
+          <span className="font-mono text-micro text-fg-3">⌘F</span>
         </div>
         {/* D-360: diariza só este corte (evita rodar o vídeo inteiro). */}
         <Tooltip
@@ -356,8 +337,8 @@ function TranscriptList({
         >
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             className="w-full"
             onClick={onDiarizar}
             disabled={diarizando}
@@ -371,7 +352,7 @@ function TranscriptList({
       {/* Linhas — v2_bruto.jsx:584-621 */}
       <div className="flex-1 overflow-y-auto py-1">
         {linhasFiltradas.length === 0 && (
-          <div className="m-auto py-8 text-center text-[12px] text-[var(--wb-text-dim)]">
+          <div className="m-auto py-8 text-center text-pequeno text-fg-3">
             {linhas.length === 0 ? 'Sem transcricao.' : 'Nenhum resultado.'}
           </div>
         )}
@@ -386,25 +367,25 @@ function TranscriptList({
               className={cn(
                 'flex w-full items-baseline gap-2.5 border-l-2 px-3 py-1.5 text-left transition-colors',
                 ativa
-                  ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
-                  : 'border-transparent hover:bg-[var(--wb-bg-inset)]',
+                  ? 'border-iris bg-vidro-3'
+                  : 'border-transparent hover:bg-vidro-2',
               )}
             >
               <span
                 className={cn(
-                  'min-w-[56px] font-code text-[10px]',
+                  'min-w-[56px] font-mono text-micro',
                   ativa
-                    ? 'font-bold text-[var(--sel-ink)]'
-                    : 'font-medium text-[var(--wb-text-dim)]',
+                    ? 'text-iris-2'
+                    : 'text-fg-3',
+                  'tabular-nums',
                 )}
-                style={{ fontVariantNumeric: 'tabular-nums' }}
               >
                 {hmsString(l.start)}
               </span>
               <span
                 className={cn(
-                  'text-[13px] leading-snug',
-                  ativa ? 'font-medium text-[var(--wb-ink)]' : 'text-[var(--wb-text)]',
+                  'text-corpo leading-snug',
+                  ativa ? 'font-medium text-fg' : 'text-fg-2',
                 )}
               >
                 {temFalante && <FalanteBadge speaker={l.speaker} falantes={falantes} />}
@@ -430,12 +411,10 @@ function FalanteBadge({ speaker, falantes }: { speaker?: string; falantes?: Fala
     nome || `Falante ${speaker.replace(/^SPEAKER_?/i, '').replace(/^0+/, '') || speaker}`;
   return (
     <span
-      className="mr-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 align-baseline font-code text-[9.5px] font-semibold uppercase tracking-[0.03em]"
-      style={
-        isCanal
-          ? { background: 'var(--wb-accent-soft)', color: 'var(--wb-accent)' }
-          : { background: 'var(--wb-violet-soft)', color: 'var(--wb-violet)' }
-      }
+      className={cn(
+        'mr-1.5 inline-flex items-center rounded-pilula px-1.5 py-0.5 align-baseline font-mono text-micro',
+        isCanal ? 'bg-iris-suave text-iris-2' : 'bg-vidro-2 text-fg-2',
+      )}
     >
       {isCanal ? `Canal${nome ? `: ${nome}` : ''}` : label}
     </span>

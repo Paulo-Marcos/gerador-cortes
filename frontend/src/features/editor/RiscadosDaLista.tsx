@@ -34,48 +34,42 @@ type SecaoDosRiscadosProps = {
   onTrazerDeVolta: (corte: Corte) => void;
 };
 
-const riscado = { textDecoration: 'line-through', textDecorationColor: 'var(--dim)' } as const;
+// O número e o título riscados: o traço apagado diz "saiu" sem tirar a leitura.
+const RISCADO = 'line-through decoration-fg-3';
 
-/** A seção, sem hook: o teste a desenha pelo HTML. */
+/** A seção, sem hook: o teste a desenha pelo HTML. Sem `style`: só classes da Sala escura. */
 export function SecaoDosRiscados({ riscados, motivos, trazendo, onTrazerDeVolta }: SecaoDosRiscadosProps) {
   if (riscados.length === 0) return null;
   return (
-    <details open style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line2)' }}>
-      <summary className="lbl" style={{ cursor: 'pointer', padding: '0 6px' }}>
+    <details open data-sala="" className="text-corpo">
+      <summary className="cursor-pointer rounded-ladrilho px-1.5 text-micro text-fg-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco">
         Riscados · {riscados.length}
       </summary>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+      <div className="mt-1.5 flex flex-col gap-1.5">
         {riscados.map((corte) => (
           <div
             key={corte.id}
             data-riscado={corte.id}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 5,
-              padding: 7,
-              border: '1px dashed var(--line)',
-              borderRadius: 'var(--r2)',
-            }}
+            className="flex flex-col gap-1.5 rounded-campo border border-dashed border-fio-2 p-2"
           >
-            <span style={{ display: 'flex', gap: 5, minWidth: 0, fontSize: 11.5, color: 'var(--mute)' }}>
-              <span style={{ ...riscado, fontFamily: 'var(--mono)', flex: 'none' }}>#{corte.numero}</span>
-              <span style={{ ...riscado, fontWeight: 600, minWidth: 0 }}>{corte.titulo_proposto}</span>
+            <span className="flex min-w-0 gap-1.5 text-pequeno text-fg-2">
+              <span className={`flex-none font-mono ${RISCADO}`}>#{corte.numero}</span>
+              <span className={`min-w-0 font-semibold ${RISCADO}`}>{corte.titulo_proposto}</span>
             </span>
             {corte.motivo_riscado?.length ? (
-              <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              <span className="flex flex-wrap gap-1">
                 {corte.motivo_riscado.map((slug) => (
-                  <span key={slug} className="chip" style={{ background: 'var(--line2)', color: 'var(--mute)' }}>
+                  <span key={slug} className="rounded-etiqueta bg-vidro-2 px-1.5 text-micro text-fg-2">
                     {nomearMotivo(slug, motivos)}
                   </span>
                 ))}
               </span>
             ) : null}
-            <span style={{ fontSize: 11, color: 'var(--dim)' }}>{FRASE_DO_RISCADO}</span>
+            <span className="text-micro text-fg-3">{FRASE_DO_RISCADO}</span>
             <button
               type="button"
-              className="btn btn-sm"
-              style={{ justifyContent: 'center' }}
+              data-sala=""
+              className="inline-flex h-botao-pq items-center justify-center gap-1.5 rounded-pilula border border-fio-2 bg-vidro-2 px-3 text-pequeno text-fg shadow-topo hover:bg-vidro-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:border-fio disabled:bg-transparent disabled:text-fg-off"
               disabled={Boolean(trazendo)}
               aria-busy={trazendo === corte.id || undefined}
               onClick={() => onTrazerDeVolta(corte)}
@@ -90,7 +84,7 @@ export function SecaoDosRiscados({ riscados, motivos, trazendo, onTrazerDeVolta 
   );
 }
 
-/** A seção que a casca desenha no fim da lista: lê os motivos do canal e traz de volta. */
+/** A seção dos riscados (no cabeçalho do editor, D-1150): lê os motivos do canal e traz de volta. */
 export function RiscadosDaLista({ projetoId, riscados }: { projetoId: string; riscados: readonly Corte[] }) {
   // Todos os motivos do canal, inclusive os escondidos: o riscado de ontem segue nomeado.
   const { data } = useMotivosDeExclusao();

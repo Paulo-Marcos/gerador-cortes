@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import type { Corte } from '@/types/models';
-import { UpgradeModal } from '@/upgrade/UpgradeModal';
+import { Dialog } from '@/components/ui/dialog';
 import { lerNotaDoCorte } from '../notaDoCorte';
 import { ConteudoDoPorQue, PorQueDoCorteModal } from '../PorQueDoCorteModal';
 import { PorQueNaBancada } from '../PorQueNaBancada';
@@ -144,16 +144,16 @@ describe('PorQueDoCorteModal', () => {
     const { quadros, html } = encenar(PorQueDoCorteModal, { corte: corte(), aoFechar: fechar }, []);
     expect(h.portais[0].alvo).toBe(casca);
     const modal = quadros[0] as ReactElement<Record<string, unknown>>;
-    expect(modal.type).toBe(UpgradeModal);
+    expect(modal.type).toBe(Dialog);
     expect(modal.props).toMatchObject({
       open: true,
       onClose: fechar,
       title: 'Por que a IA escolheu o corte #7',
-      subtitle: 'Pedro II e a Igreja',
-      secondaryLabel: null,
-      primaryLabel: 'Fechar',
-      primaryStrong: false,
+      description: 'Pedro II e a Igreja',
     });
+    expect(html.match(/<footer[^>]*>.*?<\/footer>/s)![0].match(/<button/g)).toHaveLength(1);
+    expect(html).toMatch(/<footer[^>]*>.*>Fechar<\/button>/s);
+    expect(html).not.toContain('data-variant="primario"');
     expect(html).toContain('role="dialog"');
     expect(html).toContain('Arco fechado');
   });

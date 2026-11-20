@@ -9,6 +9,7 @@ import { RightTabsPanel } from './RightTabsPanel';
 import { useSomDoCorte } from './useSomDoCorte';
 import type { TrechosRiscados } from '../useTrechosRiscados';
 import { Icon } from '@/upgrade/Icon';
+import { FERRAMENTA_ICONE } from '../salaDoEditor';
 import { trechosNoFoco } from '@/upgrade/modoFoco';
 import { useModoFocoAtivo } from '@/upgrade/useModoFoco';
 
@@ -170,8 +171,7 @@ export function EditorFase1({
       <PanelGroup
         direction="horizontal"
         autoSaveId={`${PANEL_PERSIST_AP}-h`}
-        className="h-full min-w-0 flex-1 py-2"
-        style={{ gap: 14 }}
+        className="h-full min-w-0 flex-1 gap-3.5 pb-1"
       >
         {/* Esquerda: Player (cresce) + Timeline (compact rente aos timecodes) */}
         {/* No design a coluna direita e uma faixa fixa de 320px; aqui ela
@@ -196,7 +196,7 @@ export function EditorFase1({
                 {...noPlayer}
               />
             </Panel>
-            <PanelResizeHandle className="h-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
+            <PanelResizeHandle className="h-2 transition-colors hover:bg-fio" />
             <PainelComFaixaDoBruto defaultSize={35} minSize={15} order={2} corte={corte} audioOffsetMs={audioOffsetMs ?? 0}>
               <TimelinePanel
                 audioSrc={audioSrc}
@@ -241,7 +241,7 @@ export function EditorFase1({
         </Panel>
 
         {trechosRecolhidos ? null : (
-          <PanelResizeHandle className="w-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
+          <PanelResizeHandle className="w-2 transition-colors hover:bg-fio" />
         )}
 
         {/* Direita: RightTabsPanel vertical inteiro */}
@@ -279,7 +279,8 @@ export function EditorFase1({
         <div className="flex flex-none flex-col items-center py-2 pl-2">
           <button
             type="button"
-            className="btn btn-icon btn-ghost"
+            data-sala=""
+            className={FERRAMENTA_ICONE}
             onClick={alternarTrechos}
             title={`Mostrar trechos, ordem e transcrição (${(corte.desvios ?? []).length} trechos)`}
             aria-label="Mostrar a coluna de trechos"

@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
  * grava na hora. O Desfazer devolve o corte à etapa de antes. O aviso mora
  * fora do QueryClient, então as duas ações chegam prontas.
  */
+const DESFAZER =
+  'inline-flex h-6 items-center rounded-pilula px-2.5 text-pequeno text-fg-2 hover:bg-vidro-2 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco';
+
 export function AvisoDoRiscado({
   motivos,
   onMotivos,
@@ -32,9 +35,7 @@ export function AvisoDoRiscado({
     <span className="flex flex-wrap items-center gap-1.5">
       {motivos.length > 0 ? (
         <span role="group" aria-label="Motivo (opcional)" className="flex flex-wrap items-center gap-1">
-          <span className="text-[11px]" style={{ color: 'var(--mute)' }}>
-            Motivo:
-          </span>
+          <span className="text-micro text-fg-2">Motivo:</span>
           {motivos.map((motivo) => {
             const ativo = marcados.includes(motivo.slug);
             return (
@@ -42,12 +43,12 @@ export function AvisoDoRiscado({
                 key={motivo.slug}
                 type="button"
                 aria-pressed={ativo}
+                data-sala=""
                 onClick={() => alternar(motivo.slug)}
                 className={cn(
-                  'rounded-[7px] border px-2 py-[2px] text-[11px] font-bold transition-colors',
-                  ativo
-                    ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--sel-ink)]'
-                    : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                  'rounded-pilula border px-2 py-[2px] text-micro transition-colors duration-150 motion-reduce:transition-none',
+                  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
+                  ativo ? 'border-iris-fio bg-iris-suave text-iris-2' : 'border-fio-2 bg-poco text-fg-2 hover:text-fg',
                 )}
               >
                 {motivo.rotulo}
@@ -57,7 +58,7 @@ export function AvisoDoRiscado({
         </span>
       ) : null}
       {onDesfazer ? (
-        <button type="button" className="btn btn-ghost" style={{ height: 24, fontSize: 11.5 }} onClick={onDesfazer}>
+        <button type="button" data-sala="" className={DESFAZER} onClick={onDesfazer}>
           Desfazer
         </button>
       ) : null}

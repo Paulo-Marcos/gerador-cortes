@@ -1,6 +1,7 @@
 import { effectiveShortcutSpecs, shortcutCombo } from '@/shared/atalhos/shortcutsRegistry';
 import { Icon } from '@/upgrade/Icon';
 import { alternarModoFoco } from '@/upgrade/modoFoco';
+import { FERRAMENTA_ICONE } from './salaDoEditor';
 
 /** O atalho em uso (com a reatribuição do usuário), para o `title`. */
 function atalhoDoFoco(): string {
@@ -19,10 +20,11 @@ export function BotaoModoFoco({ ativo, flutuante = false }: { ativo: boolean; fl
       aria-pressed={ativo}
       title={`${rotulo} (${atalhoDoFoco()})`}
       onClick={alternarModoFoco}
+      data-sala=""
       className={
         flutuante
-          ? 'absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] opacity-60 transition hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]'
-          : 'flex h-6 w-6 flex-none items-center justify-center rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] transition-colors hover:border-[var(--wb-accent)] hover:text-[var(--wb-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]'
+          ? `absolute right-3 top-3 z-10 opacity-60 hover:opacity-100 focus-visible:opacity-100 ${FERRAMENTA_ICONE} bg-painel-solido`
+          : FERRAMENTA_ICONE
       }
     >
       <Icon name={ativo ? 'minimize-2' : 'maximize-2'} />

@@ -24,9 +24,9 @@ export function AlertasConferirFaixa({ alertas, onSeek, onConferir, conferindoId
     <div
       role="list"
       aria-label="Alertas para conferir"
-      className="flex flex-shrink-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-[var(--wb-border-soft)] bg-[var(--wb-warn-soft)] px-3 py-1.5"
+      className="flex flex-shrink-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-fio bg-[var(--wb-warn-soft)] px-3 py-1.5"
     >
-      <span className="flex flex-none items-center gap-1 text-[11px] font-semibold text-[var(--wb-warn-ink)]">
+      <span className="flex flex-none items-center gap-1 text-micro font-semibold text-[var(--wb-warn-ink)]">
         <Icon name="flag" />
         Conferir ({pendentes.length})
       </span>
@@ -34,15 +34,15 @@ export function AlertasConferirFaixa({ alertas, onSeek, onConferir, conferindoId
         <div
           key={alerta.id}
           role="listitem"
-          className="flex max-w-[420px] flex-none items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-warn)] bg-[var(--wb-bg-card)] pl-2"
+          className="flex max-w-[420px] flex-none items-center gap-1 rounded-campo border border-[var(--wb-warn)] bg-painel-solido pl-2"
         >
           <button
             type="button"
             onClick={() => onSeek(alerta.inicio_seg)}
             title={`Ir para o trecho: ${alerta.motivo}`}
-            className="flex min-w-0 items-center gap-1.5 py-0.5 text-[11px] text-[var(--wb-text)]"
+            className="flex min-w-0 items-center gap-1.5 py-0.5 text-micro text-fg"
           >
-            <span className="flex-none font-code font-semibold text-[var(--wb-warn-ink)]">
+            <span className="flex-none font-mono font-semibold text-[var(--wb-warn-ink)]">
               {segParaHms(alerta.inicio_seg)}
             </span>
             <span className="truncate">{alerta.motivo || 'Afirmação a conferir'}</span>
@@ -52,7 +52,7 @@ export function AlertasConferirFaixa({ alertas, onSeek, onConferir, conferindoId
             onClick={() => onConferir(alerta.id)}
             disabled={conferindoId === alerta.id}
             aria-label={`Marcar como conferido: ${alerta.motivo}`}
-            className="flex h-6 flex-none items-center gap-1 border-l border-[var(--wb-border-soft)] px-2 text-[11px] font-medium text-[var(--wb-text-mute)] hover:text-[var(--wb-ok)] disabled:opacity-40"
+            className="flex h-6 flex-none items-center gap-1 border-l border-fio px-2 text-micro font-medium text-fg-2 hover:text-ok disabled:opacity-40"
           >
             <Icon name="check" />
             Conferido

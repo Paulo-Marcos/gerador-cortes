@@ -5,6 +5,7 @@ import type { Desvio, TranscricaoLinha } from '@/types/models';
 import { PerguntaDaDecisao } from './DecisoesDoCorte';
 import { LinhaDoTrecho } from './LinhaDoTrecho';
 import { resumoDoSilencio, silencioDoCorte, type RespostaDoSilencio } from './silencioDoCorte';
+import { FOCO } from '../salaDoEditor';
 
 // D-1093 (E5, P9, canvas `03-cortes-proposta`): "1 · Tirar o silêncio? Sai X". Uma
 // resposta para todos — Tirar todos / Manter todos —, e cada silêncio que sai mostra o
@@ -59,7 +60,7 @@ export const PerguntaDoSilencio = memo(function PerguntaDoSilencio({
       <div className="flex flex-col gap-1.5 px-2.5 pb-2.5 pt-1.5">
         {saem.length > 0 ? (
           <details open={saem.length <= ABERTA_ATE || selecionadoESilencio}>
-            <summary className="cursor-pointer text-[12px] font-semibold text-[var(--wb-text-mute)]">
+            <summary className="cursor-pointer text-pequeno font-semibold text-fg-2">
               {saem.length === 1 ? 'O silêncio que sai' : `Os ${saem.length} silêncios que saem`}
             </summary>
             <div className="mt-1.5 flex flex-col gap-1.5">
@@ -80,7 +81,7 @@ export const PerguntaDoSilencio = memo(function PerguntaDoSilencio({
           </details>
         ) : null}
         <RespostaEmLote resposta={silencio.resposta} pendente={pendente} onDecidir={onDecidir} />
-        <p className="m-0 text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
+        <p className="m-0 text-micro leading-[1.4] text-fg-2">
           Para manter um só, risque-o. Conta como silêncio a pausa de 0,8 s ou mais.
         </p>
       </div>
@@ -88,8 +89,8 @@ export const PerguntaDoSilencio = memo(function PerguntaDoSilencio({
   );
 });
 
-const BOTAO_DA_RESPOSTA =
-  'h-8 flex-1 rounded-[8px] border text-[12.5px] font-medium transition-colors disabled:opacity-40';
+// D-1150 (§7.3): a resposta é um segmented — pílula de poço com a opção marcada acesa.
+const BOTAO_DA_RESPOSTA = `h-7 flex-1 rounded-pilula text-pequeno transition-colors duration-150 disabled:text-fg-off motion-reduce:transition-none ${FOCO}`;
 
 function RespostaEmLote({
   resposta,
@@ -105,7 +106,7 @@ function RespostaEmLote({
     { decisao: 'manter', rotulo: 'Manter todos' },
   ];
   return (
-    <div role="group" aria-label="Resposta para todos os silêncios" className="flex gap-2">
+    <div role="group" aria-label="Resposta para todos os silêncios" className="flex gap-0.5 rounded-pilula bg-poco p-0.5">
       {opcoes.map(({ decisao, rotulo }) => {
         const marcada = resposta === decisao;
         return (
@@ -116,11 +117,12 @@ function RespostaEmLote({
             // A resposta já dada não se repete: o clique iria ao servidor para nada.
             onClick={marcada ? undefined : () => onDecidir(decisao)}
             disabled={pendente}
+            data-sala=""
             className={cn(
               BOTAO_DA_RESPOSTA,
               marcada
-                ? 'border-[var(--wb-text)] bg-[var(--wb-text)] text-[var(--wb-bg-card)]'
-                : 'border-[var(--wb-border)] bg-transparent text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)]',
+                ? 'bg-vidro-3 text-fg shadow-topo'
+                : 'bg-transparent text-fg-2 hover:text-fg',
             )}
           >
             {rotulo}

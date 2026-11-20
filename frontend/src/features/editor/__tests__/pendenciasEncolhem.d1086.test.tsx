@@ -32,14 +32,14 @@ const html = renderToStaticMarkup(
 describe('D-1086 · as pendências cedem largura na barra', () => {
   it('entra na conta da quebra da barra só com o mínimo legível e cresce até o próprio tamanho', () => {
     const raiz = html.match(/^<span[^>]*>/)?.[0] ?? '';
-    expect(raiz).toContain('min-width:64px');
-    expect(raiz).toContain('flex:1000 1 0');
-    expect(raiz).toContain('max-width:max-content');
+    expect(raiz).toContain('min-w-16');
+    expect(raiz).toContain('flex-[1000_1_0]');
+    expect(raiz).toContain('max-w-max');
   });
 
   it('o texto vira reticências numa linha; o inteiro fica no hover', () => {
     const texto = 'os trechos mudaram depois do bruto, cenas por validar';
     expect(html).toContain(`title="Em aberto, sem bloquear: ${texto}"`);
-    expect(html).toMatch(new RegExp(`<span style="[^"]*text-overflow:ellipsis;white-space:nowrap[^"]*">${texto}</span>`));
+    expect(html).toMatch(new RegExp(`<span class="[^"]*truncate[^"]*">${texto}</span>`));
   });
 });

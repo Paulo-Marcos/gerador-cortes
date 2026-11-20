@@ -83,19 +83,21 @@ export function AudioSyncControl({
             disabled={!canPreview || !onTogglePreview}
             aria-pressed={previewEnabled}
             aria-label="Preview de sincronia de áudio"
+            data-sala=""
             className={cn(
-              'flex h-7 w-7 flex-none items-center justify-center rounded-md border transition-colors disabled:pointer-events-none disabled:opacity-45',
+              'flex h-7 w-7 flex-none items-center justify-center rounded-pilula border transition-colors duration-150 disabled:pointer-events-none disabled:border-fio disabled:text-fg-off motion-reduce:transition-none',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
               falhou
-                ? 'border-[var(--wb-err)] bg-[var(--wb-bg-inset)] text-[var(--wb-err)]'
+                ? 'border-erro bg-poco text-erro'
                 : previewEnabled
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-bg-panel)]'
-                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
+                  ? 'border-iris-fio bg-iris-suave text-iris-2'
+                  : 'border-fio-2 bg-poco text-fg-3 hover:text-fg',
             )}
           >
             <Icon name={iconePreview} className={cn(carregando && 'animate-spin')} />
           </button>
         </Tooltip>
-        <span className="text-[11px] font-semibold text-[var(--wb-text-mute)]">
+        <span className="text-micro font-semibold text-fg-2">
           {carregando ? 'Preparando o áudio…' : falhou ? 'Áudio indisponível' : 'Sincronia do áudio'}
         </span>
       </div>
@@ -107,9 +109,9 @@ export function AudioSyncControl({
             type="button"
             onClick={() => onChange(clamp(offsetMs + delta))}
             disabled={disabled || (delta < 0 ? offsetMs <= MIN_MS : offsetMs >= MAX_MS)}
-            className="h-8 min-w-[44px] flex-1 rounded-[8px] border border-[var(--wb-border)] bg-transparent font-code text-[12px] font-semibold text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)] disabled:pointer-events-none disabled:opacity-40"
+            data-sala=""
+            className="h-8 min-w-[44px] flex-1 rounded-pilula border border-fio-2 bg-transparent font-mono text-pequeno tabular-nums text-fg transition-colors duration-150 hover:bg-vidro-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:pointer-events-none disabled:border-fio disabled:text-fg-off motion-reduce:transition-none"
             aria-label={dica}
-            style={{ fontVariantNumeric: 'tabular-nums' }}
           >
             {rotulo}
           </button>

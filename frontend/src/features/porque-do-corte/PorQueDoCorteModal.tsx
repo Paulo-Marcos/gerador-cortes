@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Corte } from '@/types/models';
 import { COR_DO_SELO } from '@/upgrade/SeloDeEstado';
-import { ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
+import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { MudancasDoCorte, useDiffDoCorte } from './MudancasDoCorte';
 import { NOTA_MAXIMA, lerNotaDoCorte, type NotaDoCorte } from './notaDoCorte';
 
@@ -20,24 +21,30 @@ import { NOTA_MAXIMA, lerNotaDoCorte, type NotaDoCorte } from './notaDoCorte';
 export function PorQueDoCorteModal({ corte, aoFechar }: { corte: Corte; aoFechar: () => void }) {
   const nota = lerNotaDoCorte(corte.score);
   const diff = useDiffDoCorte(corte);
-  // Portal para a `.ap`: o vidro (`backdrop-filter`) da linha e da barra vira
-  // a referência do `position: fixed` e prenderia o modal dentro delas.
+  // Portal para a `.ap`: a barra de ações, onde o selo mora, pode virar a referência do
+  // `position: fixed` e prender o diálogo dentro dela. O `Dialog` desenha no lugar.
   const alvo = document.querySelector('.ap') ?? document.body;
+  // D-1150 (E-069 H-17): o `Dialog` da Sala no lugar do `UpgradeModal` — foco preso e
+  // devolvido, Esc fecha, sem `backdrop-filter` (o editor toca vídeo, DIRECAO §3.6).
+  // Consulta, não decisão: só o "Fechar", sem primária.
   return createPortal(
-    <UpgradeModal
+    <Dialog
       open
       onClose={aoFechar}
-      icon="sparkles"
+      tamanho="md"
       title={`Por que a IA escolheu o corte #${corte.numero}`}
-      subtitle={corte.titulo_proposto}
-      secondaryLabel={null}
-      primaryLabel="Fechar"
-      primaryIcon="x"
-      primaryStrong={false}
+      description={corte.titulo_proposto}
+      footer={
+        <Button variant="secundario" onClick={aoFechar}>
+          Fechar
+        </Button>
+      }
     >
-      <ConteudoDoPorQue corte={corte} nota={nota} />
-      <MudancasDoCorte diff={diff} />
-    </UpgradeModal>,
+      <div className="flex flex-col gap-4 pb-2">
+        <ConteudoDoPorQue corte={corte} nota={nota} />
+        <MudancasDoCorte diff={diff} />
+      </div>
+    </Dialog>,
     alvo,
   );
 }
@@ -47,10 +54,10 @@ export function ConteudoDoPorQue({ corte, nota }: { corte: Corte; nota: NotaDoCo
   const gancho = corte.frase_gancho_texto?.trim();
   if (!nota && !justificativa && !gancho) {
     return (
-      <ModalText>
+      <p className="text-corpo text-fg-2">
         A IA não deixou justificativa nem nota para este corte — ele foi criado à mão ou veio de
         uma análise anterior a esses campos.
-      </ModalText>
+      </p>
     );
   }
   return (
@@ -67,34 +74,29 @@ export function ConteudoDoPorQue({ corte, nota }: { corte: Corte; nota: NotaDoCo
   );
 }
 
+// A cor da nota é a do selo do tom (a mesma do "IA 21/30" na barra), por variável.
 function BlocoDaNota({ nota }: { nota: NotaDoCorte }) {
-  const { cor } = COR_DO_SELO[nota.tom];
+  const cor = { '--cor': COR_DO_SELO[nota.tom].cor } as CSSProperties;
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-      <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: cor }}>
-          {nota.total}
-        </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--mute)' }}>
-          de {NOTA_MAXIMA} · nota da IA
-        </span>
+    <section className="flex flex-col gap-2" style={cor}>
+      <span className="flex items-baseline gap-2">
+        <span className="font-mono text-titulo text-[color:var(--cor)]">{nota.total}</span>
+        <span className="font-mono text-pequeno text-fg-2">de {NOTA_MAXIMA} · nota da IA</span>
       </span>
       {nota.partes.map((p) => (
-        <span
-          key={p.rotulo}
-          title={p.pergunta}
-          style={{ display: 'grid', gridTemplateColumns: '56px 1fr 22px', gap: 8, alignItems: 'center' }}
-        >
-          <span style={{ fontSize: 12, color: 'var(--mute)' }}>{p.rotulo}</span>
-          <span style={{ height: 6, borderRadius: 99, background: 'var(--inset)', overflow: 'hidden' }}>
+        <span key={p.rotulo} title={p.pergunta} className="grid grid-cols-[56px_1fr_22px] items-center gap-2">
+          <span className="text-pequeno text-fg-2">{p.rotulo}</span>
+          <span className="h-1.5 overflow-hidden rounded-pilula bg-poco">
+            {/* A largura é geometria de execução: entra por variável (DIRECAO §9.3). */}
             <span
-              style={{ display: 'block', height: '100%', width: `${Math.min(100, Math.max(0, p.valor * 10))}%`, background: cor }}
+              className="block h-full w-[var(--width)] bg-[var(--cor)]"
+              style={{ '--width': `${Math.min(100, Math.max(0, p.valor * 10))}%` } as CSSProperties}
             />
           </span>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, textAlign: 'right' }}>{p.valor}</span>
+          <span className="text-right font-mono text-pequeno">{p.valor}</span>
         </span>
       ))}
-      <span style={{ fontSize: 11, color: 'var(--dim)' }}>
+      <span className="text-micro text-fg-3">
         Ranking entre os cortes desta live, não nota absoluta de qualidade.
       </span>
     </section>
@@ -103,9 +105,9 @@ function BlocoDaNota({ nota }: { nota: NotaDoCorte }) {
 
 function Bloco({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--mute)' }}>{titulo}</span>
-      <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6 }}>{children}</p>
+    <section className="flex flex-col gap-1">
+      <span className="text-micro text-fg-2">{titulo}</span>
+      <p className="text-corpo text-fg">{children}</p>
     </section>
   );
 }
