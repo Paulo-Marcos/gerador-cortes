@@ -186,8 +186,8 @@ describe('D-1073 · o Desfazer rodada', () => {
 
   it('na tela: desabilitado sem anterior e durante a geração; habilitado com a anterior', () => {
     expect(botao(painel(DUAS), 'desfazer-rodada')).not.toMatch(/\sdisabled(=|\s|>)/);
-    expect(botao(painel(SO_A_ATUAL), 'desfazer-rodada')).toContain('disabled');
-    expect(botao(painel(DUAS, { emGeracao: true }), 'desfazer-rodada')).toContain('disabled');
+    expect(botao(painel(SO_A_ATUAL), 'desfazer-rodada')).toMatch(/\sdisabled(=|\s|>)/);
+    expect(botao(painel(DUAS, { emGeracao: true }), 'desfazer-rodada')).toMatch(/\sdisabled(=|\s|>)/);
   });
 });
 

@@ -274,7 +274,7 @@ function DefinirScopeRow({
             type="button" data-sala=""
             onClick={onReset}
             aria-label="Remover padrao"
-            className={cn(FERRAMENTA_ICONE, 'hover:bg-erro/13 hover:text-erro')}
+            className={cn(FERRAMENTA_ICONE, 'hover:bg-erro/[.13] hover:text-erro')}
           >
             <Icon name="trash-2" />
           </button>
@@ -550,7 +550,7 @@ export function RegionItem({
             type="button" data-sala=""
             onClick={onRemove}
             aria-label="Remover intervalo"
-            className={cn(FERRAMENTA_ICONE, 'hover:bg-erro/13 hover:text-erro')}
+            className={cn(FERRAMENTA_ICONE, 'hover:bg-erro/[.13] hover:text-erro')}
           >
             <Icon name="trash-2" />
           </button>
