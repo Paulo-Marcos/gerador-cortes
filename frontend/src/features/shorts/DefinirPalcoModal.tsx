@@ -7,7 +7,8 @@ import { EditorDeRecorte } from './EditorDeRecorte';
 import { PresetsDoPalco } from './PresetsDoPalco';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
-import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA } from './LegendaPrevia';
+import { CORES_DA_LEGENDA } from './LegendaPrevia';
+import { AmostrasDeFonte } from './AmostrasDeFonte';
 import { LegendaArrastavel } from './LegendaArrastavel';
 import { EstiloNoModal } from '@/features/channels/EstiloNoModal';
 import { PalcoDoShortNoModal, tituloDoPalco, usePalcoNoModal, type PalcoDoShort } from './PalcoDoShortNoModal';
@@ -526,30 +527,14 @@ export function DefinirPalcoModal({
                 Um select com os nomes obrigaria o operador a saber de cabeça
                 como "Oswald" se parece — e a diferença entre estas cinco é
                 inteiramente visual. O nome sozinho não decide nada. */}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {FONTES_DA_LEGENDA.map((opcao) => {
-                const ativa = short.legenda_fonte === opcao.familia;
-                return (
-                  <button
-                    key={opcao.familia || 'padrao'}
-                    type="button"
-                    disabled={ocupado}
-                    title={opcao.nome}
-                    aria-label={`Fonte da legenda: ${opcao.nome}`}
-                    aria-pressed={ativa}
-                    onClick={() => onAplicar({ legenda_fonte: opcao.familia })}
-                    className={cn(
-                      'rounded-[7px] border px-2 py-1 text-[15px] font-extrabold leading-none transition-colors disabled:opacity-50',
-                      ativa
-                        ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
-                        : 'border-[var(--wb-border)] hover:bg-[var(--wb-bg-inset)]',
-                    )}
-                    style={{ fontFamily: opcao.familia || undefined }}
-                  >
-                    Aa
-                  </button>
-                );
-              })}
+            <div className="mt-2">
+              <AmostrasDeFonte
+                valor={short.legenda_fonte}
+                onEscolher={(familia) => onAplicar({ legenda_fonte: familia })}
+                rotulo="Fonte da legenda"
+                classeDaEscolhida="border-[var(--sel-line)] bg-[var(--sel-bg)]"
+                desabilitado={ocupado}
+              />
             </div>
             <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
               A fonte da legenda queimada. Passe o mouse para o nome de cada uma.

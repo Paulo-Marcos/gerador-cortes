@@ -10,6 +10,7 @@ import {
   tamanhoEfetivo,
   type LugarDoGancho,
 } from './ganchoDoShort';
+import { ParagrafoNaFonte } from './ParagrafoNaFonte';
 
 // D-565: o título-gancho desenhado por cima do player, como sairá no arquivo.
 //
@@ -202,7 +203,7 @@ export function GanchoPrevia({
             12px numa janela de 294px (4%), e uma frase que ocupa TRÊS linhas no
             arquivo cabia em UMA na prévia. Aí a prévia deixa de responder a
             pergunta que a fez existir: isto polui a tela? */}
-        <p
+        <ParagrafoNaFonte
           ref={paragrafo}
           className="font-display font-black leading-[1.08] tracking-[-0.02em]"
           style={{
@@ -215,7 +216,7 @@ export function GanchoPrevia({
           }}
         >
           <TextoComDestaque texto={limpo} cor="var(--wb-accent)" />
-        </p>
+        </ParagrafoNaFonte>
       </div>
     </div>
   );

@@ -57,7 +57,7 @@ commit, e a melhoria fica travada.
 | Design: feixe | `…/__tests__/feixeSoNoLugar.test.ts` | `bg-feixe`, `text-feixe`, `cc-fio`, `--cc-feixe` fora dos lugares marcados (nasce zerada) | sim |
 | Design: território do canal | `…/__tests__/territorioDoCanal.test.ts` | `cc-canal-a/b` (nasce zerada) | sim |
 | Design: transição e foco | `…/__tests__/semTransicaoTotal.test.ts` | `transition-all`, `transition: all`, `outline-none` sem foco desenhado na linha | sim |
-| Design: fontes do index | `…/__tests__/fontesDoIndex.test.ts` | famílias que o `index.html` pede (11 hoje; alvo 2) | sim |
+| Design: fontes do index | `…/__tests__/fontesDoIndex.test.ts` | famílias que o `index.html` pede (2: teto final, D-1139) | sim |
 | Design: cor literal em CSS | `…/__tests__/corLiteralCss.test.ts` | cor literal nos `.css` fora de `styles/tokens.css` (estende a `corLiteral`) | sim |
 | Design: tamanho de fonte arbitrário | `…/__tests__/fonteArbitraria.test.ts` | `text-[Npx]` fora da escala (estende a `pisoDeFonte`) | sim |
 | Design: um primário por tela | `…/__tests__/umPrimarioPorTela.test.ts` | `data-variant="primary"` no HTML de cada tela: `esperarPrimarios` no teste de render da tela | sim |

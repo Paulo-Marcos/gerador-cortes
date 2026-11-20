@@ -24,7 +24,8 @@ import {
   type LugarDoGancho,
 } from './ganchoDoShort';
 import { GanchoPrevia } from './GanchoPrevia';
-import { FONTES_DA_LEGENDA, LegendaDoCanal } from './LegendaPrevia';
+import { LegendaDoCanal } from './LegendaPrevia';
+import { AmostrasDeFonte } from './AmostrasDeFonte';
 import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
@@ -230,27 +231,12 @@ function EditorDoPresetDeGancho({
           <Campo titulo="Fonte">
             {/* Cada opção desenhada na própria fonte, pelo motivo da legenda
                 (D-563): a diferença entre elas é inteiramente visual. */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {FONTES_DA_LEGENDA.map((opcao) => (
-                <button
-                  key={opcao.familia || 'padrao'}
-                  type="button"
-                  title={opcao.nome}
-                  aria-label={`Fonte do gancho: ${opcao.nome}`}
-                  aria-pressed={fonte === opcao.familia}
-                  onClick={() => setFonte(opcao.familia)}
-                  className={cn(
-                    'rounded-[7px] border px-2 py-1 text-[15px] font-extrabold leading-none transition-colors',
-                    fonte === opcao.familia
-                      ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-                      : 'border-[var(--wb-border)] hover:bg-[var(--wb-bg-inset)]',
-                  )}
-                  style={{ fontFamily: opcao.familia || undefined }}
-                >
-                  Aa
-                </button>
-              ))}
-            </div>
+            <AmostrasDeFonte
+              valor={fonte}
+              onEscolher={setFonte}
+              rotulo="Fonte do gancho"
+              classeDaEscolhida="border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]"
+            />
           </Campo>
 
           <div className="grid gap-4 sm:grid-cols-2">
