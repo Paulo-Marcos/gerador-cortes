@@ -90,7 +90,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/metadata/ThumbnailAvaliacaoPanel.tsx": 4,
   "src/features/post-production/RenderStepsModal.tsx": 2,
   "src/features/projeto-detalhe/AuditoriaAnaliseModal.tsx": 2,
-  "src/features/projeto-detalhe/CorteLinhaAp.tsx": 1,
   "src/features/shorts/BlocosArrastaveis.tsx": 1,
   "src/features/shorts/CabecalhoDoFire.tsx": 2,
   "src/features/shorts/CandidatoCard.tsx": 5,

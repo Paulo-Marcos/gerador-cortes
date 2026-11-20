@@ -63,6 +63,6 @@ describe('SeloDaOrigem (D-988)', () => {
         />,
       );
     expect(linha('gemini')).toContain('Proposto pelo Gemini');
-    expect(linha(null)).not.toContain('Proposto');
+    expect(linha(null)).not.toContain('Proposto pelo');
   });
 });

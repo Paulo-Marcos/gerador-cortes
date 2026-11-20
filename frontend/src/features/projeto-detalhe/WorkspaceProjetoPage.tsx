@@ -1,303 +1,190 @@
 import { MenuDeIa } from '@/components/ui/acao-de-ia';
+import { Busca } from '@/components/ui/busca';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Icon, type IconName } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/icon-button';
+import { CabecalhoDaLista, LinhaDaLista, Lista } from '@/components/ui/lista';
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
 import { AnaliseIaModal } from '@/features/projeto-detalhe/AnaliseIaModal';
 import { AuditoriaAnaliseModal } from '@/features/projeto-detalhe/AuditoriaAnaliseModal';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
 import { PublicarTiktokModal } from '@/features/projeto-detalhe/PublicarTiktokModal';
-import {
-  cortesParaTiktok,
-  cortesParaYoutube,
-  destinosPublicados,
-} from '@/features/projeto-detalhe/listasDePublicacao';
-import type { Corte,  StatusExportCorte } from '@/types/models';
-import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
-import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { ModalFields, ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
+import { cortesParaTiktok, cortesParaYoutube } from '@/features/projeto-detalhe/listasDePublicacao';
+import type { Corte, StatusExportCorte } from '@/types/models';
+import { BARRA_EM_COLUNA_MIN_PX, useJanelaMin } from '@/upgrade/medidas';
+import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
+import { estadoDaLinha } from './acoesDaLinha';
 import { CorteLinhaAp } from './CorteLinhaAp';
+import { colunasDaLinha, titulosDasColunas } from './colunasDaLista';
+import { EnviarAoYoutubeDialog, InformarLinkDialog, LiberarPublicacaoDialog } from './DialogosDaLinha';
 import { FalhaDosCortes, ListaVazia } from './FalhaDosCortes';
 import { listaVaziaDoWorkspace, podeReordenar } from './cortesDoWorkspace';
+import { abertoNaLista, cortesDoMapa } from './leituraDoMapa';
+import { MapaDosCortes } from './MapaDosCortes';
+import { AtalhosDaLista, AvisoDaLive, LoteDaSelecao, TituloDaLive } from './PartesDaTela';
 import { SeloNoAr } from './SeloNoAr';
+import { useCorteAberto } from './useCorteAberto';
 import { useWorkspaceProjeto } from './useWorkspaceProjeto';
 
 // ─────────────────────────────────────────────────────────────────
-// D-599 Etapa 3 · o Workspace do projeto.
+// D-599 Etapa 3 · o Workspace do projeto: a tela dos cortes da live.
 //
-// A tela responde o que cada corte ainda deve (a lista). Onde a live parou
-// e quanto ela rendeu moram na trilha da casca (D-866), que trocou os
-// quatro cartões de números e a faixa "Etapas da live" desta tela; o que
-// só os cartões diziam (agendados, disco) foi para o subtítulo.
-//
-// As ações do projeto inteiro ficam na faixa logo acima da lista.
+// D-1149 (E-069 H-16, DIRECAO §7.2): de cima para baixo, o título da live, o mapa da live
+// (o cartão com fio de luz) e a lista dos cortes. O mapa e a lista mostram o MESMO corte
+// aberto: clicar no mapa leva à linha, e a linha com o foco acende o corte no mapa. A única
+// primária da tela é a da barra de ação da casca ("Publicar N cortes", `rodapeDoWorkspace`);
+// na lista a ação é texto. Onde a live parou e quanto rendeu moram na trilha da casca (D-866).
 // ─────────────────────────────────────────────────────────────────
 
 export type CorteFiltro = { status: StatusExportCorte; corte: Corte | undefined };
 
+/** Os utilitários da live, ao lado da busca: só ícone, com rótulo e dica. */
 function Utilitario({
   icone,
   titulo,
-  cor,
   onClick,
   disabled,
 }: {
   icone: IconName;
   titulo: string;
-  cor: string;
   onClick: () => void;
   disabled?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      className="btn btn-icon"
-      title={titulo}
-      aria-label={titulo}
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        height: 26,
-        width: 26,
-        border: 0,
-        background: 'none',
-        boxShadow: 'none',
-        color: cor,
-      }}
-    >
+    <IconButton variant="fantasma" size="pq" title={titulo} aria-label={titulo} onClick={onClick} disabled={disabled}>
       <Icon name={icone} />
-    </button>
+    </IconButton>
   );
 }
 
 export default function WorkspaceProjetoPage() {
-  const { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, cortesCarregados, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, falhaDosCortes, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
+  const { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, cortesCarregados, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, falhaDosCortes, fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, resumo, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual } = useWorkspaceProjeto();
   const listaVazia = listaVaziaDoWorkspace(busca, soNoAr, cortesCarregados);
-
+  const { abertoId, abrirPeloMapa, abrirPelaLinha } = useCorteAberto();
+  const aberto = abertoNaLista(abertoId, linhas);
+  const etapasEmColuna = useJanelaMin(BARRA_EM_COLUNA_MIN_PX);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: 10,
-          padding: '11px 12px',
-          // O vidro (backdrop-filter) faz do card um contexto de empilhamento:
-          // sem subir a faixa, o menu Claude/Gemini de "gerar trechos" abria
-          // POR BAIXO da lista de cortes que vem depois.
-          position: 'relative',
-          zIndex: 5,
-        }}
-      >
-        <div style={{ flex: 1 }} />
-
-        {/* D-867: reanalisar, refazer a transcrição, auditar e abrir a pasta
-            foram para o "Mais" do cabeçalho, com rótulo. Ficam aqui o gerar
-            trechos (fora do rodapé por decisão do Paulo, D-870) e o TikTok. */}
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 1,
-            padding: 2,
-            border: '1px solid var(--line)',
-            borderRadius: 'var(--r2)',
-            background: 'var(--inset)',
-          }}
-        >
-          {/* Mesmo ícone da fileira, mas abre a escolha do provedor: aqui não
-              cabe um grupo com texto sem quebrar o ritmo dos utilitários. */}
-          <MenuDeIa
-            rotulo="Gerar trechos de todos os cortes"
-            icone={ICONE_DO_CONCEITO.iaGera}
-            ocupado={analisarDesviosTodos.disparado}
-            desabilitado={cortes.length === 0}
-            onGerar={dispararTrechosTodos}
-            classeGatilho="h-[26px] w-[26px]"
-            // A fileira mora na borda direita: abrindo para a direita, o menu vazava da tela.
-            alinhamento="direita"
-          />
-          <Utilitario
-            icone={ICONE_DO_CONCEITO.publicar}
-            titulo="Subir para o TikTok (robô ou pacote)"
-            cor="var(--mute)"
-            onClick={() => setTiktokAberto(true)}
-          />
-        </span>
-        {/* D-870: o Publicar desceu para o rodapé, onde mora o próximo passo
-            da live (rodapeDoWorkspace). */}
-      </div>
+    <div data-parte="cortes-da-live" className="flex flex-col gap-4">
+      <TituloDaLive titulo={dados?.titulo_live ?? ''} resumo={resumo} />
 
       {/* D-746: a análise da live só aparecia dentro do modal — fechado, não
           havia sinal de que a IA estava trabalhando. */}
       {analisando ? (
-        <div
-          className="card"
-          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px' }}
-        >
-          <Icon name="brain" style={{ color: 'var(--info)' }} />
-          <b style={{ fontSize: 12.5 }}>Analisando a live com a IA</b>
-          <span style={{ fontSize: 12, color: 'var(--mute)' }}>
-            os cortes propostos aparecem aqui quando terminar — pode seguir usando o app
-          </span>
-          <span style={{ flex: 1 }} />
-          <Icon name="loader" style={{ color: 'var(--info)' }} />
-        </div>
+        <AvisoDaLive
+          icone="brain"
+          titulo="Analisando a live com a IA"
+          detalhe="os cortes propostos aparecem aqui quando terminar — pode seguir usando o app"
+        />
+      ) : null}
+      {progresso && (progresso.status === 'baixando' || progresso.status === 'transcrevendo') ? (
+        <AvisoDaLive
+          icone={progresso.status === 'baixando' ? 'download' : 'captions'}
+          titulo={progresso.status === 'baixando' ? 'Baixando vídeo' : 'Transcrevendo'}
+          progresso={Math.round(progresso.progresso ?? 0)}
+        />
       ) : null}
 
-      {progresso && (progresso.status === 'baixando' || progresso.status === 'transcrevendo') ? (
-        <div
-          className="card"
-          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px' }}
-        >
-          <Icon
-            name={progresso.status === 'baixando' ? 'download' : 'captions'}
-            style={{ color: 'var(--info)' }}
-          />
-          <b style={{ fontSize: 12.5 }}>
-            {progresso.status === 'baixando' ? 'Baixando vídeo' : 'Transcrevendo'}
-          </b>
-          <span
-            style={{
-              flex: 1,
-              minWidth: 80,
-              height: 4,
-              borderRadius: 2,
-              background: 'var(--inset)',
-            }}
-          >
-            <span
-              style={{
-                display: 'block',
-                width: `${Math.round(progresso.progresso ?? 0)}%`,
-                height: '100%',
-                borderRadius: 2,
-                background: 'var(--info)',
-              }}
+      <MapaDosCortes
+        duracaoSeg={dados?.duracao_segundos ?? 0}
+        cortes={cortesDoMapa(linhas)}
+        abertoId={aberto}
+        onAbrir={abrirPeloMapa}
+        prontos={prontidao.prontos}
+        fires={fires}
+      />
+
+      <section aria-labelledby="lista-dos-cortes" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 id="lista-dos-cortes" className="text-secao text-fg">
+            Cortes
+          </h2>
+          {soNoAr ? <SeloNoAr total={linhas.length} onTirar={tirarFiltroNoAr} /> : null}
+          <span className="flex-1" />
+          <AtalhosDaLista />
+          {/* D-867: reanalisar, refazer a transcrição, auditar e abrir a pasta moram no
+              "Mais" da linha do topo. Ficam aqui o gerar trechos (fora do rodapé por decisão
+              do Paulo, D-870) e o TikTok. */}
+          <span className="inline-flex items-center gap-0.5">
+            <MenuDeIa
+              rotulo="Gerar trechos de todos os cortes"
+              icone={ICONE_DO_CONCEITO.iaGera}
+              ocupado={analisarDesviosTodos.disparado}
+              desabilitado={cortes.length === 0}
+              onGerar={dispararTrechosTodos}
+              classeGatilho="h-[30px] w-[30px]"
+              // A fileira mora na borda direita: abrindo para a direita, o menu vazava da tela.
+              alinhamento="direita"
+            />
+            <Utilitario
+              icone={ICONE_DO_CONCEITO.publicar}
+              titulo="Subir para o TikTok (robô ou pacote)"
+              onClick={() => setTiktokAberto(true)}
             />
           </span>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-            {Math.round(progresso.progresso ?? 0)}%
+          <span className="w-[220px]">
+            <Busca value={busca} aoMudar={setBusca} placeholder="Buscar corte" aria-label="Buscar corte" name="buscar-corte" autoComplete="off" />
           </span>
         </div>
-      ) : null}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className="lbl">Cortes da live</span>
-        <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>
-          {cortes.length} cortes · {prontidao.prontos} prontos · {fires} fire
-        </span>
-        {soNoAr ? <SeloNoAr total={linhas.length} onTirar={tirarFiltroNoAr} /> : null}
-        <div style={{ flex: 1 }} />
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--dim)' }}>
-          <kbd>A</kbd> aprova/devolve · <kbd>R</kbd> risca · <kbd>J</kbd>
-          <kbd>K</kbd> anda · <kbd>W</kbd> por quê
-        </span>
-        <label className="fld" style={{ width: 200 }}>
-          <Icon name="search" style={{ color: 'var(--dim)' }} />
-          <input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="buscar corte"
-            style={{
-              minWidth: 0,
-              flex: 1,
-              border: 0,
-              outline: 'none',
-              background: 'transparent',
-              fontSize: 12,
-            }}
+        {selecionados.size > 0 ? (
+          <LoteDaSelecao
+            total={selecionados.size}
+            ocupado={emLote}
+            aoAprovar={() => void aplicarEmLote('aprovar')}
+            aoDevolver={() => void aplicarEmLote('devolver')}
+            aoLimpar={() => setSelecionados(new Set())}
           />
-        </label>
-      </div>
+        ) : null}
 
-      {selecionados.size > 0 ? (
-        <div
-          className="card"
-          role="toolbar"
-          aria-label="Ações em lote"
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 5,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 11px',
-            background: 'var(--solid)',
-          }}
-        >
-          <b style={{ fontSize: 12.5 }}>
-            {selecionados.size} selecionado{selecionados.size === 1 ? '' : 's'}
-          </b>
-          <span style={{ flex: 1 }} />
-          <button
-            type="button"
-            className="btn"
-            disabled={emLote}
-            onClick={() => void aplicarEmLote('devolver')}
-            title="Tira a aprovação dos selecionados — não apaga nada"
-          >
-            <Icon name="undo-2" />
-            Devolver
-          </button>
-          <button
-            type="button"
-            className="btn"
-            disabled={emLote}
-            onClick={() => void aplicarEmLote('aprovar')}
-            style={{ borderColor: 'var(--ok)', color: 'var(--ok)' }}
-          >
-            <Icon name={emLote ? 'loader' : 'check'} />
-            Aprovar
-          </button>
-          <button
-            type="button"
-            className="btn btn-icon"
-            onClick={() => setSelecionados(new Set())}
-            title="Limpar a seleção"
-            aria-label="Limpar a seleção"
-          >
-            <Icon name="x" />
-          </button>
-        </div>
-      ) : null}
-
-      <div style={{ display: 'grid', gap: 8 }}>
-        {linhas.map(({ status, corte }, i) => (
-          <CorteLinhaAp
-            key={status.corte_id}
-            projetoId={id}
-            corte={corte}
-            status={status}
-            podeSubir={podeReordenar(busca, soNoAr) && i > 0}
-            podeDescer={podeReordenar(busca, soNoAr) && i < linhas.length - 1}
-            reordenando={reordenar.isPending}
-            onMover={(delta) => mover(status.corte_id, delta)}
-            onEnviarYoutube={() => {
-              setAgendarEm('');
-              setCapaQuebrou(false);
-              setPublicarDe(status);
-            }}
-            onInformarUrl={() => {
-              setInformarUrlDe(status);
-              setUrlManual(status.youtube_url_publicado ?? '');
-            }}
-            onLiberarPublicacao={() => {
-              setDestinoALiberar(null);
-              setLiberarDe(status);
-            }}
-            enviando={enviandoId === status.corte_id}
-            selecionado={selecionados.has(status.corte_id)}
-            onAlternarSelecao={() => alternarSelecao(status.corte_id)}
-          />
-        ))}
+        <Lista colunas={colunasDaLinha(true, etapasEmColuna)}>
+          {linhas.length > 0 ? (
+            <CabecalhoDaLista>
+              {titulosDasColunas(true, etapasEmColuna).map((t, i) => (
+                <span key={i}>{t}</span>
+              ))}
+            </CabecalhoDaLista>
+          ) : null}
+          {linhas.map(({ status, corte }, i) => (
+            <LinhaDaLista
+              key={status.corte_id}
+              atual={status.corte_id === aberto}
+              marcada={selecionados.has(status.corte_id)}
+              riscada={estadoDaLinha(corte, status) === 'rejeitado'}
+            >
+              <CorteLinhaAp
+                projetoId={id}
+                corte={corte}
+                status={status}
+                podeSubir={podeReordenar(busca, soNoAr) && i > 0}
+                podeDescer={podeReordenar(busca, soNoAr) && i < linhas.length - 1}
+                reordenando={reordenar.isPending}
+                onMover={(delta) => mover(status.corte_id, delta)}
+                onEnviarYoutube={() => {
+                  setAgendarEm('');
+                  setPublicarDe(status);
+                }}
+                onInformarUrl={() => {
+                  setInformarUrlDe(status);
+                  setUrlManual(status.youtube_url_publicado ?? '');
+                }}
+                onLiberarPublicacao={() => {
+                  setDestinoALiberar(null);
+                  setLiberarDe(status);
+                }}
+                enviando={enviandoId === status.corte_id}
+                selecionado={selecionados.has(status.corte_id)}
+                onAlternarSelecao={() => alternarSelecao(status.corte_id)}
+                onAbrir={() => abrirPelaLinha(status.corte_id)}
+              />
+            </LinhaDaLista>
+          ))}
+        </Lista>
         {linhas.length === 0 && falhaDosCortes ? <FalhaDosCortes {...falhaDosCortes} /> : null}
         {linhas.length === 0 && !falhaDosCortes ? (
           <ListaVazia {...listaVazia} analisar={() => setAnaliseAberta(true)} />
         ) : null}
-      </div>
+      </section>
 
       <AnaliseIaModal
         key={id}
@@ -331,153 +218,32 @@ export default function WorkspaceProjetoPage() {
         onCreated={atualizarTudo}
       />
 
-      <UpgradeModal
-        open={publicarDe !== null}
-        onClose={() => setPublicarDe(null)}
-        icon={ICONE_DO_CONCEITO.publicar}
-        title={`Enviar o corte #${publicarDe?.numero ?? ''} ao YouTube`}
-        width="600px"
-        subtitle={
-          canalAtivo
-            ? `canal de destino: ${canalAtivo.nome} (${canalAtivo.handle})`
-            : 'canal de destino: o canal ativo'
-        }
-        footerNote="público e sem desfazer pelo app"
-        primaryLabel={agendarEm ? 'Agendar no YouTube' : 'Enviar ao YouTube agora'}
-        primaryIcon={agendarEm ? 'clock' : ICONE_DO_CONCEITO.publicar}
-        onPrimary={() => {
-          if (!publicarDe) return;
-          enviarYoutube(publicarDe.corte_id, agendarEm ? new Date(agendarEm).toISOString() : null);
+      <EnviarAoYoutubeDialog
+        corte={publicarDe}
+        canal={canalAtivo}
+        capa={capaParaPublicar}
+        agendarEm={agendarEm}
+        setAgendarEm={setAgendarEm}
+        aoFechar={() => setPublicarDe(null)}
+        aoEnviar={(corte, quando) => {
+          enviarYoutube(corte.corte_id, quando ? new Date(quando).toISOString() : null);
           setPublicarDe(null);
         }}
-      >
-        {publicarDe ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '150px minmax(0,1fr)', gap: 12 }}>
-            <MolduraDeVideo mat={4} proporcao="16/9">
-              {capaParaPublicar && !capaQuebrou ? (
-                <img
-                  src={capaParaPublicar}
-                  onError={() => setCapaQuebrou(true)}
-                  alt=""
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <span
-                  style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 11, color: 'var(--dim)' }}
-                >
-                  sem capa
-                </span>
-              )}
-            </MolduraDeVideo>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>
-                {publicarDe.titulo_youtube || publicarDe.titulo}
-              </span>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--mute)' }}>
-                  Agendar (sugerido: próximo horário livre do canal — vazio envia agora)
-                </span>
-                <span className="fld">
-                  <input
-                    type="datetime-local"
-                    value={agendarEm}
-                    onChange={(e) => setAgendarEm(e.target.value)}
-                    style={{ flex: 1, minWidth: 0, border: 0, outline: 'none', background: 'transparent', fontSize: 12 }}
-                  />
-                </span>
-              </label>
-            </div>
-          </div>
-        ) : null}
-      </UpgradeModal>
-
-      <UpgradeModal
-        open={informarUrlDe !== null}
-        onClose={() => setInformarUrlDe(null)}
-        icon={ICONE_DO_CONCEITO.urlPublicada}
-        title={`Informar a URL do corte #${informarUrlDe?.numero ?? ''}`}
-        subtitle="para quando o vídeo já subiu fora do app"
-        width="480px"
-        footerNote="o app só guarda a marca — nada é enviado"
-        primaryLabel="Confirmar publicação"
-        primaryIcon="check"
-        onPrimary={confirmarUrlManual}
-      >
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--mute)' }}>
-            URL do YouTube
-          </span>
-          <span className="fld">
-            <input
-              value={urlManual}
-              onChange={(e) => setUrlManual(e.target.value)}
-              placeholder="https://youtube.com/watch?v=…"
-              style={{
-                minWidth: 0,
-                flex: 1,
-                border: 0,
-                outline: 'none',
-                background: 'transparent',
-                fontSize: 12,
-              }}
-            />
-          </span>
-        </label>
-      </UpgradeModal>
-
-      <UpgradeModal
-        open={liberarDe !== null}
-        onClose={() => setLiberarDe(null)}
-        icon="rotate-ccw"
-        title={`Liberar a publicação do corte #${liberarDe?.numero ?? ''}`}
-        subtitle="o corte volta para a fila e pode subir de novo"
-        width="440px"
-        secondaryLabel="Fechar"
-        primaryLabel="Liberar"
-        primaryIcon="rotate-ccw"
-        onPrimary={() => {
-          const destinos = liberarDe ? destinosPublicados(liberarDe) : [];
-          const escolhido = destinoALiberar ?? destinos[0]?.destino;
-          if (escolhido) confirmarLiberar(escolhido);
-        }}
-      >
-        <ModalText>
-          Isto não apaga nada lá fora: é o app aceitando ser informado de que o vídeo saiu do ar.
-          Depois disso o botão de enviar reaparece sozinho.
-        </ModalText>
-        {(() => {
-          const destinos = liberarDe ? destinosPublicados(liberarDe) : [];
-          if (destinos.length <= 1) {
-            return (
-              <ModalFields fields={destinos.map((d) => ({ label: d.rotulo, value: d.detalhe }))} />
-            );
-          }
-          const atual = destinoALiberar ?? destinos[0].destino;
-          return (
-            <div role="radiogroup" aria-label="Qual destino liberar" style={{ display: 'grid', gap: 6 }}>
-              {destinos.map((d) => (
-                <label
-                  key={d.destino}
-                  className="row"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', cursor: 'pointer' }}
-                >
-                  <input
-                    type="radio"
-                    name="destino-a-liberar"
-                    checked={atual === d.destino}
-                    onChange={() => setDestinoALiberar(d.destino)}
-                    style={{ accentColor: 'var(--accent)' }}
-                  />
-                  <span style={{ fontSize: 12.5, fontWeight: 600 }}>{d.rotulo}</span>
-                  <span style={{ fontSize: 11.5, color: 'var(--mute)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {d.detalhe}
-                  </span>
-                </label>
-              ))}
-            </div>
-          );
-        })()}
-      </UpgradeModal>
+      />
+      <InformarLinkDialog
+        corte={informarUrlDe}
+        link={urlManual}
+        setLink={setUrlManual}
+        aoFechar={() => setInformarUrlDe(null)}
+        aoConfirmar={confirmarUrlManual}
+      />
+      <LiberarPublicacaoDialog
+        corte={liberarDe}
+        destino={destinoALiberar}
+        setDestino={setDestinoALiberar}
+        aoFechar={() => setLiberarDe(null)}
+        aoLiberar={confirmarLiberar}
+      />
 
       <ConfirmDialog
         pedido={confirmacao.pedido}

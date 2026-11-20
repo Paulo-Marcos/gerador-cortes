@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/ui/toaster';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import type { Corte } from '@/types/models';
+import { LinkDeAcao } from '@/components/ui/link-de-acao';
 import { CorteLinhaAp } from '../CorteLinhaAp';
 
 // D-1041: a linha entrega o corte à regra do próximo passo. Sem ele, um corte com
@@ -50,7 +51,7 @@ function clicarNoPrincipal(corte: Partial<Corte>, texto: string) {
   };
   function Sonda() {
     const artigo = CorteLinhaAp(props);
-    const botao = elementos(artigo).find((e) => e.type === 'button' && [e.props.children].flat(2).includes(texto));
+    const botao = elementos(artigo).find((e) => (e.type === 'button' || e.type === LinkDeAcao) && [e.props.children].flat(2).includes(texto));
     expect(botao).toBeDefined();
     botao!.props.onClick!();
     return artigo;

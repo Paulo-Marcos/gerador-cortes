@@ -111,7 +111,6 @@ export function useWorkspaceProjeto() {
   // conferência (canal, título, capa, agendar), e só ela envia.
   const [publicarDe, setPublicarDe] = useState<StatusExportCorte | null>(null);
   const [agendarEm, setAgendarEm] = useHorarioSugerido(publicarDe);
-  const [capaQuebrou, setCapaQuebrou] = useState(false);
   const canais = useCanais();
   const canalAtivo = canais.data?.canais.find((c) => c.ativo);
   const capaParaPublicar = publicarDe ? (resolveThumbUrl(id, publicarDe.thumbnail_path) ?? undefined) : undefined;
@@ -342,6 +341,9 @@ export function useWorkspaceProjeto() {
   const analisando = analiseEmVoo || dados?.status === 'analisando';
   const duracao = dados?.duracao_segundos ? formatarDuracao(dados.duracao_segundos) : '—';
 
+  // O resumo da live: o subtítulo da linha do topo e a linha embaixo do título da tela.
+  const resumo = subDoWorkspace({ duracao, cortes: cortes.length, fires, publicados, agendados, arquivosLimpos: Boolean(dados?.arquivos_limpos) });
+
   const navigate = useNavigate();
   const proxima = proximaAcaoDaLive({
     cortes,
@@ -355,14 +357,7 @@ export function useWorkspaceProjeto() {
   useDefinirChrome(
     {
       titulo: dados?.titulo_live || 'Workspace do projeto',
-      sub: subDoWorkspace({
-        duracao,
-        cortes: cortes.length,
-        fires,
-        publicados,
-        agendados,
-        arquivosLimpos: Boolean(dados?.arquivos_limpos),
-      }),
+      sub: resumo,
       rotulos: [dados?.titulo_live ?? 'live'],
       acoes: acoesDoWorkspace({
         youtubeUrl: dados?.youtube_url,
@@ -401,5 +396,5 @@ export function useWorkspaceProjeto() {
     ],
   );
 
-  return { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, capaQuebrou, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, cortesCarregados: Boolean(cortesQuery.data), falhaDosCortes: falhaDaConsulta(cortesQuery), fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setCapaQuebrou, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
+  return { agendarEm, alternarSelecao, analisando, analisarDesviosTodos, analiseAberta, aplicarEmLote, atualizarTudo, auditoriaAberta, busca, canalAtivo, capaParaPublicar, confirmacao, confirmarLiberar, confirmarUrlManual, cortes, dados, destinoALiberar, dispararTrechosTodos, emLote, enviandoId, enviarYoutube, cortesCarregados: Boolean(cortesQuery.data), falhaDosCortes: falhaDaConsulta(cortesQuery), fires, id, informarUrlDe, liberarDe, linhas, mover, novoCorteAberto, progresso, prontidao, publicarAberto, publicarDe, reordenar, resumo, selecionados, setAgendarEm, setAnaliseAberta, setAuditoriaAberta, setBusca, setDestinoALiberar, setInformarUrlDe, setLiberarDe, setNovoCorteAberto, setPublicarAberto, setPublicarDe, setSelecionados, setTiktokAberto, setUrlManual, soNoAr, statusList, tiktokAberto, tirarFiltroNoAr, urlManual };
 }
