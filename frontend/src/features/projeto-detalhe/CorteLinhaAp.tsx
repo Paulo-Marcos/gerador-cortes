@@ -63,6 +63,18 @@ type CorteLinhaApProps = {
 };
 
 
+/**
+ * D-1149: a linha vizinha na lista, para J/K e para o foco depois do R. Na lista da Sala
+ * escura cada `<article>` mora sozinho na sua `<li>` (e a primeira `<li>` é o cabeçalho,
+ * sem linha): a vizinha é o `<article>` da `<li>` ao lado. Fora de uma `<li>`, o irmão.
+ */
+export function linhaVizinha(linha: Element, sentido: 1 | -1): HTMLElement | null {
+  const item = linha.parentElement?.tagName === 'LI' ? linha.parentElement : null;
+  if (!item) return (sentido === 1 ? linha.nextElementSibling : linha.previousElementSibling) as HTMLElement | null;
+  const aoLado = sentido === 1 ? item.nextElementSibling : item.previousElementSibling;
+  return aoLado?.querySelector<HTMLElement>('article') ?? null;
+}
+
 type TriagemPeloTeclado = {
   projetoId: string;
   corte: Corte | undefined;
@@ -122,13 +134,11 @@ function useTriagemPeloTeclado({
     else if (acao === 'explicar') explicar();
     else if (acao === 'riscar') {
       linhaQuePediu.current = linha;
-      vizinhaAoRiscar.current = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
+      vizinhaAoRiscar.current = linhaVizinha(linha, 1) ?? linhaVizinha(linha, -1);
       riscar.riscarCorte();
     } else {
       e.stopPropagation();
-      const vizinha = (acao === 'descer' ? linha.nextElementSibling : linha.previousElementSibling) as
-        | HTMLElement
-        | null;
+      const vizinha = linhaVizinha(linha, acao === 'descer' ? 1 : -1);
       vizinha?.focus();
     }
   };

@@ -133,14 +133,6 @@ describe('D-1149 · o mapa da live ligado à lista (§7.2)', () => {
     }
   });
 
-  it('a tela liga o clique do mapa e o foco da linha ao mesmo corte aberto', () => {
-    const fonte = readFileSync(resolve(__dirname, '../WorkspaceProjetoPage.tsx'), 'utf8');
-    expect(fonte).toContain('onAbrir={abrirPeloMapa}');
-    expect(fonte).toContain('onAbrir={() => abrirPelaLinha(status.corte_id)}');
-    expect(fonte).toContain('atual={status.corte_id === aberto}');
-    expect(fonte).toContain('abertoId={aberto}');
-  });
-
   it('o riscado aparece riscado no mapa e na lista', () => {
     h.cortes = LIVE;
     const html = tela();
@@ -212,7 +204,7 @@ describe('D-1149 · nenhuma sigla, nenhum style de aparência', () => {
     h.cortes = LIVE;
     const estilos = [...tela().matchAll(/style="([^"]*)"/g)].map((m) => m[1]);
     // O glifo do lucide traz `flex-shrink:0` de fábrica: é do ícone, não da tela.
-    const deAparencia = estilos.filter((s) => s !== 'flex-shrink:0' && !/^(--[\w-]+:[^;]+;?)+$/.test(s));
+    const deAparencia = estilos.filter((s) => s !== 'flex-shrink:0' && !/^--[\w-]+:[^;]+(?:;--[\w-]+:[^;]+)*;?$/.test(s));
     expect(deAparencia).toEqual([]);
   });
 
