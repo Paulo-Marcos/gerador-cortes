@@ -1,8 +1,9 @@
-// Régua da catraca `umPrimarioPorTela` (D-1115, E-069 H-06; DIRECAO §5 e §9.4).
+// Régua da catraca `umPrimarioPorTela` (D-1115, E-069 H-06; DIRECAO §5 e §9.4; D-1138).
 // Cada tela redesenhada tem um teste de render que chama `esperarPrimarios`:
-// a tela que tem primário tem exatamente um botão `data-variant="primary"` no HTML, e
-// a que não tem (escolha e leitura) tem zero. O botão novo (H-07) é quem
-// escreve o `data-variant`.
+// a tela que tem primário tem exatamente um botão primário (`data-variant="primario"`,
+// o que o Button emite; `primary` é o nome antigo, aceito até o legado sumir) e ele está
+// aceso, sem `disabled`. A que não tem (escolha e leitura) tem zero.
+// Limite: só lê `<button`; primário com `asChild` virando `<a>` não é contado.
 
 /** O primário de cada tela, da §5 da DIRECAO. `Shorts`, `Configuracoes`, `Analises` e `Fila` não têm. */
 export const PRIMARIOS_POR_TELA = {
@@ -21,14 +22,43 @@ export const PRIMARIOS_POR_TELA = {
 
 export type TelaComPrimario = keyof typeof PRIMARIOS_POR_TELA;
 
-/** Os botões primários no HTML que a tela renderiza (`renderToStaticMarkup`). */
-export function contarPrimarios(html: string): number {
-  return (html.match(/<button[^>]*\bdata-variant="primary"/g) ?? []).length;
+// O Button novo grava `primario`; `primary` é o nome antigo e a régua o aceita até a última
+// tela legada sumir. Sem isto a régua contava zero e todo teste de tela passava no vazio.
+const VARIANTES_PRIMARIAS = /\bdata-variant="(?:primario|primary)"/;
+// `disabled` de verdade, não `aria-disabled` nem `data-disabled`.
+const DESABILITADO = /(?:^|\s)disabled(?=[\s=>/])/;
+
+/** As tags de abertura dos botões primários que a tela renderiza (`renderToStaticMarkup`). */
+function primarios(html: string): string[] {
+  return (html.match(/<button\b[^>]*>/g) ?? []).filter((tag) => VARIANTES_PRIMARIAS.test(tag));
 }
 
-/** O assert do teste de render de cada tela. */
-export function esperarPrimarios(html: string, tela: TelaComPrimario): void {
-  expect(contarPrimarios(html), `${tela} deve ter ${PRIMARIOS_POR_TELA[tela]} botão primário`).toBe(
-    PRIMARIOS_POR_TELA[tela],
-  );
+/** Os botões primários no HTML, acesos ou não. */
+export function contarPrimarios(html: string): number {
+  return primarios(html).length;
+}
+
+/** Os primários sem `disabled`: o Button grava a variante mesmo desabilitado. */
+export function contarPrimariosAcesos(html: string): number {
+  return primarios(html).filter((tag) => !DESABILITADO.test(tag)).length;
+}
+
+/**
+ * O assert do teste de render de cada tela. A tela que tem primário o tem aceso: primário
+ * morto é tela sem ação principal. Um estado em que ele fica desabilitado de propósito
+ * (ex.: "Publicar" sem corte aprovado) declara `primarioDesabilitado: true` no próprio teste.
+ */
+export function esperarPrimarios(
+  html: string,
+  tela: TelaComPrimario,
+  { primarioDesabilitado = false }: { primarioDesabilitado?: boolean } = {},
+): void {
+  const esperado = PRIMARIOS_POR_TELA[tela];
+  expect(contarPrimarios(html), `${tela} deve ter ${esperado} botão primário`).toBe(esperado);
+  if (esperado > 0 && !primarioDesabilitado) {
+    expect(
+      contarPrimariosAcesos(html),
+      `${tela}: o botão primário está desabilitado (passe { primarioDesabilitado: true } só se o estado pede)`,
+    ).toBe(esperado);
+  }
 }
