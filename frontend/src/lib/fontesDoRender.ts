@@ -11,16 +11,22 @@ import { useEffect, useState } from 'react';
 // As do preset do Remotion (Inter, Lora, IBM Plex…) NÃO passam por aqui: o
 // `FontPresetProvider` do renderer já as carrega sob demanda (D-642).
 
-/** Famílias da legenda → pesos que o render usa (`LegendaShort.tsx`). */
+/** Famílias do vídeo fora do preset do Remotion → pesos que o render usa. */
 const PESOS: Record<string, string> = {
   Anton: '400',
   'Bebas Neue': '400',
   Montserrat: '700;800;900',
   Poppins: '700;800',
   Oswald: '600;700',
+  // O rótulo do apresentador (`SpeakerLabelOverlay`) também é desenhado em Inter no render.
+  Inter: '800;900',
 };
 
-export const FAMILIAS_DO_RENDER = Object.keys(PESOS);
+/** Quanto a prévia espera a fonte antes de desistir. */
+const PRAZO_MS = 3000;
+
+/** As da legenda e do gancho; o Inter do rótulo do apresentador vai junto em `PESOS`. */
+export const FAMILIAS_DO_RENDER = Object.keys(PESOS).filter((f) => f !== 'Inter');
 
 const emAndamento = new Map<string, Promise<void>>();
 
@@ -46,11 +52,23 @@ function injetarLink(familia: string): Promise<void> {
 }
 
 async function carregarUma(familia: string): Promise<void> {
-  await injetarLink(familia);
   const peso = PESOS[familia].split(';')[0];
-  // `document.fonts.load` baixa o arquivo da fonte. Sem rede, falha: a prévia cai
-  // na fonte de reserva.
-  await document.fonts.load(`${peso} 16px "${familia}"`);
+  // Rede travada (sem erro e sem resposta) não pode deixar a prévia invisível:
+  // passado o prazo, ela se desenha na fonte de reserva.
+  let prazo: ReturnType<typeof setTimeout> | undefined;
+  const desiste = new Promise<void>((resolve) => {
+    prazo = setTimeout(resolve, PRAZO_MS);
+  });
+  try {
+    await Promise.race([
+      // `document.fonts.load` baixa o arquivo da fonte. Sem rede, falha: a prévia
+      // cai na fonte de reserva.
+      injetarLink(familia).then(() => document.fonts.load(`${peso} 16px "${familia}"`)),
+      desiste,
+    ]);
+  } finally {
+    clearTimeout(prazo);
+  }
 }
 
 /** Carrega (uma vez só por família) as fontes do vídeo pedidas. Nunca rejeita:

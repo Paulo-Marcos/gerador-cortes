@@ -1,3 +1,4 @@
+import { useFontesDoRender } from '@/lib/fontesDoRender';
 import { useId, useMemo, type FC, type ReactNode } from 'react';
 import { PALETTE } from './youtubeBackgrounds';
 
@@ -210,6 +211,8 @@ export const SpeakerLabelOverlay: FC<{
   nome?: string;
   papel?: string;
 }> = ({ left, top, nome, papel }) => {
+  // D-1139: o Inter não vem mais no `index.html`; o nome espera a fonte chegar.
+  const fonteProntaNoNavegador = useFontesDoRender(['Inter']);
   if (!nome && !papel) return null;
 
   return (
@@ -237,6 +240,7 @@ export const SpeakerLabelOverlay: FC<{
         <div
           style={{
             fontFamily: '"Inter", sans-serif',
+            visibility: fonteProntaNoNavegador ? undefined : 'hidden',
             fontWeight: 850,
             fontSize: 32,
             letterSpacing: 0,
