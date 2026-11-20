@@ -27,10 +27,10 @@ describe('fontesDoRender: prazo e Inter', () => {
     vi.unstubAllGlobals();
   });
 
-  it('pede o Inter nos pesos do rótulo (800 e 900)', async () => {
+  it('pede o Inter nos pesos do rótulo (500 e 700, os do render)', async () => {
     await carregarFontesDoRender(['Inter']);
-    expect(links[0].href).toContain('family=Inter:wght@800;900');
-    expect(load).toHaveBeenCalledWith('800 16px "Inter"');
+    expect(links[0].href).toContain('family=Inter:wght@500;700');
+    expect(load).toHaveBeenCalledWith('500 16px "Inter"');
   });
 
   it('desiste da fonte depois de 3 s', async () => {

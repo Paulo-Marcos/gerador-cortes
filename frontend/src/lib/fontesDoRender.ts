@@ -8,8 +8,9 @@ import { useEffect, useState } from 'react';
 // depois que o navegador as tem — senão o operador aprova a legenda na fonte de
 // reserva e recebe outra no arquivo (o mesmo risco da D-563).
 //
-// As do preset do Remotion (Inter, Lora, IBM Plex…) NÃO passam por aqui: o
-// `FontPresetProvider` do renderer já as carrega sob demanda (D-642).
+// As do preset do Remotion (Lora, IBM Plex…) NÃO passam por aqui: o
+// `FontPresetProvider` do renderer já as carrega sob demanda (D-642). O Inter
+// é a exceção: passa por aqui, para o rótulo do apresentador.
 
 /** Famílias do vídeo fora do preset do Remotion → pesos que o render usa. */
 const PESOS: Record<string, string> = {
@@ -18,8 +19,10 @@ const PESOS: Record<string, string> = {
   Montserrat: '700;800;900',
   Poppins: '700;800',
   Oswald: '600;700',
-  // O rótulo do apresentador (`SpeakerLabelOverlay`) também é desenhado em Inter no render.
-  Inter: '800;900',
+  // O rótulo do apresentador (`SpeakerLabelOverlay`) é desenhado em Inter no render, que só
+  // carrega 500 e 700 (`palco-entry.tsx`): o 850 declarado cai no 700. A prévia pede os mesmos
+  // pesos, senão o navegador resolveria o 850 para um 900 que o vídeo não tem (D-1140).
+  Inter: '500;700',
 };
 
 /** Quanto a prévia espera a fonte antes de desistir. */
