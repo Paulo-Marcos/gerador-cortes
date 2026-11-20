@@ -55,9 +55,9 @@ describe('drawRegions — a origem da borda na onda (D-1091)', () => {
     expect(trechos[2].element.style.border).toBe(ESTILO_DO_TRECHO.voce.border);
     expect(trechos[1].element.style).toMatchObject({ top: '30%', height: '40%', zIndex: '2' });
     expect(trechos.map((r) => r.element.title)).toEqual([
-      'sai · borda da IA',
+      'sai, pela IA',
       'dentro de outro (conta uma vez)',
-      'sai · borda ajustada por você',
+      'sai, ajustado por você',
     ]);
   });
 

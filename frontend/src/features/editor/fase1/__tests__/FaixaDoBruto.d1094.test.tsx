@@ -30,7 +30,7 @@ describe('FaixaDoBruto (D-1094)', () => {
   it('mostra o título, o fica, o sai e a sincronia, na ordem do board', () => {
     const html = renderToStaticMarkup(<FaixaDoBruto corte={CORTE} audioOffsetMs={0} />);
     expect(textoDe(html)).toEqual([
-      'O BRUTO VAI TER',
+      'O bruto vai ter',
       'fica 17:43',
       ' de 20:11',
       'sai 2:28 em 3 trechos (1 dentro de outro)',
@@ -53,7 +53,7 @@ describe('FaixaDoBruto (D-1094)', () => {
     } as unknown as Parameters<typeof EditorFase1>[0];
     const html = renderToStaticMarkup(<EditorFase1 {...props} />);
     const linha = html.indexOf('LINHA-DO-TEMPO');
-    const faixa = html.indexOf('O BRUTO VAI TER');
+    const faixa = html.indexOf('O bruto vai ter');
     expect(linha).toBeGreaterThan(-1);
     expect(faixa).toBeGreaterThan(linha);
     expect(html).toContain('sincronia do áudio -30 ms');

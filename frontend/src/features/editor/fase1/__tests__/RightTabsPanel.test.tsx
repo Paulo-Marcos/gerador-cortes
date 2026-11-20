@@ -91,23 +91,23 @@ describe('RightTabsPanel — as quatro abas cabem (D-871)', () => {
     expect(abas(html).map((a) => a[1])).toEqual(['Decisões', 'Ordem', 'Transcrição', 'Avaliação']);
     for (const [aba] of abas(html)) {
       expect(aba).toContain('role="tab"');
-      expect(aba).toContain('white-space:nowrap');
+      expect(aba).toContain('whitespace-nowrap');
     }
     // A ativa é a peça clara sobre o fundo do seletor; as outras, sem fundo.
     expect(abas(html)[0][0]).toContain('aria-selected="true"');
-    expect(abas(html)[0][0]).toContain('background:var(--wb-bg-card)');
+    expect(abas(html)[0][0]).toContain('bg-vidro-3');
     expect(abas(html)[1][0]).toContain('aria-selected="false"');
-    expect(abas(html)[1][0]).toContain('background:transparent');
+    expect(abas(html)[1][0]).toContain('bg-transparent');
   });
 
   it('não rolam para fora: sem espaço, quebram em outra fileira', () => {
     const html = render(desvios);
-    expect(tablist(html)[0]).toContain('flex-wrap:wrap');
+    expect(tablist(html)[0]).toContain('flex-wrap');
     expect(html).not.toContain('overflow-x-auto');
     // Uma aba sozinha mais larga que a coluna ainda encolhe, sem vazar.
     for (const [aba] of abas(html)) {
-      expect(aba).toContain('max-width:100%');
-      expect(aba).toContain('text-overflow:ellipsis');
+      expect(aba).toContain('max-w-full');
+      expect(aba).toContain('truncate');
     }
   });
 
@@ -127,7 +127,7 @@ describe('RightTabsPanel — as quatro abas cabem (D-871)', () => {
 
   it('o tempo que cada trecho tira sai em cinza, não em vermelho', () => {
     const tempo = render(desvios).match(/<span class="([^"]*)"[^>]*>−4\.0s<\/span>/)!;
-    expect(tempo[1]).toContain('text-[var(--wb-text-mute)]');
+    expect(tempo[1]).toContain('text-fg-2');
     expect(tempo[1]).not.toContain('err');
   });
 });

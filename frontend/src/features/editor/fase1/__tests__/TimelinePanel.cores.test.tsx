@@ -54,14 +54,14 @@ describe('TimelinePanel — cor fica para estado (D-871)', () => {
     const [inicio, fim] = ['Marcar inicio aqui', 'Marcar fim aqui'].map((r) => botao(html, r)[0]);
     for (const b of [inicio, fim]) expect(b).not.toMatch(/ok-|err/);
     expect(inicio.match(/class="([^"]*)"/)![1]).toBe(fim.match(/class="([^"]*)"/)![1]);
-    expect(inicio).toContain('text-[var(--wb-text)]');
+    expect(inicio).toContain('text-fg');
   });
 
   it('a velocidade sai sem âmbar', () => {
     const velocidade = botao(render(), 'Alternar velocidade')[0];
     expect(velocidade).toMatch(/<\/svg>1\.50(?:<!-- -->)?×<\/button>$/);
     expect(velocidade).not.toContain('warn');
-    expect(velocidade).toContain('text-[var(--wb-text)]');
+    expect(velocidade).toContain('text-fg');
   });
 });
 

@@ -13,13 +13,14 @@ describe('LegendaDaTimeline (D-1091)', () => {
     const html = renderToStaticMarkup(<LegendaDaTimeline corDoCorte="cor-do-corte" />);
     expect(textoDe(html)).toEqual([
       'fica',
-      'borda vermelha',
-      ' · sai · borda da IA',
-      'borda verde',
-      ' · sai · borda ajustada por você',
+      ', aceso',
+      'véu listrado',
+      ' · sai, pela IA',
+      'véu com contorno íris',
+      ' · sai, ajustado por você',
       'faixa mais baixa',
       ' · dentro de outro (conta uma vez)',
-      'o preenchimento é a cor da categoria',
+      'o tom por baixo do véu é a cor da categoria',
     ]);
   });
 
@@ -27,20 +28,20 @@ describe('LegendaDaTimeline (D-1091)', () => {
     // O preenchimento do que sai é a cor da categoria (D-515); a legenda não
     // pode pintar o "sai" de vermelho, senão descreve uma tela que não existe.
     const html = renderToStaticMarkup(<LegendaDaTimeline corDoCorte="c" />);
-    expect(html).not.toMatch(/background:[^;"]*--wb-err/);
-    expect(html).toContain('o preenchimento é a cor da categoria');
+    expect(html).not.toMatch(/--(?:wb|cc)-err/);
+    expect(html).toContain('o tom por baixo do véu é a cor da categoria');
   });
 
   it('o "fica" tem a cor do corte na onda', () => {
     const html = renderToStaticMarkup(<LegendaDaTimeline corDoCorte="cor-do-corte" />);
-    expect(html).toContain('background:cor-do-corte');
+    expect(html).toContain('--fundo:cor-do-corte');
   });
 
   it('o quadradinho de cada caso usa a borda que a onda usa', () => {
     const html = renderToStaticMarkup(<LegendaDaTimeline corDoCorte="c" />);
-    expect(html).toMatch(/data-legenda="ia".*?border:1px solid var\(--wb-err\)/);
-    expect(html).toMatch(/data-legenda="voce".*?border:2px solid var\(--wb-ok\)/);
-    expect(html).toMatch(/data-legenda="dentro".*?top:30%;height:40%/);
+    expect(html).toMatch(/data-legenda="ia".*?--borda:1px solid var\(--cc-fio-2\)/);
+    expect(html).toMatch(/data-legenda="voce".*?--borda:2px solid var\(--cc-iris\)/);
+    expect(html).toMatch(/data-legenda="dentro".*?--topo:30%;--altura:40%/);
   });
 
   it('aparece na linha do tempo, abaixo da onda', () => {
@@ -60,6 +61,6 @@ describe('LegendaDaTimeline (D-1091)', () => {
       </TooltipProvider>,
     );
     expect(html).toContain('aria-label="Legenda da linha do tempo"');
-    expect(html).toContain('sai · borda ajustada por você');
+    expect(html).toContain('sai, ajustado por você');
   });
 });
