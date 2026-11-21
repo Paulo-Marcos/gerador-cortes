@@ -65,12 +65,12 @@ export function PalcoComponentesSection() {
   const erro = (texto: string) => (e: unknown) => notify(mensagemErro(e, texto), { tone: 'error' });
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <div className="flex items-center gap-2">
-        <Icon name="layout-template" size={20} className="text-[var(--wb-accent)]" />
-        <h2 className="text-lg font-semibold text-[var(--wb-text)]">Palco do canal</h2>
+        <Icon name="layout-template" size={20} className="text-iris" />
+        <h2 className="text-lg font-semibold text-fg">Palco do canal</h2>
       </div>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+      <p className="text-sm text-fg-2">
         O <strong>estilo</strong> de cada tipo no <strong>canal ativo</strong>. Vale no próximo render de todo corte
         que não escolheu o próprio.
       </p>
@@ -110,18 +110,18 @@ function EstadoDoPalco({
   palcoQuery: { isLoading: boolean; isError: boolean; error: unknown };
 }) {
   if (canaisCarregados && !temCanal) {
-    return <p className="text-sm text-[var(--wb-text-dim)]">Nenhum canal ativo. Selecione um canal para editar o palco.</p>;
+    return <p className="text-sm text-fg-3">Nenhum canal ativo. Selecione um canal para editar o palco.</p>;
   }
   if (palcoQuery.isLoading) {
     return (
-      <p className="flex items-center gap-2 text-sm text-[var(--wb-text-mute)]">
+      <p className="flex items-center gap-2 text-sm text-fg-2">
         <Icon name="loader-2" size={16} className="animate-spin" />
         Carregando o palco…
       </p>
     );
   }
   if (palcoQuery.isError) {
-    return <p className="text-sm text-[var(--wb-err)]">{mensagemErro(palcoQuery.error, 'Não foi possível carregar o palco.')}</p>;
+    return <p className="text-sm text-[var(--cc-erro)]">{mensagemErro(palcoQuery.error, 'Não foi possível carregar o palco.')}</p>;
   }
   return null;
 }

@@ -62,20 +62,20 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
         {criterios.map((criterio) => (
           <li
             key={criterio.key}
-            className="grid gap-2 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4"
+            className="grid gap-2 rounded-campo border border-fio bg-app p-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4"
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <Label htmlFor={`ranking-peso-${criterio.key}`} className="text-[var(--wb-text)]">
+                <Label htmlFor={`ranking-peso-${criterio.key}`} className="text-fg">
                   {criterio.rotulo}
                 </Label>
                 {!criterio.eh_peso && (
-                  <span className="rounded-full border border-[var(--wb-border-soft)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--wb-text-dim)]">
+                  <span className="rounded-full border border-fio px-2 py-0.5 text-micro tracking-wide text-fg-3">
                     parâmetro
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-[var(--wb-text-mute)]">{criterio.descricao}</p>
+              <p className="mt-1 text-xs text-fg-2">{criterio.descricao}</p>
             </div>
             <div className="flex items-center gap-2 sm:justify-end">
               <Input
@@ -91,7 +91,7 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
                 className="w-24"
               />
               <span
-                className="whitespace-nowrap text-[11px] text-[var(--wb-text-dim)]"
+                className="whitespace-nowrap text-micro text-fg-3"
                 title="Valor padrão (reset)"
               >
                 padrão: {criterio.valor_default}
@@ -102,7 +102,7 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
       </ul>
 
       {semPesoPositivo && (
-        <p className="text-xs text-error">
+        <p className="text-xs text-erro">
           Ao menos um peso deve ser maior que 0 — senão o ranking não consegue pontuar.
         </p>
       )}
@@ -112,7 +112,7 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
           type="button"
           onClick={onReset}
           disabled={pending}
-          className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 text-xs text-fg-2 hover:text-fg disabled:opacity-40"
         >
           <Icon name="rotate-ccw" />
           Resetar para o padrão

@@ -21,16 +21,16 @@ interface Props {
 }
 
 const COR_DA_INTENSIDADE: Record<Intensidade, string> = {
-  forte: 'bg-[var(--wb-accent)]',
-  medio: 'bg-[var(--wb-accent-soft)]',
-  fraco: 'bg-[var(--wb-bg-inset)]',
+  forte: 'bg-iris-suave text-iris',
+  medio: 'bg-iris-suave',
+  fraco: 'bg-poco',
 };
 
 export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabilitado }: Props) {
   const horas = Array.from({ length: HORAS }, (_, h) => h);
   return (
     <div className="overflow-x-auto">
-      <table className="border-separate border-spacing-[2px] text-[11px]">
+      <table className="border-separate border-spacing-[2px] text-micro">
         <thead>
           <tr>
             <th className="w-16" />
@@ -38,7 +38,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
               <th
                 key={h}
                 scope="col"
-                className="w-[18px] text-center font-normal text-[var(--wb-text-dim)]"
+                className="w-[18px] text-center font-normal text-fg-3"
               >
                 {h % 3 === 0 ? h : ''}
               </th>
@@ -50,7 +50,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
             <tr key={dia}>
               <th
                 scope="row"
-                className="pr-2 text-right font-medium capitalize text-[var(--wb-text-mute)]"
+                className="pr-2 text-right font-medium capitalize text-fg-2"
                 title={resumoDoDia(linha)}
               >
                 {diasDaSemana[dia] ?? dia}
@@ -64,7 +64,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
                     aria-label={`${diasDaSemana[dia] ?? dia} ${hora}h: ${ROTULO_DA_INTENSIDADE[intensidade]}`}
                     title={`${hora}h — ${ROTULO_DA_INTENSIDADE[intensidade]} (clique para trocar)`}
                     className={cn(
-                      'block h-[18px] w-[18px] rounded-[3px] transition-colors hover:ring-2 hover:ring-[var(--wb-focus)] disabled:cursor-not-allowed',
+                      'block h-[18px] w-[18px] rounded-[3px] transition-colors hover:ring-2 hover:ring-foco disabled:cursor-not-allowed',
                       COR_DA_INTENSIDADE[intensidade],
                     )}
                   />
@@ -74,7 +74,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
           ))}
         </tbody>
       </table>
-      <p className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-[var(--wb-text-mute)]">
+      <p className="mt-1.5 flex flex-wrap items-center gap-3 text-micro text-fg-2">
         {(['forte', 'medio', 'fraco'] as const).map((i) => (
           <span key={i} className="inline-flex items-center gap-1">
             <span className={cn('inline-block h-3 w-3 rounded-[3px]', COR_DA_INTENSIDADE[i])} />

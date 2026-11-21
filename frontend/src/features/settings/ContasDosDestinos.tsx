@@ -34,17 +34,17 @@ export function ContasDosDestinos() {
 
   return (
     <fieldset className="grid gap-1.5">
-      <legend className="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]">
+      <legend className="mb-1.5 text-xs font-bold tracking-[0.08em] text-fg-2">
         Conta de cada destino
       </legend>
       {(query.data ?? []).map((conta) => (
         <div
           key={conta.destino}
-          className="flex items-center justify-between gap-3 text-sm text-[var(--wb-text)]"
+          className="flex items-center justify-between gap-3 text-sm text-fg"
         >
           <span className="min-w-0">
             <span className="font-semibold">{conta.rotulo}</span>
-            <span className="block truncate text-xs text-[var(--wb-text-mute)]">
+            <span className="block truncate text-xs text-fg-2">
               {descreverConta(conta)}
             </span>
           </span>
@@ -53,14 +53,14 @@ export function ContasDosDestinos() {
               type="button"
               disabled={mutation.isPending}
               onClick={() => mutation.mutate(conta.destino)}
-              className="h-8 shrink-0 rounded-[var(--radius-sm)] border border-[var(--wb-border)] px-3 text-xs font-semibold text-[var(--wb-text)] transition-colors hover:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"
+              className="h-8 shrink-0 rounded-full border border-fio-2 px-3 text-xs font-semibold text-fg transition-colors hover:border-iris disabled:cursor-wait disabled:opacity-60"
             >
               Esquecer
             </button>
           )}
         </div>
       ))}
-      <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+      <span className="text-xs font-normal text-fg-2">
         Antes de cada envio o robô confere a conta logada: diferente da daqui, ele não publica. Trocou
         de conta de propósito? Esqueça a antiga e envie de novo.
       </span>

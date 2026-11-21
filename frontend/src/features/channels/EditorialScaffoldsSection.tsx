@@ -62,25 +62,25 @@ export function EditorialScaffoldsSection() {
   };
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Prompts (scaffold) do canal</h2>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
+      <h2 className="text-lg font-semibold text-fg">Prompts (scaffold) do canal</h2>
+      <p className="text-sm text-fg-2">
         O invólucro de cada etapa: embrulha a transcrição/contexto e fixa o formato de retorno que
         o pipeline consome. Edite por canal; o padrão fica disponível para resetar. Editar mantendo
         o contrato (placeholders + marcador) é obrigatório — o salvamento valida.
       </p>
 
       {scaffoldsQuery.isLoading && (
-        <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
+        <p className="flex items-center gap-2 text-linha text-fg-2">
           <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando scaffolds…
         </p>
       )}
 
       {scaffoldsQuery.isError && (
-        <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklab,var(--error)_10%,var(--wb-bg-card))] p-4">
-          <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-            <Icon name="triangle-alert" size={16} className="text-error" />
+        <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
+          <p className="flex items-center gap-2 text-linha text-fg">
+            <Icon name="triangle-alert" size={16} className="text-erro" />
             {mensagemErro(scaffoldsQuery.error, 'Não foi possível carregar os scaffolds.')}
           </p>
           <div>

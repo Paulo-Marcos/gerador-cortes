@@ -68,7 +68,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
             autoFocus
             required
           />
-          <p className="text-xs text-[var(--wb-text-dim)]">
+          <p className="text-xs text-fg-3">
             Vira o nome da pasta em <code>instance/channels/</code>. Não pode ser alterado depois.
           </p>
         </div>
@@ -112,13 +112,13 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
           onChange={(e) => setYoutubeChannelId(e.target.value)}
           placeholder="ex: @meucanal ou UCxxxx"
         />
-        <p className="text-xs text-[var(--wb-text-dim)]">
+        <p className="text-xs text-fg-3">
           O @handle ou id do canal do YouTube de onde vêm as lives.
         </p>
       </div>
 
       <fieldset className="grid gap-2">
-        <legend className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        <legend className="text-xs font-medium tracking-[0.08em] text-fg-3">
           Paleta
         </legend>
         <div className="grid grid-cols-3 gap-2">

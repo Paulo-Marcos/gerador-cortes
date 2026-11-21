@@ -43,10 +43,10 @@ export function EscalonamentoSection() {
   };
 
   return (
-    <section className="grid gap-4 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+    <section className="grid gap-4 rounded-campo border border-fio bg-painel-solido p-5">
       <div>
-        <h2 className="text-lg font-semibold text-[var(--wb-text)]">Horários de publicação</h2>
-        <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
+        <h2 className="text-lg font-semibold text-fg">Horários de publicação</h2>
+        <p className="mt-1 text-sm text-fg-2">
           Um lote de shorts lançado de uma vez disputa as mesmas impressões; o YouTube trata uma
           cadência inumana como sinal de conteúdo inautêntico. Com a janela do canal, o lote
           "distribuir pela janela" espaça cada item nos blocos abaixo, enche o dia e passa para o
@@ -55,16 +55,16 @@ export function EscalonamentoSection() {
       </div>
 
       {query.isLoading && (
-        <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
+        <p className="flex items-center gap-2 text-linha text-fg-2">
           <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando…
         </p>
       )}
 
       {query.isError && (
-        <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 p-4">
-          <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-            <Icon name="triangle-alert" size={16} className="text-error" />
+        <div className="grid gap-3 rounded-campo border border-erro/30 p-4">
+          <p className="flex items-center gap-2 text-linha text-fg">
+            <Icon name="triangle-alert" size={16} className="text-erro" />
             {mensagemErro(query.error, 'Não foi possível carregar os horários.')}
           </p>
           <div>
@@ -90,7 +90,7 @@ export function EscalonamentoSection() {
           />
 
           <div className="grid gap-3">
-            <h3 className="text-[13px] font-bold text-[var(--wb-text)]">Blocos por rede</h3>
+            <h3 className="text-corpo font-bold text-fg">Blocos por rede</h3>
             {dados.destinos.map((destino) => (
               <BlocosDoDestinoForm
                 key={destino.destino}
@@ -142,14 +142,14 @@ function ReferenciaDoPublico({
   return (
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-[13px] font-bold text-[var(--wb-text)]">Quando o público está lá</h3>
+        <h3 className="text-corpo font-bold text-fg">Quando o público está lá</h3>
         {dados.publico_personalizado && (
-          <span className="rounded-full border border-[var(--wb-border-soft)] px-2 py-0.5 text-[11px] uppercase tracking-wide text-[var(--wb-text-dim)]">
+          <span className="rounded-full border border-fio px-2 py-0.5 text-micro tracking-wide text-fg-3">
             personalizado
           </span>
         )}
       </div>
-      <p className="text-xs text-[var(--wb-text-mute)]">
+      <p className="text-xs text-fg-2">
         Copie do relatório "Quando seus espectadores estão no YouTube" (Studio → Público): pinte
         forte onde o mapa está escuro. Atualize de tempos em tempos; o padrão é a leitura de um
         canal de tarde/noite.
@@ -165,7 +165,7 @@ function ReferenciaDoPublico({
           type="button"
           onClick={onResetar}
           disabled={pending || !dados.publico_personalizado}
-          className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 text-xs text-fg-2 hover:text-fg disabled:opacity-40"
         >
           <Icon name="rotate-ccw" />
           Voltar ao padrão

@@ -39,9 +39,9 @@ export function RankingPesosSection() {
   };
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Pesos do ranking de lives</h2>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
+      <h2 className="text-lg font-semibold text-fg">Pesos do ranking de lives</h2>
+      <p className="text-sm text-fg-2">
         Quanto cada critério pesa ao ranquear as lives candidatas do canal-fonte. Os pesos são
         relativos (o resultado é reescalonado para 0-100), então o que importa é a proporção entre
         eles. A meia-vida controla a rapidez com que uma live perde relevância pela idade. Edite por
@@ -49,16 +49,16 @@ export function RankingPesosSection() {
       </p>
 
       {pesosQuery.isLoading && (
-        <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
+        <p className="flex items-center gap-2 text-linha text-fg-2">
           <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando pesos…
         </p>
       )}
 
       {pesosQuery.isError && (
-        <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklab,var(--error)_10%,var(--wb-bg-card))] p-4">
-          <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-            <Icon name="triangle-alert" size={16} className="text-error" />
+        <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
+          <p className="flex items-center gap-2 text-linha text-fg">
+            <Icon name="triangle-alert" size={16} className="text-erro" />
             {mensagemErro(pesosQuery.error, 'Não foi possível carregar os pesos.')}
           </p>
           <div>

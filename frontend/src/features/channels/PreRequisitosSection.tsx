@@ -12,9 +12,9 @@ const ICONE: Record<EstadoItem, IconName> = {
 };
 
 const COR: Record<EstadoItem, string> = {
-  ok: 'text-[var(--wb-ok-ink)]',
-  aviso: 'text-[var(--wb-warn-ink)]',
-  erro: 'text-[var(--wb-err-ink)]',
+  ok: 'text-ok',
+  aviso: 'text-aviso',
+  erro: 'text-erro',
 };
 
 /** Resumo de uma linha: o que o operador precisa saber sem ler a lista. */
@@ -33,15 +33,15 @@ function Item({ item }: { item: ItemAmbiente }) {
     <li className="flex gap-2.5 py-2">
       <Icon name={ICONE[item.estado]} size={16} className={cn('mt-0.5 shrink-0', COR[item.estado])} />
       <div className="grid min-w-0 gap-0.5">
-        <p className="text-sm font-medium text-[var(--wb-text)]">
+        <p className="text-sm font-medium text-fg">
           {item.nome}
           {!item.obrigatorio && (
-            <span className="ml-1.5 text-[11px] font-normal text-[var(--wb-text-mute)]">
+            <span className="ml-1.5 text-micro font-normal text-fg-2">
               opcional
             </span>
           )}
         </p>
-        <p className="truncate text-xs text-[var(--wb-text-mute)]" title={item.detalhe}>
+        <p className="truncate text-xs text-fg-2" title={item.detalhe}>
           {item.detalhe}
         </p>
         {item.como_resolver && (
@@ -58,7 +58,7 @@ export function PreRequisitosLista({ ambiente }: { ambiente: Ambiente }) {
   return (
     <>
       <p className={cn('text-sm font-medium', COR[tom])}>{resumoDoAmbiente(ambiente)}</p>
-      <ul className="divide-y divide-[var(--wb-border-soft)]">
+      <ul className="divide-y divide-[var(--cc-fio)]">
         {ambiente.itens.map((item) => (
           <Item key={item.id} item={item} />
         ))}
@@ -70,11 +70,11 @@ export function PreRequisitosLista({ ambiente }: { ambiente: Ambiente }) {
 export function PreRequisitosSection() {
   const { data, isLoading, isFetching, isError, refetch } = useAmbiente();
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <header className="flex items-center gap-3">
         <div className="grid flex-1 gap-1">
-          <h2 className="text-lg font-semibold text-[var(--wb-text)]">Pré-requisitos</h2>
-          <p className="text-sm text-[var(--wb-text-mute)]">
+          <h2 className="text-lg font-semibold text-fg">Pré-requisitos</h2>
+          <p className="text-sm text-fg-2">
             O que o app precisa nesta máquina. Instalou algo? Reabra o app e cheque de novo.
           </p>
         </div>
@@ -89,9 +89,9 @@ export function PreRequisitosSection() {
           Checar de novo
         </Button>
       </header>
-      {isLoading && <p className="text-sm text-[var(--wb-text-mute)]">Checando a máquina…</p>}
+      {isLoading && <p className="text-sm text-fg-2">Checando a máquina…</p>}
       {isError && (
-        <p className="text-sm text-[var(--wb-err-ink)]">
+        <p className="text-sm text-erro">
           Não foi possível checar: o backend respondeu com erro.
         </p>
       )}
