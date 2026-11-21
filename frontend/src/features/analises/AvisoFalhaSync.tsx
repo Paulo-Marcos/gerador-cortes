@@ -14,15 +14,15 @@ export function AvisoFalhaSync({ falha, sincronizadoEm }: Props) {
   return (
     <div
       role="alert"
-      className="flex items-start gap-3 rounded-[var(--radius)] border border-wb-warn/40 bg-[var(--wb-bg-card)] p-4"
+      className="flex items-start gap-3 rounded-cartao border border-[color-mix(in_srgb,var(--cc-aviso)_30%,transparent)] bg-[color-mix(in_srgb,var(--cc-aviso)_7%,transparent)] p-4"
     >
-      <Icon name="triangle-alert" size={20} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
-      <div className="text-[14px] text-[var(--wb-text-mute)]">
-        <p className="font-medium text-[var(--wb-text)]">
+      <Icon name="triangle-alert" size={20} className="mt-0.5 shrink-0 text-aviso" />
+      <div className="text-corpo text-fg-2">
+        <p className="font-semibold text-fg">
           {falha.precisa_reautorizar ? 'Reautorização necessária' : 'A sincronização falhou'}
         </p>
         <p className="mt-1">{falha.mensagem}</p>
-        <p className="mt-2 text-[13px] text-[var(--wb-text-dim)]">
+        <p className="mt-2 text-pequeno text-fg-3">
           {sincronizadoEm
             ? `Última sincronização com sucesso: ${new Date(sincronizadoEm).toLocaleDateString('pt-BR')}.`
             : 'Nunca sincronizou com sucesso.'}

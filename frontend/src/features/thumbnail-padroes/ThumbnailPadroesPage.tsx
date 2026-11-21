@@ -1,21 +1,106 @@
-// D-070: tela global de "Padrões dos melhores prompts de thumbnail". Dispara o
+// D-070 / D-1176 (DIRECAO §7.8, §7.13): tela global de "Padrões dos melhores prompts de thumbnail". Dispara o
 // agente que lê as avaliações melhor pontuadas (D-066), mostra o que os melhores
 // têm em comum (por eixo) e a proposta de ajuste para a skill do Capista, para o
 // o operador validar antes da edição manual da SKILL.md.
 import { useMutation } from '@tanstack/react-query';
+import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
+import { Selo, type TomDoSelo } from '@/components/ui/selo';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import { useToast } from '@/components/ui/toaster';
 import { padroesThumbnailApi, type PadroesThumbnailResponse } from './api';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
-import { cn } from '@/lib/utils';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { Icon } from '@/upgrade/Icon';
 
-const FORCA_TONS: Record<string, string> = {
-  alta: 'text-[var(--wb-ok)]',
-  media: 'text-[var(--wb-warn)]',
-  baixa: 'text-[var(--wb-text-dim)]',
+const TOM_DA_FORCA: Record<string, TomDoSelo> = {
+  alta: 'ok',
+  media: 'convite',
+  baixa: 'inerte',
 };
+
+type Resultado = PadroesThumbnailResponse;
+type Analise = NonNullable<Resultado['analise']>;
+
+function Moldura({ children }: { children: React.ReactNode }) {
+  return <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">{children}</div>;
+}
+
+export function TabelaDePadroes({ padroes }: { padroes: Analise['padroes'] }) {
+  return (
+    <Moldura>
+      <Tabela>
+        <TabelaCabeca>
+          <TabelaLinha>
+            <TabelaTitulo>Eixo</TabelaTitulo>
+            <TabelaTitulo>Padrão</TabelaTitulo>
+            <TabelaTitulo>Força</TabelaTitulo>
+            <TabelaTitulo>Evidência</TabelaTitulo>
+          </TabelaLinha>
+        </TabelaCabeca>
+        <TabelaCorpo>
+          {padroes.map((padrao, indice) => (
+            <TabelaLinha key={`${padrao.eixo}-${indice}`}>
+              <TabelaCelula className="whitespace-nowrap py-3 align-top text-fg-2">{rotuloEixo(padrao.eixo)}</TabelaCelula>
+              <TabelaCelula className="py-3 align-top font-semibold">{padrao.padrao}</TabelaCelula>
+              <TabelaCelula className="py-3 align-top">
+                <Selo tom={TOM_DA_FORCA[padrao.forca] ?? 'inerte'}>{padrao.forca}</Selo>
+              </TabelaCelula>
+              <TabelaCelula className="py-3 align-top text-fg-2">{padrao.evidencia || '—'}</TabelaCelula>
+            </TabelaLinha>
+          ))}
+        </TabelaCorpo>
+      </Tabela>
+    </Moldura>
+  );
+}
+
+export function TabelaDeFrequencia({ eixos }: { eixos: ReturnType<typeof eixosComOcorrencias> }) {
+  return (
+    <Moldura>
+      <Tabela>
+        <TabelaCabeca>
+          <TabelaLinha>
+            <TabelaTitulo>Eixo</TabelaTitulo>
+            <TabelaTitulo>Ocorrências</TabelaTitulo>
+          </TabelaLinha>
+        </TabelaCabeca>
+        <TabelaCorpo>
+          {eixos.map(({ eixo, rotulo, ocorrencias }) => (
+            <TabelaLinha key={eixo}>
+              <TabelaCelula className="whitespace-nowrap py-3 align-top text-fg-2">{rotulo}</TabelaCelula>
+              <TabelaCelula className="py-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {ocorrencias.map((ocorrencia) => (
+                    <Selo key={ocorrencia.valor} tom="neutro">
+                      {ocorrencia.valor}
+                      {ocorrencia.contagem > 1 && <span className="num text-fg-3">×{ocorrencia.contagem}</span>}
+                    </Selo>
+                  ))}
+                </div>
+              </TabelaCelula>
+            </TabelaLinha>
+          ))}
+        </TabelaCorpo>
+      </Tabela>
+    </Moldura>
+  );
+}
+
+function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <section className="grid gap-2.5">
+      <h2 className="text-linha text-fg">{titulo}</h2>
+      {children}
+    </section>
+  );
+}
 
 export function ThumbnailPadroesPage() {
   const { notify } = useToast();
@@ -52,126 +137,50 @@ export function ThumbnailPadroesPage() {
   );
 
   return (
-    <div
-      className={cn(
-        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        'h-full',
-        'h-full',
+    <div className="flex h-full min-h-0 flex-col gap-6 overflow-auto px-7 py-6 text-fg">
+      {!resultado && !analise.isPending && (
+        <EstadoVazio
+          icone="brain"
+          titulo="Nenhuma análise ainda"
+          descricao="Use “Analisar padrões” no topo para extrair o que as capas melhor avaliadas têm em comum."
+        />
       )}
-    >
 
-      <main className="grid flex-1 content-start gap-5 overflow-auto p-6">
-        {!resultado && !analise.isPending && (
-          <p className="text-[15px] text-[var(--wb-text-mute)]">
-            Clique em <strong>Analisar padrões</strong> para extrair os padrões dos melhores prompts
-            avaliados.
-          </p>
-        )}
+      {analise.isPending && <EstadoCarregando frase="Analisando os melhores prompts…" linhas={2} />}
 
-        {analise.isPending && (
-          <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-            <Icon name="loader-2" size={16} className="animate-spin" />
-            Analisando os melhores prompts…
-          </p>
-        )}
+      {insuficiente && (
+        <EstadoVazio
+          icone="image-off"
+          titulo="Ainda não há avaliações boas suficientes"
+          descricao={`Foram encontradas ${resultado?.total_melhores ?? 0} capas bem avaliadas (mínimo de ${resultado?.minimo ?? 3}). Avalie mais capas como “Ótimo/Bom” e tente de novo.`}
+        />
+      )}
 
-        {insuficiente && (
-          <div className="rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5 text-[15px] text-[var(--wb-text-mute)]">
-            Ainda não há avaliações boas suficientes para extrair padrões. Foram encontradas{' '}
-            <strong>{resultado?.total_melhores ?? 0}</strong> capas bem avaliadas (mínimo de{' '}
-            <strong>{resultado?.minimo ?? 3}</strong>). Avalie mais capas como “Ótimo/Bom” e tente
-            de novo.
-          </div>
-        )}
+      {resultado?.status === 'ok' && resultado.analise && (
+        <>
+          <Secao titulo={`Resumo · ${resultado.total_melhores} melhores de ${resultado.total_avaliacoes}`}>
+            <p className="max-w-[72ch] text-corpo text-fg-2">{resultado.analise.resumo}</p>
+          </Secao>
 
-        {resultado?.status === 'ok' && resultado.analise && (
-          <>
-            <section className="grid gap-2 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-              <h2 className="font-code text-[11px] uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-                Resumo · {resultado.total_melhores} melhores de {resultado.total_avaliacoes}
-              </h2>
-              <p className="text-[15px] text-[var(--wb-text)]">{resultado.analise.resumo}</p>
-            </section>
+          <Secao titulo="Padrões identificados">
+            <TabelaDePadroes padroes={resultado.analise.padroes} />
+          </Secao>
 
-            <section className="grid gap-3">
-              <h2 className="font-code text-[11px] uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-                Padrões identificados
-              </h2>
-              <ul className="grid gap-2">
-                {resultado.analise.padroes.map((padrao, indice) => (
-                  <li
-                    key={`${padrao.eixo}-${indice}`}
-                    className="grid gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-4"
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="font-semibold text-[var(--wb-text)]">
-                        {rotuloEixo(padrao.eixo)}: {padrao.padrao}
-                      </span>
-                      <span
-                        className={`font-code text-[10px] uppercase tracking-[0.08em] ${
-                          FORCA_TONS[padrao.forca] ?? 'text-[var(--wb-text-dim)]'
-                        }`}
-                      >
-                        {padrao.forca}
-                      </span>
-                    </div>
-                    {padrao.evidencia && (
-                      <p className="text-[13px] text-[var(--wb-text-mute)]">{padrao.evidencia}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
+          <section className="grid gap-2 rounded-cartao border border-iris-fio bg-iris-suave p-5">
+            <h2 className="text-linha text-fg">Proposta de ajuste na skill do Capista</h2>
+            <p className="whitespace-pre-wrap text-corpo text-fg">{resultado.analise.proposta_ajuste_skill}</p>
+            <p className="text-pequeno text-fg-2">
+              A edição da SKILL.md é manual e só acontece depois que você validar estes padrões.
+            </p>
+          </section>
 
-            <section className="grid gap-2 rounded-[var(--radius)] border border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] p-5">
-              <h2 className="font-code text-[11px] uppercase tracking-[0.1em] text-[var(--wb-accent)]">
-                Proposta de ajuste na skill do Capista
-              </h2>
-              <p className="whitespace-pre-wrap text-[15px] text-[var(--wb-text)]">
-                {resultado.analise.proposta_ajuste_skill}
-              </p>
-              <p className="mt-1 text-[12px] text-[var(--wb-text-mute)]">
-                A edição da SKILL.md é manual e só acontece depois que você validar estes padrões.
-              </p>
-            </section>
-
-            {eixos.length > 0 && (
-              <section className="grid gap-3">
-                <h2 className="font-code text-[11px] uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-                  Frequência por eixo (dados brutos · {resultado.com_tags ?? 0} com tags)
-                </h2>
-                <ul className="grid gap-2">
-                  {eixos.map(({ eixo, rotulo, ocorrencias }) => (
-                    <li
-                      key={eixo}
-                      className="grid gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-3"
-                    >
-                      <span className="font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                        {rotulo}
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {ocorrencias.map((ocorrencia) => (
-                          <span
-                            key={ocorrencia.valor}
-                            className="rounded-[var(--radius-sm)] border border-[var(--wb-border)] px-2 py-0.5 text-[12px] text-[var(--wb-text-mute)]"
-                          >
-                            {ocorrencia.valor}
-                            {ocorrencia.contagem > 1 && (
-                              <span className="ml-1 text-[var(--wb-text-dim)]">
-                                ×{ocorrencia.contagem}
-                              </span>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-          </>
-        )}
-      </main>
+          {eixos.length > 0 && (
+            <Secao titulo={`Frequência por eixo · dados brutos · ${resultado.com_tags ?? 0} com tags`}>
+              <TabelaDeFrequencia eixos={eixos} />
+            </Secao>
+          )}
+        </>
+      )}
     </div>
   );
 }

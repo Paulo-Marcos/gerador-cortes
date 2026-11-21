@@ -1,15 +1,17 @@
-// E-022: Área de Análises — uma tela, duas abas. Reúne a telemetria interna
-// proposta×final (D-310) e o desempenho no YouTube (D-313). Cada aba nasce vazia
-// de forma elegante e nunca quebra na ausência de dados.
+// E-022 / D-1176 (E-069 H-22; DIRECAO §7.8): Análises na Sala escura. Faixa de quatro KPIs,
+// abas e, em cada aba, o resultado. Tela de leitura: nenhum botão primário (PRIMARIOS_POR_TELA).
+// O "Exportar CSV de todas as lives" mora no cabeçalho da casca, como secundária.
 import { useMemo, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { Kpi } from '@/components/ui/kpi';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { analisesApi } from './api';
+import { calcularKpis } from './kpisDasAnalises';
 import { PropostaFinalTab } from './PropostaFinalTab';
 import { YoutubeDesempenhoTab } from './YoutubeDesempenhoTab';
 import { LlmCallsTab } from './LlmCallsTab';
 import { useYoutubeStatsStatus } from './useAnalises';
 import { useLlmCalls } from './useLlmCalls';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { Icon } from '@/upgrade/Icon';
 
 type AbaId = 'proposta-final' | 'youtube' | 'llm-calls';
 
@@ -19,97 +21,22 @@ const ABAS: { id: AbaId; rotulo: string }[] = [
   { id: 'llm-calls', rotulo: 'Chamadas de IA' },
 ];
 
-const TRINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
-
-/** Stat-cards do topo (DE-PARA §9, [NOVO] composição) — derivados dos
- *  dados que as abas já carregam; nenhum endpoint novo. A API não expõe
- *  CTR, então o card de desempenho usa retenção média (dado real). */
-function StatCards() {
+/** A faixa do topo: derivada dos dados que as abas já carregam, sem endpoint novo. */
+export function FaixaDeKpis() {
   const ytStatus = useYoutubeStatsStatus();
   const llmCalls = useLlmCalls();
-
-  const stats = useMemo(() => {
-    const videos = ytStatus.data?.videos ?? [];
-    const agora = Date.now();
-    const publicados30d = videos.filter((v) => {
-      if (!v.publicado_em) return false;
-      const ts = Date.parse(v.publicado_em);
-      return !Number.isNaN(ts) && agora - ts <= TRINTA_DIAS_MS;
-    }).length;
-
-    const retencoes = videos
-      .map((v) => v.average_view_percentage)
-      .filter((v): v is number => typeof v === 'number');
-    const retencaoMedia =
-      retencoes.length > 0 ? retencoes.reduce((s, v) => s + v, 0) / retencoes.length : null;
-
-    const total = ytStatus.data?.total ?? 0;
-    const comCorte = ytStatus.data?.com_corte ?? 0;
-
-    const custoLlm = (llmCalls.data?.chamadas ?? []).reduce(
-      (soma, call) => soma + (call.custo_usd ?? 0),
-      0,
-    );
-
-    return { publicados30d, retencaoMedia, total, comCorte, custoLlm };
-  }, [ytStatus.data, llmCalls.data]);
-
-  return (
-    <div className="grid flex-none gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
-      <StatCard
-        icon={<Icon name="film" />}
-        label="Publicados 30d"
-        value={String(stats.publicados30d)}
-        hint="Vídeos do canal publicados nos últimos 30 dias (sync YouTube)"
-      />
-      <StatCard
-        icon={<Icon name="trending-up" />}
-        label="Retenção média"
-        value={stats.retencaoMedia != null ? `${stats.retencaoMedia.toFixed(1)}%` : '—'}
-        hint="Média de average_view_percentage dos vídeos sincronizados"
-      />
-      <StatCard
-        icon={<Icon name="link-2" />}
-        label="Casados c/ corte"
-        value={stats.total > 0 ? `${stats.comCorte}/${stats.total}` : '—'}
-        hint="Vídeos do YouTube vinculados a um corte do app"
-      />
-      <StatCard
-        icon={<Icon name="cpu" />}
-        label="Custo LLM (últimas 100)"
-        value={`$${stats.custoLlm.toFixed(2)}`}
-        hint="Soma de custo_usd das chamadas de IA mais recentes"
-      />
-    </div>
+  const kpis = useMemo(
+    () => calcularKpis(ytStatus.data, llmCalls.data?.chamadas),
+    [ytStatus.data, llmCalls.data],
   );
-}
 
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint: string;
-}) {
   return (
-    <div
-      title={hint}
-      className="rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-3 py-2.5"
-    >
-      <div className="flex items-center gap-1.5 text-[var(--wb-text-dim)]">
-        {icon}
-        <span className="font-code text-[9px] font-extrabold uppercase tracking-[0.12em]">
-          {label}
-        </span>
-      </div>
-      <div className="mt-1 font-editorial text-[26px] font-medium leading-none text-[var(--wb-text)]">
-        {value}
-      </div>
-    </div>
+    <section aria-label="Resumo" className="grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+      <Kpi rotulo="Publicados 30d" icone="film" {...kpis.publicados30d} />
+      <Kpi rotulo="Retenção média" icone="trending-up" {...kpis.retencaoMedia} />
+      <Kpi rotulo="Casados com corte" icone="link-2" {...kpis.casados} />
+      <Kpi rotulo="Custo de IA" icone="cpu" {...kpis.custoLlm} />
+    </section>
   );
 }
 
@@ -118,59 +45,49 @@ export function AnalisesPage() {
   // D-994: a falha da sync do YouTube precisa ser vista sem abrir a aba.
   const syncFalhou = !!useYoutubeStatsStatus().data?.falha;
 
-  // D-599: o titulo e o subtitulo passam para a casca; a faixa de STATS e
-  // as abas continuam aqui, que e onde o design as coloca — logo abaixo do
-  // cabecalho, dentro do conteudo.
-  useDefinirChrome({ sub: 'proposta × final, desempenho no YouTube e custo de IA' }, []);
+  useDefinirChrome(
+    {
+      sub: 'proposta × final, desempenho no YouTube e custo de IA',
+      acoes: [
+        {
+          icone: 'download',
+          texto: 'Exportar CSV de todas as lives',
+          onClick: () => window.open(analisesApi.telemetriaCortesCsvUrl(), '_blank', 'noopener'),
+        },
+      ],
+    },
+    [],
+  );
 
   return (
-    <div
-      className={cn(
-        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        'h-full',
-        'h-full',
-      )}
-    >
-      <header
-        className={cn(
-          'border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)]',
-          'px-7 pt-5',
-        )}
-      >
-        <StatCards />
+    <div className="flex h-full min-h-0 flex-col gap-6 overflow-auto px-7 py-6 text-fg">
+      <FaixaDeKpis />
 
-        <nav className="mt-4 flex gap-1" aria-label="Abas de análise">
+      <Tabs value={aba} onValueChange={(v) => setAba(v as AbaId)} className="flex flex-col gap-5">
+        <TabsList aria-label="Abas de análise">
           {ABAS.map(({ id, rotulo }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setAba(id)}
-              aria-current={aba === id ? 'page' : undefined}
-              className={cn(
-                'relative -mb-px border-b-2 px-4 py-2.5 text-[14px] font-medium transition-colors',
-                aba === id
-                  ? 'border-[var(--wb-accent)] text-[var(--wb-text)]'
-                  : 'border-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-              )}
-            >
+            <TabsTrigger key={id} value={id}>
               {rotulo}
               {id === 'youtube' && syncFalhou && (
                 <span
                   role="img"
                   aria-label="sincronização com falha"
-                  className="ml-2 inline-block size-2 rounded-full bg-[var(--wb-warn)]"
+                  className="inline-block size-2 rounded-full bg-aviso"
                 />
               )}
-            </button>
+            </TabsTrigger>
           ))}
-        </nav>
-      </header>
-
-      <main className="flex-1 overflow-auto p-6">
-        {aba === 'proposta-final' && <PropostaFinalTab />}
-        {aba === 'youtube' && <YoutubeDesempenhoTab />}
-        {aba === 'llm-calls' && <LlmCallsTab />}
-      </main>
+        </TabsList>
+        <TabsContent value="proposta-final">
+          <PropostaFinalTab />
+        </TabsContent>
+        <TabsContent value="youtube">
+          <YoutubeDesempenhoTab />
+        </TabsContent>
+        <TabsContent value="llm-calls">
+          <LlmCallsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

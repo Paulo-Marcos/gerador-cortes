@@ -3,9 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
+import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { cn } from '@/lib/utils';
 import { livesApi, type RankingLive, type RankingLivesResponse } from './api';
 import { RankingEmbasamentoPanel } from './RankingEmbasamentoPanel';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
@@ -66,8 +75,8 @@ const COMPONENTE_LABEL: Record<string, string> = {
   vph: 'Momento (v/h)',
 };
 
-export function RankingLivesPage() {
-  const navigate = useNavigate();
+/** A consulta do ranking e as ações sobre ele (atualizar, rejeitar, baixar). */
+function useRanking() {
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
@@ -130,9 +139,16 @@ export function RankingLivesPage() {
     },
   });
 
+  return { rankingQuery, refreshMutation, rejeitarMutation, baixarMutation };
+}
+
+export function RankingLivesPage() {
+  const navigate = useNavigate();
+  const { rankingQuery, refreshMutation, rejeitarMutation, baixarMutation } = useRanking();
   const lives = useMemo(() => rankingQuery.data?.lives ?? [], [rankingQuery.data]);
   const atualizadoEm = rankingQuery.data?.atualizado_em ?? '';
   const janelaMeses = rankingQuery.data?.janela_meses;
+  const [comEmbasamento, setComEmbasamento] = useState<RankingLive | null>(null);
 
   useDefinirChrome(
     {
@@ -153,75 +169,90 @@ export function RankingLivesPage() {
     [lives.length, refreshMutation.isPending],
   );
 
+  const gerando = (rankingQuery.isLoading || refreshMutation.isPending) && lives.length === 0;
+
   return (
-    <div
-      className={cn(
-        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        'h-full',
-        'h-full',
-      )}
-    >
-
-      <main className="grid flex-1 content-start gap-4 overflow-auto p-5">
-        <section className="flex flex-wrap items-center gap-3 text-xs text-[var(--wb-text-mute)]">
+    <div className="flex h-full min-h-0 flex-col gap-5 overflow-auto px-7 py-6 text-fg">
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-pequeno text-fg-3">
+        <span className="inline-flex items-center gap-1.5">
+          <Icon name="sparkles" />
+          Atualizado {formatRelative(atualizadoEm)}
+        </span>
+        {janelaMeses && (
           <span className="inline-flex items-center gap-1.5">
-            <Icon name="sparkles" />
-            Atualizado {formatRelative(atualizadoEm)}
+            <Icon name="calendar" />
+            Janela de {janelaMeses} {janelaMeses === 1 ? 'mês' : 'meses'}
           </span>
-          {janelaMeses && (
-            <span className="inline-flex items-center gap-1.5">
-              <Icon name="calendar" />
-              Janela de {janelaMeses} {janelaMeses === 1 ? 'mês' : 'meses'}
-            </span>
-          )}
-        </section>
-
-        {rankingQuery.isError && (
-          <div className="rounded-[var(--radius)] border border-error/30 bg-error/10 p-4 text-sm text-error">
-            {rankingQuery.error instanceof Error
-              ? rankingQuery.error.message
-              : 'Não foi possível carregar o ranking.'}
-          </div>
         )}
+      </p>
 
-        {(rankingQuery.isLoading || refreshMutation.isPending) && lives.length === 0 && (
-          <div className="grid min-h-[240px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
-            <div className="flex items-center gap-2 text-[var(--wb-text-mute)]">
-              <Icon name="loader-2" size={16} className="animate-spin" />
-              Gerando ranking (busca + sentimento via Claude). Pode levar alguns minutos na primeira
-              vez.
-            </div>
-          </div>
-        )}
+      {rankingQuery.isError && (
+        <EstadoDeErro
+          titulo="Não foi possível carregar o ranking"
+          motivo={rankingQuery.error instanceof Error ? rankingQuery.error.message : undefined}
+          aoTentar={() => void rankingQuery.refetch()}
+        />
+      )}
 
-        {!rankingQuery.isLoading && lives.length === 0 && !rankingQuery.isError && (
-          <div className="grid min-h-[240px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
-            <div>
-              <Icon name="trophy" ilustracao={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" />
-              <p className="font-editorial text-3xl font-medium">Nenhuma candidata pendente</p>
-              <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
-                Clique em "Atualizar ranking" para buscar lives recentes do canal-fonte.
-              </p>
-            </div>
-          </div>
-        )}
+      {gerando && (
+        <EstadoCarregando
+          frase="Gerando o ranking (busca + sentimento via Claude). Pode levar alguns minutos na primeira vez."
+          linhas={2}
+        />
+      )}
 
-        <ol className="grid gap-3">
-          {lives.map((live, idx) => (
-            <RankingRow
-              key={live.video_id}
-              live={live}
-              posicao={idx + 1}
-              onBaixar={() => baixarMutation.mutate(live.video_id)}
-              onRejeitar={() => rejeitarMutation.mutate(live.video_id)}
-              baixando={baixarMutation.isPending && baixarMutation.variables === live.video_id}
-              rejeitando={
-                rejeitarMutation.isPending && rejeitarMutation.variables === live.video_id
-              }
-            />
-          ))}
-        </ol>
-      </main>
+      {!rankingQuery.isLoading && !gerando && lives.length === 0 && !rankingQuery.isError && (
+        <EstadoVazio
+          icone="trophy"
+          titulo="Nenhuma candidata pendente"
+          descricao="Use “Atualizar ranking” para buscar as lives recentes do canal-fonte."
+        />
+      )}
+
+      {lives.length > 0 && (
+        <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">
+          <Tabela>
+            <TabelaCabeca>
+              <TabelaLinha>
+                <TabelaTitulo aDireita>#</TabelaTitulo>
+                <TabelaTitulo>Live</TabelaTitulo>
+                <TabelaTitulo aDireita>Views</TabelaTitulo>
+                <TabelaTitulo aDireita>Likes</TabelaTitulo>
+                <TabelaTitulo aDireita>Comentários</TabelaTitulo>
+                <TabelaTitulo aDireita>Tom</TabelaTitulo>
+                <TabelaTitulo>Pontuação</TabelaTitulo>
+                <TabelaTitulo>
+                  <span className="sr-only">Ações</span>
+                </TabelaTitulo>
+              </TabelaLinha>
+            </TabelaCabeca>
+            <TabelaCorpo>
+              {lives.map((live, idx) => (
+                <RankingRow
+                  key={live.video_id}
+                  live={live}
+                  posicao={idx + 1}
+                  onBaixar={() => baixarMutation.mutate(live.video_id)}
+                  onRejeitar={() => rejeitarMutation.mutate(live.video_id)}
+                  onEntender={() => setComEmbasamento(live)}
+                  baixando={baixarMutation.isPending && baixarMutation.variables === live.video_id}
+                  rejeitando={rejeitarMutation.isPending && rejeitarMutation.variables === live.video_id}
+                />
+              ))}
+            </TabelaCorpo>
+          </Tabela>
+        </div>
+      )}
+
+      {comEmbasamento && (
+        <RankingEmbasamentoPanel
+          titulo={comEmbasamento.titulo}
+          pontuacaoTotal={comEmbasamento.pontuacao_total}
+          embasamento={comEmbasamento.embasamento}
+          destaques={comEmbasamento.sentimento_destaques}
+          onClose={() => setComEmbasamento(null)}
+        />
+      )}
     </div>
   );
 }
@@ -231,64 +262,26 @@ interface RowProps {
   posicao: number;
   onBaixar: () => void;
   onRejeitar: () => void;
+  onEntender: () => void;
   baixando: boolean;
   rejeitando: boolean;
 }
 
-function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando }: RowProps) {
-  const [embasamentoAberto, setEmbasamentoAberto] = useState(false);
-  const score = Math.round(live.pontuacao_total);
-  const breakdown = Object.entries(live.componentes_pontuacao)
-    .map(([k, v]) => `${COMPONENTE_LABEL[k] ?? k}: ${Math.round(v)}`)
-    .join(' · ');
-  const embasamento = live.embasamento;
+const CELULA = 'py-3 align-middle';
 
+function DadosDaLive({ live }: { live: RankingLive }) {
   return (
-    <li
-      className={cn(
-        'grid items-stretch gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-3 shadow-[shadow:var(--wb-shadow)] transition-colors',
-        'md:grid-cols-[56px_146px_minmax(0,1fr)_220px]',
-      )}
-    >
-      <div className="flex flex-col items-center justify-center gap-1">
-        <span className="font-editorial text-3xl leading-none text-[var(--wb-text)]">
-          {posicao}
-        </span>
-        <span className="font-code text-[10px] uppercase tracking-widest text-[var(--wb-text-dim)]">
-          rank
-        </span>
-      </div>
-
-      <div className="overflow-hidden rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="w-[116px] shrink-0 overflow-hidden rounded-etiqueta border border-fio bg-poco">
         {live.thumbnail_url ? (
-          <img
-            src={live.thumbnail_url}
-            alt=""
-            className="aspect-video h-full w-full object-cover"
-            loading="lazy"
-          />
+          <img src={live.thumbnail_url} alt="" className="aspect-video w-full object-cover" loading="lazy" />
         ) : (
           <ThumbnailPlaceholder hue={hueFromId(live.video_id)} />
         )}
       </div>
-
-      <div className="min-w-0 flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="line-clamp-2 text-base font-extrabold leading-tight text-[var(--wb-text)]">
-            {live.titulo}
-          </h3>
-          <a
-            href={live.youtube_url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs font-bold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-          >
-            <Icon name="external-link" />
-            Ver
-          </a>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--wb-text-dim)]">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="line-clamp-2 text-corpo font-semibold text-fg">{live.titulo}</span>
+        <span className="flex flex-wrap items-center gap-x-3 text-pequeno text-fg-3">
           <span className="inline-flex items-center gap-1">
             <Icon name="calendar" />
             {formatPublishedAt(live.data_publicacao)}
@@ -297,108 +290,95 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
             <Icon name="clock" />
             {formatDuration(live.duracao_iso)}
           </span>
-          <Tooltip label={`${live.views.toLocaleString('pt-BR')} views`} side="top">
-            <span className="inline-flex items-center gap-1">
-              <Icon name="eye" />
-              {formatNumber(live.views)}
-            </span>
-          </Tooltip>
-          <Tooltip label={`${live.likes.toLocaleString('pt-BR')} likes`} side="top">
-            <span className="inline-flex items-center gap-1">
-              <Icon name="heart" />
-              {formatNumber(live.likes)}
-            </span>
-          </Tooltip>
-          <Tooltip label={`${live.comentarios.toLocaleString('pt-BR')} comentários`} side="top">
-            <span className="inline-flex items-center gap-1">
-              <Icon name="message-circle" />
-              {formatNumber(live.comentarios)}
-            </span>
-          </Tooltip>
-          <span className="inline-flex items-center gap-1 rounded-full border border-[var(--wb-border)] px-2 py-0.5 text-[11px]">
-            tom {live.sentimento_score.toFixed(1)}/10
-          </span>
-        </div>
-
+        </span>
         {live.sentimento_destaques.length > 0 && (
-          <ul className="grid gap-1 text-[12px] text-[var(--wb-text-mute)]">
-            {live.sentimento_destaques.slice(0, 2).map((destaque, i) => (
-              <li
-                key={i}
-                className="border-l-2 border-[var(--wb-accent-soft)] pl-2 italic line-clamp-1"
-              >
-                "{destaque}"
-              </li>
-            ))}
-          </ul>
+          <span className="line-clamp-1 border-l-2 border-iris-fio pl-2 text-pequeno italic text-fg-2">
+            “{live.sentimento_destaques[0]}”
+          </span>
         )}
       </div>
+    </div>
+  );
+}
 
-      <div className="flex flex-col items-stretch justify-between gap-3">
-        <Tooltip label={breakdown || 'Composição da pontuação'} side="left">
-          <div className="rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-            <div className="flex items-baseline justify-between">
-              <span className="font-code text-[10px] uppercase tracking-widest text-[var(--wb-text-dim)]">
-                Pontuação
-              </span>
-              <span className="font-editorial text-2xl leading-none text-[var(--wb-text)]">
-                {score}
-              </span>
-            </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--wb-border)]">
-              <div
-                className="h-full bg-[var(--wb-accent)]"
-                style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
-              />
-            </div>
-          </div>
-        </Tooltip>
-
-        {embasamento.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setEmbasamentoAberto(true)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 py-1.5 text-xs font-semibold text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
-          >
-            <Icon name="info" />
-            Entenda a nota
-          </button>
-        )}
-
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRejeitar}
-            disabled={rejeitando || baixando}
-            className="flex-1"
-          >
-            {rejeitando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="x" />}
-            Rejeitar
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={onBaixar}
-            disabled={baixando || rejeitando}
-            className="flex-1"
-          >
-            {baixando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="download" />}
-            Baixar
-          </Button>
+function PontuacaoDaLive({ live }: { live: RankingLive }) {
+  const score = Math.round(live.pontuacao_total);
+  const breakdown = Object.entries(live.componentes_pontuacao)
+    .map(([k, v]) => `${COMPONENTE_LABEL[k] ?? k}: ${Math.round(v)}`)
+    .join(' · ');
+  return (
+    <Tooltip label={breakdown || 'Composição da pontuação'} side="left">
+      <div className="flex w-[132px] items-center gap-2.5">
+        <span className="num w-8 text-right text-linha font-bold text-fg">{score}</span>
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-vidro-3">
+          <div className="h-full bg-iris" style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
         </div>
       </div>
+    </Tooltip>
+  );
+}
 
-      {embasamentoAberto && (
-        <RankingEmbasamentoPanel
-          titulo={live.titulo}
-          pontuacaoTotal={live.pontuacao_total}
-          embasamento={embasamento}
-          destaques={live.sentimento_destaques}
-          onClose={() => setEmbasamentoAberto(false)}
-        />
+function AcoesDaLive({ live, onBaixar, onRejeitar, onEntender, baixando, rejeitando }: Omit<RowProps, 'posicao'>) {
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <Button asChild variant="fantasma" size="pq">
+        <a href={live.youtube_url} target="_blank" rel="noreferrer">
+          <Icon name="external-link" />
+          Ver
+        </a>
+      </Button>
+      {live.embasamento.length > 0 && (
+        <Button type="button" variant="fantasma" size="pq" onClick={onEntender}>
+          <Icon name="info" />
+          Entenda a nota
+        </Button>
       )}
-    </li>
+      <Button type="button" variant="secundario" size="pq" onClick={onRejeitar} disabled={rejeitando || baixando} carregando={rejeitando}>
+        <Icon name="x" />
+        Rejeitar
+      </Button>
+      <Button type="button" variant="secundario" size="pq" onClick={onBaixar} disabled={baixando || rejeitando} carregando={baixando}>
+        <Icon name="download" />
+        Baixar
+      </Button>
+    </div>
+  );
+}
+
+export function RankingRow(props: RowProps) {
+  const { live, posicao } = props;
+  return (
+    <TabelaLinha>
+      <TabelaCelula numero aDireita className={`${CELULA} text-fg-2`}>
+        {posicao}
+      </TabelaCelula>
+      <TabelaCelula className={CELULA}>
+        <DadosDaLive live={live} />
+      </TabelaCelula>
+      <TabelaCelula numero aDireita className={`${CELULA} text-fg-2`}>
+        <Tooltip label={`${live.views.toLocaleString('pt-BR')} views`} side="top">
+          <span>{formatNumber(live.views)}</span>
+        </Tooltip>
+      </TabelaCelula>
+      <TabelaCelula numero aDireita className={`${CELULA} text-fg-2`}>
+        <Tooltip label={`${live.likes.toLocaleString('pt-BR')} likes`} side="top">
+          <span>{formatNumber(live.likes)}</span>
+        </Tooltip>
+      </TabelaCelula>
+      <TabelaCelula numero aDireita className={`${CELULA} text-fg-2`}>
+        <Tooltip label={`${live.comentarios.toLocaleString('pt-BR')} comentários`} side="top">
+          <span>{formatNumber(live.comentarios)}</span>
+        </Tooltip>
+      </TabelaCelula>
+      <TabelaCelula numero aDireita className={`${CELULA} text-fg-2`}>
+        {live.sentimento_score.toFixed(1)}/10
+      </TabelaCelula>
+      <TabelaCelula className={CELULA}>
+        <PontuacaoDaLive live={live} />
+      </TabelaCelula>
+      <TabelaCelula className={CELULA}>
+        <AcoesDaLive {...props} />
+      </TabelaCelula>
+    </TabelaLinha>
   );
 }

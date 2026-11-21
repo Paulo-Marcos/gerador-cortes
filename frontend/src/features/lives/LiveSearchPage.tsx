@@ -1,9 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Selo } from '@/components/ui/selo';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
-import { cn } from '@/lib/utils';
 import { livesApi, type YoutubeLive, type YoutubeLivesResponse } from './api';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { Icon } from '@/upgrade/Icon';
@@ -137,133 +150,140 @@ export function LiveSearchPage() {
   );
 
   return (
-    <div
-      className={cn(
-        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        'h-full',
-        'h-full',
+    <div className="flex h-full min-h-0 flex-col gap-5 overflow-auto px-7 py-6 text-fg">
+      <FiltrosDaBusca
+        afterDate={afterDate}
+        onData={setAfterDate}
+        channel={channel}
+        onCanal={setChannel}
+        buscando={livesQuery.isFetching}
+        onBuscar={searchLives}
+      />
+
+      {selectedLives.length > 0 && (
+        <BarraDeSelecao
+          selecionadas={selectedLives}
+          processando={enqueueMutation.isPending}
+          onDesmarcar={() => setSelectedIds(new Set())}
+          onProcessar={processSelected}
+        />
       )}
-    >
 
-      <main className="grid flex-1 content-start gap-4 overflow-auto p-5">
-        <section className="grid items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-4 shadow-[shadow:var(--wb-shadow)] lg:grid-cols-[minmax(220px,1fr)_minmax(180px,260px)_170px]">
-          <label className="grid gap-2">
-            <span className="font-code text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--wb-text-dim)]">
-              Lives apos a data
-            </span>
-            <span className="flex h-11 items-center gap-2 rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3">
-              <Icon name="calendar" size={16} className="text-[var(--wb-text-dim)]" />
-              <input
-                value={afterDate}
-                onChange={(event) => setAfterDate(event.target.value)}
-                type="date"
-                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[var(--wb-text)] outline-none"
-              />
-            </span>
-          </label>
-          <label className="grid gap-2">
-            <span className="font-code text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--wb-text-dim)]">
-              Canal de origem
-            </span>
-            <span className="flex h-11 items-center gap-2 rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3">
-              <Icon name="at-sign" size={16} className="text-[var(--wb-text-dim)]" />
-              <input
-                value={channel}
-                onChange={(event) => setChannel(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--wb-text)] outline-none"
-              />
-            </span>
-          </label>
-          <Button type="button" onClick={searchLives} disabled={livesQuery.isFetching}>
-            {livesQuery.isFetching ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="search" />}
-            Buscar lives
-          </Button>
-        </section>
+      <section className="grid gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-corpo text-fg-2">
+            {livesQuery.isLoading ? 'Buscando lives…' : `${lives.length} live(s) encontrada(s)`}
+          </span>
+          <div className="flex-1" />
+          {lives.length > 0 && (
+            <Button type="button" variant="secundario" size="pq" onClick={selectNotDownloaded}>
+              <Icon name="check" />
+              Selecionar não baixadas
+            </Button>
+          )}
+        </div>
 
-        {selectedLives.length > 0 && (
-          <section className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-accent)] bg-[color-mix(in_oklab,var(--wb-accent)_6%,var(--wb-bg-card))] p-3.5 shadow-[0_14px_36px_rgba(20,15,10,0.10)] md:grid-cols-[minmax(0,1fr)_auto]">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]">
-                  <Icon name="radio" size={16} />
-                </span>
-                <strong className="text-[var(--wb-accent)]">
-                  {selectedLives.length} live(s) selecionada(s)
-                </strong>
-                <span className="text-sm text-[var(--wb-text-mute)]">
-                  O pipeline sera iniciado automaticamente.
-                </span>
-              </div>
-              <div className="mt-2 flex gap-2 overflow-hidden">
-                {selectedLives.slice(0, 3).map((live) => (
-                  <span
-                    key={live.video_id}
-                    className="max-w-[260px] truncate rounded-full border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-1 text-xs text-[var(--wb-text-mute)]"
-                  >
-                    {live.titulo}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => setSelectedIds(new Set())}>
-                Desmarcar todos
-              </Button>
-              <Button type="button" onClick={processSelected} disabled={enqueueMutation.isPending}>
-                {enqueueMutation.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="download" />}
-                Baixar e processar
-              </Button>
-            </div>
-          </section>
+        {livesQuery.isLoading && <EstadoCarregando frase="Buscando as lives do canal-fonte…" linhas={2} />}
+
+        {livesQuery.isError && (
+          <EstadoDeErro
+            titulo="Não foi possível buscar as lives"
+            motivo={livesQuery.error instanceof Error ? livesQuery.error.message : undefined}
+            aoTentar={() => void livesQuery.refetch()}
+          />
         )}
 
-        <section className="grid gap-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-[var(--wb-text-mute)]">
-              {livesQuery.isLoading ? 'Buscando lives...' : `${lives.length} live(s) encontrada(s)`}
-            </span>
-            <div className="flex-1" />
-            {lives.length > 0 && (
-              <Button type="button" variant="outline" size="sm" onClick={selectNotDownloaded}>
-                <Icon name="check" className="text-success" />
-                Selecionar nao baixadas
-              </Button>
-            )}
+        {!livesQuery.isLoading && lives.length === 0 && !livesQuery.isError && (
+          <EstadoVazio
+            icone="radio"
+            titulo="Nenhuma live encontrada"
+            descricao="Ajuste a data ou confira a configuração do canal no backend."
+          />
+        )}
+
+        {lives.length > 0 && (
+          <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">
+            <Tabela>
+              <TabelaCabeca>
+                <TabelaLinha>
+                  <TabelaTitulo>
+                    <span className="sr-only">Selecionar</span>
+                  </TabelaTitulo>
+                  <TabelaTitulo>Live</TabelaTitulo>
+                  <TabelaTitulo>Publicada em</TabelaTitulo>
+                  <TabelaTitulo aDireita>Duração</TabelaTitulo>
+                  <TabelaTitulo>Situação</TabelaTitulo>
+                  <TabelaTitulo>
+                    <span className="sr-only">Ações</span>
+                  </TabelaTitulo>
+                </TabelaLinha>
+              </TabelaCabeca>
+              <TabelaCorpo>
+                {lives.map((live) => (
+                  <LiveRow
+                    key={live.video_id}
+                    live={live}
+                    selected={selectedIds.has(live.video_id)}
+                    onToggle={() => toggleLive(live)}
+                  />
+                ))}
+              </TabelaCorpo>
+            </Tabela>
           </div>
-
-          {livesQuery.isError && (
-            <div className="rounded-[var(--radius)] border border-error/30 bg-error/10 p-4 text-sm text-error">
-              {livesQuery.error instanceof Error
-                ? livesQuery.error.message
-                : 'Nao foi possivel buscar as lives.'}
-            </div>
-          )}
-
-          {!livesQuery.isLoading && lives.length === 0 && !livesQuery.isError && (
-            <div className="grid min-h-[240px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
-              <div>
-                <Icon name="radio" ilustracao={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" />
-                <p className="font-editorial text-3xl font-medium">Nenhuma live encontrada</p>
-                <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
-                  Ajuste a data ou confira a configuracao do canal no backend.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid gap-3">
-            {lives.map((live) => (
-              <LiveRow
-                key={live.video_id}
-                live={live}
-                selected={selectedIds.has(live.video_id)}
-                onToggle={() => toggleLive(live)}
-              />
-            ))}
-          </div>
-        </section>
-      </main>
+        )}
+      </section>
     </div>
+  );
+}
+
+function FiltrosDaBusca(props: {
+  afterDate: string;
+  onData: (v: string) => void;
+  channel: string;
+  onCanal: (v: string) => void;
+  buscando: boolean;
+  onBuscar: () => void;
+}) {
+  return (
+    <section className="flex flex-wrap items-end gap-4 rounded-cartao border border-fio bg-vidro p-5">
+      <Field rotulo="Lives após a data" className="w-[200px]">
+        <Input aparencia="sala" type="date" value={props.afterDate} onChange={(e) => props.onData(e.target.value)} />
+      </Field>
+      <Field rotulo="Canal de origem" className="w-[260px]">
+        <Input aparencia="sala" value={props.channel} onChange={(e) => props.onCanal(e.target.value)} />
+      </Field>
+      <Button type="button" variant="secundario" carregando={props.buscando} onClick={props.onBuscar}>
+        <Icon name="search" />
+        {props.buscando ? 'Buscando…' : 'Buscar lives'}
+      </Button>
+    </section>
+  );
+}
+
+export function BarraDeSelecao(props: {
+  selecionadas: YoutubeLive[];
+  processando: boolean;
+  onDesmarcar: () => void;
+  onProcessar: () => void;
+}) {
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-cartao border border-iris-fio bg-iris-suave px-5 py-3.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <strong className="text-corpo font-semibold text-fg">
+          {props.selecionadas.length} live(s) selecionada(s)
+        </strong>
+        <span className="text-pequeno text-fg-2">O pipeline começa sozinho depois do download.</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="secundario" onClick={props.onDesmarcar}>
+          Desmarcar todas
+        </Button>
+        <Button type="button" variant="primario" carregando={props.processando} onClick={props.onProcessar}>
+          <Icon name="download" />
+          {props.processando ? 'Baixando…' : 'Baixar e processar'}
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -277,79 +297,40 @@ function LiveRow({
   onToggle: () => void;
 }) {
   return (
-    <article
-      className={cn(
-        'grid items-center gap-3 rounded-[var(--radius-lg)] border bg-[var(--wb-bg-card)] p-3 shadow-[shadow:var(--wb-shadow)] transition-colors',
-        'md:grid-cols-[28px_146px_minmax(0,1fr)_auto]',
-        selected
-          ? 'border-[var(--wb-accent)] bg-[color-mix(in_oklab,var(--wb-accent)_8%,var(--wb-bg-card))]'
-          : 'border-[var(--wb-border-soft)]',
-        live.ja_baixado && 'opacity-65',
-      )}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        disabled={live.ja_baixado}
-        aria-label={selected ? 'Desmarcar live' : 'Selecionar live'}
-        className={cn(
-          'flex h-[22px] w-[22px] items-center justify-center rounded-[6px] border transition-colors',
-          selected
-            ? 'border-success bg-success text-[var(--wb-accent-fg)]'
-            : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-transparent',
-          live.ja_baixado && 'cursor-not-allowed',
-        )}
-      >
-        <Icon name="check" />
-      </button>
-
-      <div className="overflow-hidden rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
-        {live.thumbnail_url ? (
-          <img
-            src={live.thumbnail_url}
-            alt=""
-            className="aspect-video h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <ThumbnailPlaceholder hue={hueFromId(live.video_id)} />
-        )}
-      </div>
-
-      <div className="min-w-0">
-        <h3 className="truncate text-base font-extrabold leading-tight text-[var(--wb-text)]">
-          {live.titulo}
-        </h3>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--wb-text-dim)]">
-          <span className="inline-flex items-center gap-1">
-            <Icon name="calendar" />
-            {formatPublishedAt(live.data_publicacao)}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Icon name="clock" />
-            {formatDuration(live.duracao_iso)}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Icon name="at-sign" />
-            YouTube
-          </span>
-          {live.ja_baixado && (
-            <span className="rounded-full border border-[var(--wb-border)] px-2 py-0.5 text-[11px] text-[var(--wb-text-mute)]">
-              baixada
-            </span>
-          )}
+    <TabelaLinha>
+      <TabelaCelula className="w-10 py-3">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggle}
+          disabled={live.ja_baixado}
+          aria-label={selected ? 'Desmarcar live' : 'Selecionar live'}
+        />
+      </TabelaCelula>
+      <TabelaCelula className={live.ja_baixado ? 'opacity-70' : undefined}>
+        <div className="flex min-w-0 items-center gap-3 py-2">
+          <div className="w-[116px] shrink-0 overflow-hidden rounded-etiqueta border border-fio bg-poco">
+            {live.thumbnail_url ? (
+              <img src={live.thumbnail_url} alt="" className="aspect-video w-full object-cover" loading="lazy" />
+            ) : (
+              <ThumbnailPlaceholder hue={hueFromId(live.video_id)} />
+            )}
+          </div>
+          <span className="line-clamp-2 text-corpo font-semibold text-fg">{live.titulo}</span>
         </div>
-      </div>
-
-      <a
-        href={live.youtube_url}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs font-bold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-      >
-        <Icon name="external-link" />
-        Ver
-      </a>
-    </article>
+      </TabelaCelula>
+      <TabelaCelula className="whitespace-nowrap text-fg-2">{formatPublishedAt(live.data_publicacao)}</TabelaCelula>
+      <TabelaCelula numero aDireita className="text-fg-2">
+        {formatDuration(live.duracao_iso)}
+      </TabelaCelula>
+      <TabelaCelula>{live.ja_baixado ? <Selo tom="ok">baixada</Selo> : <Selo tom="neutro">nova</Selo>}</TabelaCelula>
+      <TabelaCelula className="text-right">
+        <Button asChild variant="fantasma" size="pq">
+          <a href={live.youtube_url} target="_blank" rel="noreferrer">
+            <Icon name="external-link" />
+            Ver
+          </a>
+        </Button>
+      </TabelaCelula>
+    </TabelaLinha>
   );
 }

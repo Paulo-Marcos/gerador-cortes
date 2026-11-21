@@ -1,77 +1,76 @@
-// E-022 / D-310: aba "Proposta × Final". Telemetria interna que mede quanto o
-// editor mudou depois da proposta da IA (bordas, duração, desvios, título) por
-// corte de um projeto. Nasce vazia: escolha um projeto para carregar o diff.
+// E-022 / D-310 / D-1176: aba "Proposta × Final". Telemetria interna que mede quanto o
+// editor mudou depois da proposta da IA (bordas, duração, desvios, título) por corte de uma
+// live. Nasce vazia: escolha uma live para carregar o diff (DIRECAO §7.8).
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { analisesApi, type TelemetriaCorteDiff, type TelemetriaProjeto } from './api';
+import { useQueryClient } from '@tanstack/react-query';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { Field } from '@/components/ui/field';
+import { Select } from '@/components/ui/select';
+import { Selo, type TomDoSelo } from '@/components/ui/selo';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import { cn } from '@/lib/utils';
+import type { Projeto } from '@/types/models';
+import type { TelemetriaCorteDiff, TelemetriaProjeto } from './api';
 import { useProjetosAnalises, useTelemetriaCortes } from './useAnalises';
 import {
   formatarDelta,
   formatarSeg,
+  fraseBuscandoLives,
   resumirOrigens,
   rotuloSituacao,
   somarOrigens,
   tomDelta,
 } from './analisesFormat';
-import { Icon } from '@/upgrade/Icon';
 import { MudancasPorOrigem } from './MudancasPorOrigem';
 
 const TOM_DELTA_CLASSE: Record<ReturnType<typeof tomDelta>, string> = {
-  pos: 'text-[var(--wb-warn)]',
-  neg: 'text-[var(--wb-info)]',
-  zero: 'text-[var(--wb-text-dim)]',
-  nulo: 'text-[var(--wb-text-dim)]',
+  pos: 'text-aviso',
+  neg: 'text-[color:var(--cc-info)]',
+  zero: 'text-fg-3',
+  nulo: 'text-fg-3',
 };
 
-const SITUACAO_CLASSE: Record<string, string> = {
-  com_snapshot: 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]',
-  sem_proposta_ia: 'bg-[var(--wb-bg-inset)] text-[var(--wb-warn)]',
-  sem_snapshot: 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)]',
+const TOM_DA_SITUACAO: Record<string, TomDoSelo> = {
+  com_snapshot: 'neutro',
+  sem_proposta_ia: 'convite',
+  sem_snapshot: 'inerte',
 };
 
 function Delta({ seg }: { seg: number | null }) {
   return <span className={TOM_DELTA_CLASSE[tomDelta(seg)]}>{formatarDelta(seg)}</span>;
 }
 
-function SituacaoBadge({ situacao }: { situacao: TelemetriaCorteDiff['situacao'] }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 font-code text-[10px] uppercase tracking-[0.06em]',
-        SITUACAO_CLASSE[situacao] ?? 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)]',
-      )}
-    >
-      {rotuloSituacao(situacao)}
-    </span>
-  );
-}
-
-function ResumoChip({ rotulo, valor }: { rotulo: string; valor: number }) {
-  return (
-    <div className="grid gap-0.5 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-4 py-2.5">
-      <span className="font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        {rotulo}
-      </span>
-      <span className="text-[22px] font-medium leading-none text-[var(--wb-text)]">{valor}</span>
-    </div>
-  );
-}
-
 function ResumoDoProjeto({ telemetria }: { telemetria: TelemetriaProjeto }) {
+  const itens = [
+    ['Cortes', telemetria.total_cortes],
+    ['Com proposta da IA', telemetria.com_snapshot],
+    ['Sem snapshot', telemetria.sem_snapshot],
+  ] as const;
   return (
-    <div className="flex flex-wrap gap-2.5">
-      <ResumoChip rotulo="Cortes" valor={telemetria.total_cortes} />
-      <ResumoChip rotulo="Com proposta da IA" valor={telemetria.com_snapshot} />
-      <ResumoChip rotulo="Sem snapshot" valor={telemetria.sem_snapshot} />
-    </div>
+    <dl className="flex flex-wrap gap-3.5">
+      {itens.map(([rotulo, valor]) => (
+        <div key={rotulo} className="flex flex-col gap-1 rounded-cartao border border-fio bg-vidro px-4 py-3">
+          <dt className="text-micro text-fg-3">{rotulo}</dt>
+          <dd className="text-linha font-bold tabular-nums text-fg">{valor}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
 /** D-999: o que o operador mudou na proposta, no lugar do voto (D-419). */
 function MudancasCell({ diff }: { diff: TelemetriaCorteDiff }) {
-  if (diff.situacao !== 'com_snapshot') return <span className="text-[var(--wb-text-dim)]">—</span>;
-  if (diff.mudancas.length === 0) return <span className="text-[var(--wb-text-dim)]">Nada</span>;
+  if (diff.situacao !== 'com_snapshot') return <span className="text-fg-3">—</span>;
+  if (diff.mudancas.length === 0) return <span className="text-fg-3">Nada</span>;
   return (
     <ul className="grid gap-0.5">
       {diff.mudancas.map((m) => (
@@ -81,64 +80,52 @@ function MudancasCell({ diff }: { diff: TelemetriaCorteDiff }) {
   );
 }
 
+const CELULA = 'py-3 align-top';
+
 function CorteRow({ diff }: { diff: TelemetriaCorteDiff }) {
   const { titulo, bordas, desvios } = diff;
   const semProposta = diff.situacao !== 'com_snapshot';
   return (
-    <tr className="border-t border-[var(--wb-border-soft)] align-top">
-      <td className="px-3 py-3 font-code text-[13px] text-[var(--wb-text-mute)]">
+    <TabelaLinha>
+      <TabelaCelula numero className={cn(CELULA, 'text-fg-2')}>
         #{diff.numero}
-      </td>
-      <td className="px-3 py-3">
-        <SituacaoBadge situacao={diff.situacao} />
-        {diff.origem_analise && (
-          <div className="mt-1 font-code text-[10px] text-[var(--wb-text-dim)]">
-            {diff.origem_analise}
-          </div>
-        )}
-      </td>
-      <td className="px-3 py-3 text-[13px]">
+      </TabelaCelula>
+      <TabelaCelula className={CELULA}>
+        <Selo tom={TOM_DA_SITUACAO[diff.situacao] ?? 'inerte'}>{rotuloSituacao(diff.situacao)}</Selo>
+        {diff.origem_analise && <div className="mt-1 num text-pequeno text-fg-3">{diff.origem_analise}</div>}
+      </TabelaCelula>
+      <TabelaCelula className={CELULA}>
         {semProposta ? (
-          <span className="text-[var(--wb-text)]">{titulo.final || '—'}</span>
+          <span>{titulo.final || '—'}</span>
         ) : (
           <div className="grid gap-1">
-            <span className="text-[var(--wb-text-dim)] line-through decoration-[var(--wb-border)]">
-              {titulo.proposto || '—'}
-            </span>
-            <span
-              className={cn(
-                titulo.mudou ? 'text-[var(--wb-text)]' : 'text-[var(--wb-text-mute)]',
-              )}
-            >
+            <span className="text-fg-3 line-through">{titulo.proposto || '—'}</span>
+            <span className={titulo.mudou ? 'text-fg' : 'text-fg-2'}>
               {titulo.final || '—'}
-              {!titulo.mudou && (
-                <span className="ml-1.5 font-code text-[10px] text-[var(--wb-text-dim)]">
-                  (mantido)
-                </span>
-              )}
+              {!titulo.mudou && <span className="ml-1.5 text-pequeno text-fg-3">(mantido)</span>}
             </span>
           </div>
         )}
-      </td>
-      <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
+      </TabelaCelula>
+      <TabelaCelula numero className={cn(CELULA, 'text-fg-2')}>
         <div>
           início <Delta seg={bordas.delta_inicio_seg} />
         </div>
         <div>
           fim <Delta seg={bordas.delta_fim_seg} />
         </div>
-      </td>
-      <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
+      </TabelaCelula>
+      <TabelaCelula numero className={cn(CELULA, 'text-fg-2')}>
         <div>{formatarSeg(bordas.duracao_final_seg)}</div>
-        <div className="text-[var(--wb-text-dim)]">
+        <div className="text-fg-3">
           prop {formatarSeg(bordas.duracao_proposta_seg)} · <Delta seg={bordas.delta_duracao_seg} />
         </div>
-      </td>
-      <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
+      </TabelaCelula>
+      <TabelaCelula className={cn(CELULA, 'text-fg-2')}>
         {semProposta ? (
           <div>
             {desvios.finais} finais
-            <div className="text-[var(--wb-text-dim)]">{resumirOrigens(desvios.finais_por_origem)}</div>
+            <div className="text-fg-3">{resumirOrigens(desvios.finais_por_origem)}</div>
           </div>
         ) : (
           <div className="grid gap-0.5">
@@ -146,115 +133,121 @@ function CorteRow({ diff }: { diff: TelemetriaCorteDiff }) {
               {desvios.propostos ?? 0} propostos · {desvios.mantidos?.length ?? 0} mantidos ·{' '}
               {desvios.removidos?.length ?? 0} removidos
             </div>
-            <div className="text-[var(--wb-text-dim)]">
+            <div className="text-fg-3">
               +{somarOrigens(desvios.adicionados_por_origem)} adicionados
               {somarOrigens(desvios.adicionados_por_origem) > 0 &&
                 ` (${resumirOrigens(desvios.adicionados_por_origem)})`}
             </div>
           </div>
         )}
-      </td>
-      <td className="px-3 py-3 text-[13px] text-[var(--wb-text-mute)]">
+      </TabelaCelula>
+      <TabelaCelula className={cn(CELULA, 'text-fg-2')}>
         <MudancasCell diff={diff} />
-      </td>
-    </tr>
+      </TabelaCelula>
+    </TabelaLinha>
+  );
+}
+
+function TabelaDosCortes({ cortes }: { cortes: TelemetriaCorteDiff[] }) {
+  return (
+    <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">
+      <Tabela>
+        <TabelaCabeca>
+          <TabelaLinha>
+            <TabelaTitulo>#</TabelaTitulo>
+            <TabelaTitulo>Situação</TabelaTitulo>
+            <TabelaTitulo>Título proposto → final</TabelaTitulo>
+            <TabelaTitulo>Bordas</TabelaTitulo>
+            <TabelaTitulo>Duração</TabelaTitulo>
+            <TabelaTitulo>Desvios</TabelaTitulo>
+            <TabelaTitulo>O que você mudou</TabelaTitulo>
+          </TabelaLinha>
+        </TabelaCabeca>
+        <TabelaCorpo>
+          {cortes.map((diff) => (
+            <CorteRow key={diff.corte_id || diff.numero} diff={diff} />
+          ))}
+        </TabelaCorpo>
+      </Tabela>
+    </div>
+  );
+}
+
+/** O select de live: enquanto a lista do canal carrega ele fica desabilitado, gira e diz o que busca. */
+function SeletorDeLive({
+  projetoId,
+  onEscolher,
+}: {
+  projetoId: string | null;
+  onEscolher: (id: string) => void;
+}) {
+  const projetos = useProjetosAnalises();
+  // A Biblioteca já pode ter contado as lives do canal; sem isso a frase fica sem número.
+  const conhecidas = useQueryClient().getQueryData<Projeto[]>(['projetos'])?.length;
+  const carregando = projetos.isLoading;
+  const opcoes = (projetos.data ?? []).map((p) => ({ valor: p.id, rotulo: p.titulo_live || p.id }));
+  return (
+    <div className="flex flex-wrap items-end gap-4">
+      <Field rotulo="Live" className="w-full max-w-[420px]">
+        <Select
+          opcoes={opcoes}
+          value={projetoId ?? undefined}
+          onValueChange={onEscolher}
+          placeholder="Selecione uma live…"
+          carregando={carregando ? 'Carregando lives…' : false}
+        />
+      </Field>
+      {carregando && (
+        <p role="status" className="pb-2.5 text-pequeno text-fg-3">
+          {fraseBuscandoLives(conhecidas)}
+        </p>
+      )}
+    </div>
   );
 }
 
 export function PropostaFinalTab() {
   const [projetoId, setProjetoId] = useState<string | null>(null);
-  const projetos = useProjetosAnalises();
   const telemetria = useTelemetriaCortes(projetoId);
 
   return (
     <div className="grid content-start gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="grid gap-1.5">
-          <span className="font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-            Projeto
-          </span>
-          <select
-            value={projetoId ?? ''}
-            onChange={(e) => setProjetoId(e.target.value || null)}
-            disabled={projetos.isLoading}
-            className="min-w-[280px] rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-3 py-2 text-[14px] text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
-          >
-            <option value="">
-              {projetos.isLoading ? 'Carregando projetos…' : 'Selecione um projeto…'}
-            </option>
-            {(projetos.data ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.titulo_live || p.id}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => window.open(analisesApi.telemetriaCortesCsvUrl(), '_blank', 'noopener')}
-        >
-          <Icon name="download" size={16} />
-          Exportar CSV (todos os projetos)
-        </Button>
-      </div>
+      <SeletorDeLive projetoId={projetoId} onEscolher={setProjetoId} />
 
       {!projetoId && (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
-          <p className="text-[15px] text-[var(--wb-text-mute)]">
-            Escolha um projeto para comparar a proposta da IA com o corte final.
-          </p>
-          <p className="mt-1.5 text-[13px] text-[var(--wb-text-dim)]">
-            A telemetria é populada quando você <strong>roda uma análise na v2</strong> — projetos
-            anteriores aparecem marcados como legado.
-          </p>
-        </div>
+        <EstadoVazio
+          icone="git-compare-arrows"
+          titulo="Escolha uma live para comparar"
+          descricao="A telemetria nasce quando você roda uma análise na v2; lives anteriores aparecem marcadas como legado."
+        />
       )}
 
       {projetoId && telemetria.isLoading && (
-        <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-          <Icon name="loader-2" size={16} className="animate-spin" />
-          Carregando telemetria…
-        </p>
+        <div role="status" className="grid gap-3">
+          <p className="text-pequeno text-fg-3">Carregando a telemetria da live…</p>
+          <Skeleton className="h-[72px] w-full" />
+        </div>
       )}
 
       {projetoId && telemetria.isError && (
-        <div className="rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5 text-[14px] text-[var(--wb-err)]">
-          Não foi possível carregar a telemetria deste projeto.
-        </div>
+        <EstadoDeErro
+          titulo="Não foi possível carregar a telemetria"
+          motivo="Esta live não respondeu. Tente de novo em instantes."
+          aoTentar={() => void telemetria.refetch()}
+        />
       )}
 
       {projetoId && telemetria.data && (
         <>
           <ResumoDoProjeto telemetria={telemetria.data} />
-          <MudancasPorOrigem grupos={telemetria.data.mudancas_por_origem} motivos={telemetria.data.motivos_apagado} />
-
+          <MudancasPorOrigem
+            grupos={telemetria.data.mudancas_por_origem}
+            motivos={telemetria.data.motivos_apagado}
+          />
           {telemetria.data.cortes.length === 0 ? (
-            <div className="rounded-[var(--radius)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center text-[15px] text-[var(--wb-text-mute)]">
-              Este projeto ainda não tem cortes.
-            </div>
+            <EstadoVazio icone="scissors" titulo="Esta live ainda não tem cortes" />
           ) : (
-            <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--wb-border-soft)]">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="bg-[var(--wb-bg-inset)] font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                    <th className="px-3 py-2 font-medium">#</th>
-                    <th className="px-3 py-2 font-medium">Situação</th>
-                    <th className="px-3 py-2 font-medium">Título proposto → final</th>
-                    <th className="px-3 py-2 font-medium">Bordas</th>
-                    <th className="px-3 py-2 font-medium">Duração</th>
-                    <th className="px-3 py-2 font-medium">Desvios</th>
-                    <th className="px-3 py-2 font-medium">O que você mudou</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {telemetria.data.cortes.map((diff) => (
-                    <CorteRow key={diff.corte_id || diff.numero} diff={diff} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <TabelaDosCortes cortes={telemetria.data.cortes} />
           )}
         </>
       )}

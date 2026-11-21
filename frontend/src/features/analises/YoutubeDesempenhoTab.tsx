@@ -1,8 +1,19 @@
-// E-022 / D-313: aba "Desempenho YouTube". Status do último sync + botão de
+// E-022 / D-313 / D-1176: aba "Desempenho YouTube". Status do último sync + botão de
 // sincronizar e os levantamentos duração×retenção e título×desempenho. Nasce
 // vazia de forma elegante: sem vídeos, orienta a reautorizar o OAuth e
 // sincronizar. Nunca quebra se o backend pedir reautorização.
 import { Button } from '@/components/ui/button';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { Selo } from '@/components/ui/selo';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import { useToast } from '@/components/ui/toaster';
 import type { LevantamentoDuracao, LevantamentoTitulo } from './api';
 import {
@@ -22,89 +33,94 @@ const GRUPO_ROTULO: Record<string, string> = {
   numero: 'Número',
 };
 
-/** Barra horizontal simples proporcional à retenção ponderada (0–100%). */
+/** Barra horizontal proporcional à retenção ponderada (0–100%). */
 function RetencaoBar({ pct }: { pct: number }) {
   const largura = Math.max(0, Math.min(100, pct));
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-2 w-24 overflow-hidden rounded-full bg-[var(--wb-bg-inset)]">
-        <div
-          className="h-full rounded-full bg-[var(--wb-accent)]"
-          style={{ width: `${largura}%` }}
-        />
+    <div className="flex items-center gap-2.5">
+      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-vidro-3">
+        <div className="h-full rounded-full bg-iris" style={{ width: `${largura}%` }} />
       </div>
-      <span className="font-code text-[12px] text-[var(--wb-text-mute)]">{formatarPct(pct)}</span>
+      <span className="num text-fg-2">{formatarPct(pct)}</span>
     </div>
   );
 }
 
+function Moldura({ children }: { children: React.ReactNode }) {
+  return <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">{children}</div>;
+}
+
 function DuracaoTabela({ faixas }: { faixas: LevantamentoDuracao[] }) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--wb-border-soft)]">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="bg-[var(--wb-bg-inset)] font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-            <th className="px-3 py-2 font-medium">Faixa (min)</th>
-            <th className="px-3 py-2 font-medium">Vídeos</th>
-            <th className="px-3 py-2 font-medium">Views (média)</th>
-            <th className="px-3 py-2 font-medium">Retenção ponderada</th>
-            <th className="px-3 py-2 font-medium">Duração média assistida</th>
-          </tr>
-        </thead>
-        <tbody>
+    <Moldura>
+      <Tabela>
+        <TabelaCabeca>
+          <TabelaLinha>
+            <TabelaTitulo>Faixa (min)</TabelaTitulo>
+            <TabelaTitulo aDireita>Vídeos</TabelaTitulo>
+            <TabelaTitulo aDireita>Views (média)</TabelaTitulo>
+            <TabelaTitulo>Retenção ponderada</TabelaTitulo>
+            <TabelaTitulo aDireita>Duração média assistida</TabelaTitulo>
+          </TabelaLinha>
+        </TabelaCabeca>
+        <TabelaCorpo>
           {faixas.map((f) => (
-            <tr key={f.faixa} className="border-t border-[var(--wb-border-soft)]">
-              <td className="px-3 py-2.5 font-code text-[13px] text-[var(--wb-text)]">{f.faixa}</td>
-              <td className="px-3 py-2.5 text-[13px] text-[var(--wb-text-mute)]">{f.videos}</td>
-              <td className="px-3 py-2.5 text-[13px] text-[var(--wb-text-mute)]">
-                {formatarNumero(Math.round(f.views_media))}
-              </td>
-              <td className="px-3 py-2.5">
+            <TabelaLinha key={f.faixa}>
+              <TabelaCelula numero>{f.faixa}</TabelaCelula>
+              <TabelaCelula numero aDireita>{f.videos}</TabelaCelula>
+              <TabelaCelula numero aDireita>{formatarNumero(Math.round(f.views_media))}</TabelaCelula>
+              <TabelaCelula>
                 <RetencaoBar pct={f.retencao_ponderada_pct} />
-              </td>
-              <td className="px-3 py-2.5 font-code text-[13px] text-[var(--wb-text-mute)]">
-                {formatarSeg(f.avg_view_duration_media_seg)}
-              </td>
-            </tr>
+              </TabelaCelula>
+              <TabelaCelula numero aDireita>{formatarSeg(f.avg_view_duration_media_seg)}</TabelaCelula>
+            </TabelaLinha>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TabelaCorpo>
+      </Tabela>
+    </Moldura>
   );
 }
 
 function TituloTabela({ grupos }: { grupos: LevantamentoTitulo[] }) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--wb-border-soft)]">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="bg-[var(--wb-bg-inset)] font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-            <th className="px-3 py-2 font-medium">Grupo</th>
-            <th className="px-3 py-2 font-medium">Faixa</th>
-            <th className="px-3 py-2 font-medium">Vídeos</th>
-            <th className="px-3 py-2 font-medium">Views (média)</th>
-            <th className="px-3 py-2 font-medium">Retenção ponderada</th>
-          </tr>
-        </thead>
-        <tbody>
+    <Moldura>
+      <Tabela>
+        <TabelaCabeca>
+          <TabelaLinha>
+            <TabelaTitulo>Grupo</TabelaTitulo>
+            <TabelaTitulo>Faixa</TabelaTitulo>
+            <TabelaTitulo aDireita>Vídeos</TabelaTitulo>
+            <TabelaTitulo aDireita>Views (média)</TabelaTitulo>
+            <TabelaTitulo>Retenção ponderada</TabelaTitulo>
+          </TabelaLinha>
+        </TabelaCabeca>
+        <TabelaCorpo>
           {grupos.map((g) => (
-            <tr key={`${g.grupo}-${g.faixa}`} className="border-t border-[var(--wb-border-soft)]">
-              <td className="px-3 py-2.5 text-[13px] text-[var(--wb-text-mute)]">
-                {GRUPO_ROTULO[g.grupo] ?? g.grupo}
-              </td>
-              <td className="px-3 py-2.5 font-code text-[13px] text-[var(--wb-text)]">{g.faixa}</td>
-              <td className="px-3 py-2.5 text-[13px] text-[var(--wb-text-mute)]">{g.videos}</td>
-              <td className="px-3 py-2.5 text-[13px] text-[var(--wb-text-mute)]">
-                {formatarNumero(Math.round(g.views_media))}
-              </td>
-              <td className="px-3 py-2.5">
+            <TabelaLinha key={`${g.grupo}-${g.faixa}`}>
+              <TabelaCelula className="text-fg-2">{GRUPO_ROTULO[g.grupo] ?? g.grupo}</TabelaCelula>
+              <TabelaCelula numero>{g.faixa}</TabelaCelula>
+              <TabelaCelula numero aDireita>{g.videos}</TabelaCelula>
+              <TabelaCelula numero aDireita>{formatarNumero(Math.round(g.views_media))}</TabelaCelula>
+              <TabelaCelula>
                 <RetencaoBar pct={g.retencao_ponderada_pct} />
-              </td>
-            </tr>
+              </TabelaCelula>
+            </TabelaLinha>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TabelaCorpo>
+      </Tabela>
+    </Moldura>
+  );
+}
+
+function Secao({ titulo, carregando, children }: { titulo: string; carregando: boolean; children: React.ReactNode }) {
+  return (
+    <section className="grid gap-2.5">
+      <h2 className="text-linha text-fg">{titulo}</h2>
+      {carregando ? <div role="status">
+          <span className="sr-only">Carregando {titulo.toLowerCase()}…</span>
+          <Skeleton className="h-[72px] w-full" />
+        </div> : children}
+    </section>
   );
 }
 
@@ -135,27 +151,25 @@ export function YoutubeDesempenhoTab() {
 
   return (
     <div className="grid content-start gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-4 py-3">
-        <div className="text-[13px] text-[var(--wb-text-mute)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-cartao border border-fio bg-vidro px-5 py-3.5">
+        <div className="text-corpo text-fg-2">
           {status.isLoading ? (
             <span className="flex items-center gap-2">
               <Icon name="loader-2" className="animate-spin" />
               Carregando status…
             </span>
           ) : status.data ? (
-            <span>
+            <span className="flex flex-wrap items-center gap-2">
               {status.data.sincronizado_em ? (
                 <>
-                  Último sync:{' '}
-                  <strong className="text-[var(--wb-text)]">
-                    {new Date(status.data.sincronizado_em).toLocaleString('pt-BR')}
-                  </strong>
-                  {status.data.stale && (
-                    <span className="ml-2 rounded-full bg-[var(--wb-bg-inset)] px-2 py-0.5 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-warn)]">
-                      desatualizado
-                    </span>
-                  )}
-                  <span className="ml-2 text-[var(--wb-text-dim)]">
+                  <span>
+                    Último sync:{' '}
+                    <strong className="font-semibold text-fg">
+                      {new Date(status.data.sincronizado_em).toLocaleString('pt-BR')}
+                    </strong>
+                  </span>
+                  {status.data.stale && <Selo tom="convite">desatualizado</Selo>}
+                  <span className="text-fg-3">
                     {status.data.total} vídeos · {status.data.com_corte} casados com cortes
                   </span>
                 </>
@@ -167,13 +181,9 @@ export function YoutubeDesempenhoTab() {
             'Status indisponível.'
           )}
         </div>
-        <Button type="button" onClick={handleSync} disabled={sync.isPending}>
-          {sync.isPending ? (
-            <Icon name="loader-2" size={16} className="animate-spin" />
-          ) : (
-            <Icon name="refresh-cw" size={16} />
-          )}
-          Sincronizar
+        <Button type="button" variant="secundario" carregando={sync.isPending} onClick={handleSync}>
+          <Icon name="refresh-cw" size={16} />
+          {sync.isPending ? 'Sincronizando…' : 'Sincronizar'}
         </Button>
       </div>
 
@@ -183,38 +193,19 @@ export function YoutubeDesempenhoTab() {
       />
 
       {semDados && !status.isLoading ? (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
-          <p className="text-[15px] text-[var(--wb-text-mute)]">
-            Ainda não há estatísticas do YouTube.
-          </p>
-          <p className="mt-1.5 text-[13px] text-[var(--wb-text-dim)]">
-            <strong>Reautorize o OAuth</strong> (se preciso) e clique em <strong>Sincronizar</strong>{' '}
-            para trazer views e retenção dos vídeos publicados.
-          </p>
-        </div>
+        <EstadoVazio
+          icone="bar-chart"
+          titulo="Ainda não há estatísticas do YouTube"
+          descricao="Reautorize o OAuth, se preciso, e clique em Sincronizar para trazer views e retenção dos vídeos publicados."
+        />
       ) : (
         <>
-          <section className="grid gap-2.5">
-            <h2 className="font-code text-[11px] uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-              Duração × retenção
-            </h2>
-            {duracao.isLoading ? (
-              <p className="text-[14px] text-[var(--wb-text-mute)]">Carregando…</p>
-            ) : (
-              <DuracaoTabela faixas={duracao.data ?? []} />
-            )}
-          </section>
-
-          <section className="grid gap-2.5">
-            <h2 className="font-code text-[11px] uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-              Título × desempenho
-            </h2>
-            {titulo.isLoading ? (
-              <p className="text-[14px] text-[var(--wb-text-mute)]">Carregando…</p>
-            ) : (
-              <TituloTabela grupos={titulo.data ?? []} />
-            )}
-          </section>
+          <Secao titulo="Duração × retenção" carregando={duracao.isLoading}>
+            <DuracaoTabela faixas={duracao.data ?? []} />
+          </Secao>
+          <Secao titulo="Título × desempenho" carregando={titulo.isLoading}>
+            <TituloTabela grupos={titulo.data ?? []} />
+          </Secao>
         </>
       )}
     </div>

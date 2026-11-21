@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 // D-1120 (E-069 H-10) · KPI: um número que o operador quer ler de relance.
 //
@@ -11,6 +12,8 @@ import { cn } from '@/lib/utils';
 
 interface KpiBase extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
   rotulo: string;
+  /** Ícone do inventário colado ao rótulo (DIRECAO §7.8: "rótulo com ícone"). */
+  icone?: React.ComponentProps<typeof Icon>['name'];
   /** "min", "%", "views"… colado ao valor, menor. */
   unidade?: string;
   /** Linha de contexto sob o valor ("+12% sobre a semana"). */
@@ -27,7 +30,7 @@ export type KpiProps = KpiBase &
 const NUMERO_PT_BR = new Intl.NumberFormat('pt-BR');
 
 export const Kpi = React.forwardRef<HTMLDivElement, KpiProps>(function Kpi(
-  { rotulo, valor, unidade, motivo, detalhe, className, ...props },
+  { rotulo, icone, valor, unidade, motivo, detalhe, className, ...props },
   ref,
 ) {
   const semDado = valor === undefined || valor === null || valor === '';
@@ -42,7 +45,10 @@ export const Kpi = React.forwardRef<HTMLDivElement, KpiProps>(function Kpi(
       )}
       {...props}
     >
-      <span className="text-micro text-fg-3">{rotulo}</span>
+      <span className="flex items-center gap-1.5 text-micro text-fg-3">
+        {icone && <Icon name={icone} size={14} />}
+        {rotulo}
+      </span>
       {semDado ? (
         <>
           <span className="text-display font-light text-fg-3">Sem dados</span>
