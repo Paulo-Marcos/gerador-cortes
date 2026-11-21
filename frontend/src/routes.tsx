@@ -109,7 +109,7 @@ export const router = createBrowserRouter([
       { path: 'shorts/:corteId/workspace', element: <PalcoDoCortePelaRota tipo="short"><WorkspaceDoFirePage /></PalcoDoCortePelaRota> },
       { path: 'atalhos', element: <AtalhosPage /> },
       // D-1178: Novidades é a segunda aba de Atalhos (DIRECAO §7.13); /novidades abre nela.
-      { path: 'novidades', element: <AtalhosPage abaInicial="novidades" /> },
+      { path: 'novidades', element: <AtalhosPage /> },
       { path: 'fila', element: <FilaPage /> },
       {
         path: '*',

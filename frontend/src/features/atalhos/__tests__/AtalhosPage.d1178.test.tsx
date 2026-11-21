@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { novidadesKey } from '@/shared/chavesDeCache';
 import { contarPrimarios } from '@/shared/qualidade/__tests__/primariosDaTela';
@@ -11,7 +12,7 @@ vi.mock('@/upgrade/UpgradeChrome', () => ({ useDefinirChrome: () => undefined })
 
 import { AtalhosPage } from '../AtalhosPage';
 
-const montar = (aba?: 'atalhos' | 'novidades') => {
+const montar = (rota = '/atalhos') => {
   const qc = new QueryClient();
   qc.setQueryData(novidadesKey, [
     {
@@ -32,7 +33,9 @@ const montar = (aba?: 'atalhos' | 'novidades') => {
   ]);
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
-      <AtalhosPage abaInicial={aba} />
+      <MemoryRouter initialEntries={[rota]}>
+        <AtalhosPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 };
@@ -50,11 +53,20 @@ describe('Atalhos na Sala escura (§7.13)', () => {
   });
 
   it('as Novidades entram em Atalhos: a aba traz as versões do CHANGELOG', () => {
-    const html = montar('novidades');
+    const html = montar('/novidades');
     expect(html).toContain('Versão 0.6.0');
     expect(html).toContain('Covers can star the host.');
     expect(html).not.toContain('<table');
     expect(contarPrimarios(html)).toBe(0);
+  });
+
+  it('a aba segue a rota: trocar de /atalhos para /novidades troca o conteúdo', () => {
+    // Mesmo componente nas duas rotas: a aba tem de sair da URL, não de um estado que só
+    // lê o valor na primeira montagem (achado da auditoria do PR #424).
+    const emAtalhos = montar('/atalhos');
+    const emNovidades = montar('/novidades');
+    expect(emAtalhos).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>Atalhos</);
+    expect(emNovidades).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>Novidades</);
   });
 
   it('não sobram classes do tema antigo', () => {

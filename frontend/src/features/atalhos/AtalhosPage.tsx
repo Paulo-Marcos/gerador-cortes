@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/tabela';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NovidadesPage from '@/features/novidades/NovidadesPage';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 
 const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
@@ -295,11 +296,19 @@ function TabelaDeAtalhos() {
   );
 }
 
-export function AtalhosPage({ abaInicial = 'atalhos' }: { abaInicial?: Aba }) {
-  const [aba, setAba] = useState<Aba>(abaInicial);
+/** A aba vem da URL: /novidades é a aba Novidades, o resto é Atalhos. Assim trocar de uma
+ *  rota para a outra (trilho, paleta) troca a aba, e o trilho marca a tela certa. */
+export function AtalhosPage() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const aba: Aba = pathname.startsWith('/novidades') ? 'novidades' : 'atalhos';
   return (
     <div className="flex h-full min-h-0 flex-col gap-5 overflow-auto px-7 py-6 text-fg">
-      <Tabs value={aba} onValueChange={(v) => setAba(v as Aba)} className="flex flex-col gap-5">
+      <Tabs
+        value={aba}
+        onValueChange={(v) => navigate(v === 'novidades' ? '/novidades' : '/atalhos')}
+        className="flex flex-col gap-5"
+      >
         <TabsList aria-label="Atalhos e novidades">
           <TabsTrigger value="atalhos">Atalhos</TabsTrigger>
           <TabsTrigger value="novidades">Novidades</TabsTrigger>
