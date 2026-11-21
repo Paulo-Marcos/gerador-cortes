@@ -8,6 +8,7 @@ import type { Canal } from '../api/canais';
 import { ChannelCard } from '../ChannelCard';
 import { ChannelsPage } from '../ChannelsPage';
 import { ChannelThemeSection } from '../ChannelThemeSection';
+import { EscolhaDoEstilo } from '../PalcoComponentesSection';
 
 // D-1172 (E-069 H-21; DIRECAO §5 e §7.7) · As Configurações na Sala escura.
 
@@ -84,6 +85,18 @@ describe('o tema do render é escolha em cartões de opção (§7.7)', () => {
     expect(html.match(/role="radio"/g)).toHaveLength(2);
     expect(html).toMatch(/role="radio"[^>]*aria-checked="true"[^>]*>(?:(?!<\/button>).)*Tema B/);
     expect(html).toMatch(/role="radio"[^>]*aria-checked="false"[^>]*>(?:(?!<\/button>).)*Tema A/);
+  });
+});
+
+describe('o estilo do palco é escolha em cartões de opção (§7.7)', () => {
+  // Sozinho de propósito: na tela de Canais há outros rádios marcados (a capa do TikTok), e
+  // um teste que só procura `aria-checked="true"` passaria com o estilo desmarcado.
+  const html = renderToStaticMarkup(<EscolhaDoEstilo estilo="limpo" onEscolher={() => {}} />);
+
+  it('o estilo atual do canal é o cartão marcado, e só ele', () => {
+    expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
+    expect(html).toMatch(/role="radio"[^>]*aria-checked="true"[^>]*>(?:(?!<\/button>).)*Limpo/);
+    expect(html).toMatch(/role="radio"[^>]*aria-checked="false"[^>]*>(?:(?!<\/button>).)*Atual/);
   });
 });
 
