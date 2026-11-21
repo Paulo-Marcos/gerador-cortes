@@ -212,6 +212,8 @@ export const DEFINICOES: Record<string, Definicao> = {
       /^src\/features\/editor\/fase1\/agulhaDaOnda\.ts$/,
       // D-1164 (H-18): a agulha da Pós (rótulo no feixe) e o traço da cena sob ela (§3.1, §7.4).
       /^src\/features\/editor\/fase2\/agulhaDaPos\.tsx$/,
+      // D-1172 (H-21): o cartão de identidade do canal ativo, com o fio de luz (§3.1, §7.7).
+      /^src\/features\/channels\/ChannelCard\.tsx$/,
     ],
     exemplos: [
       ['className="bg-feixe text-sobre-feixe"', 1],

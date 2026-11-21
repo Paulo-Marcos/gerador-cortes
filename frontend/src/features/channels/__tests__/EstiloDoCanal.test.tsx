@@ -62,7 +62,7 @@ describe('a tela de Canais só escolhe o estilo (D-938)', () => {
     expect(tela).toContain('Vídeo horizontal e short');
     expect(tela).toContain('Atual');
     expect(tela).toContain('Limpo');
-    expect(tela).toContain('aria-pressed="true"');
+    expect(tela).toContain('aria-checked="true"');
     expect(tela).toContain('aria-label="Estilo da capa do TikTok"');
     expect(tela).toMatch(/aria-checked="true"[^>]*>Igual ao palco/);
   });
