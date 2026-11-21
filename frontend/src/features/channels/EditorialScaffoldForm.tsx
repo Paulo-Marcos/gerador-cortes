@@ -21,8 +21,8 @@ interface Props {
 }
 
 const textareaClasses = cn(
-  'flex w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900 px-3 py-2 text-sm text-text-100 placeholder:text-text-400',
-  'transition-colors focus-visible:outline-none focus-visible:border-accent-500 focus-visible:ring-1 focus-visible:ring-accent-500',
+  'flex w-full rounded-campo border border-campo bg-painel-solido px-3 py-2 text-sm text-fg placeholder:text-fg-3',
+  'transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foco',
 );
 
 /** Placeholder está presente no texto atual do editor? (para sinalizar ausência). */
@@ -51,10 +51,10 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
 
   return (
     <form onSubmit={submeter} className="grid gap-5">
-      <div className="grid gap-2 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
-        <p className="text-xs text-[var(--wb-text-mute)]">
+      <div className="grid gap-2 rounded-campo border border-fio bg-app p-3">
+        <p className="text-xs text-fg-2">
           Este é o invólucro (contrato de saída) desta etapa. Você pode reescrevê-lo, mas{' '}
-          <strong className="text-[var(--wb-text)]">mantenha o formato de retorno</strong>: os
+          <strong className="text-fg">mantenha o formato de retorno</strong>: os
           placeholders obrigatórios e o marcador do contrato. Salvar sem eles é bloqueado.
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -64,10 +64,10 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
               <span
                 key={p}
                 className={cn(
-                  'rounded border px-1.5 py-0.5 font-mono text-[11px]',
+                  'rounded border px-1.5 py-0.5 font-mono text-micro',
                   ausente
-                    ? 'border-error/40 bg-[color-mix(in_oklab,var(--error)_12%,transparent)] text-error'
-                    : 'border-[var(--wb-border-soft)] text-[var(--wb-text-dim)]',
+                    ? 'border-erro/40 bg-[color-mix(in_oklab,var(--cc-erro)_12%,transparent)] text-erro'
+                    : 'border-fio text-fg-3',
                 )}
                 title={ausente ? 'Ausente no texto atual' : 'Presente'}
               >
@@ -78,10 +78,10 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
           {scaffold.marcador && (
             <span
               className={cn(
-                'rounded border px-1.5 py-0.5 text-[11px]',
+                'rounded border px-1.5 py-0.5 text-micro',
                 marcadorAusente
-                  ? 'border-error/40 bg-[color-mix(in_oklab,var(--error)_12%,transparent)] text-error'
-                  : 'border-[var(--wb-border-soft)] text-[var(--wb-text-dim)]',
+                  ? 'border-erro/40 bg-[color-mix(in_oklab,var(--cc-erro)_12%,transparent)] text-erro'
+                  : 'border-fio text-fg-3',
               )}
               title="Marcador do contrato de saída"
             >
@@ -90,7 +90,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
           )}
         </div>
         {(faltando.length > 0 || marcadorAusente) && (
-          <p className="flex items-center gap-1.5 text-[11px] text-error">
+          <p className="flex items-center gap-1.5 text-micro text-erro">
             <Icon name="triangle-alert" />
             Faltam itens obrigatórios — o backend vai recusar o salvamento até incluí-los.
           </p>
@@ -104,7 +104,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
             type="button"
             onClick={onReset}
             disabled={pending}
-            className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
+            className="inline-flex items-center gap-1 text-xs text-fg-2 hover:text-fg disabled:opacity-40"
           >
             <Icon name="rotate-ccw" />
             Resetar para o padrão
@@ -118,7 +118,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
           spellCheck={false}
           className={cn(textareaClasses, 'font-mono text-xs leading-relaxed')}
         />
-        <p className="text-xs text-[var(--wb-text-dim)]">
+        <p className="text-xs text-fg-3">
           Os campos entre chaves ({'{...}'}) são preenchidos em tempo de execução — não os
           renomeie nem invente novos.
         </p>

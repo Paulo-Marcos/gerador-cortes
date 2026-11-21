@@ -81,13 +81,13 @@ export function FaixaDoShortForm({ faixa, pending, erroDoServidor, onSave }: Pro
             className="w-24"
           />
         </div>
-        <span className="pb-2 text-[11px] text-[var(--wb-text-dim)]">
+        <span className="pb-2 text-micro text-fg-3">
           padrão: {faixa.padrao_min_seg} a {faixa.padrao_max_seg} s
         </span>
       </div>
 
       {erro && (
-        <p role="alert" className="text-xs text-error">
+        <p role="alert" className="text-xs text-erro">
           {erro}
         </p>
       )}
@@ -97,7 +97,7 @@ export function FaixaDoShortForm({ faixa, pending, erroDoServidor, onSave }: Pro
           type="button"
           onClick={voltarAoPadrao}
           disabled={pending}
-          className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 text-xs text-fg-2 hover:text-fg disabled:opacity-40"
         >
           <Icon name="rotate-ccw" />
           Voltar ao padrão

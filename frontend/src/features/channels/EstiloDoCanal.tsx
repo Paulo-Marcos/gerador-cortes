@@ -34,7 +34,7 @@ export function EstiloPorTipo({ estilo, estiloDaCapa, onEstilo, onEstiloDaCapa, 
   return (
     <div className="grid gap-5">
       <div className="grid gap-2">
-        <h3 className="text-sm font-semibold text-[var(--wb-text)]">Vídeo horizontal e short</h3>
+        <h3 className="text-sm font-semibold text-fg">Vídeo horizontal e short</h3>
         <EscolhaDoEstilo estilo={estilo} onEscolher={onEstilo} />
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => onEditar('horizontal')}>
@@ -46,13 +46,13 @@ export function EstiloPorTipo({ estilo, estiloDaCapa, onEstilo, onEstiloDaCapa, 
             Editar o padrão do short
           </Button>
         </div>
-        <p className="text-xs text-[var(--wb-text-dim)]">
+        <p className="text-xs text-fg-3">
           Cabeçalho, placa, cards, janelas e os presets ficam no modal — o mesmo do editor. Lá se escolhe um
           preset ou se cria um novo.
         </p>
       </div>
       <div className="grid gap-2">
-        <h3 className="text-sm font-semibold text-[var(--wb-text)]">Capa do TikTok</h3>
+        <h3 className="text-sm font-semibold text-fg">Capa do TikTok</h3>
         <div role="radiogroup" aria-label="Estilo da capa do TikTok" className="flex flex-wrap gap-1.5">
           {ESTILOS_DA_CAPA.map((opcao) => (
             <button
@@ -63,10 +63,10 @@ export function EstiloPorTipo({ estilo, estiloDaCapa, onEstilo, onEstiloDaCapa, 
               disabled={!estiloDaCapa}
               onClick={() => onEstiloDaCapa(opcao.id)}
               className={cn(
-                'h-7 rounded-full border px-3 text-[12px] font-semibold transition-colors disabled:opacity-60',
+                'h-7 rounded-full border px-3 text-pequeno font-semibold transition-colors disabled:opacity-60',
                 estiloDaCapa === opcao.id
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
-                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                  ? 'border-iris bg-iris-suave text-iris'
+                  : 'border-fio-2 bg-painel-solido text-fg-2 hover:text-fg',
               )}
             >
               {opcao.nome}
@@ -77,7 +77,7 @@ export function EstiloPorTipo({ estilo, estiloDaCapa, onEstilo, onEstiloDaCapa, 
         <div className="flex flex-wrap gap-2">
           <EstilizarCapa ocupado={false} etiqueta={ETIQUETA_DE_EXEMPLO} />
         </div>
-        <p className="text-xs text-[var(--wb-text-dim)]">
+        <p className="text-xs text-fg-3">
           Componentes, posições e presets da capa ficam no modal — o mesmo da capa de um corte. Sem corte, a prévia
           vai sem a arte e com um texto de exemplo.
         </p>
@@ -106,11 +106,11 @@ export function ImagemDoCabecalho({
       {imagem ? (
         <img src={imagem} alt="Imagem do cabeçalho" className="h-12 w-12 rounded-full object-cover" />
       ) : (
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--wb-bg-card)] text-[var(--wb-text-dim)]">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-painel-solido text-fg-3">
           <Icon name="image-off" />
         </span>
       )}
-      <div className="grid gap-1 text-xs text-[var(--wb-text-dim)]">
+      <div className="grid gap-1 text-xs text-fg-3">
         <span>Imagem do cabeçalho · {propria ? 'imagem do canal' : 'pose padrão do mascote'}</span>
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="sm" disabled={enviando} onClick={() => arquivoRef.current?.click()}>

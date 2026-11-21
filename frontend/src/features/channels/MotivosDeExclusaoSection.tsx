@@ -24,9 +24,9 @@ export function MotivosDeExclusaoSection() {
   const falha = query.error ?? acrescentar.error ?? mostrar.error;
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Motivos de excluir um corte</h2>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
+      <h2 className="text-lg font-semibold text-fg">Motivos de excluir um corte</h2>
+      <p className="text-sm text-fg-2">
         Os chips que aparecem ao excluir um corte proposto pela IA. Esconder tira o chip do diálogo; os
         cortes que já saíram por ele continuam contados nas análises.
       </p>
@@ -56,7 +56,7 @@ export function MotivosDeExclusaoSection() {
         </Button>
       </form>
       {falha && (
-        <p role="alert" className="text-xs text-error">
+        <p role="alert" className="text-xs text-erro">
           {mensagemErro(falha, 'Não foi possível mudar os motivos.')}
         </p>
       )}
@@ -76,10 +76,10 @@ function ChipDoMotivo({
   return (
     <li
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[7px] border px-2 py-[3px] text-[12px]',
+        'inline-flex items-center gap-1.5 rounded-[7px] border px-2 py-[3px] text-pequeno',
         motivo.ativo
-          ? 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
-          : 'border-dashed border-[var(--wb-border)] text-[var(--wb-text-mute)]',
+          ? 'border-fio-2 bg-poco text-fg'
+          : 'border-dashed border-fio-2 text-fg-2',
       )}
     >
       <span className={motivo.ativo ? '' : 'line-through'}>{motivo.rotulo}</span>
@@ -87,7 +87,7 @@ function ChipDoMotivo({
         type="button"
         disabled={pending}
         onClick={onAlternar}
-        className="text-[11px] font-bold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+        className="text-micro font-bold text-fg-2 hover:text-fg"
         aria-label={`${motivo.ativo ? 'Esconder' : 'Mostrar'} o motivo ${motivo.rotulo}`}
       >
         {motivo.ativo ? 'Esconder' : 'Mostrar'}

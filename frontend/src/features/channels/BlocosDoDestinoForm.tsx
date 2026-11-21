@@ -64,16 +64,16 @@ export function BlocosDoDestinoForm({
         e.preventDefault();
         if (valido) onSave(valores);
       }}
-      className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3"
+      className="grid gap-3 rounded-campo border border-fio bg-app p-3"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-[13px] font-bold text-[var(--wb-text)]">{destino.rotulo}</h3>
+        <h3 className="text-corpo font-bold text-fg">{destino.rotulo}</h3>
         {destino.personalizado && (
-          <span className="rounded-full border border-[var(--wb-border-soft)] px-2 py-0.5 text-[11px] uppercase tracking-wide text-[var(--wb-text-dim)]">
+          <span className="rounded-full border border-fio px-2 py-0.5 text-micro tracking-wide text-fg-3">
             personalizado
           </span>
         )}
-        <span className="ml-auto text-[11px] text-[var(--wb-text-dim)]" title="Valor padrão (reset)">
+        <span className="ml-auto text-micro text-fg-3" title="Valor padrão (reset)">
           padrão: {resumoDosParametros(destino.padrao)}
         </span>
       </div>
@@ -112,7 +112,7 @@ export function BlocosDoDestinoForm({
         onChange={(dias_ativos) => mudar({ dias_ativos })}
       />
 
-      <p className="text-[11px] text-[var(--wb-text-mute)]">
+      <p className="text-micro text-fg-2">
         Quando um bloco enche, o próximo item vai para o bloco seguinte; quando o dia enche, para o
         próximo dia ativo. "N em X horas e depois amanhã" é um bloco só com N itens e intervalo X/N.
       </p>
@@ -122,7 +122,7 @@ export function BlocosDoDestinoForm({
           type="button"
           onClick={onReset}
           disabled={pending || !destino.personalizado}
-          className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 text-xs text-fg-2 hover:text-fg disabled:opacity-40"
         >
           <Icon name="rotate-ccw" />
           Voltar ao padrão
@@ -159,7 +159,7 @@ function BlocosDoDia({
 
   return (
     <div className="grid gap-2">
-      <span className="text-xs font-medium text-[var(--wb-text-mute)]">
+      <span className="text-xs font-medium text-fg-2">
         Blocos do dia (hora em que um grupo sai)
       </span>
       <div className="flex flex-wrap items-center gap-2">
@@ -178,7 +178,7 @@ function BlocosDoDia({
               aria-label={`Remover bloco ${i + 1}`}
               disabled={blocos.length === 1}
               onClick={() => onChange(blocos.filter((_, j) => j !== i))}
-              className="text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-30"
+              className="text-fg-3 hover:text-fg disabled:opacity-30"
             >
               <Icon name="x" />
             </button>
@@ -220,7 +220,7 @@ function DiasAtivos({
 }) {
   return (
     <div className="grid gap-1.5">
-      <span className="text-xs font-medium text-[var(--wb-text-mute)]">Dias ativos</span>
+      <span className="text-xs font-medium text-fg-2">Dias ativos</span>
       <div className="flex flex-wrap gap-1.5">
         {diasDaSemana.map((nome, dia) => {
           const ligado = ativos.includes(dia);
@@ -233,10 +233,10 @@ function DiasAtivos({
                 onChange(ligado ? ativos.filter((d) => d !== dia) : [...ativos, dia].sort())
               }
               className={cn(
-                'rounded-full border px-2.5 py-0.5 text-[11px] capitalize',
+                'rounded-full border px-2.5 py-0.5 text-micro capitalize',
                 ligado
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-text)]'
-                  : 'border-[var(--wb-border)] text-[var(--wb-text-dim)]',
+                  ? 'border-iris bg-iris-suave text-fg'
+                  : 'border-fio-2 text-fg-3',
               )}
             >
               {nome}
@@ -261,7 +261,7 @@ function CampoNumero({
 }) {
   return (
     <div className="grid gap-1">
-      <Label htmlFor={id} className="text-xs text-[var(--wb-text-mute)]">
+      <Label htmlFor={id} className="text-xs text-fg-2">
         {rotulo}
       </Label>
       <Input

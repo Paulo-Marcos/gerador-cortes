@@ -71,9 +71,9 @@ const FALLBACK_FILTERS: FiltroExport[] = [
 type UpdateBody = AtualizarSettingsBody;
 
 const controlCls =
-  'h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-semibold text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60';
-const labelCls = 'grid gap-1.5 text-xs font-semibold text-[var(--wb-text-mute)]';
-const sectionLabelCls = 'text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]';
+  'h-10 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60';
+const labelCls = 'grid gap-1.5 text-xs font-semibold text-fg-2';
+const sectionLabelCls = 'text-xs font-bold tracking-[0.08em] text-fg-2';
 
 export function AppSettingsControls() {
   const queryClient = useQueryClient();
@@ -149,7 +149,7 @@ export function AppSettingsControls() {
   return (
     <div className="grid gap-3">
       {settingsQuery.isError && (
-        <p className="rounded-[var(--radius-sm)] border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+        <p className="rounded-campo border border-erro/30 bg-erro/10 px-3 py-2 text-sm text-erro">
           Nao foi possivel carregar os ajustes.
         </p>
       )}
@@ -186,7 +186,7 @@ export function AppSettingsControls() {
             </option>
           ))}
         </select>
-        <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+        <span className="text-xs font-normal text-fg-2">
           Velocidade com que Editor, Revisao Final e Pos-producao abrem. So afeta a reproducao na
           tela &mdash; o video exportado sai sempre em 1,00×.
         </span>
@@ -222,7 +222,7 @@ export function AppSettingsControls() {
             />
           </label>
         </div>
-        <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+        <span className="text-xs font-normal text-fg-2">
           Quanto da live o editor carrega alem do corte, para voce ouvir o que veio antes/depois e
           esticar a borda quando faltar contexto. Padrao 60s e 300s. Janela maior demora mais para
           abrir o corte na primeira vez, porque o audio precisa ser extraido de novo.
@@ -231,10 +231,10 @@ export function AppSettingsControls() {
 
       <div className="grid gap-1.5">
         <span className={sectionLabelCls}>Layout YouTube padrao global</span>
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 py-2 text-sm">
-          <span className="text-[var(--wb-text)]">
+        <div className="flex items-center justify-between gap-3 rounded-campo border border-fio-2 bg-painel-solido px-3 py-2 text-sm">
+          <span className="text-fg">
             {temLayoutGlobal ? 'Definido' : 'Nenhum'}
-            <span className="ml-2 text-xs text-[var(--wb-text-mute)]">
+            <span className="ml-2 text-xs text-fg-2">
               (edite pelo editor, em Layout YouTube → “Definir como padrao global”)
             </span>
           </span>
@@ -243,7 +243,7 @@ export function AppSettingsControls() {
               type="button"
               disabled={isBusy}
               onClick={() => updateMutation.mutate({ youtube_layout_padrao_global: '{}' })}
-              className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--wb-border)] px-2 py-1 text-xs font-semibold text-[var(--wb-text)] hover:bg-[var(--wb-bg-card-elev)] disabled:opacity-60"
+              className="shrink-0 rounded-full border border-fio-2 px-2 py-1 text-xs font-semibold text-fg hover:bg-vidro-2 disabled:opacity-60"
             >
               Limpar
             </button>
@@ -251,7 +251,7 @@ export function AppSettingsControls() {
         </div>
       </div>
 
-      <div className="h-px bg-[var(--wb-border)]" />
+      <div className="h-px bg-[var(--cc-fio-2)]" />
 
       <label className="grid gap-1.5">
         <span className={sectionLabelCls}>Nome do mascote</span>
@@ -264,12 +264,12 @@ export function AppSettingsControls() {
           onBlur={onBlurMascote}
           className={controlCls}
         />
-        <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+        <span className="text-xs font-normal text-fg-2">
           Citado nos prompts de capa e metadados. Vazio usa o termo neutro “mascote”.
         </span>
       </label>
 
-      <div className="h-px bg-[var(--wb-border)]" />
+      <div className="h-px bg-[var(--cc-fio-2)]" />
 
       <div className="grid gap-2" role="radiogroup" aria-label="Nivel de logs">
         <span className={sectionLabelCls}>Logs</span>
@@ -284,18 +284,18 @@ export function AppSettingsControls() {
               disabled={isBusy}
               onClick={() => updateMutation.mutate({ log_level: option.value })}
               className={cn(
-                'grid grid-cols-[1fr_20px] gap-3 rounded-[var(--radius)] border p-3 text-left transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:cursor-wait disabled:opacity-60',
+                'grid grid-cols-[1fr_20px] gap-3 rounded-campo border p-3 text-left transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60',
                 active
-                  ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
-                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] hover:bg-[var(--wb-bg-card-elev)]',
+                  ? 'border-[var(--cc-fio-campo)] bg-[var(--cc-vidro-3)]'
+                  : 'border-fio-2 bg-painel-solido hover:bg-vidro-2',
               )}
             >
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-[var(--wb-text)]">
+                <span className="block text-sm font-semibold text-fg">
                   {option.label}
                 </span>
-                <span className="mt-1 block text-xs leading-5 text-[var(--wb-text-mute)]">
+                <span className="mt-1 block text-xs leading-5 text-fg-2">
                   {option.description}
                 </span>
               </span>
@@ -303,8 +303,8 @@ export function AppSettingsControls() {
                 className={cn(
                   'mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border',
                   active
-                    ? 'border-[var(--sel-ink)] bg-[var(--sel-ink)] text-[var(--sel-on)]'
-                    : 'border-[var(--wb-border)] text-transparent',
+                    ? 'border-[var(--cc-fg)] bg-[var(--cc-fg)] text-[var(--cc-sobre-iris)]'
+                    : 'border-fio-2 text-transparent',
                 )}
                 aria-hidden
               >
@@ -315,7 +315,7 @@ export function AppSettingsControls() {
         })}
       </div>
 
-      <div className="h-px bg-[var(--wb-border)]" />
+      <div className="h-px bg-[var(--cc-fio-2)]" />
 
       <div className="grid gap-2">
         <span className={sectionLabelCls}>Renderizacao</span>
@@ -385,7 +385,7 @@ export function AppSettingsControls() {
               <option value="vp9">VP9 (.webm)</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-[var(--wb-text)]">
+          <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-fg">
             <input
               type="checkbox"
               checked={render.bundle_cache_enabled}
@@ -400,7 +400,7 @@ export function AppSettingsControls() {
       <AjustesQueSalvamSozinhos />
 
       {isBusy && (
-        <p className="inline-flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">
+        <p className="inline-flex items-center gap-2 text-xs text-fg-2">
           <Icon name="loader-2" className="animate-spin" />
           Salvando ajuste...
         </p>

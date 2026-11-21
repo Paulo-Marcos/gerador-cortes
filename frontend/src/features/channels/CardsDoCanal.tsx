@@ -132,11 +132,11 @@ export function CardsDoCanal({
   limpo?: boolean;
 }) {
   return (
-    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
-      <legend className="px-1 text-xs font-medium text-text-300">Cards (cenas)</legend>
+    <fieldset className="grid gap-3 rounded-campo border border-fio p-4">
+      <legend className="px-1 text-xs font-medium text-fg-3">Cards (cenas)</legend>
       <TiposDeCard valor={valor} tipos={tipos} onMudar={onMudar} limpo={limpo} />
       <AjustesDosCards valor={valor} onMudar={onMudar} />
-      <p className="text-xs text-[var(--wb-text-dim)]">
+      <p className="text-xs text-fg-3">
         Na tela compartilhada o card fica na zona de cada corte (modal de posição); o modo acima diz como ele
         ocupa essa zona. Tamanho e posição valem no vídeo cheio.
       </p>
@@ -166,12 +166,12 @@ export function TiposDeCard({
     });
   return (
     <div className="grid gap-1.5" role="group" aria-label="Tipos de card que aparecem no vídeo">
-      <span className="text-xs font-medium text-text-300">Aparecem no vídeo</span>
+      <span className="text-xs font-medium text-fg-3">Aparecem no vídeo</span>
       <div className={`grid gap-1 ${colunas}`}>
         {tipos.map((tipo) => {
           const semLugar = limpo && SEM_LUGAR_NO_LIMPO.includes(tipo.id);
           return (
-            <label key={tipo.id} className="flex items-center gap-2 text-sm text-[var(--wb-text)] aria-disabled:opacity-50" aria-disabled={semLugar}>
+            <label key={tipo.id} className="flex items-center gap-2 text-sm text-fg aria-disabled:opacity-50" aria-disabled={semLugar}>
               <input
                 type="checkbox"
                 disabled={semLugar}
@@ -179,7 +179,7 @@ export function TiposDeCard({
                 onChange={(e) => alternar(tipo.id, e.target.checked)}
               />
               {tipo.nome}
-              {semLugar && <span className="text-[11px] text-[var(--wb-text-dim)]">(não existe no limpo)</span>}
+              {semLugar && <span className="text-micro text-fg-3">(não existe no limpo)</span>}
             </label>
           );
         })}
@@ -237,7 +237,7 @@ function LarguraDoTexto({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (v
         unidade={`px, 0 = automática, mínimo ${LARGURA_MINIMA_DO_TEXTO}`}
         onMudar={(numero) => onMudar({ ...valor, largura_do_texto: larguraDoTextoConfirmada(numero) })}
       />
-      <p className="text-[11px] text-[var(--wb-text-dim)]">
+      <p className="text-micro text-fg-3">
         Texto mais largo quebra em menos linhas e deixa a letra crescer em vez de encolher. Vale para os cards de texto; lista, fonte, barra inferior e ênfase mantêm a própria largura.
       </p>
     </div>

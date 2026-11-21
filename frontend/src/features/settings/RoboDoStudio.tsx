@@ -37,13 +37,13 @@ export function RoboDoStudio() {
 
   return (
     <fieldset className="grid gap-1.5">
-      <legend className="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]">
+      <legend className="mb-1.5 text-xs font-bold tracking-[0.08em] text-fg-2">
         Robô do YouTube Studio
       </legend>
       {OPCOES.map((opcao) => (
         <label
           key={opcao.chave}
-          className="flex items-center gap-2 text-sm font-semibold text-[var(--wb-text)]"
+          className="flex items-center gap-2 text-sm font-semibold text-fg"
         >
           <input
             type="checkbox"
@@ -54,7 +54,7 @@ export function RoboDoStudio() {
           {opcao.label}
         </label>
       ))}
-      <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+      <span className="text-xs font-normal text-fg-2">
         A API do YouTube não faz nenhum dos dois. Depois dos envios, o robô abre o Studio uma vez
         e ajusta todos. Na primeira vez, faça login na conta do canal na janela que ele abrir. A
         monetização só existe para canal do Programa de Parcerias.
