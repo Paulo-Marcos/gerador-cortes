@@ -1,6 +1,8 @@
 import { useRef, useState, type ComponentProps } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { Textarea } from '@/components/ui/textarea';
 import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
@@ -12,9 +14,9 @@ import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaArea
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
 import { metadadosApi } from './api/metadados';
-import { EstilizarCapa } from './EstiloDaCapaModal';
+import { EstiloDaCapaModal } from './EstiloDaCapaModal';
+import { MaisDaCapa, type GrupoDoMais } from './MaisDaCapa';
 import { metadataKey } from './useMetadataCard';
-import { Icon } from '@/upgrade/Icon';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //
@@ -78,9 +80,11 @@ export function CapaTikTokSlot({
   onAtualizou,
 }: Props) {
   const queryClient = useQueryClient();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [erro, setErro] = useState('');
   const [copiado, setCopiado] = useState(false);
+  const [estilizando, setEstilizando] = useState(false);
+  const arteRef = useRef<HTMLInputElement>(null);
+  const prontaRef = useRef<HTMLInputElement>(null);
   // D-534: o caminho da capa nao muda quando ela e refeita — mesmo arquivo,
   // mesma URL —, entao o navegador servia a imagem do cache e o preview ficava
   // na versao velha. D-968: a hora da leitura do metadado (só assina a do card,
@@ -158,6 +162,7 @@ export function CapaTikTokSlot({
     try {
       await navigator.clipboard.writeText(promptArte ?? '');
       setCopiado(true);
+      window.setTimeout(() => setCopiado(false), 1400);
     } catch {
       // Área de transferência negada (foco, permissão). O prompt continua na
       // tela para seleção manual — o operador não fica sem ele.
@@ -165,63 +170,68 @@ export function CapaTikTokSlot({
     }
   };
 
+  // D-1167 (§7.5): o "Mais" em dois grupos. Arte mexe na imagem; Prompt, no texto que a gera.
+  const semCapa = 'Ainda não há capa para atualizar.';
+  const semPrompt = 'Gere o prompt da arte primeiro.';
+  const grupos: GrupoDoMais[] = [
+    {
+      rotulo: 'Arte',
+      itens: [
+        { icone: 'clipboard', rotulo: 'Colar arte', dica: 'Sobe a imagem que está na área de transferência e monta a capa.', onSelect: () => colar.mutate() },
+        { icone: 'film', rotulo: 'Usar quadro do vídeo', dica: 'Sem arte: usa um quadro do próprio vídeo. Costuma ficar pior.', onSelect: () => montar.mutate({ origem: 'frame' }) },
+        { icone: 'palette', rotulo: 'Estilizar capa', dica: 'Escolhe o estilo da capa do canal, o que aparece e onde cada componente fica.', onSelect: () => setEstilizando(true) },
+        { icone: 'refresh-cw', rotulo: 'Atualizar texto', desligado: !capaPath, dica: capaPath ? 'Refaz a capa com o texto de capa atual, reusando a mesma arte.' : semCapa, onSelect: () => montar.mutate({}) },
+        { icone: 'image-plus', rotulo: 'Subir capa pronta 9:16', dica: 'Sobe a capa 1080x1920 inteira, já com texto — o sistema não desenha nada por cima.', onSelect: () => prontaRef.current?.click() },
+      ],
+    },
+    {
+      rotulo: 'Prompt',
+      itens: [
+        { icone: copiado ? 'check' : 'copy', rotulo: copiado ? 'Copiado' : 'Copiar', desligado: !promptArte, dica: promptArte ? 'Copiar para colar no agente capista.' : semPrompt, onSelect: () => void copiar() },
+        { icone: 'sparkle', rotulo: 'Refazer com o Claude', onSelect: () => escreverPrompt.mutate('claude') },
+        { icone: 'sparkle', rotulo: 'Refazer com o Gemini', onSelect: () => escreverPrompt.mutate('gemini') },
+      ],
+    },
+  ];
+
   return (
-    <section className="grid gap-2 rounded-[10px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2.5">
+    <section aria-label="Capa do TikTok" className="grid gap-3 rounded-bloco border border-fio bg-vidro p-3">
       <header className="flex items-baseline justify-between gap-2">
-        <h4 className="text-[12px] font-bold text-[var(--wb-text)]">Capa do TikTok</h4>
-        <span className="font-code text-[10px] text-[var(--wb-text-dim)]">9:16</span>
+        <h4 className="text-linha text-fg">Capa do TikTok</h4>
+        <span className="num text-fg-3">9:16</span>
       </header>
 
-      <div className="flex items-start gap-2.5">
-        <div className="aspect-[9/16] w-[76px] shrink-0 overflow-hidden rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]">
+      <div className="flex items-start gap-3">
+        <div className="aspect-[9/16] w-[112px] shrink-0 overflow-hidden rounded-capa border border-fio-2 bg-vidro-3">
           {capaUrl ? (
             <ImagemAmpliavel src={capaUrl} alt="Capa do TikTok" className="h-full w-full" imgClassName="h-full w-full object-cover" />
           ) : (
-            <div className="grid h-full place-items-center px-1 text-center text-[10px] leading-tight text-[var(--wb-text-dim)]">
-              sem capa
-            </div>
+            <div className="grid h-full place-items-center px-1 text-center text-micro text-fg-3">sem capa</div>
           )}
         </div>
 
-        <div className="grid min-w-0 flex-1 content-start gap-1.5">
-          {/* Passo 1: o prompt. */}
-          {/* A coluna é estreita demais para rótulo e ícones na mesma linha: a
-              legenda sobe e os dois provedores dividem a largura. */}
-          <div className="grid gap-1">
-            <span
-              aria-live="polite"
-              className="text-[10.5px] font-semibold text-[var(--wb-text-mute)]"
-            >
-              {promptEmVoo ? 'escrevendo…' : promptArte ? 'Refazer prompt' : 'Gerar prompt'}
-            </span>
-            <AcaoDeIa
-              rotulo={promptArte ? 'Refazer prompt' : 'Gerar prompt'}
-              descricao={
-                promptArte ? 'Refazer o prompt da arte da capa' : 'Gerar o prompt da arte da capa'
-              }
-              emVoo={promptEmVoo}
-              desabilitado={ocupado}
-              onGerar={(provider) => escreverPrompt.mutate(provider)}
-              apenasProvedores
-              className="w-full"
-            />
-          </div>
+        <div className="grid min-w-0 flex-1 content-start gap-2">
+          {/* A geração por IA vem primeiro quando ainda não há prompt; depois o "Mais" a leva
+              ("Refazer com o Claude/Gemini"). O rótulo vivo diz o que está rodando. */}
+          {!promptArte && (
+            <div className="grid gap-1">
+              <span aria-live="polite" className="text-pequeno text-fg-3">
+                {promptEmVoo ? 'escrevendo…' : 'Gerar prompt'}
+              </span>
+              <AcaoDeIa
+                rotulo="Gerar prompt"
+                descricao="Gerar o prompt da arte da capa"
+                emVoo={promptEmVoo}
+                desabilitado={ocupado}
+                onGerar={(provider) => escreverPrompt.mutate(provider)}
+                apenasProvedores
+                aparencia="sala-escura"
+                className="w-full"
+              />
+            </div>
+          )}
           {!promptEmVoo && promptArte && (
             <SeloDeProvider provider={arteGeradaPor} modelo={ultimaArte.data?.model} />
-          )}
-
-          {promptArte && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={ocupado}
-              onClick={() => void copiar()}
-              title="Copiar para colar no agente capista."
-            >
-              {copiado ? <Icon name="check" /> : <Icon name="copy" />}
-              {copiado ? 'copiado' : 'Copiar prompt'}
-            </Button>
           )}
           <GerarArteNoChatGPT
             corteId={corteId}
@@ -229,137 +239,82 @@ export function CapaTikTokSlot({
             aoConcluir={aoTerminar}
             desabilitado={ocupado}
           />
-
-          {/* Passo 2: a arte de volta. Subir já monta a capa — quem acabou de
-              trazer a imagem quer ver o resultado, não um segundo botão. */}
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={ocupado}
-            onClick={() => inputRef.current?.click()}
-            title="A ilustração 4:5 gerada no agente. O sistema desenha a etiqueta por cima."
-          >
-            {subirArte.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="image-plus" />}
-            Subir arte 4:5
-          </Button>
-          <Button
-            type="button"
-            size="sm" variant="outline"
-            disabled={ocupado}
-            onClick={() => colar.mutate()}
-            title="Sobe a imagem que está na área de transferência e monta a capa."
-          >
-            {colar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="clipboard" />}
-            Colar arte
-          </Button>
-
-          {/* Input próprio, disparado por clique, e não um `<label>` embrulhando
-              o botão: o card em volta captura Ctrl+V para a thumbnail do
-              YouTube, e um segundo alvo de arquivo no fluxo de foco disputaria
-              o mesmo evento. */}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) => {
-              const arquivo = event.target.files?.[0];
-              if (arquivo) subirArte.mutate(arquivo);
-              event.currentTarget.value = '';
-            }}
-          />
-
-          {/* D-534: era um link chamado "remontar com a arte atual", e o nome
-              escondia a única coisa que se faz com ele. Quem muda o texto de
-              capa procura um botão de ATUALIZAR O TEXTO — e desistia de achar,
-              porque o rótulo falava de arte. A ação é a mesma; o nome agora é o
-              da intenção. */}
-          {capaPath && (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Subir já monta a capa — quem acabou de trazer a imagem quer ver o resultado,
+                não um segundo botão. */}
             <Button
               type="button"
-              size="sm"
-              variant="outline"
+              size="pq"
+              variant="secundario"
               disabled={ocupado}
-              onClick={() => montar.mutate({})}
-              title="Refaz a capa com o texto de capa atual, reusando a mesma arte."
+              carregando={subirArte.isPending}
+              onClick={() => arteRef.current?.click()}
+              title="A ilustração 4:5 gerada no agente. O sistema desenha a etiqueta por cima."
             >
-              {montar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="refresh-cw" />}
-              Atualizar texto
+              <Icon name="image-plus" />
+              Subir arte
             </Button>
-          )}
-
-          <SubirCapaPronta ocupado={ocupado} onArquivo={(arquivo) => subirCapaPronta.mutate(arquivo)} />
-
-          <EstilizarCapa
-            ocupado={ocupado}
-            corteId={corteId}
-            etiqueta={textoCapa?.trim() || etiqueta || ''}
-            refazCapa={Boolean(capaPath)}
-            onSalvou={() => capaPath && montar.mutate({})}
-          />
-
-          <UsarFrameDoVideo ocupado={ocupado} onUsar={() => montar.mutate({ origem: 'frame' })} />
-
-          {etiqueta && (
-            <p className="truncate font-code text-[10px] uppercase text-[var(--wb-text-mute)]">
-              {etiqueta}
-            </p>
-          )}
+            <MaisDaCapa rotulo="Mais da capa do TikTok" grupos={grupos} desabilitado={ocupado} />
+          </div>
+          {etiqueta && <p className="truncate text-micro text-fg-3">{etiqueta}</p>}
         </div>
       </div>
 
-      {promptArte && (
-        <textarea
-          readOnly
-          value={promptArte}
-          rows={3}
-          onFocus={(event) => event.currentTarget.select()}
-          className="w-full resize-y rounded-[6px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-1.5 font-code text-[10px] leading-[1.5] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
-        />
-      )}
-
-      {erro && <p className="text-[11px] leading-snug text-[var(--wb-warn-ink)]">{erro}</p>}
-    </section>
-  );
-}
-
-/**
- * A capa PRONTA, montada por fora. Escape hatch de quem quer controle total do
- * quadro — discreto de propósito porque, usada por engano no lugar da arte,
- * entrega uma imagem sem a etiqueta e sem o selo.
- */
-function SubirCapaPronta({
-  ocupado,
-  onArquivo,
-}: {
-  ocupado: boolean;
-  onArquivo: (arquivo: File) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  return (
-    <>
-      <button
-        type="button"
-        disabled={ocupado}
-        onClick={() => inputRef.current?.click()}
-        className="text-left text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
-        title="Sobe a capa 1080x1920 inteira, já com texto — o sistema não desenha nada por cima."
-      >
-        subir capa pronta 9:16
-      </button>
+      {/* Inputs próprios, disparados por clique, e não um `<label>` embrulhando o botão: a
+          tela captura Ctrl+V para a thumbnail do YouTube, e um segundo alvo de arquivo no
+          fluxo de foco disputaria o mesmo evento. */}
       <input
-        ref={inputRef}
+        ref={arteRef}
         type="file"
         accept="image/*"
         className="hidden"
         onChange={(event) => {
           const arquivo = event.target.files?.[0];
-          if (arquivo) onArquivo(arquivo);
+          if (arquivo) subirArte.mutate(arquivo);
           event.currentTarget.value = '';
         }}
       />
-    </>
+      <input
+        ref={prontaRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const arquivo = event.target.files?.[0];
+          if (arquivo) subirCapaPronta.mutate(arquivo);
+          event.currentTarget.value = '';
+        }}
+      />
+
+      {promptArte && (
+        <Textarea
+          readOnly
+          value={promptArte}
+          rows={3}
+          aria-label="Prompt da arte da capa"
+          onFocus={(event) => event.currentTarget.select()}
+          className="min-h-0 font-mono text-micro"
+        />
+      )}
+
+      {erro && (
+        <p role="alert" className="text-pequeno text-aviso">
+          {erro}
+        </p>
+      )}
+
+      {/* Montado só aberto: fechado, o painel (que traz a arte inteira) nem é pedido. */}
+      {estilizando && (
+        <EstiloDaCapaModal
+          open
+          onClose={() => setEstilizando(false)}
+          corteId={corteId}
+          etiqueta={textoCapa?.trim() || etiqueta || ''}
+          refazCapa={Boolean(capaPath)}
+          onSalvou={() => capaPath && montar.mutate({})}
+        />
+      )}
+    </section>
   );
 }
 
@@ -383,21 +338,5 @@ function GerarArteNoChatGPT({
       alvoId={corteId}
       promptDoElenco={metadado.data?.prompt_thumbnail ?? ''}
     />
-  );
-}
-
-/** Sem arte: a capa sai de um quadro do próprio vídeo — discreto, porque costuma ficar pior. */
-function UsarFrameDoVideo({ ocupado, onUsar }: { ocupado: boolean; onUsar: () => void }) {
-  return (
-    <button
-      type="button"
-      disabled={ocupado}
-      onClick={onUsar}
-      className="inline-flex items-center gap-1 text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
-      title="Sem arte: usa um quadro do próprio vídeo. Costuma ficar pior."
-    >
-      <Icon name="film" />
-      usar frame do vídeo
-    </button>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
   mensagemDoRobo,
@@ -88,16 +89,18 @@ export function GerarNoChatGPT({
     <div className={cn('grid gap-1', className)}>
       <Button
         type="button"
-        size="sm"
-        disabled={desabilitado || ocupado || !configurado || !texto}
+        variant="secundario"
+        size="pq"
+        carregando={ocupado}
+        disabled={desabilitado || !configurado || !texto}
         onClick={() => pedir.mutate({ prompt: texto, pessoas: fotosQueVao(elenco.pessoas) })}
         title={motivo}
       >
-        {ocupado ? <Icon name="loader-2" className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.iaGera} />}
+        {!ocupado && <Icon name={ICONE_DO_CONCEITO.iaGera} />}
         {ocupado ? 'Gerando no ChatGPT…' : 'Gerar no ChatGPT'}
       </Button>
       {pedir.isError ? (
-        <span role="alert" className="text-[10.5px] leading-snug text-error">
+        <span role="alert" className="text-micro text-erro">
           {mensagemDoRobo(pedir.error, 'Não consegui pedir ao ChatGPT.')}
         </span>
       ) : (
@@ -113,7 +116,7 @@ export function AndamentoDoPedido({ pedido }: { pedido?: PedidoCapaChatgpt | nul
   if (!pedido) return null;
   if (pedido.estado === 'erro') {
     return (
-      <span role="alert" className="text-[11px] leading-snug text-error">
+      <span role="alert" className="text-micro text-erro">
         Parou em “{pedido.etapa}”: {pedido.erro}
       </span>
     );
@@ -127,7 +130,7 @@ export function AndamentoDoPedido({ pedido }: { pedido?: PedidoCapaChatgpt | nul
           ? 'Na fila do ChatGPT — a Fila mostra a ordem.'
           : `${pedido.etapa} — acompanhe na janela do Edge.`;
   return (
-    <span aria-live="polite" className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+    <span aria-live="polite" className="text-micro text-fg-2">
       {texto}
     </span>
   );
@@ -205,10 +208,10 @@ function ElencoDaCapa({ elenco, ocupado }: { elenco: ElencoConferido; ocupado: b
 
   return (
     <div className="grid gap-1">
-      <span className="text-[10.5px] leading-snug text-[var(--wb-text-mute)]">
+      <span className="text-micro text-fg-2">
         Pessoas na capa{elenco.buscando || buscar.isPending || subir.isPending ? ' · buscando fotos…' : ''}
       </span>
-      <ul aria-label="Pessoas na capa" className="flex flex-wrap items-center gap-1">
+      <ul aria-label="Pessoas na capa" className="flex flex-wrap items-center gap-1.5">
         {(elenco.pessoas ?? []).map((pessoa) => (
           <ChipDaPessoa
             key={pessoa.nome}
@@ -221,18 +224,20 @@ function ElencoDaCapa({ elenco, ocupado }: { elenco: ElencoConferido; ocupado: b
         ))}
         <li>
           {novo === null ? (
-            <button
+            <Button
               type="button"
+              variant="fantasma"
+              size="pq"
               disabled={ocupado}
               onClick={() => setNovo('')}
               title="Acrescentar alguém: a foto vem do banco de retratos ou da Wikipédia"
-              className="flex items-center gap-1 rounded-full border border-dashed border-[var(--wb-border-soft)] px-2 py-1 text-[11px] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
             >
               <Icon name="user-plus" />
               pessoa
-            </button>
+            </Button>
           ) : (
-            <input
+            <Input
+              aparencia="sala"
               autoFocus
               value={novo}
               onChange={(e) => setNovo(e.target.value)}
@@ -244,13 +249,13 @@ function ElencoDaCapa({ elenco, ocupado }: { elenco: ElencoConferido; ocupado: b
               disabled={buscar.isPending}
               placeholder="Nome completo, como na Wikipédia"
               aria-label="Nome da pessoa"
-              className="h-7 w-52 rounded-full border border-[var(--wb-border-soft)] bg-transparent px-2 text-[11px]"
+              className="h-[30px] w-60 rounded-pilula px-3 text-pequeno"
             />
           )}
         </li>
       </ul>
       {erro && (
-        <span role="alert" className="text-[10.5px] leading-snug text-error">
+        <span role="alert" className="text-micro text-erro">
           {mensagemDoRobo(erro, 'Não consegui buscar a foto.')}
         </span>
       )}
@@ -269,10 +274,14 @@ interface ChipProps {
 function ChipDaPessoa({ pessoa, versao, desabilitado, onFoto, onTirar }: ChipProps) {
   const { nome, slug } = pessoa;
   return (
-    <li className="flex items-center gap-1 rounded-full border border-[var(--wb-border-soft)] py-0.5 pl-0.5 pr-1.5 text-[11px] text-[var(--wb-text)]">
+    <li data-sala=""
+      className="flex items-center gap-1.5 rounded-pilula border border-fio-2 bg-vidro py-0.5 pl-0.5 pr-1.5 text-pequeno text-fg">
       <label
         title={slug ? `Trocar a foto de ${nome}` : `Subir uma foto de ${nome}`}
-        className={cn('cursor-pointer', desabilitado && 'pointer-events-none opacity-60')}
+        className={cn(
+          'cursor-pointer rounded-full focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-foco',
+          desabilitado && 'pointer-events-none opacity-60',
+        )}
       >
         {slug ? (
           <img
@@ -281,7 +290,7 @@ function ChipDaPessoa({ pessoa, versao, desabilitado, onFoto, onTirar }: ChipPro
             className="size-8 rounded-full object-cover"
           />
         ) : (
-          <span className="flex size-8 items-center justify-center rounded-full border border-dashed border-[var(--wb-warn-ink)] text-[var(--wb-warn-ink)]">
+          <span className="flex size-8 items-center justify-center rounded-full border border-dashed border-aviso text-aviso">
             <Icon name="image-plus" size={16} />
           </span>
         )}
@@ -298,14 +307,15 @@ function ChipDaPessoa({ pessoa, versao, desabilitado, onFoto, onTirar }: ChipPro
         />
       </label>
       <span>{nome}</span>
-      {!slug && <span className="text-[var(--wb-warn-ink)]">· sem foto</span>}
+      {!slug && <span className="text-aviso">· sem foto</span>}
       <button
         type="button"
         onClick={onTirar}
         disabled={desabilitado}
         aria-label={`Tirar ${nome} da capa`}
         title={`Tirar ${nome} da capa`}
-        className="rounded-full p-0.5 text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+        data-sala=""
+        className="rounded-full p-0.5 text-fg-2 transition-colors hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:text-fg-off motion-reduce:transition-none"
       >
         <Icon name="x" />
       </button>

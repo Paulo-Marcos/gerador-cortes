@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { Progresso } from '@/components/ui/progresso';
+import { useCanais } from '@/features/channels/useChannels';
 import { useCortesProjeto } from '@/features/editor/useCortes';
 import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
-import { cn, thumbnailUrl } from '@/lib/utils';
+import { thumbnailUrl } from '@/lib/utils';
 import type { MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
 import { MetadataCard } from './MetadataCard';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
+import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
+import { COR_DO_SELO } from '@/upgrade/SeloDeEstado';
 
 function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
   if (status?.metadados_completos || meta?.titulo_youtube) return 'ready';
@@ -36,31 +40,41 @@ function useCorteAtivoNaUrl(): [string, (corteId: string) => void] {
   return [activeId, ativarCorte];
 }
 
+// A bolinha de cada corte na coluna de contexto: pronto (ok), em andamento (convida) ou vazio (inerte).
+const DOT = {
+  ready: COR_DO_SELO.ok.cor,
+  partial: COR_DO_SELO.aviso.cor,
+  empty: COR_DO_SELO.inerte.cor,
+} as const;
+
+/**
+ * A tela de Metadados e capas (D-1167, E-069 H-19, DIRECAO §7.5): três colunas. A da esquerda
+ * (os cortes aprovados, cada um com o que falta) é a coluna de contexto da casca; no meio e à
+ * direita, o formulário e as capas do corte aberto. Um corte de cada vez, e a tela o recria a
+ * cada troca (D-1033). A única primária é "Publicar N cortes", na barra de ação (§5).
+ */
 export function MetadataPage() {
   const { id: projetoId } = useParams();
   const [activeId, ativarCorte] = useCorteAtivoNaUrl();
   const [metaById, setMetaById] = useState<Record<string, MetadadoCorte>>({});
   const [publicarOpen, setPublicarOpen] = useState(false);
-  const refs = useRef<Record<string, HTMLElement | null>>({});
   const cortesQuery = useCortesProjeto(projetoId);
   const exportQuery = useExportStatus(projetoId);
   const projetoQuery = useProjeto(projetoId);
+  const canais = useCanais();
   const navigate = useNavigate();
+  const canal = canais.data?.canais.find((c) => c.ativo)?.nome;
 
   const cuts = useMemo(
     () =>
       (cortesQuery.data ?? [])
-        .filter(
-          (cut) =>
-            cut.status === 'aprovado' || cut.status === 'processado',
-        )
+        .filter((cut) => cut.status === 'aprovado' || cut.status === 'processado')
         .sort((a, b) => a.numero - b.numero),
     [cortesQuery.data],
   );
 
   const statusMap = useMemo(
-    () =>
-      new Map((exportQuery.data?.cortes ?? []).map((status) => [status.corte_id, status] as const)),
+    () => new Map((exportQuery.data?.cortes ?? []).map((status) => [status.corte_id, status] as const)),
     [exportQuery.data],
   );
 
@@ -72,56 +86,36 @@ export function MetadataPage() {
     setMetaById((current) => ({ ...current, [corteId]: meta }));
   }, []);
 
-  const selectCut = (corteId: string) => {
-    ativarCorte(corteId);
-    requestAnimationFrame(() =>
-      refs.current[corteId]?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-    );
-  };
-
   const stats = useMemo(() => {
     const total = cuts.length;
-    const ready = cuts.filter(
-      (cut) => metadadoStatus(metaById[cut.id], statusMap.get(cut.id)) === 'ready',
-    ).length;
-    const prompts = cuts.filter((cut) => Boolean(metaById[cut.id]?.prompt_thumbnail)).length;
+    const ready = cuts.filter((cut) => metadadoStatus(metaById[cut.id], statusMap.get(cut.id)) === 'ready').length;
     const thumbs = cuts.filter((cut) =>
       Boolean(statusMap.get(cut.id)?.thumbnail_pronta || metaById[cut.id]?.thumbnail_path),
     ).length;
-    return { total, ready, prompts, thumbs };
+    return { total, ready, thumbs };
   }, [cuts, metaById, statusMap]);
 
-  // Rodapé "PRONTO P/ YOUTUBE X de Y" (DE-PARA §6): prontos = pronto_publicar
-  // e ainda não publicados (mesma regra do Workspace).
+  // Prontos = pronto_publicar e ainda não publicados (mesma regra do Workspace).
   const cortesProntos = useMemo(
-    () =>
-      (exportQuery.data?.cortes ?? []).filter((c) => c.pronto_publicar && !c.youtube_url_publicado),
+    () => (exportQuery.data?.cortes ?? []).filter((c) => c.pronto_publicar && !c.youtube_url_publicado),
     [exportQuery.data],
   );
 
-  // D-599: na casca nova a lista de cortes vira a COLUNA DE CONTEXTO, a troca
-  // de corte vira o seletor com J/K, e o rodape "PRONTO P/ YOUTUBE" + publicar
-  // vira a barra de acoes fixa. O trilho de metricas da direita sai: os mesmos
-  // tres numeros ja estao no subtitulo e na barra, e repeti-los numa terceira
-  // coluna so estreitava o formulario, que e onde o trabalho acontece.
+  // D-599: a lista de cortes é a COLUNA DE CONTEXTO da casca, a troca de corte é o seletor
+  // com J/K, e o rodapé "pronto para o YouTube" + publicar é a barra de ações fixa.
   const indiceAtivo = cuts.findIndex((c) => c.id === activeId);
   const irParaCorte = (delta: -1 | 1) => {
     if (cuts.length === 0) return;
-    const alvo = cuts[(Math.max(0, indiceAtivo) + delta + cuts.length) % cuts.length];
-    selectCut(alvo.id);
+    ativarCorte(cuts[(Math.max(0, indiceAtivo) + delta + cuts.length) % cuts.length].id);
   };
   const corteAtivo = cuts[indiceAtivo] ?? cuts[0];
-  const DOT = { ready: 'var(--ok)', partial: 'var(--warn)', empty: 'var(--dim)' } as const;
 
   useDefinirChrome(
     {
       titulo: corteAtivo ? `Metadados & capas — Corte #${corteAtivo.numero}` : 'Metadados & capas',
-      sub: `${stats.ready} de ${stats.total} cortes prontos · ${stats.prompts} prompts de capa · ${stats.thumbs} capas`,
+      sub: `${stats.ready} de ${stats.total} cortes prontos · ${stats.thumbs} capas`,
       // O primeiro slot da trilha de Metadados é a LIVE, o segundo o corte.
-      rotulos: [
-        projetoQuery.data?.titulo_live ?? 'Live',
-        ...(corteAtivo ? [`#${corteAtivo.numero}`] : []),
-      ],
+      rotulos: [projetoQuery.data?.titulo_live ?? 'Live', ...(corteAtivo ? [`#${corteAtivo.numero}`] : [])],
       lista:
         cuts.length > 0
           ? {
@@ -140,7 +134,7 @@ export function MetadataPage() {
                 thumb: resolveThumbUrl(projetoId ?? '', metaById[c.id]?.thumbnail_path) ?? undefined,
                 dot: DOT[metadadoStatus(metaById[c.id], statusMap.get(c.id))],
                 ativo: c.id === activeId,
-                onClick: () => selectCut(c.id),
+                onClick: () => ativarCorte(c.id),
               })),
             }
           : undefined,
@@ -157,25 +151,19 @@ export function MetadataPage() {
         cuts.length > 0
           ? {
               extra: (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                  <span className="lbl">Pronto p/ YouTube</span>
-                  <b style={{ fontSize: 12.5 }}>
-                    {stats.ready} de {stats.total}
-                  </b>
-                  <span
-                    style={{ width: 140, height: 4, borderRadius: 2, background: 'var(--inset)' }}
-                    aria-hidden
-                  >
-                    <span
-                      style={{
-                        display: 'block',
-                        height: '100%',
-                        borderRadius: 2,
-                        background: 'var(--accent)',
-                        width: `${stats.total > 0 ? Math.round((stats.ready / stats.total) * 100) : 0}%`,
-                      }}
-                    />
+                <span className="inline-flex items-center gap-2.5">
+                  <span className="text-pequeno text-fg-2">
+                    <b className="num text-fg">
+                      {stats.ready} de {stats.total}
+                    </b>{' '}
+                    prontos para o YouTube
                   </span>
+                  <Progresso
+                    className="w-[140px]"
+                    rotulo="Cortes prontos para o YouTube"
+                    valor={stats.total > 0 ? (stats.ready / stats.total) * 100 : 0}
+                    mostrarValor={false}
+                  />
                 </span>
               ),
               primario: {
@@ -190,95 +178,44 @@ export function MetadataPage() {
             }
           : undefined,
     },
-    [
-      cuts,
-      activeId,
-      stats,
-      metaById,
-      statusMap,
-      cortesProntos.length,
-      projetoQuery.data?.titulo_live,
-    ],
+    [cuts, activeId, stats, metaById, statusMap, cortesProntos.length, projetoQuery.data?.titulo_live],
   );
 
   if (!projetoId) {
-    return <div className="p-6 text-sm text-error">Projeto nao encontrado.</div>;
+    return <EstadoDeErro titulo="Projeto não encontrado" motivo="O endereço não aponta para uma live." />;
   }
 
   return (
-    <div
-      className={cn(
-        'flex min-h-0 text-[var(--wb-text)]',
-        '',
-        '',
-      )}
-    >
-      {/* Workbench: lista esquerda de cortes aprovados com status por item. */}
-
-      <main
-        className={cn('flex min-w-0 flex-1 flex-col', '')}
-      >
-
-        <div className="">
-          {cortesQuery.isLoading ? (
-            <div className="grid min-h-[300px] place-items-center">
-              <Icon name="loader-2" size={20} className="animate-spin text-[var(--wb-text-dim)]" />
-            </div>
-          ) : cortesQuery.isError ? (
-            <div className="grid min-h-[300px] place-items-center rounded-[var(--radius-lg)] border border-error/30 bg-error/5 p-8 text-center">
-              <div>
-                <p className="font-editorial text-2xl font-medium text-error">
-                  Erro ao carregar cortes
-                </p>
-                <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
-                  {cortesQuery.error instanceof Error
-                    ? cortesQuery.error.message
-                    : 'Tente novamente.'}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => void cortesQuery.refetch()}
-                >
-                  <Icon name="refresh-cw" />
-                  Tentar novamente
-                </Button>
-              </div>
-            </div>
-          ) : cuts.length === 0 ? (
-            <div className="grid min-h-[320px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
-              <div>
-                <Icon name="check" ilustracao={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" />
-                <p className="font-editorial text-3xl font-medium">Nenhum corte aprovado</p>
-                <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
-                  Aprove cortes no editor antes de gerar metadados.
-                </p>
-                <Button asChild className="mt-5">
-                  <Link to={`/projetos/${projetoId}/cortes`}>Ir para editor</Link>
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {cuts.map((cut) => (
-                <MetadataCard
-                  key={cut.id}
-                  projetoId={projetoId}
-                  cut={cut}
-                  status={statusMap.get(cut.id)}
-                  active={cut.id === activeId}
-                  innerRef={(element) => {
-                    refs.current[cut.id] = element;
-                  }}
-                  onMetaLoaded={handleMetaLoaded}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Rodapé Workbench: PRONTO P/ YOUTUBE X de Y + publicar em massa. */}
+    <div className="flex min-h-0 text-fg">
+      <main className="flex min-w-0 flex-1 flex-col">
+        {cortesQuery.isLoading ? (
+          <EstadoCarregando frase="Buscando os cortes aprovados…" linhas={2} />
+        ) : cortesQuery.isError ? (
+          <EstadoDeErro
+            titulo="Erro ao carregar cortes"
+            motivo={cortesQuery.error instanceof Error ? cortesQuery.error.message : 'Tente novamente.'}
+            aoTentar={() => void cortesQuery.refetch()}
+          />
+        ) : cuts.length === 0 ? (
+          <EstadoVazio
+            icone="check"
+            titulo="Nenhum corte aprovado"
+            descricao="Aprove cortes no editor antes de gerar metadados."
+            acao="Ir para o editor"
+            aoAgir={() => navigate(`/projetos/${projetoId}/cortes`)}
+          />
+        ) : (
+          corteAtivo && (
+            <MetadataCard
+              key={corteAtivo.id}
+              projetoId={projetoId}
+              cut={corteAtivo}
+              status={statusMap.get(corteAtivo.id)}
+              canal={canal}
+              onMetaLoaded={handleMetaLoaded}
+            />
+          )
+        )}
       </main>
 
       <PublicarMassaModal
@@ -290,4 +227,3 @@ export function MetadataPage() {
     </div>
   );
 }
-

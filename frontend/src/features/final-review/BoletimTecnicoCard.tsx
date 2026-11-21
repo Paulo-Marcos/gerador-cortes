@@ -1,5 +1,7 @@
 import { type RefObject, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Selo } from '@/components/ui/selo';
+import { cn } from '@/lib/utils';
 import { useShortsDoCorte } from '@/features/shorts/useShortsDoCorte';
 import { Icon } from '@/upgrade/Icon';
 import {
@@ -18,8 +20,7 @@ import { useBoletimTecnico, useRemedirBoletim } from './useBoletimTecnico';
 // D-1015: o boletim técnico do vídeo, na Revisão Final. Medição sem IA, feita em
 // segundo plano depois do render; a tela só mostra e AVISA — não bloqueia nada.
 
-const ROTULO_DO_TITULO =
-  'font-code text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]';
+const ROTULO_DO_TITULO = 'text-pequeno text-fg-2';
 
 export type OpcaoDoBoletim = { alvo: AlvoDoBoletim; rotulo: string };
 
@@ -87,20 +88,14 @@ export function BoletimTecnicoCard({
   return (
     <section
       aria-label="Boletim técnico"
-      className="flex-shrink-0 overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]"
+      className="flex-shrink-0 overflow-hidden rounded-cartao border border-fio bg-vidro"
     >
-      <header className="flex flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <span className={ROTULO_DO_TITULO}>Boletim técnico</span>
+      <header className="flex flex-wrap items-center gap-2 border-b border-fio px-3 py-2">
+        <span className="text-linha text-fg">Boletim técnico</span>
         {pronto && (
-          <span
-            className={`rounded-full px-2 py-0.5 font-code text-[11px] font-bold uppercase tracking-[0.04em] ${
-              avisos === 0
-                ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
-                : 'bg-[var(--wb-warn-soft)] text-[var(--wb-warn)]'
-            }`}
-          >
+          <Selo tom={avisos === 0 ? 'ok' : 'convite'}>
             {avisos === 0 ? 'sem avisos' : `${avisos} ${avisos === 1 ? 'aviso' : 'avisos'}`}
-          </span>
+          </Selo>
         )}
       </header>
       {opcoes.length > 1 && (
@@ -114,11 +109,11 @@ export function BoletimTecnicoCard({
                 type="button"
                 aria-selected={ativo}
                 onClick={() => onEscolher(o)}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                  ativo
-                    ? 'border-[var(--wb-text-mute)] bg-[var(--wb-bg-inset)] text-[var(--wb-text)]'
-                    : 'border-[var(--wb-border-soft)] text-[var(--wb-text-mute)]'
-                }`}
+                data-sala=""
+                className={cn(
+                  'h-[26px] rounded-pilula border px-3 text-pequeno transition-colors hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco motion-reduce:transition-none',
+                  ativo ? 'border-iris-fio bg-iris-suave text-fg' : 'border-fio-2 text-fg-2',
+                )}
               >
                 {o.rotulo}
               </button>
@@ -126,7 +121,7 @@ export function BoletimTecnicoCard({
           })}
         </div>
       )}
-      <div className="flex flex-col gap-3 p-3 text-[12.5px] text-[var(--wb-text)]">
+      <div className="flex flex-col gap-3 p-3 text-corpo text-fg">
         <Corpo
           boletim={boletim}
           erroDaConsulta={erroDaConsulta}
@@ -153,7 +148,7 @@ function NoInstante({
   return (
     <button
       type="button"
-      className="text-left underline"
+      className="rounded-etiqueta text-left underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
       title={`Ir para ${relogio(segundos)} no vídeo`}
       onClick={() => onIrPara(segundos)}
     >
@@ -176,11 +171,11 @@ function Corpo({
   onIrPara?: (segundos: number) => void;
 }) {
   if (erroDaConsulta) {
-    return <p className="text-[var(--wb-warn)]">Não consegui consultar o boletim agora.</p>;
+    return <p className="text-aviso">Não consegui consultar o boletim agora.</p>;
   }
   if (!boletim || boletim.estado === 'medindo') {
     return (
-      <p className="flex items-center gap-2 text-[var(--wb-text-mute)]">
+      <p className="flex items-center gap-2 text-fg-3">
         <Icon name="loader-2" className="animate-spin" />
         Medindo o vídeo… leva alguns minutos e roda em segundo plano.
       </p>
@@ -188,7 +183,7 @@ function Corpo({
   }
   if (boletim.estado === 'arquivo_ausente') {
     return (
-      <p className="text-[var(--wb-text-mute)]">
+      <p className="text-fg-3">
         Este vídeo não está mais no disco (a limpeza apaga a mídia já publicada), então não há o que
         medir.
       </p>
@@ -197,7 +192,7 @@ function Corpo({
   if (boletim.estado === 'falhou') {
     return (
       <>
-        <p className="text-[var(--wb-warn)]">
+        <p className="text-aviso">
           A medição não terminou: {boletim.erro ?? 'erro desconhecido'}
         </p>
         <MedirDeNovo onRemedir={onRemedir} remedindo={remedindo} />
@@ -211,11 +206,11 @@ function Corpo({
           <>
             <p>{linhaDeVolume(boletim.volume)}</p>
             {boletim.volume.avisos.map((a) => (
-              <p key={a} className="text-[var(--wb-warn)]">
+              <p key={a} className="text-aviso">
                 {a}
               </p>
             ))}
-            <p className="text-[11px] text-[var(--wb-text-mute)]">{TEXTO_DA_REFERENCIA}</p>
+            <p className="text-micro text-fg-3">{TEXTO_DA_REFERENCIA}</p>
           </>
         )}
       </Bloco>
@@ -223,7 +218,7 @@ function Corpo({
         {boletim.paradas?.length ? (
           <ul className="flex flex-col gap-0.5">
             {boletim.paradas.map((p) => (
-              <li key={p.inicio_seg} className="text-[var(--wb-warn)]">
+              <li key={p.inicio_seg} className="text-aviso">
                 <NoInstante segundos={p.inicio_seg} onIrPara={onIrPara}>
                   {linhaDeParada(p)}
                 </NoInstante>
@@ -241,7 +236,7 @@ function Corpo({
             {boletim.emendas.itens
               .filter((e) => e.acima_do_p99)
               .map((e) => (
-                <p key={e.tempo_seg} className="text-[var(--wb-warn)]">
+                <p key={e.tempo_seg} className="text-aviso">
                   <NoInstante segundos={e.tempo_seg} onIrPara={onIrPara}>
                     {`${relogio(e.tempo_seg)} · degrau acima do normal da fala`}
                   </NoInstante>
@@ -249,12 +244,12 @@ function Corpo({
               ))}
           </>
         ) : (
-          <p className="text-[var(--wb-text-mute)]">
+          <p className="text-fg-3">
             {boletim.emendas_aviso ?? 'As emendas não foram medidas.'}
           </p>
         )}
       </Bloco>
-      <p className="text-[11px] text-[var(--wb-text-mute)]">{TEXTO_QUE_NAO_BLOQUEIA}</p>
+      <p className="text-micro text-fg-3">{TEXTO_QUE_NAO_BLOQUEIA}</p>
       <MedirDeNovo onRemedir={onRemedir} remedindo={remedindo} />
     </>
   );
@@ -272,7 +267,7 @@ function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode
 function MedirDeNovo({ onRemedir, remedindo }: { onRemedir: () => void; remedindo: boolean }) {
   return (
     <div>
-      <Button type="button" variant="outline" size="sm" onClick={onRemedir} disabled={remedindo}>
+      <Button type="button" variant="secundario" size="pq" onClick={onRemedir} disabled={remedindo}>
         <Icon name="refresh-cw" />
         Medir de novo
       </Button>

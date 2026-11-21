@@ -1,3 +1,4 @@
+import { CLASSES_DO_CAMPO } from '@/components/ui/field';
 import type { ComponenteDaCapa, EstiloDaCapaTiktok } from '@/types/presets';
 import {
   comVisibilidade,
@@ -10,8 +11,7 @@ import {
 // D-933: os controles do modal "Estilizar capa" — estilo, fundo e o que
 // aparece. Componente burro: recebe o painel efetivo e devolve o rascunho novo.
 
-const CAMPO =
-  'h-8 rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-2 text-[12px] text-[var(--wb-text)]';
+const CAMPO = `${CLASSES_DO_CAMPO} h-10 px-3`;
 
 type Props = {
   painel: PainelDaCapa;
@@ -28,7 +28,8 @@ export function EscolhaDoEstilo({ painel, rascunho, onMudar, semCorte = false }:
         {painel.estilos.map((opcao) => (
           <label
             key={opcao}
-            className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-xs)] border border-[var(--wb-border)] px-2 py-1 text-[12px] text-[var(--wb-text)] has-[:checked]:border-wb-accent has-[:checked]:bg-wb-accent/10"
+            data-sala=""
+            className="flex min-h-[30px] cursor-pointer items-center gap-1.5 rounded-pilula border border-fio-2 px-3 text-pequeno text-fg transition-colors duration-150 hover:bg-vidro-2 has-[:checked]:border-iris-fio has-[:checked]:bg-iris-suave has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-foco motion-reduce:transition-none"
           >
             <input
               type="radio"
@@ -42,12 +43,12 @@ export function EscolhaDoEstilo({ painel, rascunho, onMudar, semCorte = false }:
         ))}
       </div>
       {estilo === 'palco' && (
-        <p className="text-[11px] text-[var(--wb-text-mute)]">
+        <p className="text-pequeno text-fg-3">
           O palco {semCorte ? 'do canal' : 'deste corte'} está no estilo <strong>{painel.estilo_do_palco}</strong>.
         </p>
       )}
       {painel.efetivo.estilo === 'limpo' && (
-        <label className="grid gap-1 text-[12px] text-[var(--wb-text-mute)]">
+        <label className="grid gap-1 text-pequeno text-fg-2">
           Fundo
           <select
             aria-label="Fundo da capa"
@@ -74,13 +75,13 @@ export function EscolhaDoEstilo({ painel, rascunho, onMudar, semCorte = false }:
 export function ComponentesDaCapa({ painel, rascunho, onMudar }: Props) {
   return (
     <fieldset className="grid gap-1">
-      <legend className="mb-1 text-[12px] font-semibold text-[var(--wb-text)]">O que aparece</legend>
+      <legend className="mb-1 text-pequeno text-fg">O que aparece</legend>
       {(painel.componentes as ComponenteDaCapa[]).map((componente) => {
         const disponivel = podeAparecer(componente, painel.efetivo.estilo);
         return (
           <label
             key={componente}
-            className="flex items-center gap-2 text-[12px] text-[var(--wb-text)] aria-disabled:opacity-50"
+            className="flex items-center gap-2 text-pequeno text-fg aria-disabled:text-fg-off"
             aria-disabled={!disponivel}
             title={disponivel ? undefined : 'Só no estilo limpo.'}
           >
@@ -91,7 +92,7 @@ export function ComponentesDaCapa({ painel, rascunho, onMudar }: Props) {
               onChange={(e) => onMudar(comVisibilidade(rascunho, componente, e.target.checked))}
             />
             {NOMES_DOS_COMPONENTES[componente]}
-            {!disponivel && <span className="text-[11px] text-[var(--wb-text-mute)]">(só no limpo)</span>}
+            {!disponivel && <span className="text-micro text-fg-3">(só no limpo)</span>}
           </label>
         );
       })}

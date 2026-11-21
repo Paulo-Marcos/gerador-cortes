@@ -12,6 +12,8 @@ import { blocosVisiveis, NOMES_DOS_COMPONENTES, propsDaPrevia, type PainelDaCapa
 
 const pct = (valor: number, total: number) => `${(valor / total) * 100}%`;
 
+// As medidas da prévia (a proporção do quadro e a faixa segura) são geometria de execução:
+// entram como variáveis CSS e a aparência fica nas classes (DIRECAO §9.2, estiloInline).
 export function PreviaDaCapa({
   painel,
   etiqueta,
@@ -25,10 +27,15 @@ export function PreviaDaCapa({
   onSoltar: (componente: ComponenteDaCapa, retangulo: Retangulo) => void;
 }) {
   const { quadro, faixa_segura: seguro } = painel;
+  const medidas = {
+    '--razao': `${quadro.largura} / ${quadro.altura}`,
+    '--topo': pct(seguro.y, quadro.altura),
+    '--base': pct(quadro.altura - seguro.y - seguro.h, quadro.altura),
+  } as React.CSSProperties;
   return (
     <div
-      className="relative w-[300px] shrink-0 overflow-hidden rounded-[10px] border border-[var(--wb-border)]"
-      style={{ aspectRatio: `${quadro.largura} / ${quadro.altura}` }}
+      className="relative aspect-[var(--razao)] w-[300px] shrink-0 overflow-hidden rounded-[10px] border border-fio-2"
+      style={medidas}
     >
       <Thumbnail
         component={CapaTikTok}
@@ -38,23 +45,14 @@ export function PreviaDaCapa({
         frameToDisplay={0}
         durationInFrames={1}
         fps={30}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        className="absolute inset-0 size-full"
       />
       {/* A vitrine do perfil: véu no que ela corta e a etiqueta. Só o traço não
           bastava — o título e o @ encostam no limite, e as bordas dos blocos o
           cobriam. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 bg-[color-mix(in_oklab,var(--wb-bg)_55%,transparent)]"
-        style={{ height: pct(seguro.y, quadro.altura) }}
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 bg-[color-mix(in_oklab,var(--wb-bg)_55%,transparent)]"
-        style={{ height: pct(quadro.altura - seguro.y - seguro.h, quadro.altura) }}
-      />
-      <span
-        className="pointer-events-none absolute right-1 rounded-[4px] bg-[var(--wb-accent)] px-1 font-code text-[11px] font-bold uppercase text-[var(--wb-accent-fg)]"
-        style={{ top: `calc(${pct(seguro.y, quadro.altura)} - 18px)` }}
-      >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[var(--topo)] bg-veu" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[var(--base)] bg-veu" />
+      <span className="num pointer-events-none absolute right-1 top-[calc(var(--topo)-18px)] rounded-etiqueta bg-iris px-1 text-micro text-sobre-iris">
         vitrine
       </span>
       <BlocosArrastaveis

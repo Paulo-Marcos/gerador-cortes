@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Modal } from '@/components/ui/modal';
 import type { EstiloDaCapaTiktok } from '@/types/presets';
-import { Icon } from '@/upgrade/Icon';
 import { ComponentesDaCapa, EscolhaDoEstilo } from './ControlesDaCapa';
 import { comPosicao, rascunhoDoSalvo } from './estiloDaCapa';
 import { PresetsDaCapa } from './PresetsDaCapa';
@@ -63,21 +63,23 @@ export function EstiloDaCapaModal({
       }
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={() => setRascunho({})}>
+          <Button type="button" variant="fantasma" size="pq" onClick={() => setRascunho({})}>
             <Icon name="rotate-ccw" />
             Restaurar padrão
           </Button>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={fechar}>
+            <Button type="button" variant="fantasma" size="pq" onClick={fechar}>
               Cancelar
             </Button>
             <Button
               type="button"
-              size="sm"
-              disabled={!atual || gravar.isPending}
+              size="pq"
+              variant="secundario"
+              disabled={!atual}
+              carregando={gravar.isPending}
               onClick={() => atual && gravar.mutate(atual, { onSuccess: () => (onSalvou?.(), fechar()) })}
             >
-              <Icon name={gravar.isPending ? 'loader-2' : 'save'} className={gravar.isPending ? 'animate-spin' : undefined} />
+              <Icon name="save" />
               {refazCapa ? 'Salvar e refazer a capa' : 'Salvar o estilo'}
             </Button>
           </div>
@@ -85,8 +87,8 @@ export function EstiloDaCapaModal({
       }
     >
       {!painel || !atual ? (
-        <p className="text-[12px] text-[var(--wb-text-mute)]">
-          <Icon name="loader-2" className="mr-1 inline animate-spin" />
+        <p role="status" className="text-pequeno text-fg-3">
+          <Icon name="loader-2" className="mr-1 inline animate-spin motion-reduce:animate-none" />
           carregando o estilo da capa…
         </p>
       ) : (
@@ -101,7 +103,11 @@ export function EstiloDaCapaModal({
             <EscolhaDoEstilo painel={painel} rascunho={atual} onMudar={setRascunho} semCorte={!corteId} />
             <ComponentesDaCapa painel={painel} rascunho={atual} onMudar={setRascunho} />
             <PresetsDaCapa rascunho={atual} onAplicar={setRascunho} />
-            {gravar.error && <p className="text-[11px] text-[var(--wb-err)]">{gravar.error.message}</p>}
+            {gravar.error && (
+              <p role="alert" className="text-pequeno text-erro">
+                {gravar.error.message}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -119,8 +125,8 @@ export function EstilizarCapa({
     <>
       <Button
         type="button"
-        size="sm"
-        variant="outline"
+        size="pq"
+        variant="secundario"
         disabled={ocupado}
         onClick={() => setAberto(true)}
         title="Escolhe o estilo da capa do canal, o que aparece e onde cada componente fica."

@@ -67,11 +67,11 @@ export function PresetsDaCapa({
         renomeando={atualizar.isPending}
         removendo={remover.isPending}
       />
-      <Button type="button" size="sm" variant="outline" onClick={() => abrir('novo')}>
+      <Button type="button" size="pq" variant="secundario" onClick={() => abrir('novo')}>
         <Icon name="bookmark" />
         Salvar como preset
       </Button>
-      {erro && <p className="w-full text-[11px] text-[var(--wb-err)]">{erro.message}</p>}
+      {erro && <p role="alert" className="w-full text-pequeno text-erro">{erro.message}</p>}
       {dialogo && (
         <NomeDoPresetDialog
           titulo={dialogo === 'novo' ? 'Novo preset da capa' : 'Renomear preset'}

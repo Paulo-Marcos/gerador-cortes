@@ -39,7 +39,7 @@ describe('GerarNoChatGPT', () => {
   it('com projeto e prompt, habilita', () => {
     const html = renderizar(PROJETO, 'o sapo aponta');
     expect(html).toContain('Gerar no ChatGPT');
-    expect(html).not.toContain('disabled');
+    expect(html).not.toMatch(/\sdisabled(=|\s|>)/);
     expect(html).toContain('imagem 16:9');
   });
 
@@ -47,7 +47,9 @@ describe('GerarNoChatGPT', () => {
   // está, e o motivo de uma parada não some mais com o modal.
   it('pedido na fila trava o botão e diz que está na fila', () => {
     const html = renderizar(PROJETO, 'o sapo aponta', undefined, { estado: 'aguardando' });
-    expect(html).toContain('disabled');
+    // O botão da fila não usa `disabled`: fica `aria-busy` e o clique não faz nada (carregando).
+    const botao = html.match(/<button[^>]*>(?:(?!<\/button>).)*?Gerando no ChatGPT/s)?.[0] ?? '';
+    expect(botao).toContain('aria-busy="true"');
     expect(html).toContain('Na fila do ChatGPT');
   });
 
@@ -69,7 +71,7 @@ describe('GerarNoChatGPT', () => {
     });
     expect(html).toContain('Cancelado na fila');
     expect(html).not.toContain('janela do Edge');
-    expect(html).not.toContain('disabled');
+    expect(html).not.toMatch(/\sdisabled(=|\s|>)/);
   });
 
   // D-899: "Gerar prompt" põe a imagem na fila pelo backend; o que a tela sabia
@@ -81,7 +83,7 @@ describe('GerarNoChatGPT', () => {
     // Prompt refeito: a tela relê no backend em vez de mostrar o do anterior.
     const html = renderizar(PROJETO, 'o prompt novo', undefined, parada, 'o antigo');
     expect(html).not.toContain('parou no antigo');
-    expect(html).not.toContain('disabled');
+    expect(html).not.toMatch(/\sdisabled(=|\s|>)/);
   });
 
   it('pedido que parou mostra onde e por quê, e deixa pedir de novo', () => {
@@ -92,18 +94,18 @@ describe('GerarNoChatGPT', () => {
     });
     expect(html).toContain('role="alert"');
     expect(html).toContain('O ChatGPT respondeu sem imagem.');
-    expect(html).not.toContain('disabled');
+    expect(html).not.toMatch(/\sdisabled(=|\s|>)/);
   });
 
   it('sem projeto configurado, manda para Canais', () => {
     const html = renderizar('', 'o sapo aponta');
-    expect(html).toContain('disabled');
+    expect(html).toMatch(/\sdisabled(=|\s|>)/);
     expect(html).toContain('Canais → Capas no ChatGPT');
   });
 
   it('sem prompt, pede o prompt antes', () => {
     const html = renderizar(PROJETO, '   ');
-    expect(html).toContain('disabled');
+    expect(html).toMatch(/\sdisabled(=|\s|>)/);
     expect(html).toContain('Gere o prompt da capa primeiro');
   });
 });

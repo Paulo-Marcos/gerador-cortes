@@ -45,7 +45,7 @@ function metadado(overrides: Partial<MetadadoCorte> = {}): MetadadoCorte {
   };
 }
 
-function render(meta: MetadadoCorte, variant: 'modal' | 'card' = 'modal') {
+function render(meta: MetadadoCorte, variant: 'modal' | 'tela' = 'modal') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(metadataKey('c1'), meta);
   qc.setQueryData(['capa-chatgpt', 'configuracao'], {
@@ -58,7 +58,7 @@ function render(meta: MetadadoCorte, variant: 'modal' | 'card' = 'modal') {
       <ToastProvider>
         <TooltipProvider>
           <MemoryRouter>
-            <MetadataCard projetoId="p1" cut={corte()} variant={variant} active={variant === 'card'} />
+            <MetadataCard projetoId="p1" cut={corte()} variant={variant} />
           </MemoryRouter>
         </TooltipProvider>
       </ToastProvider>
@@ -145,13 +145,14 @@ describe('MetadataCard — corpo do modal', () => {
   // o bloco do TikTok separava a capa do YouTube dos botoes dela.
   it('separa as capas em abas, com a do YouTube aberta', () => {
     const markup = render(metadado());
-    expect(markup).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>[^<]*YouTube/);
-    expect(markup).toMatch(/role="tab"[^>]*aria-selected="false"[^>]*>[^<]*TikTok/);
+    expect(markup).toContain('aria-label="Capa do YouTube"');
+    expect(markup).toContain('aria-label="Capa do TikTok"');
+    expect(markup).not.toContain('role="tab"');
   });
 
   // D-871: o "Influenciar a capa" saiu do editor de cortes porque a capa se
   // decide aqui — então aqui ele não pode faltar, no modal nem no cartão.
-  it.each(['modal', 'card'] as const)('no %s, oferece influenciar a capa', (variant) => {
+  it.each(['modal', 'tela'] as const)('no %s, oferece influenciar a capa', (variant) => {
     expect(render(metadado(), variant)).toContain('Influenciar a capa');
   });
 });
@@ -167,7 +168,7 @@ describe('ModalChip', () => {
         opcao
       </ModalChip>,
     );
-    expect(html).toContain('text-[var(--sel-on)]');
+    expect(html).toContain('aria-pressed="true"');
     expect(html).not.toContain('text-white');
   });
 });
@@ -195,7 +196,7 @@ describe('MetadataCard — ícones dos botões Manual', () => {
   });
 
   it('no cartão: os mesmos ícones, a 14 px', () => {
-    const [metadados, capa] = manuais(render(metadado(), 'card'));
+    const [metadados, capa] = manuais(render(metadado(), 'tela'));
     expect(metadados).toContain('lucide-wand-sparkles');
     expect(capa).toContain('lucide-palette');
     for (const icone of [metadados, capa]) expect(icone).toContain('width="14"');

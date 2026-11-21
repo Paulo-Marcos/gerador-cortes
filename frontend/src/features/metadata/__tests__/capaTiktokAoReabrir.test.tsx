@@ -36,7 +36,7 @@ function montarCartao(lidoEm: number) {
       <ToastProvider>
         <TooltipProvider>
           <MemoryRouter>
-            <MetadataCard projetoId="p1" cut={corte} variant="card" active />
+            <MetadataCard projetoId="p1" cut={corte} variant="tela" />
           </MemoryRouter>
         </TooltipProvider>
       </ToastProvider>
