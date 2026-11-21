@@ -1,7 +1,7 @@
 // Régua da catraca `umPrimarioPorTela` (D-1115, E-069 H-06; DIRECAO §5 e §9.4; D-1138).
 // Cada tela redesenhada tem um teste de render que chama `esperarPrimarios`:
 // a tela que tem primário tem exatamente um botão primário (`data-variant="primario"`,
-// o que o Button emite; `primary` é o nome antigo, aceito até o legado sumir) e ele está
+// o que o Button novo emite; o legado emite `default`, que não conta) e ele está
 // aceso, sem `disabled`. A que não tem (escolha e leitura) tem zero.
 // Limite: só lê `<button`; primário com `asChild` virando `<a>` não é contado.
 
@@ -22,10 +22,11 @@ export const PRIMARIOS_POR_TELA = {
 
 export type TelaComPrimario = keyof typeof PRIMARIOS_POR_TELA;
 
-// O Button novo grava `primario`; `primary` é o nome antigo e a régua o aceita até a última
-// tela legada sumir. Sem isto a régua contava zero e todo teste de tela passava no vazio.
-const VARIANTES_PRIMARIAS = /\bdata-variant="(?:primario|primary)"/;
-// `disabled` de verdade, não `aria-disabled` nem `data-disabled`.
+// O Button novo grava `primario`; o legado grava `default` (button.tsx), que não é primário.
+// `primary` nenhum Button emite. Sem a variante certa a régua contava zero e passava no vazio.
+const VARIANTES_PRIMARIAS = /\bdata-variant="primario"/;
+// `disabled` de verdade, não `aria-disabled` nem `data-disabled`, nem a palavra dentro de um
+// valor de atributo (`title="fica disabled até"`): os valores entre aspas saem antes do teste.
 const DESABILITADO = /(?:^|\s)disabled(?=[\s=>/])/;
 
 /** As tags de abertura dos botões primários que a tela renderiza (`renderToStaticMarkup`). */
@@ -40,7 +41,7 @@ export function contarPrimarios(html: string): number {
 
 /** Os primários sem `disabled`: o Button grava a variante mesmo desabilitado. */
 export function contarPrimariosAcesos(html: string): number {
-  return primarios(html).filter((tag) => !DESABILITADO.test(tag)).length;
+  return primarios(html).filter((tag) => !DESABILITADO.test(tag.replace(/"[^"]*"/g, '""'))).length;
 }
 
 /**

@@ -24,9 +24,9 @@ describe('catraca de design: umPrimarioPorTela', () => {
     });
   });
 
-  it('o contador conta só `data-variant="primary"`', () => {
+  it('o contador conta só `data-variant="primario"`', () => {
     const tela = `
-      <button data-variant="primary">Publicar 6 cortes</button>
+      <button data-variant="primario">Publicar 6 cortes</button>
       <button data-variant="secondary">Editar</button>
       <button data-variant="ghost">Voltar</button>
     `;
@@ -35,10 +35,10 @@ describe('catraca de design: umPrimarioPorTela', () => {
   });
 
   it('reprova a tela com dois primários e a de escolha com um', () => {
-    const doisPrimarios = '<button data-variant="primary">A</button><button data-variant="primary">B</button>';
+    const doisPrimarios = '<button data-variant="primario">A</button><button data-variant="primario">B</button>';
     expect(() => esperarPrimarios(doisPrimarios, 'Editor')).toThrow();
-    expect(() => esperarPrimarios('<button data-variant="primary">A</button>', 'Fila')).toThrow();
-    expect(() => esperarPrimarios('<button data-variant="primary">A</button>', 'Editor')).not.toThrow();
+    expect(() => esperarPrimarios('<button data-variant="primario">A</button>', 'Fila')).toThrow();
+    expect(() => esperarPrimarios('<button data-variant="primario">A</button>', 'Editor')).not.toThrow();
     expect(() => esperarPrimarios('<button>A</button>', 'Fila')).not.toThrow();
   });
 });
