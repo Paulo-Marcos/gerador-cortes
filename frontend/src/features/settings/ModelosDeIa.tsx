@@ -92,7 +92,7 @@ export function ModelosDeIa() {
                     value={papel.valor}
                     disabled={mutation.isPending}
                     onChange={(e) => mutation.mutate({ [papel.key]: e.target.value })}
-                    className="h-10 min-w-0 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60"
+                    className="h-10 min-w-0 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60"
                   >
                     {opcoesDoPapel(papel, disponiveis.data?.[grupo.provedor] ?? []).map((m) => (
                       <option key={m.id} value={m.id}>

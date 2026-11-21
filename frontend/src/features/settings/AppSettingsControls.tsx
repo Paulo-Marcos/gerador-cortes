@@ -71,7 +71,7 @@ const FALLBACK_FILTERS: FiltroExport[] = [
 type UpdateBody = AtualizarSettingsBody;
 
 const controlCls =
-  'h-10 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60';
+  'h-10 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60';
 const labelCls = 'grid gap-1.5 text-xs font-semibold text-fg-2';
 const sectionLabelCls = 'text-xs font-bold tracking-[0.08em] text-fg-2';
 

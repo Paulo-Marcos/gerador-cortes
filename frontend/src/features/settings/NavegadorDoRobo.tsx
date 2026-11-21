@@ -37,7 +37,7 @@ export function NavegadorDoRobo() {
         value={query.data?.navegador ?? 'edge'}
         disabled={query.isLoading || mutation.isPending}
         onChange={(event) => mutation.mutate(event.target.value as Navegador)}
-        className="h-10 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60"
+        className="h-10 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60"
       >
         {NAVEGADORES.map((navegador) => (
           <option key={navegador.value} value={navegador.value}>
