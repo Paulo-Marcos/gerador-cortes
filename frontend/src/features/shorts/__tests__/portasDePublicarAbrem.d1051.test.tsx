@@ -93,7 +93,7 @@ vi.mock('../useFechoDoShort', () => ({
 const { default: WorkspaceDoFirePage } = await import('../WorkspaceDoFirePage');
 const { default: ShortsProntosPage } = await import('../ShortsProntosPage');
 const { PainelPublicacao } = await import('../PainelPublicacao');
-const { RodapeDoFire } = await import('../RodapeDoFire');
+const { itensDoMenuDoFire, dicaDoWorkspace } = await import('../acoesDoFire');
 
 function comProvedores(tela: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
@@ -180,8 +180,8 @@ describe('D-1051 · o último "finalizado" no sentido de renderizado', () => {
       finalizado_em: null,
       shorts: { renderizado: 0 },
     } as unknown as FireComBruto;
-    const html = comProvedores(<RodapeDoFire fire={fire} />);
-    expect(html).toContain('Ainda não há short renderizado neste corte');
-    expect(html).toContain('Finalizar');
+    // O rodapé virou o ⋯ da linha (D-1168, §7.6): o teste lê as mesmas ações em `acoesDoFire`.
+    expect(dicaDoWorkspace(fire)).toContain('Ainda não há short renderizado neste corte');
+    expect(itensDoMenuDoFire(fire, { editar: () => undefined, alternarFinalizado: () => undefined, gerar: () => undefined, liveRodando: false, marcando: false }).map((i) => i.label)).toContain('Finalizar');
   });
 });

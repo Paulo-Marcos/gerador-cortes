@@ -51,10 +51,11 @@ vi.mock('../useFechoDoShort', () => ({
 vi.mock('../PainelPublicacao', () => ({ PainelPublicacao: () => null }));
 vi.mock('../PublicarEmLoteModal', () => ({ PublicarEmLoteModal: () => null }));
 
-const { RodapeDoFire } = await import('../RodapeDoFire');
+const { itensDoMenuDoFire } = await import('../acoesDoFire');
 const { default: WorkspaceDoFirePage } = await import('../WorkspaceDoFirePage');
 const { FireChrome } = await import('../FireDetalhePage');
 
+const ACOES_DA_LINHA = { editar: () => undefined, alternarFinalizado: () => undefined, gerar: () => undefined, liveRodando: false, marcando: false };
 const FIRE = {
   corte_id: 'c9',
   numero: 9,
@@ -107,14 +108,15 @@ describe('D-1051 · um nome para cada "Finalizar"', () => {
   });
 
   it('no cartão do Fire, "Finalizar" fica: é a declaração da RN-17', () => {
-    const html = comProvedores(<RodapeDoFire fire={FIRE} />);
-    expect(html).toContain('Finalizar');
-    expect(html).not.toContain('Renderizar');
+    // O rodapé virou o ⋯ da linha (D-1168, §7.6): o teste lê as mesmas ações em `acoesDoFire`.
+    const rotulos = itensDoMenuDoFire(FIRE, ACOES_DA_LINHA).map((i) => i.label);
+    expect(rotulos).toContain('Finalizar');
+    expect(rotulos).not.toContain('Renderizar');
   });
 
   it('com o Fire finalizado, o cartão oferece reabrir', () => {
-    const html = comProvedores(<RodapeDoFire fire={{ ...FIRE, finalizado_em: '2026-11-05' } as FireComBruto} />);
-    expect(html).toContain('Reabrir');
+    const rotulos = itensDoMenuDoFire({ ...FIRE, finalizado_em: '2026-11-05' } as FireComBruto, ACOES_DA_LINHA).map((i) => i.label);
+    expect(rotulos).toContain('Reabrir');
   });
 });
 
