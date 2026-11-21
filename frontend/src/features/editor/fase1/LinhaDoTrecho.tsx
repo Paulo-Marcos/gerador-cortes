@@ -176,7 +176,7 @@ export const LinhaDoTrecho = function LinhaDoTrecho({
       aria-current={ativo || undefined}
       className={cn(
         'rounded-campo border bg-vidro-2 transition-colors',
-        ativo ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]' : 'border-fio hover:border-campo',
+        ativo ? 'border-campo bg-vidro-3' : 'border-fio hover:border-campo',
       )}
     >
       <button

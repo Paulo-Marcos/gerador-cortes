@@ -112,7 +112,7 @@ export function AdicionarCorteModal({
       <div className="grid gap-3">
         <div className="grid grid-cols-2 gap-3">
           <label className="grid gap-1.5">
-            <span className="text-micro font-semibold tracking-[0.08em] text-text-300">
+            <span className="text-micro font-semibold tracking-[0.08em] text-fg-3">
               Inicio
             </span>
             <div className="flex gap-1.5">
@@ -121,7 +121,7 @@ export function AdicionarCorteModal({
                 value={inicio}
                 onChange={(event) => setInicio(event.target.value)}
                 placeholder="00:00:00"
-                className="h-9 min-w-0 flex-1 rounded-campo border border-[var(--border)] bg-bg-900 px-2.5 font-mono text-sm text-text-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+                className="h-9 min-w-0 flex-1 rounded-campo border border-[var(--border)] bg-painel-solido px-2.5 font-mono text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
                 disabled={ocupado}
                 aria-invalid={!validarHms(inicio)}
               />
@@ -142,7 +142,7 @@ export function AdicionarCorteModal({
             </div>
           </label>
           <label className="grid gap-1.5">
-            <span className="text-micro font-semibold tracking-[0.08em] text-text-300">
+            <span className="text-micro font-semibold tracking-[0.08em] text-fg-3">
               Fim
             </span>
             <div className="flex gap-1.5">
@@ -151,7 +151,7 @@ export function AdicionarCorteModal({
                 value={fim}
                 onChange={(event) => setFim(event.target.value)}
                 placeholder="00:01:00"
-                className="h-9 min-w-0 flex-1 rounded-campo border border-[var(--border)] bg-bg-900 px-2.5 font-mono text-sm text-text-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+                className="h-9 min-w-0 flex-1 rounded-campo border border-[var(--border)] bg-painel-solido px-2.5 font-mono text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
                 disabled={ocupado}
                 aria-invalid={!validarHms(fim)}
               />
@@ -174,7 +174,7 @@ export function AdicionarCorteModal({
         </div>
 
         <label className="grid gap-1.5">
-          <span className="text-micro font-semibold tracking-[0.08em] text-text-300">
+          <span className="text-micro font-semibold tracking-[0.08em] text-fg-3">
             Titulo (opcional)
           </span>
           <input
@@ -182,7 +182,7 @@ export function AdicionarCorteModal({
             value={titulo}
             onChange={(event) => setTitulo(event.target.value)}
             placeholder="Deixe vazio para usar 'Corte manual #N'"
-            className="h-9 rounded-campo border border-[var(--border)] bg-bg-900 px-2.5 text-sm text-text-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+            className="h-9 rounded-campo border border-[var(--border)] bg-painel-solido px-2.5 text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
             disabled={ocupado}
             maxLength={500}
           />
@@ -192,7 +192,7 @@ export function AdicionarCorteModal({
           <p className="text-xs text-error">O fim precisa ser maior que o inicio.</p>
         )}
         {(!validarHms(inicio) || !validarHms(fim)) && (
-          <p className="text-xs text-text-400">
+          <p className="text-xs text-fg-3">
             Formato esperado: <span className="font-mono">HH:MM:SS</span> (ex.{' '}
             <span className="font-mono">01:23:45</span>).
           </p>

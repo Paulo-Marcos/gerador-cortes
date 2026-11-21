@@ -102,8 +102,8 @@ function desenharAlerta(regions: RegionsInstance, alerta: AlertaConferir, offset
   el.style.cssText += [
     ';pointer-events:none',
     'height:14px',
-    'border-top:3px solid var(--wb-warn)',
-    'background:repeating-linear-gradient(135deg, color-mix(in oklab, var(--wb-warn) 35%, transparent) 0 4px, transparent 4px 8px)',
+    'border-top:3px solid var(--cc-aviso)',
+    'background:repeating-linear-gradient(135deg, color-mix(in oklab, var(--cc-aviso) 35%, transparent) 0 4px, transparent 4px 8px)',
     'z-index:4',
   ].join(';');
 }

@@ -31,20 +31,20 @@ export interface BadgeTrecho {
 // funcionar — a barra e o card do mesmo trecho têm a mesma cor, e o olho liga
 // as duas metades sem ler. Uma paleta própria para a timeline destruiria
 // exatamente o que ela veio resolver.
-const AVISO = { bg: 'var(--wb-warn-soft)', fg: 'var(--wb-warn-ink)', token: 'var(--wb-warn)' };
+const AVISO = { bg: 'color-mix(in srgb, var(--cc-aviso) 13%, transparent)', fg: 'var(--cc-aviso)', token: 'var(--cc-aviso)' };
 const REDUNDANCIA = {
   bg: 'var(--wb-violet-soft)',
   fg: 'var(--wb-violet)',
   token: 'var(--wb-violet)',
 };
-const FORA_DO_ASSUNTO = { bg: 'var(--wb-info-soft)', fg: 'var(--wb-info)', token: 'var(--wb-info)' };
-const PROBLEMA = { bg: 'var(--wb-err-soft)', fg: 'var(--wb-err-ink)', token: 'var(--wb-err)' };
+const FORA_DO_ASSUNTO = { bg: 'color-mix(in srgb, var(--cc-info) 13%, transparent)', fg: 'var(--cc-info)', token: 'var(--cc-info)' };
+const PROBLEMA = { bg: 'color-mix(in srgb, var(--cc-erro) 13%, transparent)', fg: 'var(--cc-erro)', token: 'var(--cc-erro)' };
 const NEUTRO = {
-  bg: 'var(--wb-bg-inset)',
-  fg: 'var(--wb-text-mute)',
-  token: 'var(--wb-text-mute)',
+  bg: 'var(--cc-poco)',
+  fg: 'var(--cc-fg-2)',
+  token: 'var(--cc-fg-2)',
 };
-const IA = { bg: 'var(--wb-accent-soft)', fg: 'var(--wb-accent)', token: 'var(--wb-accent)' };
+const IA = { bg: 'var(--cc-iris-suave)', fg: 'var(--cc-iris)', token: 'var(--cc-iris)' };
 
 // D-515: o silêncio SAIU de `FORA_DO_ASSUNTO`.
 //
@@ -52,7 +52,7 @@ const IA = { bg: 'var(--wb-accent-soft)', fg: 'var(--wb-accent)', token: 'var(--
 // numa timeline cheia, quase tudo ficava azul e a cor parava de distinguir
 // coisa alguma. Também é a única de origem TÉCNICA: as outras são julgamento
 // editorial, esta é o detector. Cor própria, e o card acompanha.
-const SILENCIO = { bg: 'var(--wb-bg-inset)', fg: 'var(--wb-ok-ink)', token: 'var(--wb-ok)' };
+const SILENCIO = { bg: 'var(--cc-poco)', fg: 'var(--cc-ok)', token: 'var(--cc-ok)' };
 
 const BADGE_POR_CATEGORIA: Record<DesvioCategoria, BadgeTrecho> = {
   imprecisao: {
@@ -105,7 +105,7 @@ const BADGE_POR_ORIGEM: Record<DesvioOrigem, BadgeTrecho> = {
  * A cor do segmento deste trecho na timeline (D-515).
  *
  * `color-mix` porque o token é uma variável CSS: aplicar alpha por string
- * (`oklch(... / 0.35)`) exigiria conhecer o formato do token, e ele muda com a
+ * (escrever o alfa dentro da cor) exigiria conhecer o formato do token, e ele muda com a
  * paleta que o operador escolher no seletor de tema.
  *
  * O alpha é alto o bastante para a cor ler sobre a forma de onda e baixo o

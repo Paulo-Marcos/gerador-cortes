@@ -45,7 +45,7 @@ function RiscadosDoCorte({ riscados, linhas, pendente, onRestaurar }: RiscadosDo
             <div className="min-w-0 flex-1">
               <CabecalhoDoTrecho desvio={desvio} />
               {desvio.recusa ? (
-                <div className="mb-1 text-micro font-semibold leading-[1.4] text-[var(--wb-err-ink)]">
+                <div className="mb-1 text-micro font-semibold leading-[1.4] text-erro">
                   {desvio.recusa}
                 </div>
               ) : null}
@@ -105,7 +105,7 @@ function barraDosTrechos({ emVoo, adicionando, onGerarManual, onGerarTrechosIA, 
             type="button"
             onClick={onAdicionarNoCursor}
             disabled={adicionando}
-            className="flex h-[30px] flex-none items-center gap-1 rounded-[8px] bg-iris-suave px-2.5 text-pequeno font-medium text-iris transition-colors hover:bg-[var(--wb-accent)] hover:text-[var(--wb-accent-fg)] disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-[30px] flex-none items-center gap-1 rounded-[8px] bg-iris-suave px-2.5 text-pequeno font-medium text-iris transition-colors hover:bg-vidro-2 hover:text-fg disabled:pointer-events-none disabled:opacity-40"
           >
             <Icon name="plus" size={14} />
             Trecho no cursor

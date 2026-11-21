@@ -56,7 +56,7 @@ describe('drawRegions — alertas para conferir (D-998)', () => {
     expect(faixa.element.title).toBe('Conferir: cita 40% sem fonte');
     expect(faixa.element.attrs['data-alerta-conferir']).toBe('60000-70000');
     expect(faixa.element.style.cssText).toContain('pointer-events:none');
-    expect(faixa.element.style.cssText).toContain('border-top:3px solid var(--wb-warn)');
+    expect(faixa.element.style.cssText).toContain('border-top:3px solid var(--cc-aviso)');
   });
 
   it('o alerta conferido sai da onda', () => {

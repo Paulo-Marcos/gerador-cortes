@@ -87,10 +87,10 @@ describe('BancadaChrome — nota e porquê da IA', () => {
 // estados continuam os mesmos.
 describe('BancadaChrome — chip de estado do salvar', () => {
   it.each([
-    [{ sujo: false, salvando: true }, { texto: 'salvando…', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' }],
-    [{ sujo: true, salvando: true }, { texto: 'salvando…', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' }],
-    [{ sujo: true, salvando: false }, { texto: 'não salvo', icone: 'triangle-alert', cor: 'var(--warn)', bg: 'var(--warn-soft)' }],
-    [{ sujo: false, salvando: false }, { texto: 'salvo', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' }],
+    [{ sujo: false, salvando: true }, { texto: 'salvando…', icone: 'loader', cor: 'var(--cc-info)', bg: 'color-mix(in srgb, var(--cc-info) 13%, transparent)' }],
+    [{ sujo: true, salvando: true }, { texto: 'salvando…', icone: 'loader', cor: 'var(--cc-info)', bg: 'color-mix(in srgb, var(--cc-info) 13%, transparent)' }],
+    [{ sujo: true, salvando: false }, { texto: 'não salvo', icone: 'triangle-alert', cor: 'var(--cc-aviso)', bg: 'color-mix(in srgb, var(--cc-aviso) 13%, transparent)' }],
+    [{ sujo: false, salvando: false }, { texto: 'salvo', icone: 'circle-check', cor: 'var(--cc-ok)', bg: 'color-mix(in srgb, var(--cc-ok) 13%, transparent)' }],
   ])('%o → %o', (salvo, estado) => {
     expect(publicar('proposto', vi.fn(), salvo)?.estado).toEqual(estado);
   });

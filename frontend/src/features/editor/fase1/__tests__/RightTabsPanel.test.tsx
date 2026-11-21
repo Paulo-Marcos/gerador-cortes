@@ -170,7 +170,7 @@ describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-4
     const html = render(desviosDaIa);
 
     expect(html).toContain('Possível imprecisão');
-    expect(html).toContain('var(--wb-warn-soft)');
+    expect(html).toContain('color-mix(in srgb, var(--cc-aviso) 13%, transparent)');
   });
 
   it('desvio legado sem categoria continua badgeado (fallback por motivo/origem)', () => {

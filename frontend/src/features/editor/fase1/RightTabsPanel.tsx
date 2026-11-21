@@ -326,7 +326,7 @@ function TranscriptList({
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar palavra..."
-            className="flex-1 bg-transparent text-pequeno text-fg outline-none placeholder:text-fg-3"
+            className="flex-1 bg-transparent text-pequeno text-fg outline-none placeholder:text-fg-3 focus-visible:ring-2 focus-visible:ring-foco"
           />
           <span className="font-mono text-micro text-fg-3">⌘F</span>
         </div>

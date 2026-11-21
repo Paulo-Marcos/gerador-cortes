@@ -25,7 +25,7 @@ describe('resolverBadgeTrecho — categoria manda no badge (D-422)', () => {
     const muleta = resolverBadgeTrecho(desvio({ origem: 'claude', categoria: 'disfluencia' }));
 
     expect(impreciso.label).toBe('impreciso');
-    expect(impreciso.bg).toContain('warn');
+    expect(impreciso.bg).toContain('aviso');
     expect(impreciso.bg).not.toBe(muleta.bg);
     expect(impreciso.titulo).toMatch(/imprecisa/i);
   });

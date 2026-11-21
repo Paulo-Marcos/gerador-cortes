@@ -230,8 +230,8 @@ export function BancadaChrome({
             texto: 'Fire',
             icone: 'flame',
             ativo: fire,
-            cor: 'var(--accent2)',
-            corSuave: 'var(--accent-soft)',
+            cor: 'var(--cc-iris-2)',
+            corSuave: 'var(--cc-iris-suave)',
             titulo: fire ? 'Tirar do Fire (F)' : 'Marcar como Fire (F)',
             ocupado: fireOcupado,
             onClick: onToggleFire,
@@ -242,8 +242,8 @@ export function BancadaChrome({
                   texto: 'Leitura',
                   icone: 'book-open' as const,
                   ativo: leitura.ativo,
-                  cor: 'var(--info)',
-                  corSuave: 'var(--info-soft)',
+                  cor: 'var(--cc-info)',
+                  corSuave: 'color-mix(in srgb, var(--cc-info) 13%, transparent)',
                   titulo: leitura.ativo
                     ? 'Tirar a leitura (L)'
                     : 'Marcar como leitura (L) — pede autor e parte',
@@ -352,8 +352,8 @@ function botaoDeRiscar(riscar: BancadaChromeProps['riscar']): ChromeBarra['secun
  *  sem exigir olhar para o botão Salvar. */
 function estadoDoSalvar(salvando: boolean, sujo: boolean): ChromeEstado {
   if (salvando)
-    return { texto: 'salvando…', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' };
+    return { texto: 'salvando…', icone: 'loader', cor: 'var(--cc-info)', bg: 'color-mix(in srgb, var(--cc-info) 13%, transparent)' };
   if (sujo)
-    return { texto: 'não salvo', icone: 'triangle-alert', cor: 'var(--warn)', bg: 'var(--warn-soft)' };
-  return { texto: 'salvo', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' };
+    return { texto: 'não salvo', icone: 'triangle-alert', cor: 'var(--cc-aviso)', bg: 'color-mix(in srgb, var(--cc-aviso) 13%, transparent)' };
+  return { texto: 'salvo', icone: 'circle-check', cor: 'var(--cc-ok)', bg: 'color-mix(in srgb, var(--cc-ok) 13%, transparent)' };
 }

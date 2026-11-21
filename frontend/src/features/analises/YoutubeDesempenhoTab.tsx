@@ -15,6 +15,7 @@ import {
   TabelaTitulo,
 } from '@/components/ui/tabela';
 import { useToast } from '@/components/ui/toaster';
+import type { CSSProperties } from 'react';
 import type { LevantamentoDuracao, LevantamentoTitulo } from './api';
 import {
   useLevantamentoDuracao,
@@ -39,7 +40,10 @@ function RetencaoBar({ pct }: { pct: number }) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="h-1.5 w-24 overflow-hidden rounded-full bg-vidro-3">
-        <div className="h-full rounded-full bg-iris" style={{ width: `${largura}%` }} />
+        <div
+          className="h-full w-[var(--largura)] rounded-full bg-iris"
+          style={{ '--largura': `${largura}%` } as CSSProperties}
+        />
       </div>
       <span className="num text-fg-2">{formatarPct(pct)}</span>
     </div>
