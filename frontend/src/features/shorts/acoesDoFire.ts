@@ -18,6 +18,12 @@ export interface AcoesDoFire {
   liveRodando: boolean;
   /** A marcação de finalizado está em voo. */
   marcando: boolean;
+  /**
+   * A geração DESTE corte está em voo. O POST só responde no fim e pode levar minutos (refaz o
+   * bruto): sem este sinal o operador abre o ⋯ e clica de novo, e duas gerações rodam no mesmo
+   * corte. Opcional para os testes que só leem os rótulos.
+   */
+  gerando?: boolean;
 }
 
 export const DICA_DO_WORKSPACE_VAZIO = 'Ainda não há short renderizado neste corte';
@@ -46,9 +52,9 @@ export function itensDoMenuDoFire(fire: FireComBruto, a: AcoesDoFire): OverflowM
     const semFonte = semDeOndeRecortar(fire);
     itens.push({
       icon: 'sparkle',
-      label: rotuloDeGerar(fire),
+      label: a.gerando ? 'A IA está propondo…' : rotuloDeGerar(fire),
       title: semFonte ? 'Sem bruto e com a live limpa: use “Baixar a live e gerar” na faixa da live' : dicaDeGerar(fire),
-      disabled: a.liveRodando || semFonte,
+      disabled: a.liveRodando || semFonte || Boolean(a.gerando),
       onClick: a.gerar,
     });
   }

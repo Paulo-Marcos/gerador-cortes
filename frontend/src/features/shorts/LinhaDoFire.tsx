@@ -36,6 +36,7 @@ export function LinhaDoFire({ fire, liveRodando }: { fire: FireComBruto; liveRod
     gerar: () => gerar.mutate(),
     liveRodando,
     marcando: marcar.isPending,
+    gerando: gerar.isPending,
   });
 
   return (
