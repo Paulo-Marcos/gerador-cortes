@@ -24,7 +24,7 @@ export function AlertasConferirFaixa({ alertas, onSeek, onConferir, conferindoId
     <div
       role="list"
       aria-label="Alertas para conferir"
-      className="flex flex-shrink-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-fio bg-aviso/13 px-3 py-1.5"
+      className="flex flex-shrink-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-fio bg-aviso/[.13] px-3 py-1.5"
     >
       <span className="flex flex-none items-center gap-1 text-micro font-semibold text-aviso">
         <Icon name="flag" />

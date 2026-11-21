@@ -113,7 +113,7 @@ export function BlocosPanel({
 
       {arranjo?.bruto_desatualizado && (
         // Não apagamos o bruto: o contrato desta casa é avisar, não destruir.
-        <p className="flex-shrink-0 bg-aviso/13 px-3 py-1.5 text-micro text-aviso">
+        <p className="flex-shrink-0 bg-aviso/[.13] px-3 py-1.5 text-micro text-aviso">
           A ordem mudou — o bruto gerado ainda está na ordem antiga. Gere de novo para ver.
         </p>
       )}
