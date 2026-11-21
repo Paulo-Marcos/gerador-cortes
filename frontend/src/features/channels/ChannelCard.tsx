@@ -1,8 +1,16 @@
 // D-154: card "burro" de um canal na lista. Destaca o canal ativo e expõe as
 // ações (selecionar / editar) via callbacks — sem I/O próprio.
+// D-1172 (E-069 H-21; DIRECAO §7.7): o cartão de IDENTIDADE da Sala escura. O canal ativo leva o
+// fio de luz (`cc-fio`, lugar marcado do §3.1) e o avatar no anel da luz do canal; os outros
+// canais são cartões de vidro sem fio. Nenhum botão aqui é primário: Configurações não tem (§5).
 // D-169: o bloco de conexão do YouTube aparece só no canal ATIVO (o token é
 // gravado na pasta do canal ativo); estado e callbacks vêm por props.
+import { AvatarDoCanal } from '@/components/ui/avatar-do-canal';
 import { Button } from '@/components/ui/button';
+import { Selo } from '@/components/ui/selo';
+import { luzDoCanalDe } from '@/lib/luzDoCanal';
+import { cn } from '@/lib/utils';
+import { useUpgradeTheme } from '@/lib/tema';
 import type { Canal, YoutubeAuthStatus } from '@/features/channels/api/canais';
 import { ConectarYoutubeTutorial } from './ConectarYoutubeTutorial';
 import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
@@ -20,6 +28,72 @@ interface ChannelCardProps {
   onChecarYoutube?: () => void;
 }
 
+/** A conexão do YouTube do canal ativo: o estado, e conectar ou desconectar. */
+function LinhaDoYoutube({
+  youtube,
+  busy,
+  onConectar,
+  onDesconectar,
+}: {
+  youtube: YoutubeAuthStatus;
+  busy: boolean;
+  onConectar?: () => void;
+  onDesconectar?: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-fio pt-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <Icon name="youtube" size={16} className={youtube.conectado ? 'text-erro' : 'text-fg-3'} />
+        {youtube.fluxo_em_andamento ? (
+          <span className="inline-flex items-center gap-1.5 text-corpo text-fg-2">
+            <Icon name="loader-2" className="animate-spin" />
+            Aguardando login no navegador…
+          </span>
+        ) : youtube.conectado ? (
+          <span className="truncate text-corpo text-fg">
+            YouTube conectado
+            {youtube.canal_titulo && <span className="text-fg-2"> · {youtube.canal_titulo}</span>}
+          </span>
+        ) : (
+          <span className="text-corpo text-fg-2">YouTube desconectado</span>
+        )}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2">
+        {youtube.conectado ? (
+          <Button
+            type="button"
+            variant="secundario"
+            size="pq"
+            onClick={onDesconectar}
+            disabled={busy || youtube.fluxo_em_andamento}
+          >
+            Desconectar
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="secundario"
+            size="pq"
+            onClick={onConectar}
+            disabled={busy || youtube.fluxo_em_andamento || !youtube.cliente_configurado}
+            title={
+              youtube.cliente_configurado
+                ? undefined
+                : 'Falta o client_secrets.json: veja "Como conectar o YouTube" abaixo'
+            }
+          >
+            {(busy || youtube.fluxo_em_andamento) && (
+              <Icon name="loader-2" className="animate-spin" />
+            )}
+            Conectar YouTube
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ChannelCard({
   canal,
   selecionando,
@@ -31,47 +105,46 @@ export function ChannelCard({
   onDesconectarYoutube,
   onChecarYoutube = () => {},
 }: ChannelCardProps) {
+  const { theme } = useUpgradeTheme();
+  const luz = luzDoCanalDe(canal, theme === 'dark' ? 'escuro' : 'claro');
+  const nome = canal.nome || canal.id;
   return (
     <li
-      className={`grid gap-3 rounded-[var(--radius)] border p-4 ${
-        canal.ativo
-          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
-          : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]'
-      }`}
+      data-sala=""
+      data-fio-de-luz={canal.ativo ? '' : undefined}
+      className={cn(
+        'grid gap-4 rounded-painel border bg-vidro p-5 shadow-topo',
+        // O fio de luz é lugar marcado (§3.1): só o cartão do canal ativo o leva.
+        canal.ativo ? 'cc-fio' : 'border-fio',
+      )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold text-[var(--wb-text)]">
-              {canal.nome || canal.id}
-            </h3>
-            {canal.ativo && (
-              <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-accent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-                <Icon name="circle-check" />
-                Ativo
-              </span>
-            )}
+      <div className="flex flex-wrap items-center gap-4">
+        <AvatarDoCanal nome={nome} luz={luz} tamanho={72} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-secao text-fg">{nome}</h3>
+            {canal.ativo && <Selo tom="ok">Canal ativo</Selo>}
           </div>
-          <p className="mt-0.5 truncate text-sm text-[var(--wb-text-mute)]">
+          <p className="mt-0.5 truncate text-corpo text-fg-2">
             {canal.handle || '—'}
-            <span className="mx-1.5 text-[var(--wb-text-dim)]">·</span>
-            <code className="text-xs text-[var(--wb-text-dim)]">{canal.id}</code>
+            <span className="mx-1.5 text-fg-3">·</span>
+            <code className="font-mono text-pequeno text-fg-3">{canal.id}</code>
           </p>
           {canal.youtube_channel_id && (
-            <p className="mt-0.5 truncate text-xs text-[var(--wb-text-dim)]">
+            <p className="mt-0.5 truncate text-pequeno text-fg-3">
               Canal-fonte: {canal.youtube_channel_id}
             </p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onEditar}>
+          <Button type="button" variant="secundario" size="pq" onClick={onEditar}>
             <Icon name={ICONE_DO_CONCEITO.editar} />
             Editar
           </Button>
           <Button
             type="button"
-            size="sm"
-            variant={canal.ativo ? 'ghost' : 'default'}
+            size="pq"
+            variant={canal.ativo ? 'fantasma' : 'secundario'}
             onClick={onSelecionar}
             disabled={canal.ativo || selecionando}
           >
@@ -81,73 +154,41 @@ export function ChannelCard({
         </div>
       </div>
 
-      {(canal.paleta.primaria || canal.paleta.secundaria || canal.paleta.acento) && (
-        <div className="flex items-center gap-1.5" aria-hidden>
+      <p
+        className="flex flex-wrap items-center gap-2 text-pequeno text-fg-3"
+        data-luz-do-canal={luz ? 'canal' : 'neutra'}
+      >
+        <span aria-hidden className="inline-flex gap-1.5">
           {[canal.paleta.primaria, canal.paleta.secundaria, canal.paleta.acento]
             .filter(Boolean)
             .map((cor, i) => (
               <span
                 key={`${cor}-${i}`}
-                className="h-4 w-4 rounded-full border border-[var(--wb-border)]"
-                style={{ backgroundColor: cor }}
-                title={cor}
+                className="size-4 rounded-full border border-fio-2"
+                style={{ backgroundColor: cor ?? undefined }}
+                title={cor ?? undefined}
               />
             ))}
-        </div>
-      )}
+        </span>
+        {canal.paleta.primaria || canal.paleta.secundaria || canal.paleta.acento
+          ? 'A luz do canal vem da paleta de identidade.'
+          : luz
+            ? 'A luz do canal é amostrada das capas; a paleta de identidade está vazia.'
+            : 'Sem luz ainda: a paleta de identidade está vazia e nenhuma capa foi amostrada.'}
+        <Button type="button" variant="fantasma" size="pq" onClick={onEditar}>
+          {canal.paleta.primaria || canal.paleta.secundaria || canal.paleta.acento
+            ? 'Editar paleta'
+            : 'Cadastrar paleta'}
+        </Button>
+      </p>
 
       {canal.ativo && youtube && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--wb-border-soft)] pt-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <Icon name="youtube" size={16} className={youtube.conectado ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text-dim)]'} />
-            {youtube.fluxo_em_andamento ? (
-              <span className="inline-flex items-center gap-1.5 text-sm text-[var(--wb-text-mute)]">
-                <Icon name="loader-2" className="animate-spin" />
-                Aguardando login no navegador…
-              </span>
-            ) : youtube.conectado ? (
-              <span className="truncate text-sm text-[var(--wb-text)]">
-                YouTube conectado
-                {youtube.canal_titulo && (
-                  <span className="text-[var(--wb-text-mute)]"> · {youtube.canal_titulo}</span>
-                )}
-              </span>
-            ) : (
-              <span className="text-sm text-[var(--wb-text-mute)]">YouTube desconectado</span>
-            )}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {youtube.conectado ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onDesconectarYoutube}
-                disabled={youtubeBusy || youtube.fluxo_em_andamento}
-              >
-                Desconectar
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                onClick={onConectarYoutube}
-                disabled={youtubeBusy || youtube.fluxo_em_andamento || !youtube.cliente_configurado}
-                title={
-                  youtube.cliente_configurado
-                    ? undefined
-                    : 'Falta o client_secrets.json: veja "Como conectar o YouTube" abaixo'
-                }
-              >
-                {(youtubeBusy || youtube.fluxo_em_andamento) && (
-                  <Icon name="loader-2" className="animate-spin" />
-                )}
-                Conectar YouTube
-              </Button>
-            )}
-          </div>
-        </div>
+        <LinhaDoYoutube
+          youtube={youtube}
+          busy={youtubeBusy}
+          onConectar={onConectarYoutube}
+          onDesconectar={onDesconectarYoutube}
+        />
       )}
 
       {canal.ativo && youtube && !youtube.conectado && (
@@ -159,7 +200,7 @@ export function ChannelCard({
       )}
 
       {canal.ativo && youtube?.erro && !youtube.fluxo_em_andamento && (
-        <p className="text-xs text-[var(--wb-err)]">Erro no login: {youtube.erro}</p>
+        <p className="text-pequeno text-erro">Erro no login: {youtube.erro}</p>
       )}
     </li>
   );

@@ -1,7 +1,8 @@
 import type { PalcoComponentes, PalcoComponentesEdicao } from '@/features/channels/api/canais';
 import { PALETTE } from '@/shared/palco/youtubeBackgrounds';
 import { COR_DO_ACENTO, COR_DO_FUNDO, COR_DO_TEXTO } from '@/shared/palco/palcoLimpo';
-import { Icon } from '@/upgrade/Icon';
+import { CartaoDeOpcao } from '@/components/ui/cartao-de-opcao';
+import { GrupoDeRadio } from '@/components/ui/radio';
 import type { EstiloDaLegenda, FundoDoShort, PosicaoEditavel } from './ControlesDoPalco';
 import { cardsEditaveisDe, SEM_CAIXA, type CardsEditaveis } from './CardsDoCanal';
 
@@ -88,7 +89,10 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
     fundo_short: rascunho.fundoShort,
     estilo_da_legenda: rascunho.estiloDaLegenda,
     // D-941: nulo some na edição parcial; o "sem caixa" pedido vai como a caixa vazia.
-    cards: rascunho.cards.zona_no_cheio === null ? { ...rascunho.cards, zona_no_cheio: SEM_CAIXA } : rascunho.cards,
+    cards:
+      rascunho.cards.zona_no_cheio === null
+        ? { ...rascunho.cards, zona_no_cheio: SEM_CAIXA }
+        : rascunho.cards,
     cabecalho: {
       ativo: rascunho.cabecalhoAtivo,
       mostrar_imagem: rascunho.mostrarImagem,
@@ -108,40 +112,35 @@ export function edicaoDe(rascunho: RascunhoDoPalco): PalcoComponentesEdicao {
   };
 }
 
-export function EscolhaDoEstilo({ estilo, onEscolher }: { estilo: Estilo; onEscolher: (e: Estilo) => void }) {
+export function EscolhaDoEstilo({
+  estilo,
+  onEscolher,
+}: {
+  estilo: Estilo;
+  onEscolher: (e: Estilo) => void;
+}) {
+  // D-1172 (§7.7): escolha única em cartões de opção (rádio no canto); o escolhido leva
+  // fundo e fio de íris, não mais o vermelho de "selecionado".
   return (
     <fieldset className="grid gap-2">
-      <legend className="text-xs font-medium text-text-300">Estilo do palco</legend>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {ESTILOS.map((opcao) => {
-          const atual = estilo === opcao.id;
-          return (
-            <button
-              key={opcao.id}
-              type="button"
-              aria-pressed={atual}
-              onClick={() => onEscolher(opcao.id)}
-              className={`grid gap-2 rounded-[var(--radius)] border p-4 text-left transition ${
-                atual
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-                  : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] hover:border-[var(--wb-border)]'
-              }`}
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-[var(--wb-text)]">{opcao.nome}</span>
-                {atual && (
-                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-accent)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--wb-accent-fg)]">
-                    <Icon name="check" />
-                    Selecionado
-                  </span>
-                )}
-              </span>
-              <AmostraDoEstilo estilo={opcao.id} />
-              <span className="text-xs text-[var(--wb-text-dim)]">{opcao.descricao}</span>
-            </button>
-          );
-        })}
-      </div>
+      <legend className="text-pequeno font-semibold text-fg-2">Estilo do palco</legend>
+      <GrupoDeRadio
+        value={estilo}
+        onValueChange={(v) => onEscolher(v as Estilo)}
+        aria-label="Estilo do palco"
+        className="grid gap-3 sm:grid-cols-2"
+      >
+        {ESTILOS.map((opcao) => (
+          <CartaoDeOpcao
+            key={opcao.id}
+            value={opcao.id}
+            titulo={opcao.nome}
+            descricao={opcao.descricao}
+          >
+            <AmostraDoEstilo estilo={opcao.id} />
+          </CartaoDeOpcao>
+        ))}
+      </GrupoDeRadio>
     </fieldset>
   );
 }
@@ -161,7 +160,11 @@ export function ItensDoCabecalho({
   onMudar: (rascunho: RascunhoDoPalco) => void;
 }) {
   return (
-    <div role="group" aria-label="Itens do cabeçalho" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--wb-text)]">
+    <div
+      role="group"
+      aria-label="Itens do cabeçalho"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--wb-text)]"
+    >
       <span className="text-xs text-[var(--wb-text-dim)]">Mostrar:</span>
       {ITENS_DO_CABECALHO.map((item) => (
         <label key={item.chave} className="flex items-center gap-1.5">
@@ -198,10 +201,34 @@ function AmostraDoEstilo({ estilo }: { estilo: Estilo }) {
   return (
     <svg viewBox="0 0 160 90" className="h-[90px] w-full rounded-[var(--radius-sm)]" aria-hidden>
       <rect width="160" height="90" fill={PALETTE.bg} />
-      <path d="M44 10 H140 L150 20 V80 H44 Z" fill={janela} stroke={PALETTE.lineBright} strokeWidth="0.8" />
-      <rect x="8" y="56" width="30" height="24" rx="2" fill={janela} stroke={PALETTE.lineBright} strokeWidth="0.8" />
-      <path d="M8 12 H34 L38 16 V46 H8 Z" fill={PALETTE.green} stroke={PALETTE.lineSoft} strokeWidth="0.6" />
-      <path d="M4 10 H10 M4 10 V16 M156 80 H150 M156 80 V74" stroke={PALETTE.bracket} strokeWidth="2" fill="none" />
+      <path
+        d="M44 10 H140 L150 20 V80 H44 Z"
+        fill={janela}
+        stroke={PALETTE.lineBright}
+        strokeWidth="0.8"
+      />
+      <rect
+        x="8"
+        y="56"
+        width="30"
+        height="24"
+        rx="2"
+        fill={janela}
+        stroke={PALETTE.lineBright}
+        strokeWidth="0.8"
+      />
+      <path
+        d="M8 12 H34 L38 16 V46 H8 Z"
+        fill={PALETTE.green}
+        stroke={PALETTE.lineSoft}
+        strokeWidth="0.6"
+      />
+      <path
+        d="M4 10 H10 M4 10 V16 M156 80 H150 M156 80 V74"
+        stroke={PALETTE.bracket}
+        strokeWidth="2"
+        fill="none"
+      />
     </svg>
   );
 }

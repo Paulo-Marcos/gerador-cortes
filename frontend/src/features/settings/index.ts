@@ -2,5 +2,6 @@
 // globais e a leitura das que valem para o app inteiro.
 export { AppSettingsControls } from './AppSettingsControls';
 export { ModelosDeIa } from './ModelosDeIa';
+export { NomeDoOperador } from './NomeDoOperador';
 export { normalizarVelocidade, useVelocidadePlayerPadrao } from './useVelocidadePlayerPadrao';
 export { useContextoCorte } from './useContextoCorte';
