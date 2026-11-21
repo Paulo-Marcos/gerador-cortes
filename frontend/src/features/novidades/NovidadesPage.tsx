@@ -5,9 +5,12 @@
 // release publica); a IA o reescreve para quem usa, com o "como usar", e a
 // tradução fica guardada. O que entrou desde a última visita vem marcado.
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { Icon } from '@/upgrade/Icon';
+import { Button } from '@/components/ui/button';
+import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { Icon } from '@/components/ui/icon';
+import { Selo } from '@/components/ui/selo';
 import type { VersaoDasNovidades } from './api';
 import { CartaoDaNovidade } from './CartaoDaNovidade';
 import { tituloDaVersao } from './rotulos';
@@ -44,21 +47,21 @@ function SecaoDaVersao({ versao, aberta, onAlternar, novas, traduzindo }: SecaoP
         type="button"
         onClick={onAlternar}
         aria-expanded={aberta}
-        className="flex items-center gap-2 text-left"
+        className="flex items-center gap-2 text-left text-fg"
       >
         <Icon name={aberta ? 'chevron-down' : 'chevron-right'} />
-        <h2 className="text-[15px] font-bold">{tituloDaVersao(versao.versao, versao.data)}</h2>
-        <span className="text-[12px] text-[var(--wb-text-mute)]">
+        <h2 className="text-linha font-semibold">{tituloDaVersao(versao.versao, versao.data)}</h2>
+        <span className="text-pequeno text-fg-3">
           {versao.novidades.length} {versao.novidades.length === 1 ? 'mudança' : 'mudanças'}
         </span>
         {quantasNovas > 0 && (
-          <span className="rounded bg-[var(--wb-accent)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--wb-accent-fg)]">
+          <Selo tom="convite">
             {quantasNovas} {quantasNovas === 1 ? 'nova' : 'novas'}
-          </span>
+          </Selo>
         )}
       </button>
       {aberta && (
-        <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))]">
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))]">
           {versao.novidades.map((n) => (
             <CartaoDaNovidade
               key={n.chave}
@@ -90,26 +93,32 @@ export default function NovidadesPage() {
   );
 
   if (lista.isError) {
-    return <p className="text-[13px] text-[var(--wb-err)]">Não deu para ler o CHANGELOG.</p>;
+    return (
+      <EstadoDeErro
+        titulo="Não deu para ler o CHANGELOG"
+        motivo="O arquivo de novidades não abriu. Confira se o app está de pé."
+        aoTentar={() => void lista.refetch()}
+      />
+    );
   }
 
   return (
-    <div className={cn('flex h-full min-h-0 flex-col gap-4 overflow-y-auto text-[var(--wb-text)]')}>
+    <div className="flex flex-col gap-5 text-fg">
       {erro && (
         <div
           role="alert"
-          className="flex flex-none flex-wrap items-center gap-2 rounded-md bg-[var(--wb-err-soft)] px-3 py-2 text-[12px] text-[var(--wb-err)]"
+          className="flex flex-wrap items-center gap-2 rounded-bloco border border-[color-mix(in_srgb,var(--cc-erro)_22%,transparent)] bg-[color-mix(in_srgb,var(--cc-erro)_7%,transparent)] px-3 py-2 text-pequeno text-erro"
         >
           <Icon name="triangle-alert" />
           <span>A IA não traduziu: {erro}. O texto segue em inglês.</span>
-          <button type="button" onClick={tentarDeNovo} className="font-bold underline">
+          <Button variant="fantasma" size="pq" onClick={tentarDeNovo}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       )}
-      {lista.isPending && <p className="text-[13px] text-[var(--wb-text-mute)]">Carregando…</p>}
+      {lista.isPending && <EstadoCarregando frase="Carregando as novidades…" linhas={2} />}
       {!lista.isPending && versoes.length === 0 && (
-        <p className="text-[13px] text-[var(--wb-text-mute)]">O CHANGELOG está vazio.</p>
+        <EstadoVazio icone="inbox" titulo="O CHANGELOG está vazio" />
       )}
       {versoes.map((v) => (
         <SecaoDaVersao

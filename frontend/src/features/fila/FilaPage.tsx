@@ -4,8 +4,13 @@ import {
   type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { Icon, type IconName } from '@/components/ui/icon';
+import { LinhaDaLista, Lista } from '@/components/ui/lista';
+import { Progresso } from '@/components/ui/progresso';
+import { Selo, type TomDoSelo } from '@/components/ui/selo';
 import { DetalheDasExecucoes } from '@/upgrade/GavetaDaFila';
-import { Icon, type IconName } from '@/upgrade/Icon';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
@@ -32,18 +37,17 @@ import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 // terminou, e diz isso no rótulo.
 // ─────────────────────────────────────────────────────────────────
 
-const TOM: Record<JobEstado, { texto: string; cor: string; bg: string; barra: string }> = {
-  aguardando: { texto: 'na espera', cor: 'var(--mute)', bg: 'var(--inset)', barra: 'var(--inset)' },
-  rodando: {
-    texto: 'rodando',
-    cor: 'var(--accent2)',
-    bg: 'var(--accent-soft)',
-    barra: 'var(--accent)',
-  },
-  concluido: { texto: 'concluído', cor: 'var(--ok)', bg: 'var(--ok-soft)', barra: 'var(--ok)' },
-  erro: { texto: 'erro', cor: 'var(--err)', bg: 'var(--err-soft)', barra: 'var(--err)' },
-  cancelado: { texto: 'cancelado', cor: 'var(--mute)', bg: 'var(--inset)', barra: 'var(--inset)' },
-  perdido: { texto: 'perdido', cor: 'var(--warn)', bg: 'var(--warn-soft)', barra: 'var(--warn)' },
+// D-1178 (E-069 H-23; DIRECAO §7.13): mesma casca da gaveta da fila (§7.11), em tela cheia.
+// Cada job é uma linha de `Lista`, o estado é um `Selo` e o andamento é o `Progresso`.
+// Fila não tem primário (PRIMARIOS_POR_TELA): "Cancelar" é destrutivo e o resto é secundário.
+
+const TOM: Record<JobEstado, { texto: string; selo: TomDoSelo }> = {
+  aguardando: { texto: 'na espera', selo: 'inerte' },
+  rodando: { texto: 'rodando', selo: 'curso' },
+  concluido: { texto: 'concluído', selo: 'ok' },
+  erro: { texto: 'erro', selo: 'erro' },
+  cancelado: { texto: 'cancelado', selo: 'inerte' },
+  perdido: { texto: 'perdido', selo: 'convite' },
 };
 
 const ICONE_FAMILIA: Record<string, IconName> = {
@@ -81,27 +85,16 @@ function LinhaJob({
   onRemover: () => void;
 }) {
   const tom = TOM[job.estado];
-  const pct = `${Math.round(job.progresso)}%`;
   const tempo = decorrido(job);
   const andando = emAndamento(job);
   const [aberta, setAberta] = useState(false);
 
   return (
-    <article
-      className="card"
-      style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '11px 12px' }}
-    >
-      <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 9 }}>
+    <LinhaDaLista className="!flex flex-col !items-stretch gap-2">
+      <div className="flex flex-wrap items-center gap-2.5">
         <span
-          style={{
-            display: 'grid',
-            placeItems: 'center',
-            width: 26,
-            height: 26,
-            borderRadius: 'var(--r2)',
-            background: tom.bg,
-            color: tom.cor,
-          }}
+          aria-hidden
+          className="inline-grid size-7 flex-none place-items-center rounded-bloco bg-vidro-2 text-fg-2"
         >
           <Icon name={ICONE_FAMILIA[job.familia] ?? 'loader'} />
         </span>
@@ -112,89 +105,51 @@ function LinhaJob({
           onClick={() => setAberta((v) => !v)}
           aria-expanded={aberta}
           title={aberta ? 'Recolher o detalhe' : 'Ver tempos e linha do tempo (D-769)'}
-          style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, padding: 0, border: 0, background: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-corpo font-semibold text-fg"
         >
-          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} style={{ color: 'var(--mute)' }} />
-          <span style={{ minWidth: 0, fontSize: 12.5, fontWeight: 700 }}>{job.rotulo}</span>
+          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} className="text-fg-3" />
+          <span className="min-w-0">{job.rotulo}</span>
         </button>
-        <span className="chip" style={{ background: tom.bg, color: tom.cor }}>
-          {tom.texto}
-        </span>
-        {tempo ? (
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-            {tempo}
-          </span>
-        ) : null}
+        <Selo tom={tom.selo}>{tom.texto}</Selo>
+        {tempo ? <span className="font-mono text-pequeno text-fg-3">{tempo}</span> : null}
 
         {/* Dois botões diferentes porque são dois atos diferentes: interromper
             o trabalho, ou arquivar a linha de um trabalho que já acabou.
             Oferecer só o segundo, com o nome do primeiro, era a falha. */}
         {andando ? (
-          <button
-            type="button"
-            className="btn btn-sm btn-danger"
+          <Button
+            variant="destrutivo"
+            size="pq"
             title="Cancelar este job — o processo é interrompido no servidor"
             aria-label={`Cancelar ${job.rotulo} (${job.etapa})`}
             onClick={onCancelar}
           >
             <Icon name="x" />
             Cancelar
-          </button>
+          </Button>
         ) : (
-          <button
-            type="button"
-            className="btn btn-icon btn-sm"
+          <Button
+            variant="icone"
+            size="pq"
             title="Tirar da lista (o job já terminou)"
             aria-label={`Tirar ${job.rotulo} da lista`}
             onClick={onRemover}
           >
             <Icon name="x" />
-          </button>
+          </Button>
         )}
-      </span>
+      </div>
 
-      <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-        <span
-          style={{ flex: 1, height: 4, borderRadius: 2, background: 'var(--inset)' }}
-          aria-hidden
-        >
-          <span
-            style={{
-              display: 'block',
-              height: '100%',
-              width: pct,
-              borderRadius: 2,
-              background: tom.barra,
-            }}
-          />
-        </span>
-        <span
-          style={{
-            fontFamily: 'var(--mono)',
-            fontSize: 11,
-            color: 'var(--mute)',
-            width: 38,
-            textAlign: 'right',
-          }}
-        >
-          {pct}
-        </span>
-      </span>
+      <Progresso valor={job.progresso} rotulo={`Andamento de ${job.rotulo}`} />
 
       {/* O log em mono é a única linha da tela que muda sozinha. Ele responde
           "travou ou está andando?" sem abrir nada. */}
-      <span
-        style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 11,
-          color: job.erro ? 'var(--err)' : 'var(--mute)',
-        }}
-      >
+      <span className={`font-mono text-pequeno ${job.erro ? 'text-erro' : 'text-fg-3'}`}>
         {job.erro || job.etapa || '—'}
       </span>
 
       {aberta ? <DetalheDasExecucoes jobs={[job]} /> : null}
-    </article>
+    </LinhaDaLista>
   );
 }
 
@@ -232,37 +187,28 @@ export default function FilaPage() {
 
   if (jobs.length === 0) {
     return (
-      <div
-        className="card"
-        style={{
-          display: 'grid',
-          placeItems: 'center',
-          gap: 7,
-          padding: 22,
-          textAlign: 'center',
-          maxWidth: 960,
-        }}
-      >
-        <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
-        <span style={{ fontSize: 12.5, fontWeight: 700 }}>Nada na fila</span>
-        <span style={{ fontSize: 11.5, color: 'var(--mute)', maxWidth: 260, lineHeight: 1.5 }}>
-          Download, análise, render e publicação aparecem aqui enquanto rodam — venha de qual tela
-          vier.
-        </span>
+      <div className="h-full overflow-auto px-7 py-6">
+        <EstadoVazio
+          icone="inbox"
+          titulo="Nada na fila"
+          descricao="Download, análise, render e publicação aparecem aqui enquanto rodam — venha de qual tela vier."
+        />
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 960 }}>
-      {jobs.map((job) => (
-        <LinhaJob
-          key={job.id}
-          job={job}
-          onCancelar={() => void cancelJob(job.id)}
-          onRemover={() => removeJob(job.id)}
-        />
-      ))}
+    <div className="h-full overflow-auto px-7 py-6 text-fg">
+      <Lista colunas="1fr" aria-label="Jobs da fila" className="max-w-[960px]">
+        {jobs.map((job) => (
+          <LinhaJob
+            key={job.id}
+            job={job}
+            onCancelar={() => void cancelJob(job.id)}
+            onRemover={() => removeJob(job.id)}
+          />
+        ))}
+      </Lista>
     </div>
   );
 }

@@ -56,8 +56,6 @@ const WorkspaceDoFirePage = lazy(() =>
 const ShortsProntosPage = lazy(() =>
   import('./features/shorts/ShortsProntosPage').then((m) => ({ default: m.default })),
 );
-// D-922: as novidades de cada versão, em português.
-const NovidadesPage = lazy(() => import('@/features/novidades/NovidadesPage'));
 const AtalhosPage = lazy(() =>
   import('@/features/atalhos/AtalhosPage').then((m) => ({ default: m.AtalhosPage })),
 );
@@ -110,7 +108,8 @@ export const router = createBrowserRouter([
       { path: 'shorts/:corteId', element: <PalcoDoCortePelaRota tipo="short"><FireDetalhePage /></PalcoDoCortePelaRota> },
       { path: 'shorts/:corteId/workspace', element: <PalcoDoCortePelaRota tipo="short"><WorkspaceDoFirePage /></PalcoDoCortePelaRota> },
       { path: 'atalhos', element: <AtalhosPage /> },
-      { path: 'novidades', element: <NovidadesPage /> },
+      // D-1178: Novidades é a segunda aba de Atalhos (DIRECAO §7.13); /novidades abre nela.
+      { path: 'novidades', element: <AtalhosPage /> },
       { path: 'fila', element: <FilaPage /> },
       {
         path: '*',

@@ -1,10 +1,11 @@
-// Etapa 7 + D-394 (validação 1): página de Atalhos estilo VS Code,
+// D-1178 (E-069 H-23; DIRECAO §7.13): na Sala escura, com `Tabela`, `Segmented`, `Busca` e
+// `Kbd`; as Novidades (D-922) entram aqui como a segunda aba. Tela de configuração de teclas:
+// sem primário. Etapa 7 + D-394 (validação 1): página de Atalhos estilo VS Code,
 // renderizada do shortcutsRegistry e agora EDITÁVEL — cada linha aceita
 // reatribuição de tecla (overlay `wb-keybindings-v1` em localStorage),
 // com validação de conflito via assertNoShortcutConflicts. A nova
 // combinação vale para todas as telas ao recarregar a página.
 import { useEffect, useMemo, useState } from 'react';
-import { cn } from '@/lib/utils';
 import type { ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import {
   assertNoShortcutConflicts,
@@ -18,8 +19,25 @@ import {
   type ShortcutId,
   type ShortcutScreen,
 } from '@/shared/atalhos/shortcutsRegistry';
+import { Button } from '@/components/ui/button';
+import { Busca } from '@/components/ui/busca';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { Icon, ICONE_DO_CONCEITO } from '@/components/ui/icon';
+import { Kbd } from '@/components/ui/kbd';
+import { Segmented } from '@/components/ui/segmented';
+import { Selo } from '@/components/ui/selo';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import NovidadesPage from '@/features/novidades/NovidadesPage';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
   { id: 'todas', rotulo: 'Todas' },
@@ -40,16 +58,11 @@ const TELA_LABEL: Record<ShortcutScreen, string> = {
   'pos-cenas': 'Cenas',
 };
 
-function Kbd({ combo }: { combo: string }) {
+function Combo({ combo }: { combo: string }) {
   return (
     <span className="inline-flex gap-1">
       {combo.split('+').map((parte, i) => (
-        <kbd
-          key={i}
-          className="rounded-[5px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-1.5 py-0.5 font-code text-[10px] font-bold text-[var(--wb-text)]"
-        >
-          {parte}
-        </kbd>
+        <Kbd key={i}>{parte}</Kbd>
       ))}
     </span>
   );
@@ -67,7 +80,10 @@ function overrideDoEvento(event: KeyboardEvent): KeyOverride | null {
   return { key: event.key, mod };
 }
 
-export function AtalhosPage() {
+type Aba = 'atalhos' | 'novidades';
+
+/** Estado da edição: busca, filtro de tela, captura da próxima tecla e o overlay salvo. */
+function useEdicaoDeAtalhos() {
   const [busca, setBusca] = useState('');
   const [tela, setTela] = useState<ShortcutScreen | 'todas'>('todas');
   const [overlay, setOverlay] = useState<KeybindingsOverlay>(() => loadKeybindingsOverlay());
@@ -136,160 +152,174 @@ export function AtalhosPage() {
 
   const totalCustom = Object.keys(overlay).length;
 
+  return {
+    busca, setBusca, tela, setTela, overlay, capturando, setCapturando, erro, setErro,
+    pendenteAplicar, specs, linhas, restaurarLinha, restaurarTudo, totalCustom,
+  };
+}
+
+type Edicao = ReturnType<typeof useEdicaoDeAtalhos>;
+
+/** Erro de conflito, contagem de personalizados e os botões de aplicar/restaurar. */
+function FaixaDeEstado({ e }: { e: Edicao }) {
+  const { erro, totalCustom, pendenteAplicar, restaurarTudo } = e;
+  if (!erro && !pendenteAplicar && totalCustom === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {erro && <Selo tom="erro">Conflito: {erro}</Selo>}
+      {totalCustom > 0 && (
+        <Selo tom="neutro">
+          {totalCustom} atalho{totalCustom > 1 ? 's' : ''} customizado
+          {totalCustom > 1 ? 's' : ''}
+        </Selo>
+      )}
+      {pendenteAplicar && (
+        <Button size="pq" onClick={() => window.location.reload()}>
+          <Icon name="refresh-cw" />
+          Aplicar mudanças (recarrega a página)
+        </Button>
+      )}
+      {totalCustom > 0 && (
+        <Button variant="fantasma" size="pq" onClick={restaurarTudo}>
+          Restaurar todos os padrões
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function LinhaDoAtalho({ e, spec }: { e: Edicao; spec: Edicao['specs'][number] }) {
+  const custom = Boolean(e.overlay[spec.id]);
+  const emCaptura = e.capturando === spec.id;
+  return (
+    <TabelaLinha>
+      <TabelaCelula>
+        {spec.description}
+        {custom && (
+          <Selo tom="neutro" className="ml-2">
+            custom
+          </Selo>
+        )}
+      </TabelaCelula>
+      <TabelaCelula>
+        {emCaptura ? (
+          <Selo tom="convite">pressione a combinação…</Selo>
+        ) : (
+          <Combo combo={shortcutCombo(spec)} />
+        )}
+      </TabelaCelula>
+      <TabelaCelula className="text-fg-3">{TELA_LABEL[spec.screen]}</TabelaCelula>
+      <TabelaCelula aDireita>
+        <Button
+          variant="icone"
+          size="pq"
+          onClick={() => {
+            e.setErro(null);
+            e.setCapturando(emCaptura ? null : spec.id);
+          }}
+          aria-label={`Editar atalho de ${spec.description}`}
+        >
+          <Icon name={ICONE_DO_CONCEITO.editar} />
+        </Button>
+        {custom && (
+          <Button
+            variant="icone"
+            size="pq"
+            onClick={() => e.restaurarLinha(spec.id)}
+            aria-label={`Restaurar padrão de ${spec.description}`}
+            title="Restaurar padrão"
+            className="ml-1"
+          >
+            <Icon name="rotate-ccw" />
+          </Button>
+        )}
+      </TabelaCelula>
+    </TabelaLinha>
+  );
+}
+
+/** Os atalhos editáveis; a aba "Novidades" é a `NovidadesPage` da D-922. */
+function TabelaDeAtalhos() {
+  const e = useEdicaoDeAtalhos();
+  const { specs, totalCustom, linhas } = e;
+
   useDefinirChrome(
     { sub: `${specs.length} atalhos · ${totalCustom} personalizados` },
     [specs.length, totalCustom],
   );
 
   return (
-    <div
-      className={cn(
-        'flex min-h-0 flex-col gap-3 overflow-hidden text-[var(--wb-text)]',
-        'h-full',
-        'h-full',
-      )}
-    >
-      <header className="flex flex-none flex-wrap items-center gap-2">
-        <div className="flex-1" />
-        <div className="flex gap-1.5">
-          {TELAS.map(({ id, rotulo }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTela(id)}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-[10px] font-semibold',
-                tela === id
-                  ? 'bg-[var(--wb-accent)] font-bold text-[var(--wb-accent-fg)]'
-                  : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-              )}
-            >
-              {rotulo}
-            </button>
-          ))}
-        </div>
-        <label className="flex h-8 min-w-[190px] items-center gap-2 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs text-[var(--wb-text-mute)]">
-          <Icon name="search" />
-          <input
-            value={busca}
-            onChange={(event) => setBusca(event.target.value)}
-            placeholder="buscar comando ou tecla…"
-            className="min-w-0 flex-1 bg-transparent text-[var(--wb-text)] outline-none placeholder:text-[var(--wb-text-dim)]"
+    <div className="flex min-h-0 flex-col gap-4 text-fg">
+      <div className="flex flex-wrap items-center gap-3">
+        <Segmented
+          aria-label="Tela dos atalhos"
+          value={e.tela}
+          onValueChange={e.setTela}
+          opcoes={TELAS.map(({ id, rotulo }) => ({ valor: id, rotulo }))}
+        />
+        <div className="ml-auto w-[260px]">
+          <Busca
+            value={e.busca}
+            aoMudar={e.setBusca}
+            aria-label="Buscar comando ou tecla"
+            placeholder="Buscar comando ou tecla…"
           />
-        </label>
-      </header>
-
-      {(erro || pendenteAplicar || totalCustom > 0) && (
-        <div className="flex flex-none flex-wrap items-center gap-2 text-xs">
-          {erro && (
-            <span className="rounded-md bg-[var(--wb-err-soft)] px-2.5 py-1 font-semibold text-[var(--wb-err)]">
-              Conflito: {erro}
-            </span>
-          )}
-          {totalCustom > 0 && (
-            <span className="rounded-md bg-[var(--wb-accent-soft)] px-2.5 py-1 font-semibold text-[var(--wb-accent)]">
-              {totalCustom} atalho{totalCustom > 1 ? 's' : ''} customizado
-              {totalCustom > 1 ? 's' : ''}
-            </span>
-          )}
-          {pendenteAplicar && (
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="rounded-md bg-[var(--wb-warn-soft)] px-2.5 py-1 font-bold text-[var(--wb-warn)]"
-            >
-              ↻ Aplicar mudanças (recarrega a página)
-            </button>
-          )}
-          {totalCustom > 0 && (
-            <button
-              type="button"
-              onClick={restaurarTudo}
-              className="rounded-md bg-[var(--wb-bg-inset)] px-2.5 py-1 font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-            >
-              ↺ Restaurar todos os padrões
-            </button>
-          )}
         </div>
-      )}
-
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]">
-        <table className="w-full border-collapse text-left">
-          <thead className="sticky top-0 bg-[var(--wb-bg-inset)]">
-            <tr>
-              {['Comando', 'Atalho', 'Tela', ''].map((coluna, i) => (
-                <th
-                  key={i}
-                  className="border-b border-[var(--wb-border-soft)] px-3 py-2 font-code text-[9px] font-extrabold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]"
-                >
-                  {coluna}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {linhas.map((spec) => {
-              const custom = Boolean(overlay[spec.id]);
-              const emCaptura = capturando === spec.id;
-              return (
-                <tr key={spec.id} className="border-b border-[var(--wb-border-soft)]">
-                  <td className="px-3 py-2 text-[12px] font-medium">
-                    {spec.description}
-                    {custom && (
-                      <span className="ml-2 rounded-full bg-[var(--wb-accent-soft)] px-1.5 py-0.5 font-code text-[8px] font-bold text-[var(--wb-accent)]">
-                        custom
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {emCaptura ? (
-                      <span className="rounded-md bg-[var(--wb-warn-soft)] px-2 py-1 font-code text-[10px] font-bold text-[var(--wb-warn)]">
-                        pressione a combinação…
-                      </span>
-                    ) : (
-                      <Kbd combo={shortcutCombo(spec)} />
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-[11px] text-[var(--wb-text-mute)]">
-                    {TELA_LABEL[spec.screen]}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setErro(null);
-                        setCapturando(emCaptura ? null : spec.id);
-                      }}
-                      aria-label={`Editar atalho de ${spec.description}`}
-                      className="rounded-md px-1.5 py-0.5 text-[12px] text-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
-                    >
-                      <Icon name={ICONE_DO_CONCEITO.editar} />
-                    </button>
-                    {custom && (
-                      <button
-                        type="button"
-                        onClick={() => restaurarLinha(spec.id)}
-                        aria-label={`Restaurar padrão de ${spec.description}`}
-                        title="Restaurar padrão"
-                        className="ml-1 rounded-md px-1.5 py-0.5 text-[12px] text-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
-                      >
-                        ↺
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {linhas.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-sm text-[var(--wb-text-dim)]">
-                  Nenhum atalho encontrado para o filtro atual.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
       </div>
+
+      <FaixaDeEstado e={e} />
+
+      {linhas.length === 0 ? (
+        <EstadoVazio
+          icone="search"
+          titulo="Nenhum atalho encontrado"
+          descricao="Nenhum atalho encontrado para o filtro atual."
+        />
+      ) : (
+        <Tabela>
+          <TabelaCabeca>
+            <tr>
+              <TabelaTitulo>Comando</TabelaTitulo>
+              <TabelaTitulo>Atalho</TabelaTitulo>
+              <TabelaTitulo>Tela</TabelaTitulo>
+              <TabelaTitulo aria-label="Ações" />
+            </tr>
+          </TabelaCabeca>
+          <TabelaCorpo>
+            {linhas.map((spec) => (
+              <LinhaDoAtalho key={spec.id} e={e} spec={spec} />
+            ))}
+          </TabelaCorpo>
+        </Tabela>
+      )}
+    </div>
+  );
+}
+
+/** A aba vem da URL: /novidades é a aba Novidades, o resto é Atalhos. Assim trocar de uma
+ *  rota para a outra (trilho, paleta) troca a aba, e o trilho marca a tela certa. */
+export function AtalhosPage() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const aba: Aba = pathname.startsWith('/novidades') ? 'novidades' : 'atalhos';
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-5 overflow-auto px-7 py-6 text-fg">
+      <Tabs
+        value={aba}
+        onValueChange={(v) => navigate(v === 'novidades' ? '/novidades' : '/atalhos')}
+        className="flex flex-col gap-5"
+      >
+        <TabsList aria-label="Atalhos e novidades">
+          <TabsTrigger value="atalhos">Atalhos</TabsTrigger>
+          <TabsTrigger value="novidades">Novidades</TabsTrigger>
+        </TabsList>
+        <TabsContent value="atalhos">
+          <TabelaDeAtalhos />
+        </TabsContent>
+        <TabsContent value="novidades">
+          <NovidadesPage />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
