@@ -21,7 +21,7 @@ interface Props {
 }
 
 const COR_DA_INTENSIDADE: Record<Intensidade, string> = {
-  forte: 'bg-iris-suave text-iris',
+  forte: 'bg-iris text-sobre-iris',
   medio: 'bg-iris-suave',
   fraco: 'bg-poco',
 };
