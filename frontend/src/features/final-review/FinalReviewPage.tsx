@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Selo } from '@/components/ui/selo';
+import { Etiqueta } from '@/components/ui/etiqueta';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
@@ -149,44 +154,34 @@ export function FinalReviewPage() {
 
   if (!corteId && !cortesQuery.isLoading && cortes.length === 0) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center text-[var(--wb-text-mute)]">
-        <h1 className="font-editorial text-3xl font-medium text-[var(--wb-text)]">
-          Este projeto ainda não tem cortes
-        </h1>
-        <p className="max-w-md text-sm">Gere ou importe cortes antes de abrir a revisão final.</p>
-      </div>
+      <EstadoVazio
+        className="min-h-screen"
+        titulo="Este projeto ainda não tem cortes"
+        descricao="Gere ou importe cortes antes de abrir a revisão final."
+      />
     );
   }
 
   if (corteQuery.isError || cortesQuery.isError || exportStatusQ.isError) {
     const failed = corteQuery.error ?? cortesQuery.error ?? exportStatusQ.error;
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center text-[var(--wb-text-mute)]">
-        <h1 className="font-editorial text-3xl font-medium text-error">
-          Erro ao carregar revisão final
-        </h1>
-        <p className="max-w-md text-sm">
-          {failed instanceof Error ? failed.message : 'Tente novamente em instantes.'}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            void corteQuery.refetch();
-            void cortesQuery.refetch();
-            void exportStatusQ.refetch();
-          }}
-        >
-          <Icon name="refresh-cw" />
-          Tentar novamente
-        </Button>
-      </div>
+      <EstadoDeErro
+        className="min-h-screen rounded-none"
+        titulo="Erro ao carregar revisão final"
+        motivo={failed instanceof Error ? failed.message : 'Tente novamente em instantes.'}
+        acao="Tentar novamente"
+        aoTentar={() => {
+          void corteQuery.refetch();
+          void cortesQuery.refetch();
+          void exportStatusQ.refetch();
+        }}
+      />
     );
   }
 
   if (corteQuery.isLoading || cortesQuery.isLoading || exportStatusQ.isLoading || !corte) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-[var(--wb-text-dim)]">
+      <div role="status" className="flex min-h-screen items-center justify-center text-corpo text-fg-3">
         <Icon name="loader-2" size={20} className="mr-2 animate-spin" />
         Carregando revisão final...
       </div>
@@ -266,19 +261,8 @@ export function FinalReviewPage() {
   // Grid do conteúdo (player + checklist/capa + timeline read-only) —
   // compartilhado entre o shell legado e o Workbench.
   const conteudoFinal = (
-    <div
-      className="grid min-h-0 flex-1"
-      style={{
-        gridTemplateColumns: '1.5fr 320px',
-        // DE-PARA-v3 §4: 220px fixos cortavam a trilha LAYOUT YT e o eixo na
-        // borda inferior. `minmax(200px, auto)` dá à timeline pelo menos a
-        // altura natural dela e deixa o player ceder o espaço.
-        gridTemplateRows: '1fr minmax(200px, auto)',
-        gap: 12,
-        padding: 12,
-      }}
-    >
-      <div style={{ gridColumn: '1', gridRow: '1', minHeight: 0 }}>
+    <div className="grid min-h-0 flex-1 grid-cols-[1.5fr_320px] grid-rows-[1fr_minmax(200px,auto)] gap-3 p-3">
+      <div className="col-start-1 row-start-1 min-h-0">
         {videoPronto ? (
           <FinalPlayerPanel
             src={finalVideoUrl(projetoId, corte.id)}
@@ -291,28 +275,16 @@ export function FinalReviewPage() {
             filtroLabel={filtroNome}
           />
         ) : (
-          <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-8 text-center text-[var(--wb-text-mute)]">
+          <div className="flex h-full items-center justify-center rounded-cartao border border-dashed border-fio-2 bg-poco p-8 text-center text-fg-3">
             <div className="flex flex-col items-center gap-2">
-              <p className="font-editorial text-lg text-[var(--wb-text)]">
-                Render final ainda nao disponivel
-              </p>
-              <p className="text-sm">Gere o video na fase Pos para visualizar aqui.</p>
+              <p className="text-secao text-fg">Render final ainda nao disponivel</p>
+              <p className="text-corpo">Gere o video na fase Pos para visualizar aqui.</p>
             </div>
           </div>
         )}
       </div>
 
-      <div
-        style={{
-          gridColumn: '2',
-          gridRow: '1 / span 2',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          minHeight: 0,
-          overflow: 'auto',
-        }}
-      >
+      <div className="col-start-2 row-span-2 row-start-1 flex min-h-0 flex-col gap-3 overflow-auto">
         <ChecklistCard items={checklistItems} />
         {/* D-1051: os shorts do corte. D-1015: a saúde técnica do vídeo, que só avisa. */}
         <ApoioDaRevisao corte={corte} videoPronto={videoPronto} player={videoRef} />
@@ -324,7 +296,7 @@ export function FinalReviewPage() {
         />
       </div>
 
-      <div style={{ gridColumn: '1', gridRow: '2', minHeight: 0 }}>
+      <div className="col-start-1 row-start-2 min-h-0">
         <SceneTimeline
           cenas={cenas}
           currentTime={currentTime}
@@ -435,14 +407,10 @@ function FinalPlayerPanel({
   useVelocidadeNoVideo(videoRef, velocidadePadrao, src);
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
-          Vídeo final
-        </span>
-        <span className="flex-none rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
-          1920×1080 · 29.97fps · h264
-        </span>
+    <section className="flex h-full flex-col overflow-hidden rounded-cartao border border-fio bg-painel-solido">
+      <header className="flex items-center gap-2 border-b border-fio px-3 py-2">
+        <span className="text-linha text-fg">Vídeo final</span>
+        <Etiqueta className="num">1920×1080 · 29.97fps · h264</Etiqueta>
         {/* D-367 + DE-PARA-v3 §4: o filtro de render é fonte única global
             (I-023 removeu o filtro por projeto/corte, e o render não persiste
             qual usou). O chip portanto identifica o AJUSTE GLOBAL ATUAL — não
@@ -454,10 +422,10 @@ function FinalPlayerPanel({
             label="Filtro/grade global dos Ajustes — é o perfil usado nos renders enquanto estiver selecionado. O filtro não é gravado por corte."
             side="bottom"
           >
-            <span className="inline-flex flex-none items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
+            <Etiqueta className="gap-1">
               <Icon name="palette" />
               Global · {filtroLabel}
-            </span>
+            </Etiqueta>
           </Tooltip>
         )}
         <div className="flex-1" />
@@ -466,7 +434,7 @@ function FinalPlayerPanel({
             href={src}
             download={`corte-${corteId}.mp4`}
             data-projeto={projetoId}
-            className="inline-flex h-7 items-center gap-1 rounded-[var(--radius-xs)] px-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)]"
+            className="inline-flex h-botao-pq items-center gap-1 rounded-pilula px-3 text-pequeno text-fg-2 transition-colors hover:bg-vidro-2 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco motion-reduce:transition-none"
           >
             <Icon name="download" />
             MP4
@@ -475,8 +443,8 @@ function FinalPlayerPanel({
         <Tooltip label="Abrir pasta do render" side="bottom">
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             onClick={onAbrirPasta}
             disabled={abrindoPasta}
           >
@@ -489,14 +457,14 @@ function FinalPlayerPanel({
           vir do container externo e nunca envolver esta seção inteira: o
           cabeçalho (specs + filtro + MP4/Pasta) vive aqui dentro e, espremido
           junto, quebra em várias linhas. */}
-      <div className="relative min-h-0 flex-1 bg-black">
+      <div className="relative min-h-0 flex-1 bg-palco">
         <video
           ref={videoRef}
           src={src}
           controls
           preload="metadata"
           onTimeUpdate={(e) => onTimeUpdate(e.currentTarget.currentTime)}
-          className="h-full w-full bg-black object-contain"
+          className="h-full w-full bg-palco object-contain"
         />
       </div>
     </section>
@@ -515,20 +483,12 @@ function ChecklistCard({ items }: { items: ChecklistItem[] }) {
   const total = items.length;
   const tudoOk = okCount === total;
   return (
-    <section className="flex-shrink-0 overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
-          Checklist
-        </span>
-        <span
-          className={`rounded-full px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] ${
-            tudoOk
-              ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
-              : 'bg-[var(--wb-warn-soft)] text-[var(--wb-warn)]'
-          }`}
-        >
+    <section className="flex-shrink-0 overflow-hidden rounded-cartao border border-fio bg-vidro">
+      <header className="flex items-center gap-2 border-b border-fio px-3 py-2">
+        <span className="text-linha text-fg">Checklist</span>
+        <Selo tom={tudoOk ? 'ok' : 'convite'} className="num">
           {okCount}/{total}
-        </span>
+        </Selo>
       </header>
       <div className="flex flex-col gap-1 p-3">
         {items.map((item, idx) => (
@@ -542,31 +502,24 @@ function ChecklistCard({ items }: { items: ChecklistItem[] }) {
 function ChecklistRow({ item }: { item: ChecklistItem }) {
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-[var(--radius-sm)] border p-2 ${
+      className={cn(
+        'flex items-center gap-2.5 rounded-campo border p-2',
         item.ok
           ? 'border-transparent bg-transparent'
-          : 'border-wb-warn/30 bg-[var(--wb-warn-soft)]'
-      }`}
+          : 'border-[color-mix(in_srgb,var(--cc-aviso)_22%,transparent)] bg-[color-mix(in_srgb,var(--cc-aviso)_13%,transparent)]',
+      )}
     >
       <span
-        className={`flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full border-[1.5px] ${
-          item.ok
-            ? 'border-[var(--wb-ok)] bg-[var(--wb-ok)] text-[var(--wb-accent-fg)]'
-            : 'border-[var(--wb-warn)] bg-[var(--wb-bg-card)] text-transparent'
-        }`}
+        className={cn(
+          'flex size-[22px] flex-shrink-0 items-center justify-center rounded-full border-[1.5px]',
+          item.ok ? 'border-ok bg-ok text-sobre-iris' : 'border-aviso text-transparent',
+        )}
         aria-hidden
       >
         {item.ok && <Icon name="check" />}
       </span>
-      <Icon
-        name={item.icon}
-        className={item.ok ? 'text-[var(--wb-text-mute)]' : 'text-[var(--wb-warn)]'}
-      />
-      <span
-        className={`text-[12.5px] ${
-          item.ok ? 'font-medium text-[var(--wb-text)]' : 'font-semibold text-[var(--wb-ink)]'
-        }`}
-      >
+      <Icon name={item.icon} className={item.ok ? 'text-fg-3' : 'text-aviso'} />
+      <span className={cn('text-corpo', item.ok ? 'font-medium text-fg' : 'font-semibold text-fg')}>
         {item.label}
       </span>
     </div>
@@ -586,33 +539,20 @@ function CapaCard({
   onEditar: () => void;
 }) {
   return (
-    <section className="flex-shrink-0 overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
-          Capa
-        </span>
-        <span
-          className={`rounded-full px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] ${
-            pronta
-              ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
-              : 'bg-[var(--wb-warn-soft)] text-[var(--wb-warn)]'
-          }`}
-        >
-          {pronta ? 'pronta' : 'pendente'}
-        </span>
+    <section className="flex-shrink-0 overflow-hidden rounded-cartao border border-fio bg-vidro">
+      <header className="flex items-center gap-2 border-b border-fio px-3 py-2">
+        <span className="text-linha text-fg">Capa</span>
+        <Selo tom={pronta ? 'ok' : 'convite'}>{pronta ? 'pronta' : 'pendente'}</Selo>
         <div className="flex-1" />
         <Tooltip label="Editar capa (abre Metadados)" side="bottom">
-          <Button type="button" variant="ghost" size="sm" onClick={onEditar}>
+          <Button type="button" variant="fantasma" size="pq" onClick={onEditar}>
             <Icon name={ICONE_DO_CONCEITO.editar} />
             Editar
           </Button>
         </Tooltip>
       </header>
       <div className="p-3">
-        <div
-          className="relative overflow-hidden rounded-[var(--radius-sm)] bg-gradient-to-br from-[oklch(0.45_0.05_60)] via-[oklch(0.3_0.04_60)] to-[oklch(0.15_0.03_60)]"
-          style={{ aspectRatio: '16 / 9' }}
-        >
+        <div className="relative aspect-video overflow-hidden rounded-capa bg-poco">
           {/* D-366: mostra a capa renderizada quando existe; senao mantem o
               gradiente + titulo como placeholder. */}
           {thumbUrl ? (
@@ -622,8 +562,8 @@ function CapaCard({
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="absolute bottom-3 left-3 max-w-[80%] text-white">
-              <div className="font-editorial text-[16px] font-medium leading-tight">{titulo}</div>
+            <div className="absolute bottom-3 left-3 max-w-[80%] text-fg">
+              <div className="text-secao">{titulo}</div>
             </div>
           )}
         </div>

@@ -11,7 +11,7 @@ import { useRascunhoDoCard } from './rascunhoDoCard';
 import { useVersaoDoDesfazer } from './versaoDoDesfazer';
 import { applyCoverEmojis, applyReadingTitlePrefix } from '@/lib/readingMetadata';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
-import type { PromptModalKind } from './MetadataCard';
+import type { PromptModalKind } from './PromptImportModal';
 
 
 export const metadataKey = (corteId: string) => ['metadado', corteId] as const;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { useToast } from '@/components/ui/toaster';
@@ -36,9 +37,10 @@ export function EstiloDaCapaSection() {
   const estilo = useEstiloDaCapa();
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Estilo das capas</h2>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+    <section data-sala=""
+      className="grid gap-3 rounded-cartao border border-fio bg-vidro p-5">
+      <h2 className="text-secao text-fg">Estilo das capas</h2>
+      <p className="text-corpo text-fg-2">
         Vale para as três capas: a thumbnail do YouTube, a arte do TikTok/Reels e a capa do short.
       </p>
       {estilo.data && (
@@ -78,7 +80,7 @@ export function ReferenciaGuardada({
 }) {
   if (quantas === 0) return null;
   return (
-    <p className="text-[11px] text-[var(--wb-text-dim)]">
+    <p className="text-micro text-fg-3">
       {quantas} {quantas === 1 ? singular : plural}. Para voltar a usar, escolha {protagonista}{' '}
       como protagonista.
     </p>
@@ -100,7 +102,7 @@ export function EscolhaDoProtagonista({ estilo }: { estilo: EstiloDaCapa }) {
 
   return (
     <div className="grid gap-1.5">
-      <span className="text-[12px] font-semibold text-[var(--wb-text)]">Protagonista</span>
+      <span className="text-linha text-fg">Protagonista</span>
       <div role="radiogroup" aria-label="Protagonista das capas" className="grid gap-2 sm:grid-cols-2">
         {PROTAGONISTAS.map((opcao) => {
           const ativo = estilo.protagonista === opcao.valor;
@@ -109,19 +111,21 @@ export function EscolhaDoProtagonista({ estilo }: { estilo: EstiloDaCapa }) {
               key={opcao.valor}
               type="button"
               role="radio"
+              data-sala=""
               aria-checked={ativo}
               disabled={gravar.isPending}
               onClick={() => !ativo && escolher(opcao.valor)}
               className={cn(
-                'grid gap-0.5 rounded-[8px] border p-2.5 text-left transition-colors disabled:opacity-60',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+                'grid gap-0.5 rounded-bloco border p-3 text-left transition-colors duration-150 motion-reduce:transition-none',
+                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
+                'disabled:cursor-not-allowed disabled:border-dashed disabled:bg-transparent disabled:text-fg-off',
                 ativo
-                  ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
-                  : 'border-[var(--wb-border)] hover:bg-[var(--wb-bg-card-elev)]',
+                  ? 'border-iris-fio bg-iris-suave'
+                  : 'border-fio bg-vidro hover:border-fio-2 hover:bg-vidro-2',
               )}
             >
-              <span className="text-[13px] font-semibold text-[var(--wb-text)]">{opcao.rotulo}</span>
-              <span className="text-[11px] text-[var(--wb-text-mute)]">{opcao.dica}</span>
+              <span className="text-corpo font-semibold text-fg">{opcao.rotulo}</span>
+              <span className="text-micro text-fg-2">{opcao.dica}</span>
             </button>
           );
         })}
@@ -155,17 +159,18 @@ export function FotosDoApresentador({ estilo }: { estilo: EstiloDaCapa }) {
   return (
     <div className="grid gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[12px] font-semibold text-[var(--wb-text)]">
+        <span className="text-linha text-fg">
           Fotos do apresentador ({fotos.length})
         </span>
         <Button
           type="button"
-          size="sm"
-          variant="outline"
-          disabled={subir.isPending || cheio}
+          variant="secundario"
+          size="pq"
+          carregando={subir.isPending}
+          disabled={cheio}
           onClick={() => seletor.current?.click()}
         >
-          {subir.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="image-plus" />}
+          <Icon name="image-plus" />
           Adicionar fotos
         </Button>
       </div>
@@ -182,48 +187,30 @@ export function FotosDoApresentador({ estilo }: { estilo: EstiloDaCapa }) {
           if (arquivos.length) void aoSubir(arquivos);
         }}
       />
-      <span className="text-[11px] text-[var(--wb-text-dim)]">
-        O nome do arquivo é a expressão: <span className="font-code">pensativo.jpg</span>,{' '}
-        <span className="font-code">indignado-2.png</span>. A IA escolhe até 3 que combinam com o
+      <span className="text-micro text-fg-3">
+        O nome do arquivo é a expressão: <span className="font-mono">pensativo.jpg</span>,{' '}
+        <span className="font-mono">indignado-2.png</span>. A IA escolhe até 3 que combinam com o
         corte; subir o mesmo nome troca a foto.
       </span>
       {estilo.expressoes.length > 0 && (
-        <p className="text-[11px] text-[var(--wb-text-mute)]">
+        <p className="text-micro text-fg-2">
           Expressões: {estilo.expressoes.join(', ')}
         </p>
       )}
       {fotos.length > 0 && (
         <ul className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(120px,1fr))]">
           {fotos.map((nome) => (
-            <li
+            <FotoDoApresentador
               key={nome}
-              className="grid grid-cols-1 gap-1 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-1.5"
-            >
-              <ImagemAmpliavel
-                src={fotoDoApresentadorUrl(nome, versao)}
-                alt={nome}
-                className="w-full"
-                imgClassName="aspect-square w-full rounded-[6px] object-cover"
-              />
-              <div className="flex items-center gap-1">
-                <span className="min-w-0 flex-1 truncate font-code text-[11px] text-[var(--wb-text-mute)]">
-                  {nome}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Remover ${nome}`}
-                  disabled={remover.isPending}
-                  onClick={() =>
-                    remover.mutate(nome, {
-                      onError: (erro) => notify(texto(erro, 'Erro ao remover a foto.'), { tone: 'error' }),
-                    })
-                  }
-                  className="rounded p-1 text-[var(--wb-text-dim)] hover:text-error disabled:opacity-50"
-                >
-                  <Icon name="trash-2" />
-                </button>
-              </div>
-            </li>
+              nome={nome}
+              versao={versao}
+              desabilitado={remover.isPending}
+              onRemover={() =>
+                remover.mutate(nome, {
+                  onError: (erro) => notify(texto(erro, 'Erro ao remover a foto.'), { tone: 'error' }),
+                })
+              }
+            />
           ))}
         </ul>
       )}
@@ -253,24 +240,59 @@ export function MetaDeClaridade({ estilo }: { estilo: EstiloDaCapa }) {
 
   return (
     <div className="grid gap-1.5">
-      <span className="text-[12px] font-semibold text-[var(--wb-text)]">Meta de claridade</span>
+      <span className="text-linha text-fg">Meta de claridade</span>
       <div className="flex flex-wrap items-end gap-2">
-        <label className="grid gap-1 text-[11px] text-[var(--wb-text-mute)]">
-          Luz média mínima (0–255)
-          <Input type="number" min={0} max={255} value={luz} onChange={(e) => setLuz(e.target.value)} className="w-28" />
-        </label>
-        <label className="grid gap-1 text-[11px] text-[var(--wb-text-mute)]">
-          Pixels escuros no máximo (%)
-          <Input type="number" min={0} max={100} value={escuros} onChange={(e) => setEscuros(e.target.value)} className="w-28" />
-        </label>
-        <Button type="button" size="sm" onClick={aoSalvar} disabled={gravar.isPending || !mudou}>
-          {gravar.isPending && <Icon name="loader-2" className="animate-spin" />}
+        <Field rotulo="Luz média mínima (0–255)" className="w-36">
+          <Input aparencia="sala" type="number" min={0} max={255} value={luz} onChange={(e) => setLuz(e.target.value)} />
+        </Field>
+        <Field rotulo="Pixels escuros no máximo (%)" className="w-44">
+          <Input aparencia="sala" type="number" min={0} max={100} value={escuros} onChange={(e) => setEscuros(e.target.value)} />
+        </Field>
+        <Button type="button" variant="secundario" carregando={gravar.isPending} onClick={aoSalvar} disabled={!mudou}>
           Salvar
         </Button>
       </div>
-      <span className="text-[11px] text-[var(--wb-text-dim)]">
+      <span className="text-micro text-fg-3">
         Abaixo dela, a capa do YouTube ganha um aviso. Escuro é pixel com luz abaixo de 50.
       </span>
     </div>
+  );
+}
+
+function FotoDoApresentador({
+  nome,
+  versao,
+  desabilitado,
+  onRemover,
+}: {
+  nome: string;
+  versao: number;
+  desabilitado: boolean;
+  onRemover: () => void;
+}) {
+  return (
+    <li
+      className="grid grid-cols-1 gap-1 rounded-ladrilho border border-fio bg-poco p-1.5"
+    >
+      <ImagemAmpliavel
+        src={fotoDoApresentadorUrl(nome, versao)}
+        alt={nome}
+        className="w-full"
+        imgClassName="aspect-square w-full rounded-etiqueta object-cover"
+      />
+      <div className="flex items-center gap-1">
+        <span className="min-w-0 flex-1 truncate font-mono text-micro text-fg-2">{nome}</span>
+        <button
+          type="button"
+          aria-label={`Remover ${nome}`}
+          disabled={desabilitado}
+          onClick={onRemover}
+          data-sala=""
+          className="rounded-etiqueta p-1 text-fg-3 transition-colors hover:text-erro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:text-fg-off motion-reduce:transition-none"
+        >
+          <Icon name="trash-2" />
+        </button>
+      </div>
+    </li>
   );
 }

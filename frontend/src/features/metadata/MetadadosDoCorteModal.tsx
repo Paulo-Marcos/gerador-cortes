@@ -6,9 +6,13 @@ import { metadataKey } from '@/features/metadata/useMetadataCard';
 import { comVersao, resolveThumbUrl } from '@/lib/api';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { copyTextToClipboard } from '@/lib/clipboard';
+import { cn } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
-import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/icon-button';
+import { PELE_FLUTUANTE } from '@/components/ui/superficie-flutuante';
+import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
@@ -29,22 +33,14 @@ import { useFocoDoModal } from '@/features/metadata/useFocoDoModal';
 
 function Campo({ rotulo, valor, alto = false }: { rotulo: string; valor: string; alto?: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-      <span className="lbl">{rotulo}</span>
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-pequeno text-fg-2">{rotulo}</span>
       <div
-        style={{
-          padding: '7px 9px',
-          border: '1px solid var(--line)',
-          borderRadius: 'var(--r2)',
-          background: 'var(--inset)',
-          fontSize: 12.5,
-          lineHeight: 1.45,
-          color: valor ? 'var(--ink)' : 'var(--dim)',
-          whiteSpace: 'pre-wrap',
-          overflowWrap: 'anywhere',
-          maxHeight: alto ? 120 : undefined,
-          overflow: alto ? 'auto' : undefined,
-        }}
+        className={cn(
+          'whitespace-pre-wrap break-words rounded-campo border border-fio bg-poco px-3 py-2 text-corpo',
+          valor ? 'text-fg' : 'text-fg-3',
+          alto && 'max-h-[120px] overflow-auto',
+        )}
       >
         {valor || 'vazio'}
       </div>
@@ -98,84 +94,47 @@ export function MetadadosDoCorteModal({
     }
   };
 
-  // Portal para a `.ap`: aberto de dentro da linha do corte, o modal ficaria
-  // preso a ela — o vidro (`backdrop-filter`) do card vira a referência do
-  // `position: fixed`. Na `.ap` ele cobre a tela e continua com os tokens.
+  // Portal para a `.ap`: aberto de dentro da linha do corte, o modal ficaria preso a ela.
+  // Na `.ap` ele cobre a tela e continua com os tokens.
   const destino = document.querySelector('.ap') ?? document.body;
   return createPortal(
     <div
       role="presentation"
       onClick={aoFechar}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 60,
-        display: 'grid',
-        placeItems: 'center',
-        padding: 24,
-        background: 'rgb(10 12 18/.5)',
-        backdropFilter: 'blur(3px)',
-      }}
+      className="fixed inset-0 z-[60] grid place-items-center bg-veu p-6"
     >
       <div
         ref={caixa}
-        className="card"
         role="dialog"
         aria-modal="true"
         aria-label={`Metadados do corte ${status.numero}`}
+        data-sala=""
         onClick={(e) => e.stopPropagation()}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          width: corte ? 'min(1100px, 100%)' : 'min(720px, 100%)',
-          maxHeight: 'calc(100dvh - 48px)',
-          overflow: 'hidden',
-          // Sólido: é um formulário de leitura, e o vidro deixava a lista de
-          // trás atravessar o texto.
-          background: 'var(--solid)',
-          boxShadow: '0 24px 64px rgb(0 0 0/.35)',
-        }}
+        className={cn(
+          'flex max-h-[calc(100dvh-48px)] flex-col overflow-hidden rounded-dialogo',
+          PELE_FLUTUANTE,
+          corte ? 'w-[min(1100px,100%)]' : 'w-[min(720px,100%)]',
+        )}
       >
-        <header
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 9,
-            padding: '12px 14px',
-            borderBottom: '1px solid var(--line2)',
-          }}
-        >
-          <Icon name="tags" size={16} style={{ color: 'var(--accent)', flex: 'none' }} />
-          <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-            <strong
-              style={{
-                fontSize: 13.5,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
+        <header className="flex items-center gap-3 border-b border-fio px-5 py-3">
+          <Icon name="tags" size={16} className="flex-none text-iris" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <strong className="truncate text-linha text-fg">
               #{status.numero} · {status.titulo}
             </strong>
-            <span style={{ fontSize: 11, color: 'var(--mute)' }}>
+            <span className="text-pequeno text-fg-3">
               {corte
                 ? 'metadados do corte — edite aqui; a lista atrás fica onde estava'
                 : 'metadados do corte — só consulta; a lista atrás fica onde estava'}
             </span>
           </span>
-          <button
-            type="button"
-            className="btn btn-icon"
-            onClick={aoFechar}
-            aria-label="Fechar"
-            title="Fechar (Esc)"
-          >
+          <IconButton variant="fantasma" size="pq" onClick={aoFechar} aria-label="Fechar" title="Fechar (Esc)">
             <Icon name="x" />
-          </button>
+          </IconButton>
         </header>
 
         {corte ? (
-          <div style={{ padding: 14, overflow: 'auto' }}>
+          <div className="overflow-auto p-5">
             <MetadataCard
               projetoId={projetoId}
               cut={corte}
@@ -185,20 +144,14 @@ export function MetadadosDoCorteModal({
             />
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1fr) 216px',
-              gap: 14,
-              padding: 14,
-              overflow: 'auto',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+          <div className="grid grid-cols-[minmax(0,1fr)_216px] gap-4 overflow-auto p-5">
+            <div className="flex min-w-0 flex-col gap-3">
               {meta.isLoading ? (
-                <span style={{ color: 'var(--mute)', fontSize: 12.5 }}>Carregando…</span>
+                <span className="text-corpo text-fg-3" role="status">
+                  Carregando…
+                </span>
               ) : meta.isError ? (
-                <span style={{ color: 'var(--err)', fontSize: 12.5 }}>
+                <span className="text-corpo text-erro" role="alert">
                   Não foi possível ler os metadados deste corte.
                 </span>
               ) : (
@@ -212,71 +165,41 @@ export function MetadadosDoCorteModal({
               )}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <MolduraDeVideo mat={6} proporcao="16/9">
+            <div className="flex flex-col gap-3">
+              <div className="relative aspect-video overflow-hidden rounded-capa border border-fio-2 bg-vidro-3">
                 {capa && !capaErro ? (
                   <img
                     src={capa}
                     alt=""
                     onError={() => setCapaErro(true)}
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
+                    className="absolute inset-0 size-full object-cover"
                   />
                 ) : (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'grid',
-                      placeItems: 'center',
-                      fontSize: 11,
-                      color: 'var(--dim)',
-                    }}
-                  >
-                    sem capa
-                  </span>
+                  <span className="absolute inset-0 grid place-items-center text-pequeno text-fg-3">sem capa</span>
                 )}
-              </MolduraDeVideo>
+              </div>
               <TiraDoCorteAp tira={montarTira(status, statusCorte)} />
             </div>
           </div>
         )}
 
-        <footer
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: 8,
-            padding: '10px 14px',
-            borderTop: '1px solid var(--line2)',
-          }}
-        >
+        <footer className="flex items-center justify-end gap-2 border-t border-fio px-5 py-3">
           {corte ? null : (
-            <button
+            <Button
               type="button"
-              className="btn"
+              variant="secundario"
               onClick={() => void copiar()}
               disabled={!prompt}
               title={prompt ? 'Copiar o prompt da capa' : 'Este corte ainda não tem prompt de capa'}
             >
               <Icon name={copiado ? 'check' : 'copy'} />
               {copiado ? 'Copiado' : 'Copiar prompt'}
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            className="btn btn-pri"
-            onClick={() => navigate(`/projetos/${projetoId}/metadados`)}
-          >
+          <Button type="button" variant="secundario" onClick={() => navigate(`/projetos/${projetoId}/metadados`)}>
             <Icon name={ICONE_DO_CONCEITO.editar} />
             {corte ? 'Abrir a tela de metadados' : 'Editar na tela de metadados'}
-          </button>
+          </Button>
         </footer>
       </div>
     </div>,

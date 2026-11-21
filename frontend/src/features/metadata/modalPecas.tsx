@@ -1,40 +1,43 @@
+import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
-import { Icon, type IconName } from '@/upgrade/Icon';
 
-// As peças visuais do corpo do modal de metadados (AUDITORIA-v3 §6). Saíram do
-// MetadataCard na D-821, quando o modal foi reorganizado em textos × capas e a
-// coluna das capas virou componente próprio: as duas metades usam as mesmas.
+// As peças visuais do corpo de metadados (AUDITORIA-v3 §6, D-821), na escala e nos
+// tokens da Sala escura (D-1167, DIRECAO §7.5): rótulo no `pequeno`, contador em mono,
+// sugestões como Chip. Servem à tela de Metadados e ao modal do editor.
 
-// D-413: os botões da coluna da capa herdavam o `size=default` do primitivo —
-// 11,5px, ilegível ao lado do corpo ampliado. Sobrescrito só aqui: o `Button`
-// é compartilhado com o app inteiro.
-export const MODAL_ASIDE_BUTTON = 'h-10 px-3.5 text-[13px]';
+// Os botões da coluna das capas e do rodapé: 38 px, o degrau do botão (§4.4).
+export const MODAL_ASIDE_BUTTON = 'min-w-0';
 
-// Label de campo: mono uppercase à esquerda, contador à direita, na mesma linha.
+/**
+ * A linha do rótulo de um campo: o nome à esquerda, o contador em mono e, se houver, a
+ * ação do campo ("Gerar de novo") à direita. Liga o rótulo ao controle pelo `htmlFor`.
+ */
 export function ModalFieldLabel({
   label,
   counter,
   over,
+  htmlFor,
+  acao,
 }: {
   label: string;
   counter?: string;
   over?: boolean;
+  htmlFor?: string;
+  acao?: React.ReactNode;
 }) {
   return (
-    <div className="mb-1.5 flex items-center gap-1.5">
-      <span className="font-code text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
+    <div className="mb-1.5 flex min-h-[30px] items-center gap-2">
+      <label htmlFor={htmlFor} className="text-pequeno text-fg-2">
         {label}
-      </span>
+      </label>
       {counter && (
-        <span
-          className={cn(
-            'ml-auto font-code text-[11.5px] font-semibold text-[var(--wb-text-dim)]',
-            over && 'text-[var(--wb-err)]',
-          )}
-        >
+        <span className={cn('num ml-auto', over ? 'text-erro' : 'text-fg-3')} aria-live="polite">
           {counter}
         </span>
       )}
+      {acao && <span className={cn('flex items-center gap-1.5', !counter && 'ml-auto')}>{acao}</span>}
     </div>
   );
 }
@@ -42,12 +45,12 @@ export function ModalFieldLabel({
 /**
  * As sugestões da IA, recolhidas até o operador pedir (D-821).
  *
- * Servem para quando o título ou o texto da capa ficou ruim — não para toda
- * vez. Abertas por padrão, empurravam o resto do modal para baixo em todo
- * corte. Fechadas, dizem quantas há, e abrir custa um clique.
+ * Servem para quando o título ou o texto da capa ficou ruim — não para toda vez.
+ * Abertas por padrão, empurravam o resto da tela para baixo em todo corte. Fechadas,
+ * dizem quantas há, e abrir custa um clique.
  *
- * D-413 continua valendo: a sugestão é pill (escolha) e a ação de geração é
- * retângulo numa barra própria — as duas nunca dividem a mesma fileira.
+ * D-413 continua valendo: a sugestão é chip (escolha) e a ação de geração é botão
+ * numa barra própria — as duas nunca dividem a mesma fileira.
  */
 export function SugestoesRecolhidas({
   quantidade,
@@ -66,7 +69,8 @@ export function SugestoesRecolhidas({
         type="button"
         onClick={onAlternar}
         aria-expanded={aberto}
-        className="inline-flex w-fit items-center gap-1 font-code text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+        data-sala=""
+        className="inline-flex w-fit items-center gap-1 rounded-etiqueta text-pequeno text-fg-3 transition-colors hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco motion-reduce:transition-none"
       >
         <Icon name="chevron-down" className={aberto ? 'rotate-180' : ''} />
         sugestões ({quantidade})
@@ -82,7 +86,7 @@ export function SugestoesRecolhidas({
 
 export function ModalActionRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-dashed border-[var(--wb-border-soft)] pt-2.5">
+    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-dashed border-fio pt-2.5">
       {children}
     </div>
   );
@@ -99,23 +103,16 @@ export function ModalActionButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex h-8 items-center gap-1.5 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-[12.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
-    >
+    <Button type="button" variant="secundario" size="pq" onClick={onClick}>
       <Icon name={icon} />
       {children}
-    </button>
+    </Button>
   );
 }
 
 /**
- * Pill de SUGESTÃO (rounded-full, inset).
- *
- * D-821: a escolhida usa o par que o TEMA define para o acento
- * (`--wb-accent-fg`), e não branco fixo — num tema de acento escuro com texto
- * herdado escuro, a opção escolhida ficava ilegível.
+ * Chip de SUGESTÃO: o escolhido fica ligado (`aria-pressed`, fundo e fio de íris, visto).
+ * O Chip da Sala escura tem a cor do par que o tema define; não há branco fixo.
  */
 export function ModalChip({
   active,
@@ -127,25 +124,15 @@ export function ModalChip({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        'rounded-full px-3 py-1.5 text-left text-[12px] font-semibold transition-colors',
-        active
-          ? 'bg-[var(--sel-ink)] text-[var(--sel-on)]'
-          : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-      )}
-    >
+    <Chip pressionado={Boolean(active)} onClick={onClick} className="h-auto min-h-[30px] whitespace-normal py-1 text-left">
       {children}
-    </button>
+    </Chip>
   );
 }
 
 export function SemSugestoes() {
   return (
-    <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+    <span className="text-pequeno text-fg-3">
       A IA ainda não sugeriu — gere os metadados para ver opções.
     </span>
   );

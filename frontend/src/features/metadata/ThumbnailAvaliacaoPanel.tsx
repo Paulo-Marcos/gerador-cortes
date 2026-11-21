@@ -5,6 +5,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
+import { Icon } from '@/components/ui/icon';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import {
@@ -15,7 +18,6 @@ import {
   type NotasState,
 } from './thumbnailAvaliacao';
 import { avaliacaoThumbnailApi, type VeredictoThumbnail } from './api/avaliacaoThumbnail';
-import { Icon } from '@/upgrade/Icon';
 
 const avaliacoesKey = (corteId: string) => ['avaliacoes-thumbnail', corteId] as const;
 
@@ -67,14 +69,14 @@ export function ThumbnailAvaliacaoPanel({ corteId }: { corteId: string }) {
   const pending = registrar.isPending;
 
   return (
-    <div className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-2.5">
+    <section aria-label="Avaliar capa" className="grid gap-2 rounded-bloco border border-fio bg-vidro p-3">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
+        <span className="flex items-center gap-1.5 text-pequeno text-fg-2">
           <Icon name="star" />
           Avaliar capa
         </span>
         {resumo && resumo.total > 0 && (
-          <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
+          <span className="num text-fg-3">
             {resumo.positivos}/{resumo.total} bons
           </span>
         )}
@@ -83,110 +85,96 @@ export function ThumbnailAvaliacaoPanel({ corteId }: { corteId: string }) {
       {/* Caminho rápido: um clique registra com o veredito escolhido. */}
       <div className="grid grid-cols-2 gap-1.5">
         {VEREDITOS.map((item) => (
-          <button
+          <Button
             key={item.value}
             type="button"
+            variant="secundario"
+            size="pq"
             disabled={pending}
+            aria-pressed={veredito === item.value}
             onClick={() => {
               setVeredito(item.value);
               registrar.mutate({ veredito: item.value, comDetalhes: false });
             }}
-            className={cn(
-              'h-8 rounded-[var(--radius-sm)] border px-2 text-xs font-semibold transition',
-              veredito === item.value
-                ? 'border-[var(--wb-accent)] text-[var(--wb-text)]'
-                : 'border-[var(--wb-border)] text-[var(--wb-text-mute)] hover:border-[var(--wb-text-dim)]',
-            )}
           >
             {item.label}
-          </button>
+          </Button>
         ))}
       </div>
 
       <button
         type="button"
+        aria-expanded={detalhar}
         onClick={() => setDetalhar((current) => !current)}
-        className="flex items-center gap-1 self-start font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)] hover:text-[var(--wb-text-mute)]"
+        data-sala=""
+        className="flex items-center gap-1 self-start rounded-etiqueta text-pequeno text-fg-3 transition-colors hover:text-fg-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco motion-reduce:transition-none"
       >
-        <Icon name="chevron-down" className={cn('transition-transform', detalhar && 'rotate-180')} />
+        <Icon name="chevron-down" className={cn('transition-transform motion-reduce:transition-none', detalhar && 'rotate-180')} />
         Detalhar critérios
       </button>
 
       {detalhar && (
-        <div className="grid gap-2 border-t border-[var(--wb-border-soft)] pt-2">
+        <div className="grid gap-2 border-t border-fio pt-2">
           {CRITERIOS.map((criterio) => (
-            <div key={criterio.key} className="grid gap-1">
-              <span className="text-xs text-[var(--wb-text-mute)]">{criterio.label}</span>
+            <div key={criterio.key} role="group" aria-label={criterio.label} className="grid gap-1">
+              <span className="text-pequeno text-fg-2">{criterio.label}</span>
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map((nota) => (
-                  <button
+                  <Chip
                     key={nota}
-                    type="button"
+                    pressionado={notas[criterio.key] === nota}
+                    className="min-w-0 flex-1 justify-center px-0"
                     onClick={() =>
                       setNotas((current) => ({
                         ...current,
                         [criterio.key]: current[criterio.key] === nota ? null : nota,
                       }))
                     }
-                    className={cn(
-                      'h-6 min-w-0 flex-1 rounded-[var(--radius-sm)] border text-[11px] font-semibold transition',
-                      notas[criterio.key] === nota
-                        ? 'border-[var(--wb-accent)] text-[var(--wb-text)]'
-                        : 'border-[var(--wb-border)] text-[var(--wb-text-dim)] hover:border-[var(--wb-text-dim)]',
-                    )}
                   >
                     {nota}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             </div>
           ))}
-          <textarea
+          <Textarea
             value={comentario}
             onChange={(event) => setComentario(event.target.value)}
             rows={2}
+            aria-label="Comentário sobre a capa"
             placeholder="O que ficou bom/ruim? (opcional)"
-            className="rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] p-2 text-xs text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+            className="min-h-0 text-pequeno"
           />
           <Button
             type="button"
-            size="sm"
-            disabled={pending}
+            size="pq"
+            variant="secundario"
+            carregando={pending}
             onClick={() => registrar.mutate({ veredito, comDetalhes: true })}
             className="min-w-0"
             title={`Registrar “${rotuloVeredito(veredito)}” com critérios`}
           >
-            {pending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="star" />}
+            <Icon name="star" />
             <span className="truncate">Registrar com detalhes</span>
           </Button>
         </div>
       )}
 
       {avaliacoes.length > 0 && (
-        <ul className="grid gap-1 border-t border-[var(--wb-border-soft)] pt-2">
+        <ul className="grid gap-1 border-t border-fio pt-2">
           {avaliacoes.slice(0, 5).map((avaliacao) => (
-            <li
-              key={avaliacao.id}
-              className="flex items-start justify-between gap-2 text-[11px] text-[var(--wb-text-mute)]"
-            >
-              <span className="font-semibold text-[var(--wb-text)]">
-                {rotuloVeredito(avaliacao.veredito)}
-              </span>
+            <li key={avaliacao.id} className="flex items-start justify-between gap-2 text-pequeno text-fg-2">
+              <span className="text-fg">{rotuloVeredito(avaliacao.veredito)}</span>
               {avaliacao.comentario && (
-                <span
-                  className="flex-1 truncate text-[var(--wb-text-dim)]"
-                  title={avaliacao.comentario}
-                >
+                <span className="flex-1 truncate text-fg-3" title={avaliacao.comentario}>
                   {avaliacao.comentario}
                 </span>
               )}
-              <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
-                {formatarData(avaliacao.criado_em)}
-              </span>
+              <span className="num text-fg-3">{formatarData(avaliacao.criado_em)}</span>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }

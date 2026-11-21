@@ -81,7 +81,7 @@ function linhasDoChecklist(html: string): [string, string, boolean][] {
     .map((linha) => linha.slice(0, linha.indexOf('</div>')));
   return linhas.map((linha) => {
     const svgs = linha.match(/<svg[^>]*>/g) ?? [];
-    const rotulo = linha.match(/<span class="text-\[12\.5px\][^>]*>([^<]*)</)?.[1] ?? '';
+    const rotulo = linha.match(/<span class="text-corpo[^>]*>([^<]*)</)?.[1] ?? '';
     const glifo = svgs.at(-1)?.match(/lucide-([\w-]+)/)?.[1] ?? '';
     // A bolinha do item feito leva o check; o glifo do item vem depois dela.
     const check = svgs.length === 2 && /lucide-check(?![\w-])/.test(svgs[0]);
@@ -106,7 +106,7 @@ describe('FinalReviewPage — checklist', () => {
     const card = html.slice(html.indexOf('Checklist'));
     const iconeDoRender = card.match(/<svg[^>]*lucide-sparkles[^>]*>/)?.[0] ?? '';
     expect(iconeDoRender).toContain('width="14"');
-    expect(iconeDoRender).toContain('text-[var(--wb-warn)]');
+    expect(iconeDoRender).toContain('text-aviso');
   });
 
   it('só o item feito ganha o check na bolinha, e o contador acompanha', () => {

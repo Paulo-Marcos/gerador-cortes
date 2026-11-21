@@ -1,16 +1,17 @@
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { AvisoDeClaridade } from '@/features/capa-chatgpt/AvisoDeClaridade';
 import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
 import { cortesApi } from '@/features/editor/api/cortes';
-import { cn } from '@/lib/utils';
 import type { Corte } from '@/types/models';
 import { MODAL_ASIDE_BUTTON, ModalActionButton, ModalActionRow } from './modalPecas';
 import { ThumbnailAvaliacaoPanel } from './ThumbnailAvaliacaoPanel';
 import type { EstadoDoCard } from './useMetadataCard';
-import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
+import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 // A aba da capa do YouTube no modal (D-821): tudo o que opera ESTA capa, ao
 // lado dela, na ordem do trabalho — a prévia, 1. o prompt, 2. a imagem, e as
@@ -31,12 +32,12 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
         title={thumbnailUrl ? 'Ampliar a capa' : 'Sem thumbnail'}
         disabled={!thumbnailUrl}
         onClick={() => card.setCapaAmpliada(true)}
-        className="aspect-video overflow-hidden rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]"
+        className="aspect-video overflow-hidden rounded-capa border border-fio-2 bg-vidro-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:cursor-default"
       >
         {thumbnailUrl ? (
           <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="grid h-full place-items-center text-sm text-[var(--wb-text-dim)]">
+          <div className="grid h-full place-items-center text-corpo text-fg-3">
             Sem thumbnail
           </div>
         )}
@@ -48,10 +49,9 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
         <ModalActionRow>
           <AcaoDeIa
             rotulo={promptReady ? 'Regerar prompt da capa' : 'Gerar prompt da capa'}
-            destaque
             emVoo={card.promptCapaEmVoo}
             onGerar={(provider) => card.generatePromptThumbnailClaude.mutate(provider)}
-            className="h-8"
+            aparencia="sala-escura"
           />
           <ModalActionButton icon="palette" onClick={() => card.setManualKind('thumbnail-agent-livre')}>
             Manual
@@ -75,29 +75,25 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
         <div className="grid grid-cols-2 gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="secundario"
             className={MODAL_ASIDE_BUTTON}
             onClick={() => card.generateThumbnail.mutate()}
-            disabled={!promptReady || card.generateThumbnail.isPending}
+            disabled={!promptReady}
+            carregando={card.generateThumbnail.isPending || card.conferindoCapa}
             title="Gera pela API do Gemini"
           >
-            {card.generateThumbnail.isPending || card.conferindoCapa ? (
-              <Icon name="loader-2" className="animate-spin" />
-            ) : (
-              <Icon name={ICONE_DO_CONCEITO.iaGera} />
-            )}
+            <Icon name={ICONE_DO_CONCEITO.iaGera} />
             {card.conferindoCapa ? 'Gerando…' : 'Gerar no Gemini'}
           </Button>
           <TrocarThumbnail onArquivo={(file) => card.uploadThumbnail.mutate(file)} />
         </div>
         {/* D-413: copiar continua à vista — é o caminho de quem usa outro gerador. */}
-        <div className="flex items-center justify-center gap-1.5 font-code text-[11px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        <div className="flex items-center justify-center gap-1.5 text-pequeno text-fg-3">
           <span>ou cole com Ctrl+V ·</span>
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-[11px]"
+            variant="fantasma"
+            size="pq"
             onClick={() => void card.copy(meta?.prompt_thumbnail ?? '', 'Prompt da capa copiado.')}
             disabled={!promptReady}
             title={promptReady ? 'Copiar o prompt para outro gerador' : 'Gere o prompt da capa primeiro'}
@@ -107,7 +103,7 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
           </Button>
         </div>
         {!promptReady && (
-          <p className="-mt-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]">
+          <p className="-mt-1 text-pequeno text-aviso">
             Gere o prompt da capa primeiro — sem ele não há o que gerar.
           </p>
         )}
@@ -122,26 +118,23 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
 
 function Passo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-2 border-t border-[var(--wb-border-soft)] pt-2.5">
-      <h4 className="font-code text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-        {titulo}
-      </h4>
+    <section className="grid gap-2 border-t border-fio pt-3">
+      <h4 className="text-pequeno text-fg-2">{titulo}</h4>
       {children}
     </section>
   );
 }
 
 function TrocarThumbnail({ onArquivo }: { onArquivo: (arquivo: File) => void }) {
+  const entrada = useRef<HTMLInputElement>(null);
   return (
-    <label
-      className={cn(
-        MODAL_ASIDE_BUTTON,
-        'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] font-bold text-[var(--wb-text)] hover:border-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-card-elev)]',
-      )}
-    >
-      <Icon name="upload-cloud" />
-      Trocar
+    <>
+      <Button type="button" variant="secundario" className={MODAL_ASIDE_BUTTON} onClick={() => entrada.current?.click()}>
+        <Icon name="upload-cloud" />
+        Trocar
+      </Button>
       <input
+        ref={entrada}
         type="file"
         accept="image/*"
         className="hidden"
@@ -151,7 +144,7 @@ function TrocarThumbnail({ onArquivo }: { onArquivo: (arquivo: File) => void }) 
           event.currentTarget.value = '';
         }}
       />
-    </label>
+    </>
   );
 }
 
@@ -159,10 +152,10 @@ function TrocarThumbnail({ onArquivo }: { onArquivo: (arquivo: File) => void }) 
 // porque o header é do card e o modal não o renderiza.
 function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
   return (
-    <div className="flex items-center justify-center gap-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+    <div className="flex items-center justify-center gap-1.5 border-t border-fio pt-3">
       <IconButton
-        size="sm"
-        variant="inset"
+        size="pq"
+        variant="vidro"
         aria-label="Copiar pasta da thumbnail"
         title="Copiar pasta da thumbnail"
         onClick={() => void card.copy(card.meta?.thumbnail_path ?? '', 'Endereco copiado.')}
@@ -170,8 +163,8 @@ function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
         <Icon name="folder" size={16} />
       </IconButton>
       <IconButton
-        size="sm"
-        variant="inset"
+        size="pq"
+        variant="vidro"
         aria-label="Comprimir thumbnail"
         title="Comprimir thumbnail"
         onClick={() => card.compressThumbnail.mutate()}
@@ -180,8 +173,8 @@ function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
         {card.compressThumbnail.isPending ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="refresh-cw" size={16} />}
       </IconButton>
       <IconButton
-        size="sm"
-        variant="inset"
+        size="pq"
+        variant="vidro"
         aria-label="Aplicar moldura"
         title="Aplicar a moldura do canal nesta capa"
         onClick={() => card.applyFrame.mutate()}
@@ -190,13 +183,12 @@ function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
         {card.applyFrame.isPending ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="frame" size={16} />}
       </IconButton>
       <IconButton
-        size="sm"
-        variant="inset"
+        size="pq"
         aria-label="Remover thumbnail"
         title="Remover thumbnail (apaga o arquivo)"
         onClick={card.confirmRemoveThumbnail}
         disabled={card.removeThumbnail.isPending}
-        className="text-[var(--wb-err)] hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
+        variant="destrutivo"
       >
         {card.removeThumbnail.isPending ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="trash-2" size={16} />}
       </IconButton>

@@ -25,10 +25,10 @@ export function AvisoDeClaridade({ corteId, capaUrl }: { corteId: string; capaUr
   if (!aviso) return null;
   return (
     <p
-      className="-mt-1 flex items-center gap-1.5 text-[11px] leading-snug text-[var(--wb-warn-ink)]"
+      className="flex items-center gap-1.5 text-micro text-aviso"
       title="Rosto em luz alta e frontal deixa a capa mais clara. A meta fica em Canais → Estilo das capas."
     >
-      <Icon name="sun" size={14} />
+      <Icon name="sun" size={14} className="flex-none" />
       {aviso}
     </p>
   );

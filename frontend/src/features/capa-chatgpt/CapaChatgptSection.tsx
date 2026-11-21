@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { useToast } from '@/components/ui/toaster';
@@ -24,9 +25,10 @@ export function CapaChatgptSection() {
   const protagonista = useEstiloDaCapa().data?.protagonista;
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Capas no ChatGPT</h2>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+    <section data-sala=""
+      className="grid gap-3 rounded-cartao border border-fio bg-vidro p-5">
+      <h2 className="text-secao text-fg">Capas no ChatGPT</h2>
+      <p className="text-corpo text-fg-2">
         O botão “Gerar no ChatGPT” das capas abre este projeto no Edge, anexa as fichas abaixo,
         cola o prompt e traz a imagem de volta — pela sua assinatura, sem API. Na primeira vez,
         entre na sua conta na janela que o robô abrir; ela fica guardada.
@@ -58,10 +60,10 @@ function LinkDoProjeto({ salvo }: { salvo: string }) {
     });
 
   return (
-    <label className="grid gap-1.5">
-      <span className="text-[12px] font-semibold text-[var(--wb-text)]">Link do projeto</span>
+    <Field rotulo="Link do projeto" ajuda="Abra o projeto no ChatGPT e copie a barra de endereço. Vazio desliga o botão.">
       <div className="flex flex-wrap gap-2">
         <Input
+          aparencia="sala"
           value={projeto}
           onChange={(e) => setProjeto(e.target.value)}
           placeholder="https://chatgpt.com/g/g-p-…/project"
@@ -69,18 +71,15 @@ function LinkDoProjeto({ salvo }: { salvo: string }) {
         />
         <Button
           type="button"
-          size="sm"
+          variant="secundario"
+          carregando={gravar.isPending}
           onClick={aoSalvar}
-          disabled={gravar.isPending || projeto.trim() === salvo}
+          disabled={projeto.trim() === salvo}
         >
-          {gravar.isPending && <Icon name="loader-2" className="animate-spin" />}
           Salvar
         </Button>
       </div>
-      <span className="text-[11px] text-[var(--wb-text-dim)]">
-        Abra o projeto no ChatGPT e copie a barra de endereço. Vazio desliga o botão.
-      </span>
-    </label>
+    </Field>
   );
 }
 
@@ -114,17 +113,18 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
   return (
     <div className="grid gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[12px] font-semibold text-[var(--wb-text)]">
+        <span className="text-linha text-fg">
           Fichas do personagem ({fichas.length})
         </span>
         <Button
           type="button"
-          size="sm"
-          variant="outline"
-          disabled={subir.isPending || cheio}
+          variant="secundario"
+          size="pq"
+          carregando={subir.isPending}
+          disabled={cheio}
           onClick={() => seletor.current?.click()}
         >
-          {subir.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="image-plus" />}
+          <Icon name="image-plus" />
           Adicionar fichas
         </Button>
       </div>
@@ -142,7 +142,7 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
         }}
       />
       {fichas.length === 0 ? (
-        <p className="text-[12px] text-[var(--wb-text-dim)]">
+        <p className="text-pequeno text-fg-3">
           Nenhuma ficha. Sem elas o ChatGPT desenha o personagem só pelo que está no projeto.
         </p>
       ) : (
@@ -150,16 +150,16 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
           {fichas.map((nome) => (
             <li
               key={nome}
-              className="grid grid-cols-1 gap-1 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-1.5"
+              className="grid grid-cols-1 gap-1 rounded-ladrilho border border-fio bg-poco p-1.5"
             >
               <ImagemAmpliavel
                 src={fichaUrl(nome, versao)}
                 alt={nome}
                 className="w-full"
-                imgClassName="aspect-[3/2] w-full rounded-[6px] object-contain"
+                imgClassName="aspect-[3/2] w-full rounded-etiqueta object-contain"
               />
               <div className="flex items-center gap-1">
-                <span className="min-w-0 flex-1 truncate font-code text-[10.5px] text-[var(--wb-text-mute)]">
+                <span className="min-w-0 flex-1 truncate font-mono text-micro text-fg-2">
                   {nome}
                 </span>
                 <button
@@ -167,7 +167,8 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
                   aria-label={`Remover ${nome}`}
                   disabled={remover.isPending}
                   onClick={() => aoRemover(nome)}
-                  className="rounded p-1 text-[var(--wb-text-dim)] hover:text-error disabled:opacity-50"
+                  data-sala=""
+                  className="rounded-etiqueta p-1 text-fg-3 transition-colors hover:text-erro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:text-fg-off motion-reduce:transition-none"
                 >
                   <Icon name="trash-2" />
                 </button>
