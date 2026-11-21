@@ -20,8 +20,8 @@ describe('régua do primário: variante certa', () => {
     expect(contarPrimarios(secundario)).toBe(0);
   });
 
-  it('ainda conta o `primary` antigo de tela legada', () => {
-    expect(contarPrimarios('<button data-variant="primary">A</button>')).toBe(1);
+  it('o `primary` antigo não conta mais: nenhum Button o emite', () => {
+    expect(contarPrimarios('<button data-variant="primary">A</button>')).toBe(0);
   });
 });
 
