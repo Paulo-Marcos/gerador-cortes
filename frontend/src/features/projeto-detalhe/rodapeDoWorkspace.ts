@@ -157,8 +157,8 @@ export function pedidoAprovarPropostos(quantos: number) {
  */
 export function chipDaProntidao(p: { total: number; liberado: boolean; resumo: string }): ChromeEstado {
   if (p.total === 0)
-    return { texto: 'nada a publicar', icone: 'circle-check', cor: 'var(--mute)', bg: 'var(--inset)' };
+    return { texto: 'nada a publicar', icone: 'circle-check', cor: 'var(--cc-fg-2)', bg: 'var(--cc-poco)' };
   if (p.liberado)
-    return { texto: 'lote pronto', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' };
-  return { texto: p.resumo, icone: 'triangle-alert', cor: 'var(--warn)', bg: 'var(--warn-soft)' };
+    return { texto: 'lote pronto', icone: 'circle-check', cor: 'var(--cc-ok)', bg: 'color-mix(in srgb, var(--cc-ok) 13%, transparent)' };
+  return { texto: p.resumo, icone: 'triangle-alert', cor: 'var(--cc-aviso)', bg: 'color-mix(in srgb, var(--cc-aviso) 13%, transparent)' };
 }

@@ -50,7 +50,6 @@ const EXCECOES: Record<string, number> = {
   "src/components/ui/acao-de-ia.tsx": 1,
   "src/components/ui/button.tsx": 1,
   "src/components/workbench/PanelShell.tsx": 3,
-  "src/features/projeto-detalhe/AuditoriaAnaliseModal.tsx": 2,
   "src/features/shorts/DefinirPalcoModal.tsx": 7,
   "src/upgrade/UpgradeModal.tsx": 3,
   "src/upgrade/upgrade.css": 2,

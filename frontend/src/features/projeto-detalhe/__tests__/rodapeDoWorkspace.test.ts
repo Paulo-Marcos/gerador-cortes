@@ -195,15 +195,15 @@ describe('chipDaProntidao', () => {
   it('nada a publicar é neutro (live fechada), lote pronto é ok, pendência é aviso', () => {
     expect(chipDaProntidao({ total: 0, liberado: false, resumo: '' })).toMatchObject({
       texto: 'nada a publicar',
-      cor: 'var(--mute)',
+      cor: 'var(--cc-fg-2)',
     });
     expect(chipDaProntidao({ total: 2, liberado: true, resumo: '' })).toMatchObject({
       texto: 'lote pronto',
-      cor: 'var(--ok)',
+      cor: 'var(--cc-ok)',
     });
     expect(chipDaProntidao({ total: 2, liberado: false, resumo: '1/2 prontos' })).toMatchObject({
       texto: '1/2 prontos',
-      cor: 'var(--warn)',
+      cor: 'var(--cc-aviso)',
     });
   });
 });

@@ -52,8 +52,8 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
     );
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40 p-3">
-      <label className="flex items-start gap-2 text-xs text-text-200">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/40 p-3">
+      <label className="flex items-start gap-2 text-xs text-fg-2">
         <input
           type="checkbox"
           checked={usarDiarizacao}
@@ -62,10 +62,10 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
           aria-label="Usar diarização na análise"
         />
         <span className="flex-1">
-          <span className="flex items-center gap-1.5 font-semibold text-text-100">
-            <Icon name="users" className="text-accent-300" /> Usar diarização de falantes
+          <span className="flex items-center gap-1.5 font-semibold text-fg">
+            <Icon name="users" className="text-iris" /> Usar diarização de falantes
           </span>
-          <span className="mt-0.5 block text-[11px] text-text-300">
+          <span className="mt-0.5 block text-micro text-fg-3">
             Marca no prompt quem fala em cada trecho ({'['}CANAL{']'} vs. {'['}OUTRO{']'}) para a
             IA não misturar a fala do dono do canal com a fala reagida.
           </span>
@@ -75,7 +75,7 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
       {usarDiarizacao && (
         <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-text-300">
+            <span className="text-micro text-fg-3">
               {temFalantes
                 ? `${speakers.length} falante(s) identificado(s). Renomeie e marque quem é o canal.`
                 : 'Ainda não diarizado. Rode a diarização sobre o áudio do vídeo.'}
@@ -101,14 +101,14 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
             <div className="flex flex-col gap-2">
               {speakers.map((sid) => (
                 <div key={sid} className="flex items-center gap-2">
-                  <span className="w-24 shrink-0 font-mono text-[11px] text-text-400">{sid}</span>
+                  <span className="w-24 shrink-0 font-mono text-micro text-fg-3">{sid}</span>
                   <Input
                     value={rascunho[sid]?.nome ?? ''}
                     onChange={(e) => setNome(sid, e.target.value)}
                     placeholder="Nome (ex.: Pedro)"
                     className="h-8 flex-1 text-xs"
                   />
-                  <label className="flex shrink-0 items-center gap-1 text-[11px] text-text-200">
+                  <label className="flex shrink-0 items-center gap-1 text-micro text-fg-2">
                     <input
                       type="radio"
                       name={`canal-${projetoId}`}

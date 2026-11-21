@@ -143,20 +143,20 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
   return (
     <Modal open={open} onClose={onClose} size="lg" title="TikTok — cortes horizontais">
       <div className="space-y-3">
-        <p className="text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="text-pequeno leading-relaxed text-fg-2">
           O TikTok aceita 16:9, e o MP4 já existe — é o mesmo que foi para o YouTube, sem
           render novo. O robô sobe pelo navegador dele, fora da tela; a API deles só publica em
           modo privado enquanto o app não passar pela auditoria.
         </p>
 
         {cortes.length === 0 ? (
-          <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-3 text-[12px] text-[var(--wb-text-mute)]">
+          <p className="rounded-[8px] bg-poco p-3 text-pequeno text-fg-2">
             Nenhum corte com vídeo final ainda. O pacote sai do MP4 exportado.
           </p>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[var(--wb-bg-inset)] px-2.5 py-2">
-              <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
+            <div className="flex flex-wrap items-center gap-2 rounded-[8px] bg-poco px-2.5 py-2">
+              <label className="flex items-center gap-1.5 text-micro text-fg-3">
                 <input
                   type="checkbox"
                   checked={Boolean(agendarPara)}
@@ -173,13 +173,13 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                     onChange={(e) => setAgendarPara(e.target.value)}
                     className="w-[210px]"
                   />
-                  <span className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+                  <span className="text-micro leading-relaxed text-fg-2">
                     O robô liga o “Programar” no Studio e marca a data antes de devolver a aba.
                     Vale para o botão de cada corte; o lote distribui pelo próprio Quando.
                   </span>
                 </>
               )}
-              <label className="flex w-full items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
+              <label className="flex w-full items-center gap-1.5 text-micro text-fg-3">
                 <input
                   type="checkbox"
                   checked={publicarSozinho}
@@ -298,7 +298,7 @@ function LinhaDoCorte({
         'flex flex-wrap items-center gap-2 rounded-[8px] border px-2.5 py-2',
         publicado
           ? 'border-wb-ok/40 bg-wb-ok-soft/30'
-          : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
+          : 'border-fio bg-painel-solido',
       )}
     >
       {/* D-518: a capa, que o pacote copia para dentro da pasta. Aqui ela e
@@ -310,27 +310,27 @@ function LinhaDoCorte({
           target="_blank"
           rel="noopener noreferrer"
           title="Ver a capa em tamanho real. Ela tambem vai na pasta do pacote."
-          className="shrink-0 overflow-hidden rounded-[4px] border border-[var(--wb-border-soft)]"
+          className="shrink-0 overflow-hidden rounded-[4px] border border-fio"
         >
           <img src={capa} alt="" className="h-[24px] w-[42px] object-cover" />
         </a>
       ) : (
         <span
-          className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[var(--wb-warn-ink)]"
+          className="inline-flex shrink-0 items-center gap-1 text-micro text-aviso"
           title="Sem thumbnail gerada: o TikTok vai congelar um frame qualquer do video."
         >
           <Icon name="image-off" />
           sem capa
         </span>
       )}
-      <span className="font-code text-[11px] text-[var(--wb-text-mute)]">#{corte.numero}</span>
-      <span className="min-w-0 flex-1 truncate text-[12px]">{corte.titulo || 'sem título'}</span>
+      <span className="font-code text-micro text-fg-2">#{corte.numero}</span>
+      <span className="min-w-0 flex-1 truncate text-pequeno">{corte.titulo || 'sem título'}</span>
 
       {/* D-516: o estado do YouTube é CONTEXTO, não filtro. Saber que o corte já
           subiu lá ajuda a decidir a ordem aqui; escondê-lo por isso era o bug. */}
       {corte.youtube_url_publicado && (
         <span
-          className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-text-dim)]"
+          className="inline-flex items-center gap-1 text-micro text-fg-3"
           title="Já publicado no YouTube"
         >
           <Icon name="youtube" />
@@ -339,7 +339,7 @@ function LinhaDoCorte({
       )}
 
       {publicado ? (
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--wb-ok-ink)]">
+        <span className="inline-flex items-center gap-1 text-micro font-semibold text-ok">
           <Icon name="check" />
           publicado no TikTok
         </span>
@@ -347,7 +347,7 @@ function LinhaDoCorte({
         <>
           {preparado && !abrir.isPending && (
             <span
-              className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-text-mute)]"
+              className="inline-flex items-center gap-1 text-micro text-fg-2"
               title={copiada ? 'Legenda copiada' : 'A legenda está no pacote.txt'}
             >
               <Icon name="check" />
@@ -396,13 +396,13 @@ function LinhaDoCorte({
       )}
 
       {assistido.isPending && (
-        <span className="w-full text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+        <span className="w-full text-micro leading-relaxed text-fg-2">
           Subindo no navegador do robô, fora da tela… num corte longo o TikTok leva minutos para
           processar. Quando a aba ficar pronta, a janela volta para a tela.
         </span>
       )}
       {assistido.isSuccess && (
-        <span className="inline-flex w-full flex-wrap items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
+        <span className="inline-flex w-full flex-wrap items-center gap-1 text-micro text-fg-2">
           {esperandoPublicar ? (
             <>
               <Icon name="loader-2" className="animate-spin" />
@@ -411,34 +411,34 @@ function LinhaDoCorte({
             </>
           ) : (
             <>
-              <Icon name="check" className="text-[var(--wb-ok-ink)]" />
+              <Icon name="check" className="text-ok" />
               Pronto para conferir: {assistido.data.resumo}.
             </>
           )}
           {(assistido.data.avisos ?? []).map((aviso) => (
-            <span key={aviso} className="text-[var(--wb-warn-ink)]">
+            <span key={aviso} className="text-aviso">
               {aviso}
             </span>
           ))}
         </span>
       )}
       {assistido.isError && (
-        <span className="w-full text-[11px] leading-relaxed text-[var(--wb-warn-ink)]">
+        <span className="w-full text-micro leading-relaxed text-aviso">
           {mensagemDoEnvio(assistido.error)}
         </span>
       )}
       {abrir.isSuccess && abrir.data?.erro_ao_abrir && (
-        <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
+        <span className="w-full text-micro text-aviso">
           Não consegui abrir a pasta: {abrir.data.pasta}
         </span>
       )}
       {abrir.isError && (
-        <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
+        <span className="w-full text-micro text-aviso">
           {(abrir.error as Error)?.message ?? 'não consegui montar o pacote'}
         </span>
       )}
       {abrir.isSuccess && !publicado && (
-        <span className="inline-flex w-full items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
+        <span className="inline-flex w-full items-center gap-1 text-micro text-fg-2">
           <Icon name="external-link" />
           arraste o MP4 na aba que abriu e confirme em “publiquei”
         </span>

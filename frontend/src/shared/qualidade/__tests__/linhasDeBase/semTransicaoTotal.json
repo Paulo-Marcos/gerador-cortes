@@ -6,7 +6,6 @@
   "src/components/ui/select.tsx": 1,
   "src/features/editor/CommonTopBar.tsx": 2,
   "src/features/editor/fase1/RightTabsPanel.tsx": 1,
-  "src/features/projeto-detalhe/AnaliseIaModal.tsx": 1,
   "src/features/shorts/CapaModal.tsx": 1,
   "src/features/shorts/EditorDePalco.tsx": 1,
   "src/features/shorts/GanchoModal.tsx": 1,
