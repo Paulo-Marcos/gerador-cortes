@@ -51,7 +51,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/channels/ChannelThemeSection.tsx": 1,
   "src/features/editor/fase1/TimelinePanel.tsx": 1,
   "src/features/editor/fase1/trechoBadge.ts": 1,
-  "src/features/lives/RankingEmbasamentoPanel.tsx": 1,
   "src/features/shorts/BlocosArrastaveis.tsx": 5,
   "src/features/shorts/CandidatoCard.tsx": 2,
   "src/features/shorts/CapaModal.tsx": 4,

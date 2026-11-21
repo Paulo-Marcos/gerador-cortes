@@ -1,8 +1,17 @@
-import { useEffect, useRef } from 'react';
+import { Dialog } from '@/components/ui/dialog';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import type { EmbasamentoItem } from './api';
 import { Icon } from '@/upgrade/Icon';
 
 /**
+ * D-1176: na Sala escura é o `Dialog` (foco preso, Esc fecha) com uma `Tabela`.
  * Painel de embasamento de uma live no ranking (D-356).
  *
  * Mostra POR QUE a live tirou aquela nota: para cada critério, o valor bruto que o
@@ -45,148 +54,70 @@ export function RankingEmbasamentoPanel({
   destaques,
   onClose,
 }: PanelProps) {
-  const painelRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current();
-    };
-    document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    requestAnimationFrame(() => painelRef.current?.focus());
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, []);
-
   const somaContribuicoes = embasamento.reduce((acc, item) => acc + item.contribuicao, 0);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Embasamento da nota — ${titulo}`}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <Dialog
+      open
+      onClose={onClose}
+      tamanho="md"
+      title={`Por que essa nota? ${Math.round(pontuacaoTotal)} pontos`}
+      description={`${titulo}. Cada critério vale o valor bruto, sua posição no lote (0–100%) × o peso do canal = a contribuição em pontos. A soma das contribuições é a nota final.`}
     >
-      <button
-        type="button"
-        aria-label="Fechar"
-        onClick={onClose}
-        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-sm"
-      />
-      <div
-        ref={painelRef}
-        tabIndex={-1}
-        className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text)] shadow-[shadow:var(--wb-shadow)] outline-none"
-      >
-        <header className="flex items-start justify-between gap-3 border-b border-[var(--wb-border-soft)] px-5 py-4">
-          <div className="min-w-0 flex-1">
-            <span className="font-code text-[10px] uppercase tracking-widest text-[var(--wb-text-dim)]">
-              Por que essa nota?
-            </span>
-            <h2 className="mt-1 line-clamp-2 text-base font-bold leading-tight text-[var(--wb-text)]">
-              {titulo}
-            </h2>
-          </div>
-          <span className="flex flex-col items-end">
-            <span className="font-editorial text-3xl leading-none text-[var(--wb-text)]">
-              {Math.round(pontuacaoTotal)}
-            </span>
-            <span className="font-code text-[10px] uppercase tracking-widest text-[var(--wb-text-dim)]">
-              nota
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="-m-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
-          >
-            <Icon name="x" size={16} />
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          <p className="mb-3 text-xs text-[var(--wb-text-mute)]">
-            Cada critério vale o valor bruto → sua posição no lote (0–100%) × o peso do canal = a
-            contribuição em pontos. A soma das contribuições é a nota final.
-          </p>
-
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[var(--wb-border-soft)] text-left font-code text-[10px] uppercase tracking-wider text-[var(--wb-text-dim)]">
-                  <th className="py-2 pr-3 font-normal">Critério</th>
-                  <th className="py-2 pr-3 font-normal">Bruto</th>
-                  <th className="py-2 pr-3 text-right font-normal">No lote</th>
-                  <th className="py-2 pr-3 text-right font-normal">Peso</th>
-                  <th className="py-2 text-right font-normal">Contrib.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {embasamento.map((item) => (
-                  <tr
-                    key={item.criterio}
-                    className="border-b border-[var(--wb-border-soft)] last:border-0"
-                  >
-                    <td className="py-2 pr-3 font-semibold text-[var(--wb-text)]">{item.rotulo}</td>
-                    <td className="py-2 pr-3 text-[var(--wb-text-mute)]">
-                      {formatBruto(item.criterio, item.valor_bruto)}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-[var(--wb-text-mute)]">
-                      {Math.round(item.valor_normalizado * 100)}%
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-[var(--wb-text-mute)]">
-                      {item.peso.toFixed(2)}
-                    </td>
-                    <td className="py-2 text-right font-bold tabular-nums text-[var(--wb-text)]">
-                      {item.contribuicao.toFixed(1)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-[var(--wb-border)]">
-                  <td
-                    className="py-2 pr-3 font-code text-[11px] uppercase tracking-wider text-[var(--wb-text-dim)]"
-                    colSpan={4}
-                  >
-                    Nota final (soma)
-                  </td>
-                  <td className="py-2 text-right font-editorial text-lg tabular-nums text-[var(--wb-text)]">
-                    {somaContribuicoes.toFixed(1)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {destaques.length > 0 && (
-            <section className="mt-5">
-              <h3 className="mb-2 flex items-center gap-1.5 font-code text-[10px] uppercase tracking-widest text-[var(--wb-text-dim)]">
-                <Icon name="quote" />
-                Comentários que justificam o tom
-              </h3>
-              <ul className="grid gap-2">
-                {destaques.map((destaque, i) => (
-                  <li
-                    key={i}
-                    className="border-l-2 border-[var(--wb-accent-soft)] bg-[var(--wb-bg-inset)] px-3 py-2 text-[13px] italic text-[var(--wb-text-mute)]"
-                  >
-                    &ldquo;{destaque}&rdquo;
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
+      <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">
+        <Tabela>
+          <TabelaCabeca>
+            <TabelaLinha>
+              <TabelaTitulo>Critério</TabelaTitulo>
+              <TabelaTitulo>Bruto</TabelaTitulo>
+              <TabelaTitulo aDireita>No lote</TabelaTitulo>
+              <TabelaTitulo aDireita>Peso</TabelaTitulo>
+              <TabelaTitulo aDireita>Contrib.</TabelaTitulo>
+            </TabelaLinha>
+          </TabelaCabeca>
+          <TabelaCorpo>
+            {embasamento.map((item) => (
+              <TabelaLinha key={item.criterio}>
+                <TabelaCelula className="font-semibold">{item.rotulo}</TabelaCelula>
+                <TabelaCelula className="text-fg-2">{formatBruto(item.criterio, item.valor_bruto)}</TabelaCelula>
+                <TabelaCelula numero aDireita className="text-fg-2">
+                  {Math.round(item.valor_normalizado * 100)}%
+                </TabelaCelula>
+                <TabelaCelula numero aDireita className="text-fg-2">
+                  {item.peso.toFixed(2)}
+                </TabelaCelula>
+                <TabelaCelula numero aDireita className="font-bold">
+                  {item.contribuicao.toFixed(1)}
+                </TabelaCelula>
+              </TabelaLinha>
+            ))}
+            <TabelaLinha>
+              <TabelaCelula colSpan={4} className="text-fg-3">
+                Nota final (soma)
+              </TabelaCelula>
+              <TabelaCelula numero aDireita className="text-linha font-bold">
+                {somaContribuicoes.toFixed(1)}
+              </TabelaCelula>
+            </TabelaLinha>
+          </TabelaCorpo>
+        </Tabela>
       </div>
-    </div>
+
+      {destaques.length > 0 && (
+        <section className="mt-5">
+          <h3 className="mb-2 flex items-center gap-1.5 text-micro text-fg-3">
+            <Icon name="quote" />
+            Comentários que justificam o tom
+          </h3>
+          <ul className="grid gap-2">
+            {destaques.map((destaque, i) => (
+              <li key={i} className="rounded-etiqueta border-l-2 border-iris-fio bg-vidro px-3 py-2 text-corpo italic text-fg-2">
+                &ldquo;{destaque}&rdquo;
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </Dialog>
   );
 }

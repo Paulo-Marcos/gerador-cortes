@@ -1,8 +1,19 @@
-// D-353: aba "Chamadas de IA". Telemetria não-fatal de cada chamada do Claude CLI
+// D-353 / D-1176: aba "Chamadas de IA". Telemetria não-fatal de cada chamada do Claude CLI
 // (etapa/modelo/custo/latência/tokens/sucesso), com prompt/resposta sob demanda.
 // Separada da telemetria proposta×final (outra preocupação, outra aba).
 import { Fragment, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { Selo } from '@/components/ui/selo';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import { type LlmCall } from '@/features/ia';
 import { useLlmCalls } from './useLlmCalls';
 import { Icon } from '@/upgrade/Icon';
@@ -29,18 +40,11 @@ function formatarTokens(entrada: number | null, saida: number | null): string {
 }
 
 function SucessoBadge({ call }: { call: LlmCall }) {
-  const ok = call.sucesso;
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 font-code text-[10px] uppercase tracking-[0.06em]',
-        ok
-          ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-          : 'bg-[var(--wb-bg-inset)] text-[var(--wb-err)]',
-      )}
-      title={call.erro_tipo ?? undefined}
-    >
-      {ok ? 'ok' : (call.erro_tipo ?? 'erro')}
+  return call.sucesso ? (
+    <Selo tom="ok">ok</Selo>
+  ) : (
+    <span title={call.erro_tipo ?? undefined}>
+      <Selo tom="erro">{call.erro_tipo ?? 'erro'}</Selo>
     </span>
   );
 }
@@ -48,10 +52,8 @@ function SucessoBadge({ call }: { call: LlmCall }) {
 function TextoBloco({ rotulo, texto }: { rotulo: string; texto: string | null }) {
   return (
     <div className="grid gap-1">
-      <span className="font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        {rotulo}
-      </span>
-      <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-3 font-code text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
+      <span className="text-micro text-fg-3">{rotulo}</span>
+      <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-etiqueta border border-fio bg-poco p-3 num text-pequeno leading-relaxed text-fg-2">
         {texto || '—'}
       </pre>
     </div>
@@ -62,38 +64,32 @@ function CallRow({ call }: { call: LlmCall }) {
   const [aberto, setAberto] = useState(false);
   return (
     <Fragment>
-      <tr
-        className="cursor-pointer border-t border-[var(--wb-border-soft)] align-top hover:bg-[var(--wb-bg-inset)]"
-        onClick={() => setAberto((v) => !v)}
-      >
-        <td className="px-3 py-3 text-[var(--wb-text-dim)]">
-          {aberto ? <Icon name="chevron-down" size={16} /> : <Icon name="chevron-right" size={16} />}
-        </td>
-        <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
-          {formatarTs(call.ts)}
-        </td>
-        <td className="px-3 py-3 text-[13px] text-[var(--wb-text)]">{call.etapa ?? '—'}</td>
-        <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
-          {call.model ?? '—'}
-        </td>
-        <td className="px-3 py-3">
+      <TabelaLinha className="cursor-pointer" onClick={() => setAberto((v) => !v)}>
+        <TabelaCelula className="text-fg-3">
+          <button
+            type="button"
+            aria-expanded={aberto}
+            aria-label={aberto ? 'Recolher a chamada' : 'Ver o prompt e a resposta'}
+            className="grid place-items-center rounded-etiqueta text-fg-3 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-foco"
+          >
+            <Icon name={aberto ? 'chevron-down' : 'chevron-right'} size={16} />
+          </button>
+        </TabelaCelula>
+        <TabelaCelula numero className="text-fg-2">{formatarTs(call.ts)}</TabelaCelula>
+        <TabelaCelula>{call.etapa ?? '—'}</TabelaCelula>
+        <TabelaCelula numero className="text-fg-2">{call.model ?? '—'}</TabelaCelula>
+        <TabelaCelula>
           <SucessoBadge call={call} />
-        </td>
-        <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
-          {formatarCusto(call.custo_usd)}
-        </td>
-        <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
-          {formatarLatencia(call.latencia_ms_wall)}
-        </td>
-        <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
-          {formatarTokens(call.tokens_in, call.tokens_out)}
-        </td>
-      </tr>
+        </TabelaCelula>
+        <TabelaCelula numero aDireita className="text-fg-2">{formatarCusto(call.custo_usd)}</TabelaCelula>
+        <TabelaCelula numero aDireita className="text-fg-2">{formatarLatencia(call.latencia_ms_wall)}</TabelaCelula>
+        <TabelaCelula numero aDireita className="text-fg-2">{formatarTokens(call.tokens_in, call.tokens_out)}</TabelaCelula>
+      </TabelaLinha>
       {aberto && (
-        <tr className="border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-          <td colSpan={8} className="px-3 py-4">
+        <tr>
+          <td colSpan={8} className="border-b border-fio bg-vidro px-3 py-4">
             <div className="grid gap-3">
-              <div className="flex flex-wrap gap-x-6 gap-y-1 font-code text-[11px] text-[var(--wb-text-dim)]">
+              <div className="flex flex-wrap gap-x-6 gap-y-1 num text-pequeno text-fg-3">
                 {call.projeto_id && <span>projeto: {call.projeto_id}</span>}
                 {call.corte_id && <span>corte: {call.corte_id}</span>}
                 {call.duracao_ms_servidor != null && (
@@ -111,66 +107,64 @@ function CallRow({ call }: { call: LlmCall }) {
 }
 
 export function LlmCallsTab() {
-  const { data, isLoading, isError } = useLlmCalls(100);
+  const { data, isLoading, isError, refetch } = useLlmCalls(100);
   const chamadas = data?.chamadas ?? [];
 
   if (isLoading) {
     return (
-      <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-        <Icon name="loader-2" size={16} className="animate-spin" />
-        Carregando chamadas de IA…
-      </p>
+      <div role="status" className="grid gap-3">
+        <p className="text-pequeno text-fg-3">Buscando as chamadas de IA…</p>
+        <Skeleton className="h-[72px] w-full" />
+      </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5 text-[14px] text-[var(--wb-err)]">
-        Não foi possível carregar a telemetria de chamadas de IA.
-      </div>
+      <EstadoDeErro
+        titulo="Não foi possível carregar as chamadas de IA"
+        motivo="A telemetria não respondeu. Tente de novo em instantes."
+        aoTentar={() => void refetch()}
+      />
     );
   }
 
   if (chamadas.length === 0) {
     return (
-      <div className="rounded-[var(--radius)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
-        <p className="text-[15px] text-[var(--wb-text-mute)]">
-          Nenhuma chamada de IA registrada ainda.
-        </p>
-        <p className="mt-1.5 text-[13px] text-[var(--wb-text-dim)]">
-          A telemetria é populada assim que você <strong>roda uma geração via Claude</strong>{' '}
-          (análise, trechos, cenas, metadados, thumbnail).
-        </p>
-      </div>
+      <EstadoVazio
+        icone="brain"
+        titulo="Nenhuma chamada de IA registrada ainda"
+        descricao="A telemetria nasce quando você roda uma geração via Claude: análise, trechos, cenas, metadados ou capa."
+      />
     );
   }
 
   return (
     <div className="grid content-start gap-4">
-      <p className="text-[13px] text-[var(--wb-text-dim)]">
+      <p className="text-pequeno text-fg-3">
         {chamadas.length} chamada{chamadas.length === 1 ? '' : 's'} mais recente
         {chamadas.length === 1 ? '' : 's'}. Clique numa linha para ver o prompt e a resposta.
       </p>
-      <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--wb-border-soft)]">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="bg-[var(--wb-bg-inset)] font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-              <th className="px-3 py-2 font-medium" aria-label="Expandir" />
-              <th className="px-3 py-2 font-medium">Quando</th>
-              <th className="px-3 py-2 font-medium">Etapa</th>
-              <th className="px-3 py-2 font-medium">Modelo</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Custo</th>
-              <th className="px-3 py-2 font-medium">Latência</th>
-              <th className="px-3 py-2 font-medium">Tokens (in→out)</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">
+        <Tabela>
+          <TabelaCabeca>
+            <TabelaLinha>
+              <TabelaTitulo aria-label="Expandir" />
+              <TabelaTitulo>Quando</TabelaTitulo>
+              <TabelaTitulo>Etapa</TabelaTitulo>
+              <TabelaTitulo>Modelo</TabelaTitulo>
+              <TabelaTitulo>Status</TabelaTitulo>
+              <TabelaTitulo aDireita>Custo</TabelaTitulo>
+              <TabelaTitulo aDireita>Latência</TabelaTitulo>
+              <TabelaTitulo aDireita>Tokens (in→out)</TabelaTitulo>
+            </TabelaLinha>
+          </TabelaCabeca>
+          <TabelaCorpo>
             {chamadas.map((call) => (
               <CallRow key={call.id} call={call} />
             ))}
-          </tbody>
-        </table>
+          </TabelaCorpo>
+        </Tabela>
       </div>
     </div>
   );

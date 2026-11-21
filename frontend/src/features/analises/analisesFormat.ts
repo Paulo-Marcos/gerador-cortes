@@ -90,3 +90,8 @@ export function resumirApagados(
     .map(({ slug, rotulo }) => `${rotulo} ${porMotivo[slug]}`);
   return partes.length ? partes.join(' · ') : '—';
 }
+
+/** D-1176: o texto ao lado do select de live enquanto a lista do canal carrega (DIRECAO §7.8). */
+export function fraseBuscandoLives(total?: number): string {
+  return total && total > 0 ? `Buscando as ${total} lives do canal.` : 'Buscando as lives do canal.';
+}

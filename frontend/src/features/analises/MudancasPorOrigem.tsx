@@ -2,6 +2,14 @@
 // voto de qualidade (D-419), que virou carimbo: em vez de uma nota, quantos
 // cortes de cada provedor o operador precisou esticar, encurtar, renomear ou
 // retalhar — e quantas propostas apagou, e por quê (D-993).
+import {
+  Tabela,
+  TabelaCabeca,
+  TabelaCelula,
+  TabelaCorpo,
+  TabelaLinha,
+  TabelaTitulo,
+} from '@/components/ui/tabela';
 import { MOTIVOS_APAGADO } from '@/features/editor/motivoApagado';
 import type { TelemetriaProjeto } from './api';
 import { resumirApagados } from './analisesFormat';
@@ -39,39 +47,39 @@ export function MudancasPorOrigem({
   if (grupos.length === 0) return null;
   return (
     <section className="grid gap-2">
-      <h3 className="text-[15px] font-medium text-[var(--wb-text)]">O que você mudou, por origem</h3>
-      <p className="text-[13px] text-[var(--wb-text-dim)]">
+      <h3 className="text-linha text-fg">O que você mudou, por origem</h3>
+      <p className="text-corpo text-fg-3">
         Quantos cortes de cada proposta tiveram cada mudança. + esticou, − encurtou.
       </p>
-      <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--wb-border-soft)]">
-        <table className="w-full border-collapse text-left text-[13px]">
-          <thead>
-            <tr className="bg-[var(--wb-bg-inset)] text-[11px] uppercase text-[var(--wb-text-dim)]">
-              <th className="px-3 py-2 font-medium">Origem</th>
+      <div className="overflow-x-auto rounded-cartao border border-fio bg-vidro">
+        <Tabela>
+          <TabelaCabeca>
+            <TabelaLinha>
+              <TabelaTitulo>Origem</TabelaTitulo>
               {COLUNAS.map((c) => (
-                <th key={c.rotulo} className="px-3 py-2 font-medium">
+                <TabelaTitulo key={c.rotulo} aDireita>
                   {c.rotulo}
-                </th>
+                </TabelaTitulo>
               ))}
-              <th className="px-3 py-2 font-medium">Por que apagou</th>
-            </tr>
-          </thead>
-          <tbody>
+              <TabelaTitulo>Por que apagou</TabelaTitulo>
+            </TabelaLinha>
+          </TabelaCabeca>
+          <TabelaCorpo>
             {grupos.map((g) => (
-              <tr key={g.origem} className="border-t border-[var(--wb-border-soft)]">
-                <td className="px-3 py-2 font-code text-[var(--wb-text)]">{g.origem}</td>
+              <TabelaLinha key={g.origem}>
+                <TabelaCelula numero>{g.origem}</TabelaCelula>
                 {COLUNAS.map((c) => (
-                  <td key={c.rotulo} className="px-3 py-2 font-code text-[var(--wb-text-mute)]">
+                  <TabelaCelula key={c.rotulo} numero aDireita className="text-fg-2">
                     {c.valor(g)}
-                  </td>
+                  </TabelaCelula>
                 ))}
-                <td className="px-3 py-2 text-[var(--wb-text-mute)]">
+                <TabelaCelula className="text-fg-2">
                   {resumirApagados(g.apagados.por_motivo, motivos)}
-                </td>
-              </tr>
+                </TabelaCelula>
+              </TabelaLinha>
             ))}
-          </tbody>
-        </table>
+          </TabelaCorpo>
+        </Tabela>
       </div>
     </section>
   );
