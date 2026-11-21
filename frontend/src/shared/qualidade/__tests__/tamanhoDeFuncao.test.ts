@@ -29,7 +29,6 @@ const TESTES = /(__tests__\/|\.test\.tsx?$)/;
 const EXCECOES: Record<string, number> = {
   "src/components/PromptManualPanel.tsx::PromptManualPanel": 223,
   "src/components/PromptManualPanel.tsx::PromptManualPanel.map": 103,
-  "src/features/atalhos/AtalhosPage.tsx::AtalhosPage": 226,
   "src/features/channels/ChannelCard.tsx::ChannelCard": 111,
   "src/features/channels/ChannelForm.tsx::ChannelForm": 142,
   "src/features/channels/ChannelsPage.tsx::ChannelsPage": 224,
@@ -64,7 +63,6 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::EscopoLadder": 132,
   "src/features/editor/fase2/youtubeLayoutPanel/components.tsx::RegionItem": 189,
   "src/features/editor/useEditorPage.tsx::useEditorPage": 492,
-  "src/features/fila/FilaPage.tsx::LinhaJob": 126,
   "src/features/final-review/FinalReviewPage.tsx::FinalReviewPage": 329,
   "src/features/lives/LiveSearchPage.tsx::LiveSearchPage": 180,
   "src/features/lives/RankingLivesPage.tsx::RankingLivesPage": 114,
