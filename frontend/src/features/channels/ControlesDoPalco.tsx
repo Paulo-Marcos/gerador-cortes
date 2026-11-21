@@ -53,7 +53,7 @@ export function CampoNumero({
   return (
     <div className="grid gap-1.5">
       <Label htmlFor={id}>
-        {rotulo} <span className="text-[var(--wb-text-dim)]">({unidade})</span>
+        {rotulo} <span className="text-fg-3">({unidade})</span>
       </Label>
       <Input
         id={id}
@@ -120,9 +120,9 @@ export function CampoPosicao({
   const manual = !podeSerAutomatica || !posicao.automatica;
   return (
     <div className="grid gap-2">
-      <span className="text-xs font-medium text-text-300">{rotulo}</span>
+      <span className="text-xs font-medium text-fg-3">{rotulo}</span>
       {podeSerAutomatica && (
-        <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
+        <label className="flex items-center gap-2 text-sm text-fg">
           <input
             type="checkbox"
             checked={posicao.automatica}
@@ -171,7 +171,7 @@ export function CampoEscolha<T extends string>({
 }) {
   return (
     <div className="grid gap-1.5" role="group" aria-label={rotulo}>
-      <span className="text-xs font-medium text-text-300">{rotulo}</span>
+      <span className="text-xs font-medium text-fg-3">{rotulo}</span>
       <div className="flex flex-wrap gap-2">
         {opcoes.map((opcao) => (
           <Button
@@ -224,8 +224,8 @@ export function JanelasDoShort({
   onMudar: (valor: ShortDoPalco) => void;
 }) {
   return (
-    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] p-4">
-      <legend className="px-1 text-xs font-medium text-text-300">Short</legend>
+    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-fio p-4">
+      <legend className="px-1 text-xs font-medium text-fg-3">Short</legend>
       <CampoNumero
         id="palco-contorno"
         rotulo="Contorno do fundo em volta das janelas"

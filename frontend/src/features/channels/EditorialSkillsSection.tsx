@@ -90,24 +90,24 @@ export function EditorialSkillsSection() {
   };
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Skills do canal</h2>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+      <h2 className="text-lg font-semibold text-fg">Skills do canal</h2>
+      <p className="text-sm text-fg-2">
         As cinco skills editoriais que a IA usa em cada etapa. Edite o prompt, os parâmetros e as
         lentes de variação por canal; o padrão genérico fica disponível para resetar.
       </p>
 
       {skillsQuery.isLoading && (
-        <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
+        <p className="flex items-center gap-2 text-linha text-fg-2">
           <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando skills…
         </p>
       )}
 
       {skillsQuery.isError && (
-        <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklab,var(--error)_10%,var(--wb-bg-card))] p-4">
-          <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-            <Icon name="triangle-alert" size={16} className="text-error" />
+        <div className="grid gap-3 rounded-[var(--radius)] border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
+          <p className="flex items-center gap-2 text-linha text-fg">
+            <Icon name="triangle-alert" size={16} className="text-erro" />
             {mensagemErro(skillsQuery.error, 'Não foi possível carregar as skills.')}
           </p>
           <div>

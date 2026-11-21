@@ -68,17 +68,17 @@ export function ModelosDeIa() {
   const papeis = query.data?.papeis ?? [];
 
   return (
-    <section className="grid gap-4 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+    <section className="grid gap-4 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
       <div className="grid gap-1">
-        <h2 className="text-lg font-semibold text-[var(--wb-text)]">Modelos de IA</h2>
-        <p className="text-sm text-[var(--wb-text-mute)]">
+        <h2 className="text-lg font-semibold text-fg">Modelos de IA</h2>
+        <p className="text-sm text-fg-2">
           Cada skill do canal escolhe uma faixa: pesado, médio ou rápido. Aqui você diz qual
           modelo atende cada faixa. Quando um modelo sair de uso, basta trocar aqui.
         </p>
       </div>
       {GRUPOS.map((grupo) => (
         <fieldset key={grupo.provedor} className="grid gap-2">
-          <legend className="mb-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]">
+          <legend className="mb-1 text-xs font-bold uppercase tracking-[0.08em] text-fg-2">
             {grupo.titulo}
           </legend>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -86,13 +86,13 @@ export function ModelosDeIa() {
               .filter((papel) => papel.provedor === grupo.provedor)
               .map((papel) => (
                 <label key={papel.key} className="grid content-start gap-1">
-                  <span className="text-sm font-semibold text-[var(--wb-text)]">{papel.rotulo}</span>
+                  <span className="text-sm font-semibold text-fg">{papel.rotulo}</span>
                   <select
                     aria-label={`${grupo.titulo} · ${papel.rotulo}`}
                     value={papel.valor}
                     disabled={mutation.isPending}
                     onChange={(e) => mutation.mutate({ [papel.key]: e.target.value })}
-                    className="h-10 min-w-0 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-semibold text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"
+                    className="h-10 min-w-0 rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"
                   >
                     {opcoesDoPapel(papel, disponiveis.data?.[grupo.provedor] ?? []).map((m) => (
                       <option key={m.id} value={m.id}>
@@ -100,11 +100,11 @@ export function ModelosDeIa() {
                       </option>
                     ))}
                   </select>
-                  <span className="text-xs text-[var(--wb-text-mute)]">{papel.descricao}</span>
+                  <span className="text-xs text-fg-2">{papel.descricao}</span>
                 </label>
               ))}
           </div>
-          <span className="text-xs text-[var(--wb-text-dim)]">
+          <span className="text-xs text-fg-3">
             {disponiveis.isLoading ? 'Buscando os modelos disponíveis…' : grupo.nota}
           </span>
         </fieldset>

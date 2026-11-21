@@ -24,7 +24,7 @@ function Link({ href, children }: { href: string; children: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-0.5 font-medium text-[var(--wb-accent)] underline-offset-2 hover:underline"
+      className="inline-flex items-center gap-0.5 font-medium text-iris underline-offset-2 hover:underline"
     >
       {children}
       <Icon name="external-link" />
@@ -46,9 +46,9 @@ export function ConectarYoutubeTutorial({
   return (
     <details
       open={abertoDeInicio}
-      className="rounded-md border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-3 py-2 text-xs text-[var(--wb-text-mute)]"
+      className="rounded-md border border-fio bg-painel-solido px-3 py-2 text-xs text-fg-2"
     >
-      <summary className="cursor-pointer text-sm font-semibold text-[var(--wb-text)]">
+      <summary className="cursor-pointer text-sm font-semibold text-fg">
         Como conectar o YouTube
       </summary>
 
@@ -78,7 +78,7 @@ export function ConectarYoutubeTutorial({
             Renomeie o arquivo para <code>client_secrets.json</code> e salve exatamente aqui:
           </span>
           <span className="flex items-center gap-1.5">
-            <code className="min-w-0 truncate rounded bg-[var(--wb-bg-inset)] px-1.5 py-0.5 text-[var(--wb-text)]">
+            <code className="min-w-0 truncate rounded bg-poco px-1.5 py-0.5 text-fg">
               {destino}
             </code>
             <Button
@@ -105,7 +105,7 @@ export function ConectarYoutubeTutorial({
         </li>
       </ol>
 
-      <p className="mt-3 font-semibold text-[var(--wb-text)]">Se algo der errado</p>
+      <p className="mt-3 font-semibold text-fg">Se algo der errado</p>
       <ul className="mt-1 grid list-disc gap-1 pl-5">
         <li>
           <b>Erro 403: access_denied</b>: a conta usada no login não está entre os usuários de

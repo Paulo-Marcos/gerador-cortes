@@ -30,14 +30,14 @@ export function NavegadorDoRobo() {
 
   return (
     <label className="grid gap-1.5">
-      <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]">
+      <span className="text-xs font-bold uppercase tracking-[0.08em] text-fg-2">
         Navegador do robô (TikTok e Instagram)
       </span>
       <select
         value={query.data?.navegador ?? 'edge'}
         disabled={query.isLoading || mutation.isPending}
         onChange={(event) => mutation.mutate(event.target.value as Navegador)}
-        className="h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-semibold text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"
+        className="h-10 rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"
       >
         {NAVEGADORES.map((navegador) => (
           <option key={navegador.value} value={navegador.value}>
@@ -45,7 +45,7 @@ export function NavegadorDoRobo() {
           </option>
         ))}
       </select>
-      <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+      <span className="text-xs font-normal text-fg-2">
         Onde o robô abre o upload assistido. Cada navegador guarda a própria sessão: na primeira
         vez em um deles, faça login na janela que o robô abrir.
       </span>

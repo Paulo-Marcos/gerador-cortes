@@ -19,7 +19,7 @@ interface Props {
 export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onCriar }: Props) {
   if (carregando) {
     return (
-      <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
+      <p className="flex items-center gap-2 text-linha text-fg-2">
         <Icon name="loader-2" size={16} className="animate-spin" />
         Carregando canais…
       </p>
@@ -28,9 +28,9 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
 
   if (erro) {
     return (
-      <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklab,var(--error)_10%,var(--wb-bg-card))] p-5">
-        <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-          <Icon name="triangle-alert" size={16} className="text-error" />
+      <div className="grid gap-3 rounded-[var(--radius)] border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-5">
+        <p className="flex items-center gap-2 text-linha text-fg">
+          <Icon name="triangle-alert" size={16} className="text-erro" />
           {mensagemErro(erro, 'Não foi possível carregar os canais.')}
         </p>
         <div>
@@ -44,8 +44,8 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
 
   if (vazio) {
     return (
-      <div className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-6 text-center">
-        <p className="text-[15px] text-[var(--wb-text-mute)]">
+      <div className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-6 text-center">
+        <p className="text-linha text-fg-2">
           Nenhum canal cadastrado ainda. Crie o primeiro para começar.
         </p>
         <div className="flex justify-center">

@@ -38,22 +38,22 @@ export function EstiloNoModal({
   return (
     <section
       aria-label="Estilo do palco"
-      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-5 py-2"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-fio bg-poco px-5 py-2"
     >
-      <Icon name="layout-template" className="text-[var(--wb-accent)]" />
-      <span className="text-[13px] text-[var(--wb-text)]">
+      <Icon name="layout-template" className="text-iris" />
+      <span className="text-corpo text-fg">
         Estilo <strong>{nome}</strong>
-        <span className="text-[var(--wb-text-dim)]"> · {origem ? ORIGEM[origem] : 'carregando…'}</span>
+        <span className="text-fg-3"> · {origem ? ORIGEM[origem] : 'carregando…'}</span>
       </span>
       {acoes}
       <div className="flex-1" />
       {alvo === 'global' ? (
-        <Link to="/canais" className="text-[12px] font-semibold text-[var(--wb-accent)] underline-offset-2 hover:underline">
+        <Link to="/canais" className="text-pequeno font-semibold text-iris underline-offset-2 hover:underline">
           O estilo global se troca em Canais → Palco do canal
         </Link>
       ) : (
         <div role="radiogroup" aria-label={`Estilo deste ${alvo}`} className="flex items-center gap-1">
-          <span className="mr-1 text-[12px] text-[var(--wb-text-dim)]">Usar neste {alvo}:</span>
+          <span className="mr-1 text-pequeno text-fg-3">Usar neste {alvo}:</span>
           {ESTILOS.map((opcao) => (
             <button
               key={opcao.id}
@@ -63,10 +63,10 @@ export function EstiloNoModal({
               title={opcao.descricao}
               onClick={() => onEstilo(opcao.id)}
               className={cn(
-                'h-7 rounded-full border px-3 text-[12px] font-semibold transition-colors',
+                'h-7 rounded-full border px-3 text-pequeno font-semibold transition-colors',
                 estilo === opcao.id
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
-                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-sobre-iris'
+                  : 'border-fio-2 bg-painel-solido text-fg-2 hover:text-fg',
               )}
             >
               {opcao.nome}
@@ -90,10 +90,10 @@ export function FundosDoLimpo({ fundo, onFundo, desabilitado }: { fundo: string;
           disabled={desabilitado}
           onClick={() => onFundo(opcao.id)}
           className={cn(
-            'h-7 rounded-[var(--radius-xs)] border px-2.5 text-[12px] font-semibold transition-colors disabled:opacity-60',
+            'h-7 rounded-[var(--radius-xs)] border px-2.5 text-pequeno font-semibold transition-colors disabled:opacity-60',
             fundo === opcao.id
-              ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-              : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+              ? 'border-[var(--wb-accent)] bg-iris-suave text-iris'
+              : 'border-fio-2 bg-painel-solido text-fg-2 hover:text-fg',
           )}
         >
           {opcao.nome}

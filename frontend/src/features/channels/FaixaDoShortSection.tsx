@@ -22,14 +22,14 @@ export function FaixaDoShortSection() {
   });
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Duração dos shorts</h2>
-      <p className="text-sm text-[var(--wb-text-mute)]">
+    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+      <h2 className="text-lg font-semibold text-fg">Duração dos shorts</h2>
+      <p className="text-sm text-fg-2">
         A faixa em que a IA propõe os candidatos a short deste canal. Candidato fora dela é
         descartado antes de chegar a você.
       </p>
       {query.isError && (
-        <p role="alert" className="text-xs text-error">
+        <p role="alert" className="text-xs text-erro">
           {mensagemErro(query.error, 'Não foi possível carregar a faixa dos shorts.')}
         </p>
       )}

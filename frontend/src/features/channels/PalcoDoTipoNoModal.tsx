@@ -47,7 +47,7 @@ export function PalcoDoTipoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) 
   return (
     <div className="grid gap-2">
       {abas.length > 1 && (
-        <div role="tablist" aria-label="Componentes do palco" className="flex flex-wrap gap-1 border-b border-[var(--wb-border-soft)]">
+        <div role="tablist" aria-label="Componentes do palco" className="flex flex-wrap gap-1 border-b border-fio">
           {abas.map((id) => (
             <button
               key={id}
@@ -56,10 +56,10 @@ export function PalcoDoTipoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) 
               aria-selected={aba === id}
               onClick={() => setEscolhida(id)}
               className={cn(
-                '-mb-px border-b-2 px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors',
+                '-mb-px border-b-2 px-2.5 py-1.5 text-pequeno font-semibold transition-colors',
                 aba === id
-                  ? 'border-[var(--wb-accent)] text-[var(--wb-text)]'
-                  : 'border-transparent text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
+                  ? 'border-[var(--wb-accent)] text-fg'
+                  : 'border-transparent text-fg-3 hover:text-fg',
               )}
             >
               {NOMES[id]}
@@ -98,7 +98,7 @@ export function PainelDoComponente({ aba, ...props }: Props & { aba: Aba }) {
   }
   return (
     <div className="grid gap-3">
-      <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
+      <label className="flex items-center gap-2 text-sm text-fg">
         <input type="checkbox" checked={rascunho.placaAtiva} onChange={(e) => onMudar({ ...rascunho, placaAtiva: e.target.checked })} />
         Mostrar a placa (nome e papel de quem fala)
       </label>
@@ -121,7 +121,7 @@ function CabecalhoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) {
   const short = tipo === 'short';
   return (
     <div className="grid gap-3">
-      <label className="flex items-center gap-2 text-sm text-[var(--wb-text)]">
+      <label className="flex items-center gap-2 text-sm text-fg">
         <input type="checkbox" checked={rascunho.cabecalhoAtivo} onChange={(e) => onMudar({ ...rascunho, cabecalhoAtivo: e.target.checked })} />
         Mostrar o cabeçalho
       </label>
@@ -168,7 +168,7 @@ function CabecalhoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) {
           />
         )}
       </div>
-      <p className="text-xs text-[var(--wb-text-dim)]">
+      <p className="text-xs text-fg-3">
         Nome e @ vazios usam os do canal; para não mostrar, desmarque o item. A imagem é a do canal (Canais → Palco do canal).
       </p>
     </div>
