@@ -73,7 +73,7 @@ export function CamposDoPalco({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+        <span className="font-code text-micro uppercase tracking-[0.06em] text-fg-2">
           blocos do palco
         </span>
         <div className="flex-1" />
@@ -89,10 +89,10 @@ export function CamposDoPalco({
         <div key={regiao} className="flex flex-wrap items-center gap-1">
           <span
             className={cn(
-              'w-[52px] flex-none font-code text-[10.5px]',
+              'w-[52px] flex-none font-code text-micro',
               ajustados.includes(regiao)
-                ? 'font-bold text-[var(--wb-accent)]'
-                : 'text-[var(--wb-text-mute)]',
+                ? 'font-bold text-iris'
+                : 'text-fg-2',
             )}
             title={ajustados.includes(regiao) ? 'Ajustado por você' : 'Vem do modelo'}
           >
@@ -136,7 +136,7 @@ function CampoDeLado({
 
   return (
     <label className="inline-flex items-center gap-0.5">
-      <span className="font-code text-[9.5px] uppercase text-[var(--wb-text-mute)]">{lado}</span>
+      <span className="font-code text-micro uppercase text-fg-2">{lado}</span>
       <input
         value={mostrado}
         disabled={ocupado}
@@ -157,7 +157,7 @@ function CampoDeLado({
             e.currentTarget.blur();
           }
         }}
-        className="w-[46px] rounded-[5px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-1 py-0.5 text-center font-code text-[10.5px] tabular-nums outline-none focus-visible:border-[var(--wb-accent)] disabled:opacity-50"
+        className="w-[46px] rounded-[5px] border border-fio-2 bg-painel-solido px-1 py-0.5 text-center font-code text-micro tabular-nums outline-none focus-visible:border-[var(--wb-accent)] disabled:opacity-50"
       />
     </label>
   );

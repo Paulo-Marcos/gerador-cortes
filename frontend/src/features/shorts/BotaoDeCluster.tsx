@@ -34,10 +34,10 @@ export function BotaoDeCluster({
       aria-label={rotulo}
       aria-pressed={ativo}
       className={cn(
-        'inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[12px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+        'inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-pequeno font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35',
         ativo
-          ? 'bg-[var(--wb-bg-panel)] text-[var(--wb-text)] shadow-[var(--wb-shadow)]'
-          : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]',
+          ? 'bg-painel-solido text-fg shadow-[var(--wb-shadow)]'
+          : 'text-fg-2 hover:bg-painel-solido hover:text-fg',
       )}
     >
       {children}

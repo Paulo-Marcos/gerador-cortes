@@ -18,9 +18,9 @@ interface Props {
 export function PassoDesenharCapa({ shortId, prompt, ocupado }: Props) {
   const qc = useQueryClient();
   return (
-    <section className="border-t border-[var(--wb-border-soft)] pt-3">
-      <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">2. Desenhar a arte</p>
-      <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+    <section className="border-t border-fio pt-3">
+      <p className="text-pequeno font-semibold text-fg">2. Desenhar a arte</p>
+      <p className="mt-1 text-micro leading-relaxed text-fg-2">
         Gere no ChatGPT com um clique, ou cole o prompt no gerador de imagem e peça 1080×1920.
         Confira se o texto e o assunto cabem no quadrado central antes de salvar.
       </p>

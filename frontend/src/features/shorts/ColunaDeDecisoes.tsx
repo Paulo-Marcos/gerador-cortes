@@ -109,7 +109,7 @@ export function ColunaDeDecisoes({
 
   return (
     <aside className="flex min-h-0 flex-col gap-2.5 overflow-auto">
-      <div className="flex-none space-y-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
+      <div className="flex-none space-y-2 rounded-[10px] border border-fio-2 bg-painel-solido p-2.5">
         {/* D-570: o PALCO toma o lugar do RECORTES aqui.
             O RECORTES não sumiu — foi para a seção 2 do "Definir o palco",
             junto do que ele descreve: de onde sai cada janela. Aqui em cima
@@ -117,7 +117,7 @@ export function ColunaDeDecisoes({
         {/* D-594: os PADRÕES do corte num bloco só — o palco e o gancho, cada
             um com escolher, editar e criar. São as duas decisões que valem
             para todos os trechos, e o operador as procura no mesmo lugar. */}
-        <p className="font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        <p className="font-code text-micro font-bold uppercase tracking-[0.08em] text-fg-3">
           padrões do corte
         </p>
         <PalcoPadraoDoCorte
@@ -126,7 +126,7 @@ export function ColunaDeDecisoes({
           onEditar={onEditarPalcoPadrao}
         />
         <GanchoPadraoDoCorte corteId={corteId} onEditar={onEditarGanchoPadrao} />
-        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-2">
+        <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-2">
           <Button
             variant="outline"
             size="sm"
@@ -144,7 +144,7 @@ export function ColunaDeDecisoes({
               operador clicou, e ele teria de abrir o trecho certo antes de
               marcar. Aqui o fluxo é o dele — para o player, marca, escolhe. */}
           {shorts.length > 0 && (
-            <label className="flex items-center gap-1.5 text-[11px] text-[var(--wb-text-mute)]">
+            <label className="flex items-center gap-1.5 text-micro text-fg-2">
               somar este instante a
               <select
                 aria-label="Somar este instante como segmento de qual trecho"
@@ -163,7 +163,7 @@ export function ColunaDeDecisoes({
                   onSelecionar(alvo.id);
                   setAjusteAberto(alvo.id);
                 }}
-                className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+                className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
               >
                 <option value="">escolher o trecho…</option>
                 {shorts.map((candidato, indice) => (
@@ -178,14 +178,14 @@ export function ColunaDeDecisoes({
 
           {/* D-746: o motivo do "Novo trecho" apagado, escrito. */}
           {duracaoRegua <= 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-[var(--wb-warn-ink)]">
+            <span className="flex items-center gap-1 text-micro text-aviso">
               <Icon name="ban" />
               Sem bruto na régua: gere o bruto antes de marcar um trecho.
             </span>
           )}
 
           {criarManual.isError && (
-            <span className="text-[11px] text-[var(--wb-warn-ink)]">
+            <span className="text-micro text-aviso">
               {(criarManual.error as Error)?.message ?? 'não consegui criar'}
             </span>
           )}
@@ -193,7 +193,7 @@ export function ColunaDeDecisoes({
       </div>
 
       {carregando && (
-        <p className="py-8 text-center text-[13px] text-[var(--wb-text-mute)]">
+        <p className="py-8 text-center text-corpo text-fg-2">
           Carregando candidatos…
         </p>
       )}
@@ -201,14 +201,14 @@ export function ColunaDeDecisoes({
       {/* Falha de rede NÃO pode se parecer com "não há candidatos": a
           primeira pede para tentar de novo, a segunda pede para gerar. */}
       {falhou && (
-        <p className="py-8 text-center text-[13px] leading-relaxed text-[var(--wb-text-dim)]">
+        <p className="py-8 text-center text-corpo leading-relaxed text-fg-3">
           Não consegui carregar os candidatos:{' '}
           {(erroDaLista as Error)?.message ?? 'erro desconhecido'}
         </p>
       )}
 
       {!carregando && !falhou && shorts.length === 0 && (
-        <p className="py-8 text-center text-[13px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="py-8 text-center text-corpo leading-relaxed text-fg-2">
           Nenhum candidato ainda. Gere o bruto de novo para a IA propor os trechos, ou marque
           um trecho à mão.
         </p>
@@ -257,7 +257,7 @@ export function ColunaDeDecisoes({
       ))}
 
       {edicao.erro && (
-        <p className="rounded-[9px] bg-[var(--wb-bg-inset)] p-2 text-[12px] text-[var(--wb-text-dim)]">
+        <p className="rounded-[9px] bg-poco p-2 text-pequeno text-fg-3">
           {edicao.erro}
         </p>
       )}
@@ -265,7 +265,7 @@ export function ColunaDeDecisoes({
       {/* Falha de DISPARO (ex.: já há render em andamento). A falha do render
           em si chega pelo progresso, no card. */}
       {(previa.isError || renderizar.isError) && (
-        <p className="rounded-[9px] border border-[var(--wb-warn-ink)] bg-[var(--wb-warn-soft)] p-2 text-[12px] leading-relaxed text-[var(--wb-warn-ink)]">
+        <p className="rounded-[9px] border border-aviso bg-aviso/13 p-2 text-pequeno leading-relaxed text-aviso">
           <span className="font-bold">Não consegui iniciar.</span>{' '}
           {((previa.error ?? renderizar.error) as Error)?.message ?? 'erro desconhecido'}
         </p>

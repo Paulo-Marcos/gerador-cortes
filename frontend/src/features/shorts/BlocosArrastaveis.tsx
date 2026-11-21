@@ -136,7 +136,7 @@ export function BlocosArrastaveis({
                 : 'border-white/70 hover:border-[var(--wb-accent)] hover:bg-wb-accent/10',
             )}
           >
-            <span className="absolute left-1 top-1 rounded-[4px] bg-black/70 px-1 font-code text-[9px] font-bold uppercase tracking-wide text-white">
+            <span className="absolute left-1 top-1 rounded-[4px] bg-black/70 px-1 font-code text-micro font-bold uppercase tracking-wide text-white">
               {nome}
             </span>
             {CANTOS.map(({ pega, classe, cursor }) => (

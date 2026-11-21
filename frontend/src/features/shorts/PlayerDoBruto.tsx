@@ -93,7 +93,7 @@ export function PlayerDoBruto({
               palco", onde a prévia é fixa e o controle de tamanho já
               morava — eram metades da mesma decisão em telas diferentes.
               O gesto era bom; o lugar é que estava errado. */}
-          <span className="font-code text-[9.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+          <span className="font-code text-micro uppercase tracking-[0.06em] text-fg-2">
             como vai sair
           </span>
         </div>

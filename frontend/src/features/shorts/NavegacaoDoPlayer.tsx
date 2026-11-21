@@ -26,7 +26,7 @@ export function NavegacaoDoPlayer({ trecho, onIrPara }: Props) {
       role="group"
       aria-label="Ir para um ponto do vídeo"
     >
-      <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+      <span className="font-code text-micro uppercase tracking-[0.06em] text-fg-2">
         ir para
       </span>
 

@@ -18,7 +18,7 @@ interface Props {
 export function RoboDoLote(p: Props) {
   const temRobo = (p.temTiktok && p.tiktokAssistido) || (p.temInstagram && p.instagramAssistido);
   return (
-    <div className="mt-2 space-y-1.5 rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
+    <div className="mt-2 space-y-1.5 rounded-[9px] bg-poco p-2.5">
       {/* Um interruptor por plataforma, e não um só: as duas páginas não são
           nossas e quebram em dias diferentes — desligar o robô de uma não pode
           desligar o da outra. */}
@@ -48,7 +48,7 @@ export function RoboDoLote(p: Props) {
         />
       )}
       {temRobo && p.publicarSozinho && p.seguraInstagram && (
-        <p className="text-[11.5px] text-[var(--wb-text-dim)]">
+        <p className="text-micro text-fg-3">
           Só "distribuir" espaça os Reels: neste lote o robô sobe tudo e para no botão final,
           para eles não irem ao ar de uma vez.
         </p>

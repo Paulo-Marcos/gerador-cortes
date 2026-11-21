@@ -78,7 +78,7 @@ export function LinhaDeAjuste({
 
   return (
     <div
-      className="space-y-2.5 border-y border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-3"
+      className="space-y-2.5 border-y border-fio bg-poco p-3"
       onClick={(e) => e.stopPropagation()}
       role="group"
       aria-label="Ajustes do candidato"
@@ -117,7 +117,7 @@ export function LinhaDeAjuste({
               escolhido ? (escolhido.payload as unknown as PalcoShortPreset) : null,
             );
           }}
-          className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+          className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
           {/* O trecho que ninguém tocou SEGUE o padrão — e escolher esta
               opção num customizado o devolve a ele. Sem padrão no corte, o
@@ -151,7 +151,7 @@ export function LinhaDeAjuste({
         {/* Só depois de carregar: enquanto a lista não chega, `data` é
             vazio e o aviso piscava mesmo com presets salvos. */}
         {presets.isSuccess && presets.data.length === 0 && (
-          <span className="text-[11px] text-[var(--wb-text-mute)]">
+          <span className="text-micro text-fg-2">
             nenhum palco salvo — monte um em Definir palco
           </span>
         )}
@@ -172,7 +172,7 @@ export function LinhaDeAjuste({
       {/* O veredito precisa aparecer mesmo quando é "não achei": sem isso, um
           clique sem efeito visível fica indistinguível de um botão quebrado. */}
       {vereditoDoRosto && (
-        <p className="w-full font-code text-[10.5px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="w-full font-code text-micro leading-relaxed text-fg-2">
           {vereditoDoRosto}
         </p>
       )}
@@ -192,7 +192,7 @@ function Grupo({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" title={dica}>
-      <span className="w-[74px] shrink-0 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+      <span className="w-[74px] shrink-0 font-code text-micro uppercase tracking-[0.06em] text-fg-2">
         {rotulo}
       </span>
       {children}

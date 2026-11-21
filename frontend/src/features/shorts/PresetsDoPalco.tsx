@@ -56,7 +56,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
           value={nomeNovo}
           onChange={(e) => setNomeNovo(e.target.value)}
           placeholder="ex.: rosto cheio da live de terça"
-          className="h-8 max-w-[260px] text-[12px]"
+          className="h-8 max-w-[260px] text-pequeno"
         />
         <Button
           size="sm"
@@ -77,14 +77,14 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
         {doEstilo.map((preset) => (
           <li
             key={preset.id}
-            className="flex flex-wrap items-center gap-1.5 rounded-[7px] border border-[var(--wb-border-soft)] px-2 py-1.5"
+            className="flex flex-wrap items-center gap-1.5 rounded-[7px] border border-fio px-2 py-1.5"
           >
             {renomeando === preset.id ? (
               <>
                 <Input
                   value={nomeEditado}
                   onChange={(e) => setNomeEditado(e.target.value)}
-                  className="h-7 max-w-[200px] text-[12px]"
+                  className="h-7 max-w-[200px] text-pequeno"
                   autoFocus
                 />
                 <Button
@@ -105,7 +105,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
               </>
             ) : (
               <>
-                <span className="min-w-0 flex-1 truncate text-[12px]">{preset.nome}</span>
+                <span className="min-w-0 flex-1 truncate text-pequeno">{preset.nome}</span>
                 <Button
                   size="sm"
                   variant="outline"
@@ -135,7 +135,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
                     quebrado, que é a mesma lição do veredito do rosto e da
                     régua lisa. */}
                 {regravar.isSuccess && regravar.variables?.id === preset.id && (
-                  <span className="font-code text-[10px] uppercase tracking-wide text-[var(--wb-accent-strong)]">
+                  <span className="font-code text-micro uppercase tracking-wide text-iris-2">
                     regravado
                   </span>
                 )}
@@ -164,7 +164,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
           </li>
         ))}
         {doEstilo.length === 0 && (
-          <li className="text-[11.5px] text-[var(--wb-text-mute)]">
+          <li className="text-micro text-fg-2">
             Nenhum preset de short ainda. Os do horizontal têm nomes de cena do OBS e continuam
             servindo de atalho para os recortes — estes aqui são seus.
           </li>

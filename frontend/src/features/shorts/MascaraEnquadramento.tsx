@@ -56,7 +56,7 @@ export function MascaraEnquadramento({ largura, altura, focoX, children }: Props
         }}
       >
         {recorta && (
-          <span className="absolute left-1/2 top-1 -translate-x-1/2 rounded-[4px] bg-black/70 px-1.5 py-0.5 font-code text-[10px] font-bold tracking-wide text-white">
+          <span className="absolute left-1/2 top-1 -translate-x-1/2 rounded-[4px] bg-black/70 px-1.5 py-0.5 font-code text-micro font-bold tracking-wide text-white">
             9:16
           </span>
         )}

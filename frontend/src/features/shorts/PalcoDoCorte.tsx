@@ -35,7 +35,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
 
   if (palco.isError) {
     return (
-      <p className="text-[11.5px] text-[var(--wb-text-dim)]">
+      <p className="text-micro text-fg-3">
         Nao consegui ler o palco: {(palco.error as Error)?.message ?? 'erro desconhecido'}
       </p>
     );
@@ -55,7 +55,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
           rotulo "palco" pareciam nomes de palco malfeitos. Eles nao nomeiam o
           palco: dizem de onde saem os recortes. O palco do short e o ARRANJO,
           que tem nomes proprios ("Tela em cima, pessoa embaixo"). */}
-      <span className="inline-flex items-center gap-1 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)]">
+      <span className="inline-flex items-center gap-1 font-code text-micro uppercase tracking-wide text-fg-2">
         <Icon name="crop" />
         recortes
       </span>
@@ -65,7 +65,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
         value={estado.presets_disponiveis.find((p) => p.nome === estado.preset)?.id ?? ''}
         disabled={escolher.isPending}
         onChange={(e) => escolher.mutate(e.target.value)}
-        className="rounded-[5px] border border-transparent bg-[var(--wb-bg-inset)] px-1.5 py-1 text-[11.5px] text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)] disabled:opacity-45"
+        className="rounded-[5px] border border-transparent bg-poco px-1.5 py-1 text-micro text-fg outline-none focus:border-[var(--wb-accent)] disabled:opacity-45"
       >
         <option value="">automático</option>
         {estado.presets_disponiveis.map((preset) => (
@@ -77,8 +77,8 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
 
       <span
         className={cn(
-          'inline-flex items-center gap-1 font-code text-[11px]',
-          semRegiao ? 'font-bold text-[var(--wb-warn-ink)]' : 'text-[var(--wb-text-mute)]',
+          'inline-flex items-center gap-1 font-code text-micro',
+          semRegiao ? 'font-bold text-aviso' : 'text-fg-2',
         )}
         title={
           semRegiao
@@ -92,7 +92,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
       </span>
 
       {escolher.isError && (
-        <span className="text-[11px] text-[var(--wb-warn-ink)]">
+        <span className="text-micro text-aviso">
           {(escolher.error as Error)?.message ?? 'nao consegui trocar'}
         </span>
       )}

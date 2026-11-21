@@ -59,7 +59,7 @@ export function TexturaDoAtual({
         ocupado={ocupado}
         onEscolher={(id) => onAplicar({ fundo_editorial: id })}
       />
-      <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+      <p className="mt-1 text-micro text-fg-2">
         A textura do canal por trás das janelas. Aparece na prévia ao lado.
       </p>
     </>

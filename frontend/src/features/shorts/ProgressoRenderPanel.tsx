@@ -24,10 +24,10 @@ interface Props {
 }
 
 const ICONE: Record<PassoRender['status'], React.ReactNode> = {
-  pendente: <Icon name="circle-dashed" className="text-[var(--wb-text-mute)]" />,
-  rodando: <Icon name="loader-2" className="animate-spin text-[var(--wb-accent)]" />,
-  concluido: <Icon name="check" className="text-[var(--wb-ok-ink)]" />,
-  erro: <Icon name="x" className="text-[var(--wb-warn-ink)]" />,
+  pendente: <Icon name="circle-dashed" className="text-fg-2" />,
+  rodando: <Icon name="loader-2" className="animate-spin text-iris" />,
+  concluido: <Icon name="check" className="text-ok" />,
+  erro: <Icon name="x" className="text-aviso" />,
 };
 
 function decorrido(segundos: number): string {
@@ -45,11 +45,11 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
 
   return (
     <div
-      className="mt-2.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-2.5"
+      className="mt-2.5 rounded-[8px] border border-fio-2 bg-poco p-2.5"
       aria-live="polite"
     >
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="font-code text-[10.5px] font-bold uppercase tracking-wide text-[var(--wb-text-dim)]">
+        <span className="font-code text-micro font-bold uppercase tracking-wide text-fg-3">
           {erro
             ? `${estagio} falhou`
             : cancelado
@@ -59,21 +59,21 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
                 : `renderizando ${estagio}`}
         </span>
         <div className="flex-1" />
-        <span className="font-code text-[10.5px] tabular-nums text-[var(--wb-text-mute)]">
+        <span className="font-code text-micro tabular-nums text-fg-2">
           {decorrido(decorridoSeg)}
         </span>
       </div>
 
       <ol className="space-y-1">
         {passos.map((passo) => (
-          <li key={passo.chave} className="flex items-center gap-1.5 text-[11.5px]">
+          <li key={passo.chave} className="flex items-center gap-1.5 text-micro">
             {ICONE[passo.status]}
             <span
               className={cn(
-                passo.status === 'rodando' && 'font-semibold text-[var(--wb-text)]',
-                passo.status === 'concluido' && 'text-[var(--wb-text-dim)]',
-                passo.status === 'pendente' && 'text-[var(--wb-text-mute)]',
-                passo.status === 'erro' && 'font-semibold text-[var(--wb-warn-ink)]',
+                passo.status === 'rodando' && 'font-semibold text-fg',
+                passo.status === 'concluido' && 'text-fg-3',
+                passo.status === 'pendente' && 'text-fg-2',
+                passo.status === 'erro' && 'font-semibold text-aviso',
               )}
             >
               {passo.label}
@@ -83,13 +83,13 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
       </ol>
 
       {erro && (
-        <p className="mt-2 border-t border-[var(--wb-border-soft)] pt-2 text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+        <p className="mt-2 border-t border-fio pt-2 text-micro leading-relaxed text-fg-3">
           {erro}
         </p>
       )}
 
       {cancelado && (
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="mt-2 text-micro leading-relaxed text-fg-2">
           Cancelado pela fila. O arquivo anterior, se havia, continua valendo — renderize de novo
           quando quiser.
         </p>
@@ -99,7 +99,7 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
         // A camada é o passo longo, e sem dizer isso o operador acha que travou
         // justamente onde é normal demorar. D-843: na fila, o motivo da espera
         // (vaga ou RAM) responde o mesmo "travou?" antes de qualquer passo.
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="mt-2 text-micro leading-relaxed text-fg-2">
           {fila
             ? `${fila}. Cortes e shorts dividem as mesmas vagas de render — este começa sozinho quando abrir a dele.`
             : 'Desenhar a legenda e as cenas é o passo demorado — costuma levar alguns minutos.'}{' '}
@@ -131,22 +131,22 @@ function LogDoWorker({ shortId, emCurso }: { shortId: string; emCurso: boolean }
       <button
         type="button"
         onClick={() => setVerLog((v) => !v)}
-        className="mt-2 flex items-center gap-1 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+        className="mt-2 flex items-center gap-1 font-code text-micro uppercase tracking-wide text-fg-2 hover:text-fg"
       >
         {verLog ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
         log do worker
       </button>
 
       {verLog && (
-        <div className="mt-1 max-h-[180px] overflow-auto rounded-[6px] bg-[var(--wb-bg)] p-1.5">
+        <div className="mt-1 max-h-[180px] overflow-auto rounded-[6px] bg-app p-1.5">
           {linhas.length === 0 ? (
-            <p className="font-code text-[10.5px] text-[var(--wb-text-mute)]">
+            <p className="font-code text-micro text-fg-2">
               {log.data?.existe === false
                 ? 'Nenhum passo despachado ainda — o log nasce quando o worker pega o primeiro.'
                 : 'lendo…'}
             </p>
           ) : (
-            <pre className="whitespace-pre-wrap break-all font-code text-[10px] leading-relaxed text-[var(--wb-text-dim)]">
+            <pre className="whitespace-pre-wrap break-all font-code text-micro leading-relaxed text-fg-3">
               {linhas.join('\n')}
             </pre>
           )}

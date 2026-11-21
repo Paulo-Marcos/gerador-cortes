@@ -109,11 +109,11 @@ export function LinhaDoTempo({
 
   return (
     <div className="flex-none select-none">
-      <div className="mb-1 flex items-center gap-2 font-code text-[10.5px] tabular-nums text-[var(--wb-text-mute)]">
+      <div className="mb-1 flex items-center gap-2 font-code text-micro tabular-nums text-fg-2">
         <span>00:00</span>
         <div className="flex-1" />
         {bordasVisiveis && (
-          <span className={cn(alerta && 'font-bold text-[var(--wb-warn-ink)]')}>
+          <span className={cn(alerta && 'font-bold text-aviso')}>
             {mmss(bordasVisiveis.inicio)} → {mmss(bordasVisiveis.fim)} ·{' '}
             {Math.round(duracaoEmFoco)}s
             {alerta && ' · fora de 15-90s'}
@@ -129,7 +129,7 @@ export function LinhaDoTempo({
         ref={faixa}
         role="presentation"
         onPointerDown={(e) => onSeek(segundoDoEvento(e.clientX))}
-        className="relative h-20 w-full cursor-pointer overflow-hidden rounded-[8px] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]"
+        className="relative h-20 w-full cursor-pointer overflow-hidden rounded-[8px] bg-poco text-fg-2"
       >
         {/* A onda vem PRIMEIRO na ordem de pintura: ela é o fundo sobre o qual
             os trechos são marcados, do mesmo jeito que na tela do bruto. A
@@ -149,7 +149,7 @@ export function LinhaDoTempo({
               // remover do editor. O bloco opaco de antes tapava a onda
               // justamente onde ela mais importa — dentro do trecho.
               className={cn(
-                'absolute inset-y-0 border-x border-[var(--wb-border)] bg-wb-border/30',
+                'absolute inset-y-0 border-x border-fio-2 bg-wb-border/30',
                 short.status === 'rejeitado' && 'opacity-40',
               )}
               style={{
@@ -164,7 +164,7 @@ export function LinhaDoTempo({
           <div
             className={cn(
               'absolute inset-y-0 rounded-[5px] border-2 bg-wb-accent/25',
-              alerta ? 'border-[var(--wb-warn-ink)]' : 'border-[var(--wb-accent)]',
+              alerta ? 'border-aviso' : 'border-[var(--wb-accent)]',
             )}
             style={{
               left: `${posicaoPct(bordasVisiveis.inicio, duracaoSeg)}%`,

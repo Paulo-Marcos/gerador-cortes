@@ -23,16 +23,16 @@ export function PainelDoLote({ raias, corteId, empilhado = false }: Props) {
       {raias.map((raia) => (
         <article
           key={raia.plataforma}
-          className="rounded-[9px] border border-[var(--wb-border)] p-2.5"
+          className="rounded-[9px] border border-fio-2 p-2.5"
         >
-          <h4 className="flex items-center gap-1.5 text-[12.5px] font-bold">
+          <h4 className="flex items-center gap-1.5 text-pequeno font-bold">
             {raia.rotulo}
             {raia.exige_humano && (
-              <Icon name="hand" rotulo="depende de você" className="text-[var(--wb-text-mute)]" />
+              <Icon name="hand" rotulo="depende de você" className="text-fg-2" />
             )}
           </h4>
           {raia.aviso && (
-            <p className="mt-1 flex items-start gap-1 text-[11px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+            <p className="mt-1 flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
               <Icon name="triangle-alert" className="mt-0.5 flex-none" />
               {raia.aviso}
             </p>
@@ -52,10 +52,10 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
   const confirmar = useConfirmarPublicacao(corteId);
 
   return (
-    <li className="rounded-[6px] bg-[var(--wb-bg-inset)] px-2 py-1.5">
+    <li className="rounded-[6px] bg-poco px-2 py-1.5">
       <div className="flex items-center gap-1.5">
         <Icone estado={item.estado} />
-        <span className="min-w-0 flex-1 truncate text-[11.5px]" title={item.rotulo}>
+        <span className="min-w-0 flex-1 truncate text-micro" title={item.rotulo}>
           {item.rotulo}
         </span>
         {/* D-603: tambem no item que falhou. O caso comum e o robo quebrar no
@@ -64,7 +64,7 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
         {podeMarcarAMao(item.estado) && (
           <button
             type="button"
-            className="flex-none text-[11px] font-semibold text-[var(--wb-accent)]"
+            className="flex-none text-micro font-semibold text-iris"
             disabled={confirmar.isPending}
             title={marcacaoAMao(item.estado).titulo}
             onClick={() => confirmar.mutate({ alvoId: item.alvo_id, plataforma: item.plataforma })}
@@ -77,14 +77,14 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
             href={item.url}
             target="_blank"
             rel="noreferrer"
-            className="flex-none text-[11px] text-[var(--wb-accent)]"
+            className="flex-none text-micro text-iris"
           >
             ver
           </a>
         )}
       </div>
       {item.agendado_para && (
-        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--wb-text-dim)]">
+        <p className="mt-0.5 flex items-center gap-1 text-micro text-fg-3">
           <Icon name="clock" />
           {item.agendado_para}
         </p>
@@ -92,7 +92,7 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
       {/* D-1098: quebra a linha, sem cortar. O porquê de o robô não ter publicado
           vem depois do recado, e as reticências do `truncate` comiam justamente ele. */}
       {item.detalhe && (
-        <p className="mt-0.5 break-words text-[11px] text-[var(--wb-text-mute)]">{item.detalhe}</p>
+        <p className="mt-0.5 break-words text-micro text-fg-2">{item.detalhe}</p>
       )}
     </li>
   );
@@ -100,22 +100,22 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
 
 function Icone({ estado }: { estado: EstadoItemLote }) {
   if (estado === 'preparando') {
-    return <Icon name="loader-2" className="flex-none animate-spin text-[var(--wb-accent)]" />;
+    return <Icon name="loader-2" className="flex-none animate-spin text-iris" />;
   }
   if (estado === 'publicado') {
     return <Icon name="check" className="flex-none text-[var(--wb-ok-ink,var(--wb-accent))]" />;
   }
   if (estado === 'sua_vez') {
-    return <Icon name="hand" className="flex-none text-[var(--wb-accent)]" />;
+    return <Icon name="hand" className="flex-none text-iris" />;
   }
   if (estado === 'conferir') {
     return <Icon name="eye" className="flex-none text-[var(--wb-warn-ink,var(--wb-accent))]" />;
   }
   if (estado === 'erro') {
-    return <Icon name="triangle-alert" className="flex-none text-[var(--wb-text-dim)]" />;
+    return <Icon name="triangle-alert" className="flex-none text-fg-3" />;
   }
   if (estado === 'aguardando') {
-    return <Icon name="clock" className="flex-none text-[var(--wb-text-mute)]" />;
+    return <Icon name="clock" className="flex-none text-fg-2" />;
   }
-  return <Icon name="circle-dashed" className="flex-none text-[var(--wb-text-mute)]" />;
+  return <Icon name="circle-dashed" className="flex-none text-fg-2" />;
 }

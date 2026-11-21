@@ -47,8 +47,8 @@ export function SeletorDeTextura({ escolhida, padrao, ocupado, onEscolher }: Pro
           className={cn(
             'overflow-hidden rounded-[7px] border transition-transform disabled:opacity-50',
             opcao.id === ativa
-              ? 'border-[var(--sel-line)] ring-2 ring-[var(--sel-line)]'
-              : 'border-[var(--wb-border)] hover:scale-105',
+              ? 'border-campo ring-2 ring-[var(--cc-fio-campo)]'
+              : 'border-fio-2 hover:scale-105',
           )}
         >
           {/* A miniatura desenha a própria textura: um quadradinho de cor não

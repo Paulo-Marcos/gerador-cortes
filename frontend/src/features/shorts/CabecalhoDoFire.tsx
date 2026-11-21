@@ -47,7 +47,7 @@ interface Props {
 export function SeloFinalizado() {
   return (
     <span
-      className="flex-none rounded-[5px] bg-[var(--wb-bg-inset)] px-1.5 py-0.5 font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-ok-ink)]"
+      className="flex-none rounded-[5px] bg-poco px-1.5 py-0.5 font-code text-micro uppercase tracking-wide text-ok"
       title="Os shorts deste corte já estão no YouTube, TikTok e Instagram"
     >
       finalizado
@@ -101,7 +101,7 @@ export function CabecalhoDoFire({
         <div className="flex-1" />
 
         {/* ── o que eu vejo ─────────────────────────────────────────── */}
-        <div className="flex items-center gap-0.5 rounded-[8px] bg-[var(--wb-bg-inset)] p-0.5">
+        <div className="flex items-center gap-0.5 rounded-[8px] bg-poco p-0.5">
           {temPalco && (
             <BotaoDeCluster
               ativo={verPalco}
@@ -124,7 +124,7 @@ export function CabecalhoDoFire({
           )}
           {fonteDaTranscricao !== null && !temPalavras && (
             <span
-              className="px-1.5 font-code text-[10.5px] text-[var(--wb-text-mute)]"
+              className="px-1.5 font-code text-micro text-fg-2"
               title="A transcrição deste corte não tem tempo por palavra (anterior a D-337)."
             >
               sem legenda
@@ -137,10 +137,10 @@ export function CabecalhoDoFire({
             onClick={onAlternarVelocidade}
             title="Alternar entre 1x e a velocidade de trabalho (Ctrl+U). Ctrl+J / Ctrl+K ajustam."
             className={cn(
-              'inline-flex h-7 items-center gap-1 rounded-[6px] px-2 font-code text-[11px] tabular-nums transition-colors',
+              'inline-flex h-7 items-center gap-1 rounded-[6px] px-2 font-code text-micro tabular-nums transition-colors',
               emVelocidadeNormal
-                ? 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]'
-                : 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong,var(--wb-accent))]',
+                ? 'text-fg-2 hover:bg-painel-solido hover:text-fg'
+                : 'bg-iris-suave text-iris-2',
             )}
           >
             <Icon name="gauge" />
@@ -149,7 +149,7 @@ export function CabecalhoDoFire({
         </div>
 
         {/* ── o que acabei de fazer ─────────────────────────────────── */}
-        <div className="flex items-center gap-0.5 rounded-[8px] bg-[var(--wb-bg-inset)] p-0.5">
+        <div className="flex items-center gap-0.5 rounded-[8px] bg-poco p-0.5">
           <BotaoDeCluster
             ativo={false}
             onClick={edicao.desfazer}

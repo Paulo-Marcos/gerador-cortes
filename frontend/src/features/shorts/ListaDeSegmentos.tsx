@@ -68,7 +68,7 @@ export function ListaDeSegmentos({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        <p className="font-code text-micro font-bold uppercase tracking-[0.08em] text-fg-3">
           {colado
             ? `${segmentos.length} segmentos · ${Math.round(duracaoLiquida(short))}s de vídeo`
             : 'um segmento só'}
@@ -97,21 +97,21 @@ export function ListaDeSegmentos({
           {segmentos.map((segmento, indice) => (
             <li
               key={`${segmento.inicio_seg}-${segmento.fim_seg}-${indice}`}
-              className="flex items-center gap-1.5 rounded-[7px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1"
+              className="flex items-center gap-1.5 rounded-[7px] border border-fio bg-poco px-2 py-1"
             >
               {/* O número é a ORDEM DE TOQUE, e o tempo ao lado é onde ele fica no
                 bruto. Quando os dois discordam, foi escolha do operador. */}
-              <span className="font-code text-[10px] font-bold text-[var(--wb-text-dim)]">
+              <span className="font-code text-micro font-bold text-fg-3">
                 {indice + 1}
               </span>
               <button
                 type="button"
                 onClick={() => onIr(segmento.inicio_seg)}
-                className="flex-1 text-left font-code text-[11px] tabular-nums hover:text-[var(--wb-accent-strong)]"
+                className="flex-1 text-left font-code text-micro tabular-nums hover:text-iris-2"
                 title="Ir até este segmento no player"
               >
                 {mmss(segmento.inicio_seg)} → {mmss(segmento.fim_seg)}
-                <span className="ml-1.5 text-[var(--wb-text-mute)]">
+                <span className="ml-1.5 text-fg-2">
                   {Math.round(duracaoDe(segmento))}s
                 </span>
               </button>
@@ -178,7 +178,7 @@ export function ListaDeSegmentos({
         </ol>
       )}
 
-      <p className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+      <p className="text-micro leading-relaxed text-fg-2">
         {colado
           ? 'O short toca os segmentos nesta ordem, um atrás do outro. Arraste as bordas na régua ou acerte-as pelo player com ⇤ e ⇥; as setas mudam a ordem.'
           : 'Marque um segundo segmento para montar o short com trechos separados do bruto. O que fica entre eles não entra.'}
