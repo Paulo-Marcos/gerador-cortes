@@ -64,12 +64,12 @@ export function BlocosDoDestinoForm({
         e.preventDefault();
         if (valido) onSave(valores);
       }}
-      className="grid gap-3 rounded-[var(--radius)] border border-fio bg-app p-3"
+      className="grid gap-3 rounded-campo border border-fio bg-app p-3"
     >
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-corpo font-bold text-fg">{destino.rotulo}</h3>
         {destino.personalizado && (
-          <span className="rounded-full border border-fio px-2 py-0.5 text-micro uppercase tracking-wide text-fg-3">
+          <span className="rounded-full border border-fio px-2 py-0.5 text-micro tracking-wide text-fg-3">
             personalizado
           </span>
         )}
@@ -235,7 +235,7 @@ function DiasAtivos({
               className={cn(
                 'rounded-full border px-2.5 py-0.5 text-micro capitalize',
                 ligado
-                  ? 'border-[var(--wb-accent)] bg-iris-suave text-fg'
+                  ? 'border-iris bg-iris-suave text-fg'
                   : 'border-fio-2 text-fg-3',
               )}
             >

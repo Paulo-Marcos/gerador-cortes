@@ -25,8 +25,8 @@ interface Props {
 }
 
 const textareaClasses = cn(
-  'flex w-full rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 py-2 text-sm text-fg placeholder:text-fg-3',
-  'transition-colors focus-visible:outline-none focus-visible:border-accent-500 focus-visible:ring-1 focus-visible:ring-accent-500',
+  'flex w-full rounded-campo border border-campo bg-painel-solido px-3 py-2 text-sm text-fg placeholder:text-fg-3',
+  'transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foco',
 );
 
 /** Lentes ⇄ texto (uma por linha), para editar a lista como bloco simples. */
@@ -113,7 +113,7 @@ export function EditorialSkillForm({
       {/* Params da etapa: a faixa escolhe o modelo dos dois providers (D-924) */}
       <fieldset className="grid gap-2">
         <div className="flex items-center justify-between">
-          <legend className="text-xs font-medium uppercase tracking-[0.08em] text-fg-3">
+          <legend className="text-xs font-medium tracking-[0.08em] text-fg-3">
             Parâmetros da etapa
           </legend>
           <ResetButton onClick={() => onReset(['params'])} disabled={pending} />
@@ -127,7 +127,7 @@ export function EditorialSkillForm({
               id="skill-faixa"
               value={faixa}
               onChange={(e) => setFaixa(e.target.value as Faixa)}
-              className="h-9 rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-2 text-sm text-fg"
+              className="h-9 rounded-campo border border-fio-2 bg-painel-solido px-2 text-sm text-fg"
             >
               {FAIXAS.map((f) => (
                 <option key={f.faixa} value={f.faixa}>

@@ -39,7 +39,7 @@ export function RankingPesosSection() {
   };
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <h2 className="text-lg font-semibold text-fg">Pesos do ranking de lives</h2>
       <p className="text-sm text-fg-2">
         Quanto cada critério pesa ao ranquear as lives candidatas do canal-fonte. Os pesos são
@@ -56,7 +56,7 @@ export function RankingPesosSection() {
       )}
 
       {pesosQuery.isError && (
-        <div className="grid gap-3 rounded-[var(--radius)] border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
+        <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
           <p className="flex items-center gap-2 text-linha text-fg">
             <Icon name="triangle-alert" size={16} className="text-erro" />
             {mensagemErro(pesosQuery.error, 'Não foi possível carregar os pesos.')}

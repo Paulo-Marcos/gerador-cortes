@@ -21,7 +21,7 @@ interface Props {
 }
 
 const COR_DA_INTENSIDADE: Record<Intensidade, string> = {
-  forte: 'bg-[var(--wb-accent)]',
+  forte: 'bg-iris-suave text-iris',
   medio: 'bg-iris-suave',
   fraco: 'bg-poco',
 };
@@ -64,7 +64,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
                     aria-label={`${diasDaSemana[dia] ?? dia} ${hora}h: ${ROTULO_DA_INTENSIDADE[intensidade]}`}
                     title={`${hora}h — ${ROTULO_DA_INTENSIDADE[intensidade]} (clique para trocar)`}
                     className={cn(
-                      'block h-[18px] w-[18px] rounded-[3px] transition-colors hover:ring-2 hover:ring-[var(--wb-focus)] disabled:cursor-not-allowed',
+                      'block h-[18px] w-[18px] rounded-[3px] transition-colors hover:ring-2 hover:ring-foco disabled:cursor-not-allowed',
                       COR_DA_INTENSIDADE[intensidade],
                     )}
                   />

@@ -71,9 +71,9 @@ const FALLBACK_FILTERS: FiltroExport[] = [
 type UpdateBody = AtualizarSettingsBody;
 
 const controlCls =
-  'h-10 rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60';
+  'h-10 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60';
 const labelCls = 'grid gap-1.5 text-xs font-semibold text-fg-2';
-const sectionLabelCls = 'text-xs font-bold uppercase tracking-[0.08em] text-fg-2';
+const sectionLabelCls = 'text-xs font-bold tracking-[0.08em] text-fg-2';
 
 export function AppSettingsControls() {
   const queryClient = useQueryClient();
@@ -149,7 +149,7 @@ export function AppSettingsControls() {
   return (
     <div className="grid gap-3">
       {settingsQuery.isError && (
-        <p className="rounded-[var(--radius-sm)] border border-erro/30 bg-erro/10 px-3 py-2 text-sm text-erro">
+        <p className="rounded-campo border border-erro/30 bg-erro/10 px-3 py-2 text-sm text-erro">
           Nao foi possivel carregar os ajustes.
         </p>
       )}
@@ -231,7 +231,7 @@ export function AppSettingsControls() {
 
       <div className="grid gap-1.5">
         <span className={sectionLabelCls}>Layout YouTube padrao global</span>
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 py-2 text-sm">
+        <div className="flex items-center justify-between gap-3 rounded-campo border border-fio-2 bg-painel-solido px-3 py-2 text-sm">
           <span className="text-fg">
             {temLayoutGlobal ? 'Definido' : 'Nenhum'}
             <span className="ml-2 text-xs text-fg-2">
@@ -243,7 +243,7 @@ export function AppSettingsControls() {
               type="button"
               disabled={isBusy}
               onClick={() => updateMutation.mutate({ youtube_layout_padrao_global: '{}' })}
-              className="shrink-0 rounded-[var(--radius-sm)] border border-fio-2 px-2 py-1 text-xs font-semibold text-fg hover:bg-vidro-2 disabled:opacity-60"
+              className="shrink-0 rounded-full border border-fio-2 px-2 py-1 text-xs font-semibold text-fg hover:bg-vidro-2 disabled:opacity-60"
             >
               Limpar
             </button>
@@ -284,8 +284,8 @@ export function AppSettingsControls() {
               disabled={isBusy}
               onClick={() => updateMutation.mutate({ log_level: option.value })}
               className={cn(
-                'grid grid-cols-[1fr_20px] gap-3 rounded-[var(--radius)] border p-3 text-left transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:cursor-wait disabled:opacity-60',
+                'grid grid-cols-[1fr_20px] gap-3 rounded-campo border p-3 text-left transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60',
                 active
                   ? 'border-[var(--cc-fio-campo)] bg-[var(--cc-vidro-3)]'
                   : 'border-fio-2 bg-painel-solido hover:bg-vidro-2',

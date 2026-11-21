@@ -30,14 +30,14 @@ export function NavegadorDoRobo() {
 
   return (
     <label className="grid gap-1.5">
-      <span className="text-xs font-bold uppercase tracking-[0.08em] text-fg-2">
+      <span className="text-xs font-bold tracking-[0.08em] text-fg-2">
         Navegador do robô (TikTok e Instagram)
       </span>
       <select
         value={query.data?.navegador ?? 'edge'}
         disabled={query.isLoading || mutation.isPending}
         onChange={(event) => mutation.mutate(event.target.value as Navegador)}
-        className="h-10 rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"
+        className="h-10 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60"
       >
         {NAVEGADORES.map((navegador) => (
           <option key={navegador.value} value={navegador.value}>

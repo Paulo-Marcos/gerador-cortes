@@ -65,7 +65,7 @@ export function PalcoComponentesSection() {
   const erro = (texto: string) => (e: unknown) => notify(mensagemErro(e, texto), { tone: 'error' });
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <div className="flex items-center gap-2">
         <Icon name="layout-template" size={20} className="text-iris" />
         <h2 className="text-lg font-semibold text-fg">Palco do canal</h2>

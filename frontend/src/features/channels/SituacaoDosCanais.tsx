@@ -28,7 +28,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
 
   if (erro) {
     return (
-      <div className="grid gap-3 rounded-[var(--radius)] border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-5">
+      <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-5">
         <p className="flex items-center gap-2 text-linha text-fg">
           <Icon name="triangle-alert" size={16} className="text-erro" />
           {mensagemErro(erro, 'Não foi possível carregar os canais.')}
@@ -44,7 +44,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
 
   if (vazio) {
     return (
-      <div className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-6 text-center">
+      <div className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-6 text-center">
         <p className="text-linha text-fg-2">
           Nenhum canal cadastrado ainda. Crie o primeiro para começar.
         </p>

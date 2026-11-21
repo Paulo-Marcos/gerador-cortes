@@ -62,7 +62,7 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
         {criterios.map((criterio) => (
           <li
             key={criterio.key}
-            className="grid gap-2 rounded-[var(--radius)] border border-fio bg-app p-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4"
+            className="grid gap-2 rounded-campo border border-fio bg-app p-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4"
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -70,7 +70,7 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
                   {criterio.rotulo}
                 </Label>
                 {!criterio.eh_peso && (
-                  <span className="rounded-full border border-fio px-2 py-0.5 text-micro uppercase tracking-wide text-fg-3">
+                  <span className="rounded-full border border-fio px-2 py-0.5 text-micro tracking-wide text-fg-3">
                     parâmetro
                   </span>
                 )}

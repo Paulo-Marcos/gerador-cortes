@@ -132,7 +132,7 @@ export function CardsDoCanal({
   limpo?: boolean;
 }) {
   return (
-    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-fio p-4">
+    <fieldset className="grid gap-3 rounded-campo border border-fio p-4">
       <legend className="px-1 text-xs font-medium text-fg-3">Cards (cenas)</legend>
       <TiposDeCard valor={valor} tipos={tipos} onMudar={onMudar} limpo={limpo} />
       <AjustesDosCards valor={valor} onMudar={onMudar} />

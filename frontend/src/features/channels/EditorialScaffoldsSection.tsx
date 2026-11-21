@@ -62,7 +62,7 @@ export function EditorialScaffoldsSection() {
   };
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <h2 className="text-lg font-semibold text-fg">Prompts (scaffold) do canal</h2>
       <p className="text-sm text-fg-2">
         O invólucro de cada etapa: embrulha a transcrição/contexto e fixa o formato de retorno que
@@ -78,7 +78,7 @@ export function EditorialScaffoldsSection() {
       )}
 
       {scaffoldsQuery.isError && (
-        <div className="grid gap-3 rounded-[var(--radius)] border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
+        <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
           <p className="flex items-center gap-2 text-linha text-fg">
             <Icon name="triangle-alert" size={16} className="text-erro" />
             {mensagemErro(scaffoldsQuery.error, 'Não foi possível carregar os scaffolds.')}

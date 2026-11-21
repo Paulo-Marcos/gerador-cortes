@@ -37,7 +37,7 @@ export function RoboDoStudio() {
 
   return (
     <fieldset className="grid gap-1.5">
-      <legend className="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-fg-2">
+      <legend className="mb-1.5 text-xs font-bold tracking-[0.08em] text-fg-2">
         Robô do YouTube Studio
       </legend>
       {OPCOES.map((opcao) => (

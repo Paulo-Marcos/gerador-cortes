@@ -22,7 +22,7 @@ export function FaixaDoShortSection() {
   });
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <h2 className="text-lg font-semibold text-fg">Duração dos shorts</h2>
       <p className="text-sm text-fg-2">
         A faixa em que a IA propõe os candidatos a short deste canal. Candidato fora dela é

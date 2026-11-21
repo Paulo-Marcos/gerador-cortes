@@ -43,7 +43,7 @@ export function EscalonamentoSection() {
   };
 
   return (
-    <section className="grid gap-4 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-4 rounded-campo border border-fio bg-painel-solido p-5">
       <div>
         <h2 className="text-lg font-semibold text-fg">Horários de publicação</h2>
         <p className="mt-1 text-sm text-fg-2">
@@ -62,7 +62,7 @@ export function EscalonamentoSection() {
       )}
 
       {query.isError && (
-        <div className="grid gap-3 rounded-[var(--radius)] border border-erro/30 p-4">
+        <div className="grid gap-3 rounded-campo border border-erro/30 p-4">
           <p className="flex items-center gap-2 text-linha text-fg">
             <Icon name="triangle-alert" size={16} className="text-erro" />
             {mensagemErro(query.error, 'Não foi possível carregar os horários.')}
@@ -144,7 +144,7 @@ function ReferenciaDoPublico({
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-corpo font-bold text-fg">Quando o público está lá</h3>
         {dados.publico_personalizado && (
-          <span className="rounded-full border border-fio px-2 py-0.5 text-micro uppercase tracking-wide text-fg-3">
+          <span className="rounded-full border border-fio px-2 py-0.5 text-micro tracking-wide text-fg-3">
             personalizado
           </span>
         )}

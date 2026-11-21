@@ -21,8 +21,8 @@ interface Props {
 }
 
 const textareaClasses = cn(
-  'flex w-full rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 py-2 text-sm text-fg placeholder:text-fg-3',
-  'transition-colors focus-visible:outline-none focus-visible:border-accent-500 focus-visible:ring-1 focus-visible:ring-accent-500',
+  'flex w-full rounded-campo border border-campo bg-painel-solido px-3 py-2 text-sm text-fg placeholder:text-fg-3',
+  'transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foco',
 );
 
 /** Placeholder está presente no texto atual do editor? (para sinalizar ausência). */
@@ -50,7 +50,7 @@ export function PromptUtilitarioForm({ prompt, pending, onSave, onReset, onCance
 
   return (
     <form onSubmit={submeter} className="grid gap-5">
-      <div className="grid gap-2 rounded-[var(--radius)] border border-fio bg-app p-3">
+      <div className="grid gap-2 rounded-campo border border-fio bg-app p-3">
         <p className="text-xs text-fg-2">
           Este é o prompt da etapa. Você pode reescrevê-lo, mas{' '}
           <strong className="text-fg">mantenha o formato de retorno</strong>: os

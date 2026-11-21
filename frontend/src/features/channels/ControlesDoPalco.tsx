@@ -224,7 +224,7 @@ export function JanelasDoShort({
   onMudar: (valor: ShortDoPalco) => void;
 }) {
   return (
-    <fieldset className="grid gap-3 rounded-[var(--radius)] border border-fio p-4">
+    <fieldset className="grid gap-3 rounded-campo border border-fio p-4">
       <legend className="px-1 text-xs font-medium text-fg-3">Short</legend>
       <CampoNumero
         id="palco-contorno"

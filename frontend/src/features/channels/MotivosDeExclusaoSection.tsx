@@ -24,7 +24,7 @@ export function MotivosDeExclusaoSection() {
   const falha = query.error ?? acrescentar.error ?? mostrar.error;
 
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <h2 className="text-lg font-semibold text-fg">Motivos de excluir um corte</h2>
       <p className="text-sm text-fg-2">
         Os chips que aparecem ao excluir um corte proposto pela IA. Esconder tira o chip do diálogo; os

@@ -65,7 +65,7 @@ export function EstiloNoModal({
               className={cn(
                 'h-7 rounded-full border px-3 text-pequeno font-semibold transition-colors',
                 estilo === opcao.id
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-sobre-iris'
+                  ? 'border-iris bg-iris-suave text-iris'
                   : 'border-fio-2 bg-painel-solido text-fg-2 hover:text-fg',
               )}
             >
@@ -90,9 +90,9 @@ export function FundosDoLimpo({ fundo, onFundo, desabilitado }: { fundo: string;
           disabled={desabilitado}
           onClick={() => onFundo(opcao.id)}
           className={cn(
-            'h-7 rounded-[var(--radius-xs)] border px-2.5 text-pequeno font-semibold transition-colors disabled:opacity-60',
+            'h-7 rounded-full border px-2.5 text-pequeno font-semibold transition-colors disabled:opacity-60',
             fundo === opcao.id
-              ? 'border-[var(--wb-accent)] bg-iris-suave text-iris'
+              ? 'border-iris bg-iris-suave text-iris'
               : 'border-fio-2 bg-painel-solido text-fg-2 hover:text-fg',
           )}
         >

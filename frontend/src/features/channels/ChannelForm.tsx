@@ -118,7 +118,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
       </div>
 
       <fieldset className="grid gap-2">
-        <legend className="text-xs font-medium uppercase tracking-[0.08em] text-fg-3">
+        <legend className="text-xs font-medium tracking-[0.08em] text-fg-3">
           Paleta
         </legend>
         <div className="grid grid-cols-3 gap-2">

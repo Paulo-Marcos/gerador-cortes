@@ -70,7 +70,7 @@ export function PreRequisitosLista({ ambiente }: { ambiente: Ambiente }) {
 export function PreRequisitosSection() {
   const { data, isLoading, isFetching, isError, refetch } = useAmbiente();
   return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <header className="flex items-center gap-3">
         <div className="grid flex-1 gap-1">
           <h2 className="text-lg font-semibold text-fg">Pré-requisitos</h2>

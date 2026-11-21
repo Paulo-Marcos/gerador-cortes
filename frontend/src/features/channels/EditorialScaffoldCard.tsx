@@ -13,7 +13,7 @@ interface Props {
 
 export function EditorialScaffoldCard({ scaffold, customizado, onEditar }: Props) {
   return (
-    <li className="grid gap-2 rounded-[var(--radius)] border border-fio bg-painel-solido p-4">
+    <li className="grid gap-2 rounded-campo border border-fio bg-painel-solido p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

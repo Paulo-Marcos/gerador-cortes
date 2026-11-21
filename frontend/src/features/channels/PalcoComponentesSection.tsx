@@ -163,9 +163,9 @@ export function ItensDoCabecalho({
     <div
       role="group"
       aria-label="Itens do cabeçalho"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--wb-text)]"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg"
     >
-      <span className="text-xs text-[var(--wb-text-dim)]">Mostrar:</span>
+      <span className="text-xs text-fg-3">Mostrar:</span>
       {ITENS_DO_CABECALHO.map((item) => (
         <label key={item.chave} className="flex items-center gap-1.5">
           <input
@@ -183,10 +183,10 @@ export function ItensDoCabecalho({
 
 /** Um desenho mínimo de cada estilo, com as cores do próprio palco (é o vídeo, não a interface). */
 function AmostraDoEstilo({ estilo }: { estilo: Estilo }) {
-  const janela = 'var(--wb-border)';
+  const janela = 'var(--cc-fio-2)';
   if (estilo === 'limpo') {
     return (
-      <svg viewBox="0 0 160 90" className="h-[90px] w-full rounded-[var(--radius-sm)]" aria-hidden>
+      <svg viewBox="0 0 160 90" className="h-[90px] w-full rounded-campo" aria-hidden>
         <rect width="160" height="90" fill={COR_DO_FUNDO} />
         <rect x="44" y="10" width="106" height="70" rx="4" fill={janela} />
         <rect x="8" y="56" width="30" height="24" rx="3" fill={janela} />
@@ -199,7 +199,7 @@ function AmostraDoEstilo({ estilo }: { estilo: Estilo }) {
     );
   }
   return (
-    <svg viewBox="0 0 160 90" className="h-[90px] w-full rounded-[var(--radius-sm)]" aria-hidden>
+    <svg viewBox="0 0 160 90" className="h-[90px] w-full rounded-campo" aria-hidden>
       <rect width="160" height="90" fill={PALETTE.bg} />
       <path
         d="M44 10 H140 L150 20 V80 H44 Z"

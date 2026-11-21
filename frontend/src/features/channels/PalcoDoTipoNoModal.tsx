@@ -58,7 +58,7 @@ export function PalcoDoTipoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) 
               className={cn(
                 '-mb-px border-b-2 px-2.5 py-1.5 text-pequeno font-semibold transition-colors',
                 aba === id
-                  ? 'border-[var(--wb-accent)] text-fg'
+                  ? 'border-iris text-fg'
                   : 'border-transparent text-fg-3 hover:text-fg',
               )}
             >

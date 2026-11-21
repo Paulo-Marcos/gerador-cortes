@@ -68,7 +68,7 @@ export function ModelosDeIa() {
   const papeis = query.data?.papeis ?? [];
 
   return (
-    <section className="grid gap-4 rounded-[var(--radius)] border border-fio bg-painel-solido p-5">
+    <section className="grid gap-4 rounded-campo border border-fio bg-painel-solido p-5">
       <div className="grid gap-1">
         <h2 className="text-lg font-semibold text-fg">Modelos de IA</h2>
         <p className="text-sm text-fg-2">
@@ -78,7 +78,7 @@ export function ModelosDeIa() {
       </div>
       {GRUPOS.map((grupo) => (
         <fieldset key={grupo.provedor} className="grid gap-2">
-          <legend className="mb-1 text-xs font-bold uppercase tracking-[0.08em] text-fg-2">
+          <legend className="mb-1 text-xs font-bold tracking-[0.08em] text-fg-2">
             {grupo.titulo}
           </legend>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -92,7 +92,7 @@ export function ModelosDeIa() {
                     value={papel.valor}
                     disabled={mutation.isPending}
                     onChange={(e) => mutation.mutate({ [papel.key]: e.target.value })}
-                    className="h-10 min-w-0 rounded-[var(--radius-sm)] border border-fio-2 bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60"
+                    className="h-10 min-w-0 rounded-campo border border-campo bg-painel-solido px-3 text-sm font-semibold text-fg outline-none transition-colors focus-visible:ring-foco disabled:cursor-wait disabled:opacity-60"
                   >
                     {opcoesDoPapel(papel, disponiveis.data?.[grupo.provedor] ?? []).map((m) => (
                       <option key={m.id} value={m.id}>
