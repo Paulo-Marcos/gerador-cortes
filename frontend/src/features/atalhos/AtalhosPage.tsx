@@ -174,7 +174,7 @@ function FaixaDeEstado({ e }: { e: Edicao }) {
         </Selo>
       )}
       {pendenteAplicar && (
-        <Button size="pq" onClick={() => window.location.reload()}>
+        <Button variant="secundario" size="pq" onClick={() => window.location.reload()}>
           <Icon name="refresh-cw" />
           Aplicar mudanças (recarrega a página)
         </Button>

@@ -204,8 +204,8 @@ function AnaliseIaModalDaLive({
                 />
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
+                  variant="secundario"
+                  size="pq"
                   onClick={usarFimDoVideo}
                   disabled={duracaoSegundos <= 0}
                   className="shrink-0"
@@ -327,11 +327,11 @@ function AnaliseIaModalDaLive({
       </div>
 
       <div className="mt-5 flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={fechar} disabled={isPending}>
+        <Button type="button" variant="fantasma" onClick={fechar} disabled={isPending}>
           Cancelar
         </Button>
         {origem === 'manual' && (
-          <Button
+          <Button variant="secundario"
             type="button"
             onClick={onSubmitManual}
             disabled={isPending || !todasColadas}

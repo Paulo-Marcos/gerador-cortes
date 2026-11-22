@@ -98,8 +98,8 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
         </select>
 
         <Button
-          size="sm"
-          variant="ghost"
+          size="pq"
+          variant="fantasma"
           disabled={!escolhido || !podeEditar}
           title={podeEditar ? undefined : semTrecho}
           aria-label="Editar o palco padrão"
@@ -109,8 +109,8 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
           editar
         </Button>
         <Button
-          size="sm"
-          variant="ghost"
+          size="pq"
+          variant="fantasma"
           disabled={!podeEditar}
           title={podeEditar ? undefined : semTrecho}
           onClick={() => onEditar(null)}

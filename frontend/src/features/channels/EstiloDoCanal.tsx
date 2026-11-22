@@ -37,11 +37,11 @@ export function EstiloPorTipo({ estilo, estiloDaCapa, onEstilo, onEstiloDaCapa, 
         <h3 className="text-sm font-semibold text-fg">Vídeo horizontal e short</h3>
         <EscolhaDoEstilo estilo={estilo} onEscolher={onEstilo} />
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => onEditar('horizontal')}>
+          <Button type="button" variant="secundario" size="pq" onClick={() => onEditar('horizontal')}>
             <Icon name="pen" />
             Editar o padrão do horizontal
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => onEditar('short')}>
+          <Button type="button" variant="secundario" size="pq" onClick={() => onEditar('short')}>
             <Icon name="pen" />
             Editar o padrão do short
           </Button>
@@ -113,12 +113,12 @@ export function ImagemDoCabecalho({
       <div className="grid gap-1 text-xs text-fg-3">
         <span>Imagem do cabeçalho · {propria ? 'imagem do canal' : 'pose padrão do mascote'}</span>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" disabled={enviando} onClick={() => arquivoRef.current?.click()}>
+          <Button type="button" variant="secundario" size="pq" disabled={enviando} onClick={() => arquivoRef.current?.click()}>
             <Icon name="image-plus" />
             {enviando ? 'Enviando…' : 'Trocar imagem'}
           </Button>
           {propria && (
-            <Button type="button" variant="ghost" size="sm" disabled={enviando} onClick={onRemover}>
+            <Button type="button" variant="fantasma" size="pq" disabled={enviando} onClick={onRemover}>
               <Icon name="trash-2" />
               Voltar ao mascote
             </Button>

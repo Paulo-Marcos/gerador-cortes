@@ -175,7 +175,7 @@ function IconControl({
 }) {
   return (
     <Tooltip label={label} side="bottom">
-      <Button type="button" variant="secundario" size="icon-sm" onClick={onClick}>
+      <Button type="button" variant="secundario" size="pq" soIcone onClick={onClick}>
         {children}
       </Button>
     </Tooltip>

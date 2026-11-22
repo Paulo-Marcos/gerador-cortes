@@ -68,7 +68,7 @@ export function EscalonamentoSection() {
             {mensagemErro(query.error, 'Não foi possível carregar os horários.')}
           </p>
           <div>
-            <Button type="button" variant="outline" size="sm" onClick={() => query.refetch()}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => query.refetch()}>
               Tentar de novo
             </Button>
           </div>
@@ -170,9 +170,9 @@ function ReferenciaDoPublico({
           <Icon name="rotate-ccw" />
           Voltar ao padrão
         </button>
-        <Button
+        <Button variant="secundario"
           type="button"
-          size="sm"
+          size="pq"
           disabled={pending || !gradeMudou}
           onClick={() => onSalvar(faixasDaGrade(grade))}
         >

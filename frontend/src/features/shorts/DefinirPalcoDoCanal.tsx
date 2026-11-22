@@ -105,10 +105,10 @@ type PalcoDoCanal = ReturnType<typeof usePalcoDoModal>;
 export function RodapeDoCanal({ palco, onClose }: { palco: PalcoDoCanal; onClose: () => void }) {
   return (
     <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+      <Button type="button" variant="fantasma" size="pq" onClick={onClose}>
         Cancelar
       </Button>
-      <Button type="button" size="sm" disabled={!palco.mudou || palco.salvando} onClick={() => palco.aplicar(onClose)}>
+      <Button variant="secundario" type="button" size="pq" disabled={!palco.mudou || palco.salvando} onClick={() => palco.aplicar(onClose)}>
         {palco.salvando ? 'Salvando…' : 'Aplicar e fechar'}
       </Button>
     </div>

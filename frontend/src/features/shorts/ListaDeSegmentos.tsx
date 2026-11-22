@@ -74,8 +74,8 @@ export function ListaDeSegmentos({
             : 'um segmento só'}
         </p>
         <Button
-          size="sm"
-          variant="outline"
+          size="pq"
+          variant="secundario"
           disabled={ocupado || cheio || duracaoBrutoSeg <= 0}
           onClick={adicionar}
           title={
@@ -120,8 +120,8 @@ export function ListaDeSegmentos({
                 régua resolve o grosso; isto é para acertar o quadro, que é onde
                 um pixel de régua vale meio segundo. */}
               <Button
-                size="icon-sm"
-                variant="ghost"
+                size="pq" soIcone
+                variant="fantasma"
                 disabled={ocupado}
                 onClick={() =>
                   onGravar(
@@ -134,8 +134,8 @@ export function ListaDeSegmentos({
                 <Icon name="arrow-left-to-line" />
               </Button>
               <Button
-                size="icon-sm"
-                variant="ghost"
+                size="pq" soIcone
+                variant="fantasma"
                 disabled={ocupado}
                 onClick={() =>
                   onGravar(comBordaDoSegmento(short, indice, 'fim', tempoAtualSeg, duracaoBrutoSeg))
@@ -146,8 +146,8 @@ export function ListaDeSegmentos({
                 <Icon name="arrow-right-to-line" />
               </Button>
               <Button
-                size="icon-sm"
-                variant="ghost"
+                size="pq" soIcone
+                variant="fantasma"
                 disabled={ocupado || indice === 0}
                 onClick={() => onGravar(comSegmentoMovido(short, indice, -1))}
                 aria-label={`Tocar o segmento ${indice + 1} mais cedo`}
@@ -155,8 +155,8 @@ export function ListaDeSegmentos({
                 <Icon name="arrow-up" />
               </Button>
               <Button
-                size="icon-sm"
-                variant="ghost"
+                size="pq" soIcone
+                variant="fantasma"
                 disabled={ocupado || indice === segmentos.length - 1}
                 onClick={() => onGravar(comSegmentoMovido(short, indice, 1))}
                 aria-label={`Tocar o segmento ${indice + 1} mais tarde`}
@@ -164,8 +164,8 @@ export function ListaDeSegmentos({
                 <Icon name="arrow-down" />
               </Button>
               <Button
-                size="icon-sm"
-                variant="danger"
+                size="pq" soIcone
+                variant="destrutivo"
                 disabled={ocupado}
                 onClick={() => onGravar(semOSegmento(short, indice))}
                 title={`Tirar o segmento ${indice + 1}`}

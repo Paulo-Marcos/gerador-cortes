@@ -358,8 +358,8 @@ function LinhaDoCorte({
               manual fica ao lado porque depende de seletores de uma página que
               não é nossa — no dia em que o TikTok redesenhar o Studio, ele é o
               que continua funcionando. */}
-          <Button
-            size="sm"
+          <Button variant="secundario"
+            size="pq"
             disabled={assistido.isPending || abrir.isPending || conferindo}
             onClick={() => assistido.mutate()}
             title={envio.publicarSozinho ? 'Sobe, escreve a legenda, põe a capa e APERTA Publicar (só se a capa entrou).' : 'Sobe o vídeo, escreve a legenda e põe a capa no navegador do robô, e para antes de publicar.'}
@@ -368,8 +368,8 @@ function LinhaDoCorte({
             {assistido.isPending ? 'subindo…' : envio.publicarSozinho ? 'Publicar com o robô' : 'Assistido'}
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             disabled={abrir.isPending || assistido.isPending}
             onClick={() => abrir.mutate()}
             title="Só monta o pacote, abre a pasta, copia a legenda e abre a aba. Você sobe à mão."
@@ -383,8 +383,8 @@ function LinhaDoCorte({
               alguem que SAIBA. Errar para menos custa este clique; errar para
               mais apaga o MP4, porque a marca libera a limpeza (D-512). */}
           <Button
-            size="sm"
-            variant="secondary"
+            size="pq"
+            variant="secundario"
             disabled={confirmar.isPending}
             onClick={() => confirmar.mutate()}
             title="Libera a limpeza automática deste MP4. Sem isto ele fica no disco."

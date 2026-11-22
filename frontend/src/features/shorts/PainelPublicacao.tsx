@@ -180,7 +180,7 @@ function Destino({
           ) : (
             <MarcaManual ocupado={marcando} onMarcar={onMarcar} />
           ))}
-        <Button size="sm" variant="outline" onClick={onPublicar} disabled={ocupado}>
+        <Button size="pq" variant="secundario" onClick={onPublicar} disabled={ocupado}>
           {porApi ? <Icon name={ICONE_DO_CONCEITO.publicar} /> : <Icon name="package" />}
           {porApi ? 'publicar' : 'preparar pacote'}
         </Button>
@@ -214,8 +214,8 @@ function MarcaManual({ ocupado, onMarcar }: { ocupado: boolean; onMarcar: () => 
   if (!perguntando) {
     return (
       <Button
-        size="sm"
-        variant="ghost"
+        size="pq"
+        variant="fantasma"
         onClick={() => setPerguntando(true)}
         title="marcar que este short já foi publicado à mão, fora do app"
       >
@@ -227,8 +227,8 @@ function MarcaManual({ ocupado, onMarcar }: { ocupado: boolean; onMarcar: () => 
   return (
     <span className="flex flex-none items-center gap-1">
       <Button
-        size="sm"
-        variant="ghost"
+        size="pq"
+        variant="fantasma"
         disabled={ocupado}
         onClick={() => {
           onMarcar();
@@ -239,7 +239,7 @@ function MarcaManual({ ocupado, onMarcar }: { ocupado: boolean; onMarcar: () => 
         <Icon name="check" />
         confirmar
       </Button>
-      <Button size="sm" variant="ghost" onClick={() => setPerguntando(false)}>
+      <Button size="pq" variant="fantasma" onClick={() => setPerguntando(false)}>
         não
       </Button>
     </span>

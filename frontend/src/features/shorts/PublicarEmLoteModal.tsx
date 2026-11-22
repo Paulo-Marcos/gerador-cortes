@@ -159,11 +159,11 @@ export function PublicarEmLoteModal({
           <RodapeDoLoteEmCurso cancelado={Boolean(lote?.cancelado)} />
         ) : (
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="fantasma" size="pq" onClick={onClose}>
               Fechar
             </Button>
-            <Button
-              size="sm"
+            <Button variant="secundario"
+              size="pq"
               disabled={
                 envios === 0 || criar.isPending || Boolean(problemaDoAgendamento) || !agendaPronta
               }
@@ -382,8 +382,8 @@ function RodapeDoLoteEmCurso({ cancelado }: { cancelado: boolean }) {
         </span>
       )}
       <Button
-        variant="ghost"
-        size="sm"
+        variant="fantasma"
+        size="pq"
         disabled={cancelar.isPending || cancelado}
         title={cancelado ? 'o item em curso termina; os que esperavam foram cancelados' : undefined}
         onClick={() => cancelar.mutate()}

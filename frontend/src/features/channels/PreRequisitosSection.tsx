@@ -80,8 +80,8 @@ export function PreRequisitosSection() {
         </div>
         <Button
           type="button"
-          size="sm"
-          variant="outline"
+          size="pq"
+          variant="secundario"
           onClick={() => refetch()}
           disabled={isFetching}
         >

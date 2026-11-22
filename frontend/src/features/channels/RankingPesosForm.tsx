@@ -117,7 +117,7 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
           <Icon name="rotate-ccw" />
           Resetar para o padrão
         </button>
-        <Button type="submit" disabled={bloqueado}>
+        <Button variant="secundario" type="submit" disabled={bloqueado}>
           {pending && <Icon name="loader-2" className="animate-spin" />}
           Salvar pesos
         </Button>

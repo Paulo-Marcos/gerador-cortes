@@ -109,8 +109,8 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
         </select>
 
         <Button
-          size="sm"
-          variant="ghost"
+          size="pq"
+          variant="fantasma"
           disabled={!efetivo || escolherDoCanal.isPending}
           aria-pressed={ehDoCanal}
           title={
@@ -124,8 +124,8 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
           {ehDoCanal ? 'do canal' : 'padrão do canal'}
         </Button>
         <Button
-          size="sm"
-          variant="ghost"
+          size="pq"
+          variant="fantasma"
           disabled={!efetivo}
           aria-label="Editar o gancho padrão"
           onClick={() => onEditar(efetivo)}
@@ -133,7 +133,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
           <Icon name={ICONE_DO_CONCEITO.editar} />
           editar
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => onEditar(null)}>
+        <Button size="pq" variant="fantasma" onClick={() => onEditar(null)}>
           <Icon name="plus" />
           novo
         </Button>

@@ -102,7 +102,7 @@ export function FaixaDoShortForm({ faixa, pending, erroDoServidor, onSave }: Pro
           <Icon name="rotate-ccw" />
           Voltar ao padrão
         </button>
-        <Button type="submit" disabled={bloqueado}>
+        <Button variant="secundario" type="submit" disabled={bloqueado}>
           {pending && <Icon name="loader-2" className="animate-spin" />}
           Salvar faixa
         </Button>

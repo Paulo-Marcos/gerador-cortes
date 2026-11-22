@@ -82,8 +82,8 @@ export function EditorialSkillHistory({ versoes, carregando, erro, pending, onRe
               {!v.vigente && (
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
+                  variant="secundario"
+                  size="pq"
                   className="shrink-0"
                   disabled={pending}
                   onClick={() => onReverter(v.versao)}

@@ -176,7 +176,7 @@ export default function ShortsProntosPage() {
               Todo short renderizado já está no YouTube, no TikTok e no Instagram. Os próximos que
               você renderizar na fábrica aparecem aqui.
             </p>
-            <Button variant="outline" size="sm" className="mt-3" asChild>
+            <Button variant="secundario" size="pq" className="mt-3" asChild>
               <Link to="/shorts">Ir para os Shorts</Link>
             </Button>
           </div>
@@ -348,7 +348,7 @@ function CartaoDaCentral({
           onClick={fecho.abrirCapa}
         />
         <GerarCapaComIA shortId={pronto.id} aoConcluir={() => void cliente.invalidateQueries({ queryKey: PRONTOS_KEY })} />
-        <Button variant="outline" size="sm" onClick={() => setKitAberto(true)}>
+        <Button variant="secundario" size="pq" onClick={() => setKitAberto(true)}>
           <Icon name="clipboard-list" />
           Kit de publicação
         </Button>

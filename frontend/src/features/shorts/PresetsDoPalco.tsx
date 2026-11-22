@@ -58,8 +58,8 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
           placeholder="ex.: rosto cheio da live de terça"
           className="h-8 max-w-[260px] text-pequeno"
         />
-        <Button
-          size="sm"
+        <Button variant="secundario"
+          size="pq"
           disabled={!nomeNovo.trim() || salvar.isPending}
           onClick={() =>
             salvar.mutate(
@@ -87,8 +87,8 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
                   className="h-7 max-w-[200px] text-pequeno"
                   autoFocus
                 />
-                <Button
-                  size="sm"
+                <Button variant="secundario"
+                  size="pq"
                   disabled={!nomeEditado.trim() || renomear.isPending}
                   onClick={() =>
                     renomear.mutate(
@@ -99,7 +99,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
                 >
                   ok
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setRenomeando(null)}>
+                <Button size="pq" variant="fantasma" onClick={() => setRenomeando(null)}>
                   cancelar
                 </Button>
               </>
@@ -107,8 +107,8 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
               <>
                 <span className="min-w-0 flex-1 truncate text-pequeno">{preset.nome}</span>
                 <Button
-                  size="sm"
-                  variant="outline"
+                  size="pq"
+                  variant="secundario"
                   disabled={ocupado}
                   onClick={() => onAplicar(preset.id, preset.payload as unknown as PalcoShortPreset)}
                 >
@@ -121,8 +121,8 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
                     mesma ideia, sem dizer qual valia. O endpoint sempre aceitou
                     payload; era a tela que só oferecia o nome. */}
                 <Button
-                  size="sm"
-                  variant="ghost"
+                  size="pq"
+                  variant="fantasma"
                   title="Grava neste preset o palco que está montado agora"
                   disabled={ocupado || regravar.isPending}
                   onClick={() => regravar.mutate({ id: preset.id, body: { payload: comoEstaHoje() } })}
@@ -140,8 +140,8 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
                   </span>
                 )}
                 <Button
-                  size="sm"
-                  variant="ghost"
+                  size="pq"
+                  variant="fantasma"
                   aria-label={`Renomear ${preset.nome}`}
                   onClick={() => {
                     setRenomeando(preset.id);
@@ -151,8 +151,8 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
                   <Icon name={ICONE_DO_CONCEITO.renomear} />
                 </Button>
                 <Button
-                  size="sm"
-                  variant="ghost"
+                  size="pq"
+                  variant="fantasma"
                   aria-label={`Apagar ${preset.nome}`}
                   disabled={apagar.isPending}
                   onClick={() => apagar.mutate(preset.id)}

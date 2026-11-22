@@ -83,8 +83,8 @@ export function ConectarYoutubeTutorial({
             </code>
             <Button
               type="button"
-              size="sm"
-              variant="ghost"
+              size="pq"
+              variant="fantasma"
               onClick={copiarDestino}
               aria-label="Copiar caminho"
             >
@@ -98,7 +98,7 @@ export function ConectarYoutubeTutorial({
             escolha a conta do canal. O aviso “O Google não verificou este app” é esperado: o app
             é seu. Clique em <b>Avançado</b> → <b>Acessar</b>.
           </span>
-          <Button type="button" size="sm" variant="outline" onClick={onChecarDeNovo} className="w-fit">
+          <Button type="button" size="pq" variant="secundario" onClick={onChecarDeNovo} className="w-fit">
             <Icon name="refresh-cw" />
             Checar de novo
           </Button>

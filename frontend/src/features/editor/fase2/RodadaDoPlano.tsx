@@ -60,7 +60,7 @@ export function RodadaDoPlano({ corteId, projetoId, dirty }: { corteId: string; 
               <Button
                 type="button"
                 variant="fantasma"
-                size="icon-sm"
+                size="pq" soIcone
                 onClick={() => setComparando(true)}
                 aria-label="Comparar com a rodada anterior"
                 data-testid="comparar-rodadas"

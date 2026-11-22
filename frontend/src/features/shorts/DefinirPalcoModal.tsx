@@ -316,8 +316,8 @@ export function DefinirPalcoModal({
                 {faltando.map((regiao) => (
                   <Button
                     key={regiao}
-                    size="sm"
-                    variant="outline"
+                    size="pq"
+                    variant="secundario"
                     disabled={ocupado || !fonteMedida}
                     title={fonteMedida ? undefined : 'Espere o vídeo carregar: o recorte usa a resolução dele.'}
                     onClick={() => marcarRegiao(regiao)}
@@ -345,8 +345,8 @@ export function DefinirPalcoModal({
                     {Object.keys(recortesDaFonte).map((regiao) => (
                       <Button
                         key={regiao}
-                        size="sm"
-                        variant={short.janela_cheia === regiao ? 'secondary' : 'outline'}
+                        size="pq"
+                        variant="secundario" aria-pressed={short.janela_cheia === regiao}
                         disabled={ocupado}
                         onClick={() => onAplicar({ janela_cheia: regiao })}
                       >
@@ -392,8 +392,8 @@ export function DefinirPalcoModal({
           <Secao numero={3} titulo="O tamanho e o lugar na tela">
             <div className="flex flex-wrap items-center gap-1.5">
               <Button
-                size="sm"
-                variant="outline"
+                size="pq"
+                variant="secundario"
                 aria-label="Diminuir o palco"
                 disabled={ocupado || !plano}
                 onClick={() => redimensionar(1 / PASSO_DO_TAMANHO)}
@@ -404,8 +404,8 @@ export function DefinirPalcoModal({
                 {Math.round(ocupacao * 100)}%
               </span>
               <Button
-                size="sm"
-                variant="outline"
+                size="pq"
+                variant="secundario"
                 aria-label="Aumentar o palco"
                 disabled={ocupado || !plano}
                 onClick={() => redimensionar(PASSO_DO_TAMANHO)}
@@ -418,8 +418,8 @@ export function DefinirPalcoModal({
                   direita, que é fixa desde a D-558: dá para descer até aqui sem
                   perder de vista o que se está movendo. */}
               <Button
-                size="sm"
-                variant={movendo ? 'secondary' : 'outline'}
+                size="pq"
+                variant="secundario" aria-pressed={movendo}
                 disabled={ocupado || !plano}
                 onClick={() => setMovendo((v) => !v)}
               >
@@ -427,8 +427,8 @@ export function DefinirPalcoModal({
                 {movendo ? 'movendo' : 'mover no quadro'}
               </Button>
               <Button
-                size="sm"
-                variant="ghost"
+                size="pq"
+                variant="fantasma"
                 disabled={ocupado || !plano}
                 onClick={() => onAplicar({ ajustes_palco: {} })}
               >
@@ -551,8 +551,8 @@ export function DefinirPalcoModal({
                 largura
               </span>
               <Button
-                size="sm"
-                variant="outline"
+                size="pq"
+                variant="secundario"
                 disabled={ocupado || lugarDaLegenda.largura <= LARGURA_MIN}
                 onClick={() =>
                   onAplicar({
@@ -570,8 +570,8 @@ export function DefinirPalcoModal({
                 {Math.round(lugarDaLegenda.largura)}%
               </span>
               <Button
-                size="sm"
-                variant="outline"
+                size="pq"
+                variant="secundario"
                 disabled={ocupado || lugarDaLegenda.largura >= LARGURA_MAX}
                 onClick={() =>
                   onAplicar({
@@ -590,8 +590,8 @@ export function DefinirPalcoModal({
                   um controle que não faz nada. */}
               {legendaNoLugarDela && (
                 <Button
-                  size="sm"
-                  variant="ghost"
+                  size="pq"
+                  variant="fantasma"
                   disabled={ocupado}
                   onClick={() =>
                     onAplicar({ legenda_x: 0, legenda_y: 0, legenda_largura: 0 })

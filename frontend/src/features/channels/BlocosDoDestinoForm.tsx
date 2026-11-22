@@ -127,7 +127,7 @@ export function BlocosDoDestinoForm({
           <Icon name="rotate-ccw" />
           Voltar ao padrão
         </button>
-        <Button type="submit" size="sm" disabled={pending || !valido}>
+        <Button variant="secundario" type="submit" size="pq" disabled={pending || !valido}>
           Salvar {destino.rotulo}
         </Button>
       </div>
@@ -186,8 +186,8 @@ function BlocosDoDia({
         ))}
         <Button
           type="button"
-          variant="outline"
-          size="sm"
+          variant="secundario"
+          size="pq"
           onClick={() => onChange([...blocos, '20:00'])}
         >
           <Icon name="plus" />
@@ -195,8 +195,8 @@ function BlocosDoDia({
         </Button>
         <Button
           type="button"
-          variant="ghost"
-          size="sm"
+          variant="fantasma"
+          size="pq"
           disabled={sugerindo || pending}
           title="Realinha os mesmos blocos à janela forte da referência do público"
           onClick={() => void sugerir()}

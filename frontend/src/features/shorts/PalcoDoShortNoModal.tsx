@@ -60,7 +60,7 @@ export function PalcoDoShortNoModal({ palco, emPreset = false }: { palco: Return
       <div className="flex flex-wrap items-center justify-between gap-2 text-micro text-fg-2">
         <span>{palco.salvando ? 'Salvando no corte…' : 'Vale só para os shorts deste corte.'}</span>
         {palco.origem === 'corte' && (
-          <Button type="button" variant="ghost" size="sm" onClick={palco.herdar} disabled={palco.salvando}>
+          <Button type="button" variant="fantasma" size="pq" onClick={palco.herdar} disabled={palco.salvando}>
             Desfazer os ajustes deste corte
           </Button>
         )}

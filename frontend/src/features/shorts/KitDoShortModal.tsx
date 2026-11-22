@@ -45,7 +45,7 @@ export function KitDoShortModal({ open, onClose, short }: Props) {
       description={short.titulo}
       size="xl"
       footer={
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <Button variant="fantasma" size="pq" onClick={onClose}>
           Fechar
         </Button>
       }
@@ -113,8 +113,8 @@ function CampoCopiavel({ rotulo, texto, linhas }: { rotulo: string; texto: strin
           <span className="ml-1 font-code normal-case tracking-normal">{texto.length}</span>
         </span>
         <Button
-          size="sm"
-          variant="ghost"
+          size="pq"
+          variant="fantasma"
           disabled={!texto}
           onClick={async () =>
             setResultado((await copyTextToClipboard(texto)) ? 'copiado' : 'falhou')

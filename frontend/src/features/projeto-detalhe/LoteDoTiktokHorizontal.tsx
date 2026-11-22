@@ -103,8 +103,8 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
       <QuandoDoLote {...quando.secao} rotuloDoAlvo={rotuloDoAlvo} />
       <div className="flex flex-wrap items-center gap-2">
         <CampoQuantos total={pendentes.length} valor={quantidade} onChange={setQuantidade} />
-        <Button
-          size="sm"
+        <Button variant="secundario"
+          size="pq"
           disabled={subir.isPending || correndo || alvos.length === 0 || !quando.pronto}
           onClick={subirTodos}
           title="O robô sobe um por um no navegador dele, fora da tela, com legenda e capa. No fim a janela volta com as abas prontas."
@@ -113,8 +113,8 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
           {correndo ? 'subindo…' : `Subir todos (${alvos.length})`}
         </Button>
         <Button
-          variant="outline"
-          size="sm"
+          variant="secundario"
+          size="pq"
           disabled={preparar.isPending || alvos.length === 0}
           onClick={() => preparar.mutate()}
           title="Só monta as pastas, sem abrir nada. Caminho de reserva se o robô quebrar."
@@ -124,8 +124,8 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparad
         </Button>
         {correndo && (
           <Button
-            variant="ghost"
-            size="sm"
+            variant="fantasma"
+            size="pq"
             disabled={cancelar.isPending}
             onClick={() => cancelar.mutate()}
           >

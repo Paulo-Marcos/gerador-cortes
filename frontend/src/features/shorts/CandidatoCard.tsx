@@ -165,8 +165,8 @@ export function CandidatoCard({
           {mmss(short.inicio_seg)} · {Math.round(short.duracao_seg)}s
         </span>
         <Button
-          variant="ghost"
-          size="sm"
+          variant="fantasma"
+          size="pq"
           disabled={ocupado}
           onClick={(e) => {
             e.stopPropagation();
@@ -336,8 +336,8 @@ export function CandidatoCard({
             ficava na linha dos que decidem sem decidir nada. */}
         <div className="flex-1" />
         <Button
-          variant="ghost"
-          size="sm"
+          variant="fantasma"
+          size="pq"
           onClick={(e) => {
             e.stopPropagation();
             onAlternarAjuste();
@@ -390,8 +390,8 @@ export function CandidatoCard({
       {/* ── Produção: uma ação em destaque ─────────────────────────── */}
       <footer className="flex flex-wrap items-center gap-1.5 border-t border-fio p-3">
         <Button
-          variant="outline"
-          size="sm"
+          variant="secundario"
+          size="pq"
           disabled={ocupado}
           onClick={(e) => {
             e.stopPropagation();
@@ -408,8 +408,8 @@ export function CandidatoCard({
           <Button
             key={id}
             // D-746: secundária em peso fantasma — o primário é o único cheio.
-            variant="ghost"
-            size="sm"
+            variant="fantasma"
+            size="pq"
             disabled={ocupado}
             onClick={(e) => {
               e.stopPropagation();
@@ -422,8 +422,8 @@ export function CandidatoCard({
         ))}
 
         {plano.principal && (
-          <Button
-            size="sm"
+          <Button variant="secundario"
+            size="pq"
             disabled={ocupado}
             onClick={(e) => {
               e.stopPropagation();

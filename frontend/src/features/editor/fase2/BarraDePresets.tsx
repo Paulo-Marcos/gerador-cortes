@@ -41,7 +41,7 @@ export function BarraDePresets({
             <Button
               type="button"
               variant="fantasma"
-              size="icon-sm"
+              size="pq" soIcone
               onClick={onRenomear}
               disabled={!selecionado || renomeando}
               aria-label="Renomear preset selecionado"
@@ -55,7 +55,7 @@ export function BarraDePresets({
             <Button
               type="button"
               variant="fantasma"
-              size="icon-sm"
+              size="pq" soIcone
               onClick={onRemover}
               disabled={!selecionado || removendo}
               aria-label="Remover preset selecionado"
@@ -125,10 +125,10 @@ export function PresetsNaFaixa({
           </option>
         ))}
       </select>
-      <Button type="button" variant="fantasma" size="icon-sm" onClick={onRenomear} disabled={!selecionado || renomeando} aria-label="Renomear preset selecionado">
+      <Button type="button" variant="fantasma" size="pq" soIcone onClick={onRenomear} disabled={!selecionado || renomeando} aria-label="Renomear preset selecionado">
         <Icon name={ICONE_DO_CONCEITO.renomear} />
       </Button>
-      <Button type="button" variant="fantasma" size="icon-sm" onClick={onRemover} disabled={!selecionado || removendo} aria-label="Remover preset selecionado">
+      <Button type="button" variant="fantasma" size="pq" soIcone onClick={onRemover} disabled={!selecionado || removendo} aria-label="Remover preset selecionado">
         <Icon name={removendo ? 'loader-2' : 'trash-2'} className={removendo ? 'animate-spin' : undefined} />
       </Button>
     </div>

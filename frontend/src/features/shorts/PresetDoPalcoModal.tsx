@@ -138,8 +138,8 @@ function EditorDoPresetDePalco({
           placeholder="ex.: rosto cheio com a textura do canal"
           className="h-8 max-w-[260px] text-pequeno"
         />
-        <Button
-          size="sm"
+        <Button variant="secundario"
+          size="pq"
           disabled={!nome.trim() || gravando}
           onClick={guardar}
         >
@@ -147,7 +147,7 @@ function EditorDoPresetDePalco({
           {editando ? 'Salvar alterações' : 'Criar preset'}
         </Button>
         {editando && (
-          <Button size="sm" variant="ghost" disabled={apagando} onClick={apagar}>
+          <Button size="pq" variant="fantasma" disabled={apagando} onClick={apagar}>
             <Icon name="trash-2" />
             apagar
           </Button>

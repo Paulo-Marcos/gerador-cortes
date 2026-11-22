@@ -128,8 +128,8 @@ export function ColunaDeDecisoes({
         <GanchoPadraoDoCorte corteId={corteId} onEditar={onEditarGanchoPadrao} />
         <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-2">
           <Button
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             onClick={onCriarManual}
             disabled={criarManual.isPending || duracaoRegua <= 0}
           >

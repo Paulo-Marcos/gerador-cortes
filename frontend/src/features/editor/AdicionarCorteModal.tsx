@@ -99,10 +99,10 @@ export function AdicionarCorteModal({
       description="Informe inicio e fim em HH:MM:SS."
       footer={
         <>
-          <Button type="button" variant="outline" onClick={onClose} disabled={ocupado}>
+          <Button type="button" variant="secundario" onClick={onClose} disabled={ocupado}>
             Cancelar
           </Button>
-          <Button type="button" onClick={submeter} disabled={!podeSubmeter || ocupado}>
+          <Button variant="secundario" type="button" onClick={submeter} disabled={!podeSubmeter || ocupado}>
             {ocupado ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="plus" />}
             {labelAcao}
           </Button>
@@ -129,8 +129,8 @@ export function AdicionarCorteModal({
                 <Tooltip label="Usar tempo atual do player" side="top">
                   <Button
                     type="button"
-                    variant="outline"
-                    size="icon-sm"
+                    variant="secundario"
+                    size="pq" soIcone
                     onClick={() => usarTempoAtual('inicio')}
                     disabled={ocupado}
                     aria-label="Usar tempo atual como inicio"
@@ -159,8 +159,8 @@ export function AdicionarCorteModal({
                 <Tooltip label="Usar tempo atual do player" side="top">
                   <Button
                     type="button"
-                    variant="outline"
-                    size="icon-sm"
+                    variant="secundario"
+                    size="pq" soIcone
                     onClick={() => usarTempoAtual('fim')}
                     disabled={ocupado}
                     aria-label="Usar tempo atual como fim"

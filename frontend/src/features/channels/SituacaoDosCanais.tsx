@@ -34,7 +34,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
           {mensagemErro(erro, 'Não foi possível carregar os canais.')}
         </p>
         <div>
-          <Button type="button" variant="outline" size="sm" onClick={onTentarDeNovo}>
+          <Button type="button" variant="secundario" size="pq" onClick={onTentarDeNovo}>
             Tentar de novo
           </Button>
         </div>
@@ -49,7 +49,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
           Nenhum canal cadastrado ainda. Crie o primeiro para começar.
         </p>
         <div className="flex justify-center">
-          <Button type="button" onClick={onCriar}>
+          <Button variant="secundario" type="button" onClick={onCriar}>
             <Icon name="plus" />
             Criar primeiro canal
           </Button>
