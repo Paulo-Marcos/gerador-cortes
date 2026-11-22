@@ -38,7 +38,8 @@ function Segmentado<T extends string>({
             onClick={() => onEscolher(o.id)}
             aria-pressed={ativa}
             className={cn(
-              'inline-flex h-[26px] cursor-pointer items-center gap-[5px] rounded-etiqueta border-0 px-2.5 text-micro font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco',
+              // `!`: a casca antiga fixa fonte e raio do botão por cima das utilidades.
+              'inline-flex h-[26px] cursor-pointer items-center gap-[5px] !rounded-etiqueta border-0 px-2.5 !text-micro font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco',
               ativa ? 'bg-painel-solido text-fg shadow-topo' : 'bg-transparent text-fg-2',
             )}
           >

@@ -375,7 +375,7 @@ export function MenuDeIa({
           role="menu"
           aria-label={rotulo}
           className={cn(
-            'absolute top-[calc(100%+4px)] z-40 flex w-[240px] flex-col gap-0.5 rounded-campo border border-fio-2 bg-painel-solido p-2 shadow-pop',
+            'absolute top-[calc(100%+4px)] z-40 flex w-[240px] flex-col gap-0.5 rounded-campo border border-fio-2 bg-painel-solido p-2 shadow-pop-luz',
             alinhamento === 'esquerda' ? 'left-0' : 'right-0',
           )}
         >
