@@ -260,7 +260,7 @@ export function ChannelsPage() {
         </TabsList>
       </Tabs>
 
-      <main className="grid flex-1 content-start gap-4 overflow-auto px-6 py-5">
+      <div className="grid flex-1 content-start gap-4 overflow-auto px-6 py-5">
         {aba === 'aplicacao' && <AbaAplicacao />}
 
         {aba === 'canal' && secao !== null && (
@@ -332,7 +332,7 @@ export function ChannelsPage() {
             </div>
           </>
         )}
-      </main>
+      </div>
 
       <Modal
         open={dialogo?.tipo === 'criar'}

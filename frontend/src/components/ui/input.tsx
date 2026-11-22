@@ -16,6 +16,14 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   carregando?: boolean | string;
 };
 
+/**
+ * D-1195 (DIRECAO §8.2 Formulário): o navegador não preenche campo do app, e URL não passa
+ * pelo corretor. Vem depois do `{...props}` e só preenche o que quem chama não passou.
+ */
+export function semPreenchimento({ autoComplete, spellCheck, type }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return { autoComplete: autoComplete ?? 'off', spellCheck: spellCheck ?? (type === 'url' ? false : undefined) };
+}
+
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (
     { className, aparencia = 'atual', invalido, carregando, id, placeholder, disabled, ...props },
@@ -38,6 +46,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className,
           )}
           {...props}
+          {...semPreenchimento(props)}
         />
       );
     }
@@ -56,6 +65,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           required={props.required ?? campo?.obrigatorio}
           className={cn(CLASSES_DO_CAMPO, 'h-10 px-3.5', carregando && 'pr-10', className)}
           {...props}
+          {...semPreenchimento(props)}
         />
         {carregando && <GiroDoCampo />}
       </div>

@@ -122,7 +122,7 @@ export default function ShortsProntosPage() {
       )}
     >
 
-      <main className="">
+      <div className="">
         {prontos.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {FILTROS.map((f) => (
@@ -202,7 +202,7 @@ export default function ShortsProntosPage() {
             Nenhum short neste filtro.
           </p>
         )}
-      </main>
+      </div>
 
       <PublicarEmLoteModal
         key={aberturaDoLote}

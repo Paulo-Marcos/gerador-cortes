@@ -187,7 +187,7 @@ export function MetadataPage() {
 
   return (
     <div className="flex min-h-0 text-fg">
-      <main className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         {cortesQuery.isLoading ? (
           <EstadoCarregando frase="Buscando os cortes aprovados…" linhas={2} />
         ) : cortesQuery.isError ? (
@@ -216,7 +216,7 @@ export function MetadataPage() {
             />
           )
         )}
-      </main>
+      </div>
 
       <PublicarMassaModal
         open={publicarOpen}

@@ -568,7 +568,7 @@ export function ReguaDeOnda({
           `--barra-de-rolagem` é a própria barra. */}
       <div
         ref={caixa}
-        className="timeline-waveform-host h-[var(--altura)] w-full rounded-[8px] bg-poco"
+        className="timeline-waveform-host onda-com-foco h-[var(--altura)] w-full rounded-[8px] bg-poco"
         style={
           {
             '--altura': `${ALTURA_DA_ONDA + ALTURA_DA_BARRA}px`,

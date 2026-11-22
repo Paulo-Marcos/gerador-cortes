@@ -143,7 +143,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
         <div className="border-t border-dashed border-fio px-3 pb-3 pt-2">
           {/* Grid 4: Inicio / Fim / Tipo / Texto */}
           <div className="grid grid-cols-[1fr_1fr_1fr_2fr] gap-1.5">
-            <FieldNum label="Inicio" value={cena.inicio} onChange={(v) => set({ inicio: v })} />
+            <FieldNum label="Início" value={cena.inicio} onChange={(v) => set({ inicio: v })} />
             <FieldNum label="Fim" value={cena.fim} onChange={(v) => set({ fim: v })} />
             <FieldSelect
               label="Tipo"

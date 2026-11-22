@@ -133,7 +133,7 @@ export function AdicionarCorteModal({
                     size="pq" soIcone
                     onClick={() => usarTempoAtual('inicio')}
                     disabled={ocupado}
-                    aria-label="Usar tempo atual como inicio"
+                    aria-label="Usar tempo atual como início"
                   >
                     <Icon name="clock-3" />
                   </Button>

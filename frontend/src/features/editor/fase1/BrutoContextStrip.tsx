@@ -199,7 +199,7 @@ function IntervaloEditor({
           spellCheck={false}
           autoComplete="off"
           className="h-7 w-[96px] rounded-campo border border-campo bg-poco px-2 font-mono text-pequeno tabular-nums text-fg focus-visible:border-iris focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-iris-suave"
-          aria-label="Inicio do intervalo"
+          aria-label="Início do intervalo"
         />
         <CurrentTimeButton
           ariaLabel="Usar tempo atual no inicio"

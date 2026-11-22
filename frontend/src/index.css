@@ -104,6 +104,13 @@
     scrollbar-color: var(--barra-de-rolagem, var(--cc-fio-2)) transparent;
   }
 
+  /* D-1195: a rolagem da onda vive no shadow DOM do wavesurfer e o Chrome a põe na ordem do
+     Tab; o anel global (`:focus-visible`) não atravessa o shadow DOM, então entra pelo `::part`. */
+  .onda-com-foco ::part(scroll):focus-visible {
+    outline: 2px solid var(--cc-foco);
+    outline-offset: -2px;
+  }
+
   .timeline-waveform-host ::part(scroll)::-webkit-scrollbar {
     height: 9px;
   }
