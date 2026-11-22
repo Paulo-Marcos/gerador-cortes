@@ -142,14 +142,14 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       <div className="mt-5 flex items-center justify-end gap-2">
         <Button
           type="button"
-          variant={loteEnviado ? 'default' : 'ghost'}
+          variant={loteEnviado ? 'secundario' : 'fantasma'}
           onClick={onClose}
           disabled={enviando}
         >
           {enviando ? 'Aguarde...' : 'Fechar'}
         </Button>
         {totalProntos > 0 && !loteEnviado && (
-          <Button type="button" onClick={onPublicar} disabled={enviando || !quando.pronto || total === 0}>
+          <Button variant="secundario" type="button" onClick={onPublicar} disabled={enviando || !quando.pronto || total === 0}>
             {enviando ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.publicar} size={16} />}
             Publicar {total} {total === 1 ? 'corte' : 'cortes'}
           </Button>

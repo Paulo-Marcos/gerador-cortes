@@ -51,7 +51,7 @@ export function MotivosDeExclusaoSection() {
           aria-label="Nome do motivo novo"
           className="max-w-xs"
         />
-        <Button type="submit" size="sm" disabled={!nome.trim() || acrescentar.isPending}>
+        <Button variant="secundario" type="submit" size="pq" disabled={!nome.trim() || acrescentar.isPending}>
           Acrescentar
         </Button>
       </form>

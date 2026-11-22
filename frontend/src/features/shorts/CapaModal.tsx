@@ -212,8 +212,8 @@ export function CapaModal({ open, onClose, short }: Props) {
           <section className="space-y-2">
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 aria-label="Um segundo atrás"
                 disabled={instante.seg <= 0}
                 onClick={() => mover(-PASSO_GROSSO_SEG)}
@@ -224,8 +224,8 @@ export function CapaModal({ open, onClose, short }: Props) {
                 {comSegundos(instante.seg)}
               </span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 aria-label="Um segundo à frente"
                 disabled={instante.seg >= duracao}
                 onClick={() => mover(PASSO_GROSSO_SEG)}
@@ -272,16 +272,16 @@ export function CapaModal({ open, onClose, short }: Props) {
 
             <div className="flex items-center gap-1.5">
               <Button
-                variant="ghost"
-                size="sm"
+                variant="fantasma"
+                size="pq"
                 aria-label="Um décimo atrás"
                 onClick={() => mover(-PASSO_SEG)}
               >
                 −{PASSO_SEG}s
               </Button>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="fantasma"
+                size="pq"
                 aria-label="Um décimo à frente"
                 onClick={() => mover(PASSO_SEG)}
               >
@@ -297,8 +297,8 @@ export function CapaModal({ open, onClose, short }: Props) {
 
           {origem === 'quadro' && (
           <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-3">
-            <Button
-              size="sm"
+            <Button variant="secundario"
+              size="pq"
               disabled={gerar.isPending || duracao <= 0}
               onClick={() => gerar.mutate({ instante_seg: instante.seg })}
             >
@@ -401,7 +401,7 @@ function ArteDaCapa({
             <SeloDeProvider provider={capaGeradaPor} modelo={ultimaCapa.data?.model} />
           )}
           {texto && (
-            <Button variant="ghost" size="sm" onClick={copiar}>
+            <Button variant="fantasma" size="pq" onClick={copiar}>
               {copiado ? <Icon name="check" /> : <Icon name="copy" />}
               {copiado ? 'copiado' : 'Copiar'}
             </Button>
@@ -454,8 +454,8 @@ function ArteDaCapa({
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             disabled={subir.isPending}
             onClick={() => seletor.current?.click()}
           >

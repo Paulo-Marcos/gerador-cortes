@@ -141,6 +141,8 @@ const LEGADAS = new Set<string>(Object.keys(AP_VARIANTS));
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: VarianteLegada | VarianteDeLuz;
   size?: TamanhoLegado | TamanhoDeLuz;
+  /** Círculo, largura = altura, para o botão que só tem ícone (D-1189). */
+  soIcone?: boolean;
   asChild?: boolean;
   /**
    * Trabalhando: `aria-busy`, giro e o clique não faz nada. O texto vai no gerúndio com
@@ -160,7 +162,7 @@ function classesDoLegado(variant: VarianteLegada, size: TamanhoLegado | TamanhoD
   );
 }
 
-function classesDeLuz(variant: VarianteDeLuz, size: TamanhoLegado | TamanhoDeLuz) {
+function classesDeLuz(variant: VarianteDeLuz, size: TamanhoLegado | TamanhoDeLuz, soIcone: boolean) {
   const [tamanho, daEscalaAntiga] =
     size in TAMANHO_LEGADO_NA_ESCALA_NOVA
       ? TAMANHO_LEGADO_NA_ESCALA_NOVA[size as TamanhoLegado]
@@ -168,20 +170,20 @@ function classesDeLuz(variant: VarianteDeLuz, size: TamanhoLegado | TamanhoDeLuz
   return botaoDeLuz({
     variante: variant === 'icone' ? 'secundario' : variant,
     tamanho,
-    soIcone: variant === 'icone' || daEscalaAntiga,
+    soIcone: soIcone || variant === 'icone' || daEscalaAntiga,
   });
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant = 'default', size = 'default', asChild = false, carregando = false, onClick, children, ...props },
+    { className, variant = 'default', size = 'default', soIcone = false, asChild = false, carregando = false, onClick, children, ...props },
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button';
     const classes = cn(
       LEGADAS.has(variant)
         ? classesDoLegado(variant as VarianteLegada, size)
-        : classesDeLuz(variant as VarianteDeLuz, size),
+        : classesDeLuz(variant as VarianteDeLuz, size, soIcone),
       className,
     );
 

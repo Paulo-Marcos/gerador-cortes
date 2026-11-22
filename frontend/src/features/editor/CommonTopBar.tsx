@@ -204,10 +204,10 @@ export function ReadingModal({
       size="sm"
       footer={
         <>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          <Button type="button" variant="fantasma" size="pq" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" form="reading-form" size="sm" disabled={disabled}>
+          <Button variant="secundario" type="submit" form="reading-form" size="pq" disabled={disabled}>
             OK
           </Button>
         </>

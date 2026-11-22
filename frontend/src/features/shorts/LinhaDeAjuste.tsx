@@ -89,10 +89,10 @@ export function LinhaDeAjuste({
           gesto que sempre responde erro. */}
       {!temColagem(short) && (
         <Grupo rotulo="bordas" dica="Usa o instante em que o player está agora">
-          <Button variant="outline" size="sm" disabled={ocupado} onClick={() => onBorda('inicio_seg')}>
+          <Button variant="secundario" size="pq" disabled={ocupado} onClick={() => onBorda('inicio_seg')}>
             início aqui
           </Button>
-          <Button variant="outline" size="sm" disabled={ocupado} onClick={() => onBorda('fim_seg')}>
+          <Button variant="secundario" size="pq" disabled={ocupado} onClick={() => onBorda('fim_seg')}>
             fim aqui
           </Button>
         </Grupo>
@@ -138,8 +138,8 @@ export function LinhaDeAjuste({
         </select>
 
         <Button
-          size="sm"
-          variant="outline"
+          size="pq"
+          variant="secundario"
           disabled={ocupado}
           onClick={onDefinirPalco}
           title="Como a tela monta, o enquadramento, de onde vem cada janela, o fundo, a moldura e os presets"
@@ -159,8 +159,8 @@ export function LinhaDeAjuste({
 
       <Grupo rotulo="rosto" dica="Procura quem fala neste trecho e centra a janela 9:16 nele">
         <Button
-          variant="secondary"
-          size="sm"
+          variant="secundario"
+          size="pq"
           disabled={ocupado || enquadrando}
           onClick={onEnquadrarPeloRosto}
         >

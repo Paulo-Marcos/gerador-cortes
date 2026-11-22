@@ -159,10 +159,10 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
       </fieldset>
 
       <div className="mt-1 flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
+        <Button type="button" variant="fantasma" onClick={onCancel} disabled={pending}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={pending || !idValido}>
+        <Button variant="secundario" type="submit" disabled={pending || !idValido}>
           {pending && <Icon name="loader-2" className="animate-spin" />}
           {criando ? 'Criar canal' : 'Salvar identidade'}
         </Button>

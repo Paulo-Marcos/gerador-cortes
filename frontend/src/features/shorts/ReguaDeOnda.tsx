@@ -528,8 +528,8 @@ export function ReguaDeOnda({
         )}
         <div className="flex-1" />
         <Button
-          variant="ghost"
-          size="icon-sm"
+          variant="fantasma"
+          size="pq" soIcone
           aria-label="Diminuir o zoom da régua"
           disabled={zoom <= ZOOM_MINIMO}
           onClick={() => mudarZoom(1 / FATOR_DO_BOTAO)}
@@ -540,8 +540,8 @@ export function ReguaDeOnda({
           {zoom.toFixed(1)}×
         </span>
         <Button
-          variant="ghost"
-          size="icon-sm"
+          variant="fantasma"
+          size="pq" soIcone
           aria-label="Aumentar o zoom da régua"
           disabled={zoom >= ZOOM_MAXIMO}
           onClick={() => mudarZoom(FATOR_DO_BOTAO)}

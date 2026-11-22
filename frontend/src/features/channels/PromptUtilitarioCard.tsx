@@ -30,7 +30,7 @@ export function PromptUtilitarioCard({ prompt, customizado, onEditar }: Props) {
           </div>
           <p className="mt-1 text-sm text-fg-2">{prompt.descricao}</p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={onEditar} className="shrink-0">
+        <Button type="button" variant="secundario" size="pq" onClick={onEditar} className="shrink-0">
           <Icon name={ICONE_DO_CONCEITO.editar} />
           Editar
         </Button>

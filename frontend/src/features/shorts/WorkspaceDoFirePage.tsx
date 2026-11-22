@@ -119,8 +119,8 @@ function CartaoDoPronto({
                 aprovado, falta o arquivo
               </p>
               <Button
-                variant="secondary"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 className="mt-2"
                 disabled={renderizando || renderizar.isPending}
                 onClick={() => fecho.finalizar(() => renderizar.mutate(short.id))}
@@ -180,7 +180,7 @@ function CartaoDoPronto({
         </div>
 
         {pronto && (
-          <Button variant="outline" size="sm" onClick={onAlternar}>
+          <Button variant="secundario" size="pq" onClick={onAlternar}>
             <Icon name={ICONE_DO_CONCEITO.publicar} />
             {aberto ? 'fechar a publicação' : 'Publicar este'}
           </Button>
@@ -313,7 +313,7 @@ export default function WorkspaceDoFirePage() {
               O workspace mostra só o que passou pela curadoria. Aprove os trechos na tela de
               edição e eles aparecem aqui, prontos para o despacho.
             </p>
-            <Button variant="outline" size="sm" className="mt-3" asChild>
+            <Button variant="secundario" size="pq" className="mt-3" asChild>
               <Link to={`/shorts/${corteId}`}>
                 <Icon name={ICONE_DO_CONCEITO.editar} />
                 Ir para a edição

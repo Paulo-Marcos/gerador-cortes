@@ -68,7 +68,7 @@ export function ControlesDoRecorte({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Button variant={ativo ? 'secondary' : 'outline'} size="sm" onClick={onAlternar}>
+      <Button variant="secundario" aria-pressed={ativo} size="pq" onClick={onAlternar}>
         <Icon name="crop" />
         {ativo ? 'marcando o recorte' : 'Recortar da live'}
       </Button>
@@ -77,7 +77,7 @@ export function ControlesDoRecorte({
           <span className="font-code text-micro text-fg-2">
             {marcados.join(', ')} · deste short
           </span>
-          <Button variant="ghost" size="sm" disabled={ocupado} onClick={onDesfazer}>
+          <Button variant="fantasma" size="pq" disabled={ocupado} onClick={onDesfazer}>
             <Icon name="rotate-ccw" />
             voltar ao preset
           </Button>

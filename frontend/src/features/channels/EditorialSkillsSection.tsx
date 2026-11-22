@@ -111,7 +111,7 @@ export function EditorialSkillsSection() {
             {mensagemErro(skillsQuery.error, 'Não foi possível carregar as skills.')}
           </p>
           <div>
-            <Button type="button" variant="outline" size="sm" onClick={() => skillsQuery.refetch()}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => skillsQuery.refetch()}>
               Tentar de novo
             </Button>
           </div>

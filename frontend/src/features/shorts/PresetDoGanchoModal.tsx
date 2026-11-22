@@ -302,8 +302,8 @@ function EditorDoPresetDeGancho({
                 placeholder="ex.: amarelo com caixa"
                 className="h-8 max-w-[260px] text-pequeno"
               />
-              <Button
-                size="sm"
+              <Button variant="secundario"
+                size="pq"
                 disabled={!nome.trim() || gravando}
                 onClick={() =>
                   void salvar(nome, { cor, realce, fonte, tamanho, duracao, ...lugar }, virarPadrao)
@@ -313,7 +313,7 @@ function EditorDoPresetDeGancho({
                 {preset ? 'Salvar alterações' : 'Criar preset'}
               </Button>
               {preset && (
-                <Button size="sm" variant="ghost" disabled={apagando} onClick={apagar}>
+                <Button size="pq" variant="fantasma" disabled={apagando} onClick={apagar}>
                   <Icon name="trash-2" />
                   apagar
                 </Button>
@@ -382,13 +382,13 @@ function Passo({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" aria-label={`Diminuir ${nome}`} disabled={noMinimo} onClick={menos}>
+      <Button variant="secundario" size="pq" aria-label={`Diminuir ${nome}`} disabled={noMinimo} onClick={menos}>
         <Icon name="minus" />
       </Button>
       <span className="w-[46px] text-center font-code text-corpo tabular-nums text-fg">
         {rotulo}
       </span>
-      <Button variant="outline" size="sm" aria-label={`Aumentar ${nome}`} disabled={noMaximo} onClick={mais}>
+      <Button variant="secundario" size="pq" aria-label={`Aumentar ${nome}`} disabled={noMaximo} onClick={mais}>
         <Icon name="plus" />
       </Button>
     </div>

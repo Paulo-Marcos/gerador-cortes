@@ -85,7 +85,7 @@ export function PromptsUtilitariosSection() {
             {mensagemErro(promptsQuery.error, 'Não foi possível carregar os prompts.')}
           </p>
           <div>
-            <Button type="button" variant="outline" size="sm" onClick={() => promptsQuery.refetch()}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => promptsQuery.refetch()}>
               Tentar de novo
             </Button>
           </div>

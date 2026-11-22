@@ -31,8 +31,8 @@ export function NavegacaoDoPlayer({ trecho, onIrPara }: Props) {
       </span>
 
       <Button
-        variant="outline"
-        size="sm"
+        variant="secundario"
+        size="pq"
         onClick={() => onIrPara(0)}
         title="Volta ao primeiro quadro do corte"
       >
@@ -43,8 +43,8 @@ export function NavegacaoDoPlayer({ trecho, onIrPara }: Props) {
       {trecho && (
         <>
           <Button
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             onClick={() => onIrPara(trecho.inicio_seg)}
             title="Põe o cursor exatamente na borda de início do trecho"
           >
@@ -52,8 +52,8 @@ export function NavegacaoDoPlayer({ trecho, onIrPara }: Props) {
             início · {mmss(trecho.inicio_seg)}
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            variant="secundario"
+            size="pq"
             onClick={() => onIrPara(trecho.fim_seg)}
             title="Põe o cursor exatamente na borda de fim do trecho"
           >

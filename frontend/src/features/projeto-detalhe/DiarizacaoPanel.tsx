@@ -82,8 +82,8 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
             </span>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant="secundario"
+              size="pq"
               onClick={() => diarizar.mutate()}
               disabled={diarizar.isPending}
               className="shrink-0"
@@ -121,9 +121,9 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
                 </div>
               ))}
               <div className="flex justify-end">
-                <Button
+                <Button variant="secundario"
                   type="button"
-                  size="sm"
+                  size="pq"
                   onClick={() => salvar.mutate(rascunho)}
                   disabled={!sujo || salvar.isPending}
                 >

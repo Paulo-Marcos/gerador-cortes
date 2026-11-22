@@ -92,10 +92,10 @@ export function TrechosManualModal({ open, onClose, corteId }: Props) {
       />
 
       <div className="mt-4 flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose} disabled={importar.isPending}>
+        <Button type="button" variant="fantasma" onClick={onClose} disabled={importar.isPending}>
           Cancelar
         </Button>
-        <Button type="button" onClick={onImportar} disabled={!todasColadas || importar.isPending}>
+        <Button variant="secundario" type="button" onClick={onImportar} disabled={!todasColadas || importar.isPending}>
           {importar.isPending ? (
             <Icon name="loader-2" className="animate-spin" />
           ) : (

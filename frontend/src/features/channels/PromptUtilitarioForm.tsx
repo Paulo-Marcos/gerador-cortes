@@ -124,10 +124,10 @@ export function PromptUtilitarioForm({ prompt, pending, onSave, onReset, onCance
       </div>
 
       <div className="mt-1 flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
+        <Button type="button" variant="fantasma" onClick={onCancel} disabled={pending}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button variant="secundario" type="submit" disabled={pending}>
           {pending && <Icon name="loader-2" className="animate-spin" />}
           Salvar prompt
         </Button>

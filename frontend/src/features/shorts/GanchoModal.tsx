@@ -523,8 +523,8 @@ export function GanchoModal({
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 aria-label="Caixa mais estreita"
                 disabled={ocupado || lugarNaTela.largura <= LARGURA_MIN}
                 onClick={() =>
@@ -540,8 +540,8 @@ export function GanchoModal({
                 {Math.round(lugarNaTela.largura)}% de largura
               </span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 aria-label="Caixa mais larga"
                 disabled={ocupado || lugarNaTela.largura >= LARGURA_MAX}
                 onClick={() =>
@@ -579,8 +579,8 @@ export function GanchoModal({
             </p>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 aria-label="Menos tempo"
                 disabled={ocupado || duracaoNaTela <= DURACAO_MIN_SEG}
                 onClick={() => setAteSeg(Math.max(DURACAO_MIN_SEG, duracaoNaTela - DURACAO_PASSO_SEG))}
@@ -591,8 +591,8 @@ export function GanchoModal({
                 {duracaoNaTela.toFixed(1)}s
               </span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 aria-label="Mais tempo"
                 disabled={ocupado || duracaoNaTela >= DURACAO_MAX_SEG}
                 onClick={() => setAteSeg(Math.min(DURACAO_MAX_SEG, duracaoNaTela + DURACAO_PASSO_SEG))}
@@ -621,8 +621,8 @@ export function GanchoModal({
           )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-3">
-            <Button
-              size="sm"
+            <Button variant="secundario"
+              size="pq"
               disabled={ocupado}
               onClick={() => onGravar({ texto, ateSeg, cor, realce, ...lugarGravado })}
             >
@@ -630,8 +630,8 @@ export function GanchoModal({
             </Button>
             {short.gancho_tela && (
               <Button
-                variant="outline"
-                size="sm"
+                variant="secundario"
+                size="pq"
                 disabled={ocupado}
                 onClick={() => onGravar({ texto: '', ateSeg, cor, realce, ...lugarGravado })}
               >

@@ -91,8 +91,8 @@ export function GerarCapaComIA({
     <div className={cn('grid gap-1', className)}>
       <Button
         type="button"
-        size="sm"
-        variant="outline"
+        size="pq"
+        variant="secundario"
         disabled={ocupado}
         onClick={(e) => {
           e.stopPropagation();
@@ -144,8 +144,8 @@ function GerarGancho({ short, corteId }: { short: ShortSugerido; corteId: string
     <div className="grid gap-1">
       <Button
         type="button"
-        size="sm"
-        variant="outline"
+        size="pq"
+        variant="secundario"
         disabled={escrever.isPending}
         onClick={(e) => {
           e.stopPropagation();

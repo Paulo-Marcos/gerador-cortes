@@ -62,7 +62,7 @@ export function RankingPesosSection() {
             {mensagemErro(pesosQuery.error, 'Não foi possível carregar os pesos.')}
           </p>
           <div>
-            <Button type="button" variant="outline" size="sm" onClick={() => pesosQuery.refetch()}>
+            <Button type="button" variant="secundario" size="pq" onClick={() => pesosQuery.refetch()}>
               Tentar de novo
             </Button>
           </div>

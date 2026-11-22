@@ -197,8 +197,8 @@ export function PostModal({ open, onClose, short }: Props) {
         </section>
 
         <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-3">
-          <Button
-            size="sm"
+          <Button variant="secundario"
+            size="pq"
             disabled={ocupado}
             onClick={() => {
               salvar.mutate({ titulo, descricao, hashtags });

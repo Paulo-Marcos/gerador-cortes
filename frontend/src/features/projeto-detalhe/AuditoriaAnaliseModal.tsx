@@ -36,7 +36,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
       description="Por que cada corte virou corte (e o que foi descartado)."
       size="xl"
       footer={
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="secundario" onClick={onClose}>
           Fechar
         </Button>
       }

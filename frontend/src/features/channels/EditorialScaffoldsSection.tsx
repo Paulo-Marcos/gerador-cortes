@@ -86,8 +86,8 @@ export function EditorialScaffoldsSection() {
           <div>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant="secundario"
+              size="pq"
               onClick={() => scaffoldsQuery.refetch()}
             >
               Tentar de novo

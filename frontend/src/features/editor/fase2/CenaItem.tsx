@@ -120,7 +120,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           </div>
         </button>
         <Tooltip label="Riscar: fica no plano, fora do render" side="left">
-          <Button variant="fantasma" size="icon-sm" onClick={onRiscar} aria-label="Riscar cena">
+          <Button variant="fantasma" size="pq" soIcone onClick={onRiscar} aria-label="Riscar cena">
             <Icon name="eye-off" />
           </Button>
         </Tooltip>
@@ -128,7 +128,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           <Button
             type="button"
             variant="fantasma"
-            size="icon-sm"
+            size="pq" soIcone
             onClick={() => setAberto((v) => !v)}
             aria-expanded={aberto}
             aria-label={aberto ? 'Recolher cena' : 'Editar cena'}

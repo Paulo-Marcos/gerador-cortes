@@ -78,7 +78,7 @@ export function CamposDoPalco({
         </span>
         <div className="flex-1" />
         {ajustados.length > 0 && (
-          <Button variant="ghost" size="sm" disabled={ocupado} onClick={onDesfazer}>
+          <Button variant="fantasma" size="pq" disabled={ocupado} onClick={onDesfazer}>
             <Icon name="rotate-ccw" />
             voltar ao modelo
           </Button>

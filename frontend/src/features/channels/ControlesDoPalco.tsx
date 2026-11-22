@@ -177,8 +177,8 @@ export function CampoEscolha<T extends string>({
           <Button
             key={opcao.id}
             type="button"
-            size="sm"
-            variant={valor === opcao.id ? 'default' : 'outline'}
+            size="pq"
+            variant="secundario"
             aria-pressed={valor === opcao.id}
             onClick={() => onEscolher(opcao.id)}
           >
