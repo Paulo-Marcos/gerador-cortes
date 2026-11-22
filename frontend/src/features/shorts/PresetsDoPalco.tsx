@@ -135,7 +135,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
                     quebrado, que é a mesma lição do veredito do rosto e da
                     régua lisa. */}
                 {regravar.isSuccess && regravar.variables?.id === preset.id && (
-                  <span className="font-code text-micro uppercase tracking-wide text-iris-2">
+                  <span className="font-code text-micro text-iris-2">
                     regravado
                   </span>
                 )}

@@ -184,8 +184,8 @@ export function GanchoPrevia({
               // um convite a um gesto que não acontece.
               'pointer-events-auto absolute select-none rounded-[6px] text-center outline-dashed outline-1 outline-offset-4 ' +
               (arrastando
-                ? 'cursor-grabbing outline-[var(--wb-accent)]'
-                : 'cursor-grab outline-white/30 hover:outline-[var(--wb-accent)]')
+                ? 'cursor-grabbing outline-iris'
+                : 'cursor-grab outline-white/30 hover:outline-iris')
             : 'absolute text-center'
         }
         style={{
@@ -215,7 +215,7 @@ export function GanchoPrevia({
             ...estilo.texto,
           }}
         >
-          <TextoComDestaque texto={limpo} cor="var(--wb-accent)" />
+          <TextoComDestaque texto={limpo} cor="var(--cc-iris)" />
         </ParagrafoNaFonte>
       </div>
     </div>

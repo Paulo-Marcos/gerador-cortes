@@ -13,15 +13,7 @@ export function ShortsDesteCorte({ corteId }: { corteId: string }) {
     <Link
       to={`/shorts/${corteId}`}
       title="Marcado como fire"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        flex: 'none',
-        fontSize: 12,
-        whiteSpace: 'nowrap',
-        color: 'var(--cc-iris)',
-      }}
+      className="inline-flex flex-none items-center gap-1 whitespace-nowrap text-pequeno text-iris"
     >
       <Icon name="flame" />
       {total > 0 ? `Shorts deste corte (${total})` : 'Shorts deste corte'}

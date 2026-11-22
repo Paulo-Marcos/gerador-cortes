@@ -35,6 +35,7 @@ import { useUltimaGeracao } from '@/features/ia';
 import { useSugerirGanchos } from './useShortsDoCorte';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 import { Icon } from '@/upgrade/Icon';
+import type { CSSProperties } from 'react';
 
 // D-565: onde o título-gancho é escrito.
 //
@@ -58,9 +59,9 @@ const INSTANTE_DA_PREVIA_SEG = 0.5;
 
 const TONS: Record<TomDoGancho, string> = {
   vazio: 'text-fg-2',
-  curto: 'text-[var(--wb-warn-ink,var(--wb-text-dim))]',
-  ideal: 'text-[var(--wb-ok-ink,var(--wb-accent))]',
-  longo: 'text-[var(--wb-warn-ink,var(--wb-text-dim))]',
+  curto: 'text-aviso',
+  ideal: 'text-ok',
+  longo: 'text-aviso',
 };
 
 interface Props {
@@ -287,7 +288,7 @@ export function GanchoModal({
               onChange={(e) => setTexto(e.target.value)}
               rows={2}
               placeholder="ninguém te conta isso sobre *juros* (entre * fica no acento)"
-              className="w-full resize-none rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 font-display text-linha font-bold leading-snug text-fg outline-none focus:border-[var(--wb-accent)]"
+              className="w-full resize-none rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 font-display text-linha font-bold leading-snug text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco focus:border-iris"
             />
             <div className="flex items-baseline gap-2">
               <span className={cn('font-code text-micro tabular-nums', TONS[tom])}>
@@ -361,7 +362,7 @@ export function GanchoModal({
                         className={cn(
                           'flex w-full items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
                           variacao === texto
-                            ? 'border-[var(--wb-accent)] bg-iris-suave'
+                            ? 'border-iris bg-iris-suave'
                             : 'border-fio hover:bg-poco',
                         )}
                       >
@@ -401,7 +402,7 @@ export function GanchoModal({
                 aria-hidden
                 className={cn(
                   'relative h-4 w-7 flex-none rounded-full transition-colors',
-                  personalizado ? 'bg-[var(--wb-accent)]' : 'bg-[var(--wb-border)]',
+                  personalizado ? 'bg-iris' : 'bg-fio-2',
                 )}
               >
                 <span
@@ -447,15 +448,15 @@ export function GanchoModal({
                   aria-label={!hex && padrao?.cor ? 'do padrão do corte' : nome}
                   aria-pressed={cor === hex}
                   className={cn(
-                    'h-7 w-7 rounded-[7px] border-2 transition-transform disabled:opacity-45',
+                    'h-7 w-7 rounded-[7px] border-2 bg-[color:var(--cor)] transition-transform disabled:opacity-45',
                     cor === hex
-                      ? 'border-[var(--wb-accent)] scale-110'
-                      : 'border-fio-2 hover:border-[var(--wb-text-dim)]',
+                      ? 'border-iris scale-110'
+                      : 'border-fio-2 hover:border-fg-3',
                   )}
                   // Amostra sobre xadrez escuro: a cor do gancho é julgada
                   // CONTRA vídeo, e um fundo claro faria o branco desaparecer
                   // do seletor justamente por ser a opção padrão.
-                  style={{ backgroundColor: hex || padrao?.cor || '#ffffff' }}
+                  style={{ '--cor': hex || padrao?.cor || '#ffffff' } as CSSProperties}
                 />
               ))}
             </div>
@@ -475,7 +476,7 @@ export function GanchoModal({
                 className={cn(
                   'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
                   realce === ''
-                    ? 'border-[var(--wb-accent)] bg-iris-suave'
+                    ? 'border-iris bg-iris-suave'
                     : 'border-fio hover:bg-poco',
                 )}
               >
@@ -496,7 +497,7 @@ export function GanchoModal({
                   className={cn(
                     'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
                     realce === id
-                      ? 'border-[var(--wb-accent)] bg-iris-suave'
+                      ? 'border-iris bg-iris-suave'
                       : 'border-fio hover:bg-poco',
                   )}
                 >
@@ -663,8 +664,7 @@ export function GanchoModal({
             // Sem palco não há o que desenhar do vídeo aqui, mas a pergunta do
             // modal é a OCUPAÇÃO do texto — e essa a moldura 9:16 responde.
             <div
-              className="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-[8px] border border-fio-2 bg-black"
-              style={{ aspectRatio: '9 / 16', containerType: 'inline-size' }}
+              className="relative mx-auto w-full max-w-[220px] aspect-[9/16] overflow-hidden rounded-[8px] border border-fio-2 bg-black [container-type:inline-size]"
             >
               {sobreposicoes}
             </div>

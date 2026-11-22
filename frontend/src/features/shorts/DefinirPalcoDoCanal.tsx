@@ -11,6 +11,7 @@ import { PalcoPrevia } from './PalcoPrevia';
 import { tituloDoPalco } from './PalcoDoShortNoModal';
 import { CabecalhoArrastavelNoShort, QUADRO_DO_SHORT } from './SecoesDoEstilo';
 import type { PlanoDesenhavel, Retangulo } from './shortsApi';
+import type { CSSProperties } from 'react';
 
 // D-946: o `DefinirPalcoModal` no MODO CANAL, aberto pela tela de Canais.
 //
@@ -81,13 +82,15 @@ function JanelasDeExemplo({ plano }: { plano: PlanoDesenhavel }) {
   return plano.recortes.map(({ regiao, janela }) => (
     <div
       key={regiao}
-      className="pointer-events-none absolute flex items-center justify-center border border-dashed border-fio-2"
-      style={{
-        left: `${(janela.x / largura) * 100}%`,
-        top: `${(janela.y / altura) * 100}%`,
-        width: `${(janela.w / largura) * 100}%`,
-        height: `${(janela.h / altura) * 100}%`,
-      }}
+      className="pointer-events-none absolute left-[var(--x)] top-[var(--y)] flex h-[var(--h)] w-[var(--w)] items-center justify-center border border-dashed border-fio-2"
+      style={
+        {
+          '--x': `${(janela.x / largura) * 100}%`,
+          '--y': `${(janela.y / altura) * 100}%`,
+          '--w': `${(janela.w / largura) * 100}%`,
+          '--h': `${(janela.h / altura) * 100}%`,
+        } as CSSProperties
+      }
     >
       <span className="rounded-full bg-painel-solido px-2 py-0.5 text-micro text-fg-2">
         {ROTULO[regiao] ?? regiao}
@@ -136,7 +139,7 @@ export function DefinirPalcoDoCanalModal({ onClose }: { onClose: () => void }) {
           )}
         </Secao>
         <div className="flex flex-col items-center gap-1 lg:sticky lg:top-0 lg:self-start">
-          <span className="font-code text-micro uppercase tracking-[0.06em] text-fg-2">
+          <span className="font-code text-micro text-fg-2">
             como vai sair
           </span>
           <div className="w-full max-w-[220px]">

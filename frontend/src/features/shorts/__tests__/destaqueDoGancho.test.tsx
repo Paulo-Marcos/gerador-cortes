@@ -44,7 +44,7 @@ describe('destaque do gancho (D-913)', () => {
         tempoAtualSeg={1}
       />,
     );
-    expect(html).toContain('<span style="color:var(--wb-accent)">Game of Thrones</span>');
+    expect(html).toContain('<span style="color:var(--cc-iris)">Game of Thrones</span>');
     expect(html).not.toContain('*');
   });
 });

@@ -39,7 +39,7 @@ export function Secao({
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
-        <h3 className="text-pequeno font-bold uppercase tracking-wide text-fg-2">
+        <h3 className="text-pequeno font-bold text-fg-2">
           {titulo}
         </h3>
         <div className="flex-1" />
@@ -76,7 +76,7 @@ export function Interruptor({
         type="checkbox"
         checked={ligado}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-3.5 flex-none accent-[var(--wb-accent)]"
+        className="mt-0.5 size-3.5 flex-none accent-iris"
       />
       <span className="min-w-0">
         <span className="block text-pequeno font-semibold">{titulo}</span>
@@ -84,7 +84,7 @@ export function Interruptor({
           className={cn(
             'block text-micro',
             alerta && ligado
-              ? 'text-[var(--wb-warn-ink,var(--wb-text-dim))]'
+              ? 'text-aviso'
               : 'text-fg-2',
           )}
         >
@@ -115,7 +115,7 @@ export function Caixa({
       className={cn(
         'flex min-w-[180px] flex-1 flex-col items-start gap-0.5 rounded-[9px] border px-3 py-2 text-left transition-colors',
         marcada
-          ? 'border-[var(--wb-accent)] bg-iris-suave'
+          ? 'border-iris bg-iris-suave'
           : 'border-fio-2 hover:bg-poco',
       )}
     >

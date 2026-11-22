@@ -1,4 +1,5 @@
 import { janelaVertical } from './janelaEnquadramento';
+import type { CSSProperties } from 'react';
 
 // D-475: a janela 9:16 desenhada por cima do player.
 //
@@ -38,22 +39,22 @@ export function MascaraEnquadramento({ largura, altura, focoX, children }: Props
       {recorta && (
         <>
           <div
-            className="absolute inset-y-0 left-0 bg-black/60"
-            style={{ width: `${janela.esquerdaPct}%` }}
+            className="absolute inset-y-0 left-0 w-[var(--larg)] bg-black/60"
+            style={{ '--larg': `${janela.esquerdaPct}%` } as CSSProperties}
           />
           <div
-            className="absolute inset-y-0 right-0 bg-black/60"
-            style={{ width: `${direitaPct}%` }}
+            className="absolute inset-y-0 right-0 w-[var(--larg)] bg-black/60"
+            style={{ '--larg': `${direitaPct}%` } as CSSProperties}
           />
         </>
       )}
       <div
-        className={recorta ? 'absolute inset-y-0 border-x-2 border-[var(--wb-accent)]' : 'absolute inset-0'}
-        style={{
-          left: `${janela.esquerdaPct}%`,
-          width: `${janela.larguraPct}%`,
-          containerType: 'inline-size',
-        }}
+        className={
+          recorta
+            ? 'absolute inset-y-0 left-[var(--esq)] w-[var(--larg)] border-x-2 border-iris [container-type:inline-size]'
+            : 'absolute inset-0 [container-type:inline-size]'
+        }
+        style={recorta ? ({ '--esq': `${janela.esquerdaPct}%`, '--larg': `${janela.larguraPct}%` } as CSSProperties) : undefined}
       >
         {recorta && (
           <span className="absolute left-1/2 top-1 -translate-x-1/2 rounded-[4px] bg-black/70 px-1.5 py-0.5 font-code text-micro font-bold tracking-wide text-white">

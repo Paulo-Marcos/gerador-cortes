@@ -27,6 +27,7 @@ import {
   useSubirArteDaCapa,
 } from './useShortsDoCorte';
 import { Icon } from '@/upgrade/Icon';
+import type { CSSProperties } from 'react';
 
 // D-565 (onda 4): escolher o quadro de capa do short.
 //
@@ -143,7 +144,7 @@ export function CapaModal({ open, onClose, short }: Props) {
             title={nota}
             className={
               origem === id
-                ? 'flex-1 rounded-[7px] bg-painel-solido px-3 py-1.5 text-pequeno font-bold text-fg shadow-[var(--wb-shadow)]'
+                ? 'flex-1 rounded-[7px] bg-painel-solido px-3 py-1.5 text-pequeno font-bold text-fg shadow-topo'
                 : 'flex-1 rounded-[7px] px-3 py-1.5 text-pequeno font-semibold text-fg-2 transition-colors hover:text-fg'
             }
           >
@@ -155,7 +156,10 @@ export function CapaModal({ open, onClose, short }: Props) {
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="space-y-2">
           {/* A prévia com as guias da vitrine por cima. */}
-          <div className="relative mx-auto w-full max-w-[240px] overflow-hidden rounded-[8px] border border-fio-2 bg-black">
+          <div
+            className="relative mx-auto w-full max-w-[240px] overflow-hidden rounded-[8px] border border-fio-2 bg-black"
+            style={{ '--corte': `${FRACAO_CORTADA * 100}%` } as CSSProperties}
+          >
             {/* D-581: na aba da ARTE a prévia mostra a imagem GRAVADA, e não o
                 vídeo. Ali a pergunta é "a arte que subi sobrevive ao recorte?",
                 e responder isso com um frame do vídeo seria mostrar outra
@@ -173,28 +177,21 @@ export function CapaModal({ open, onClose, short }: Props) {
                 muted
                 playsInline
                 preload="metadata"
-                className="block w-full"
-                style={{ aspectRatio: '9 / 16' }}
+                className="block aspect-[9/16] w-full"
               />
             )}
             {/* As faixas PERDIDAS, escurecidas. O que fica claro é o que a
                 grade do perfil preserva. */}
             <div
-              className="pointer-events-none absolute inset-x-0 top-0 bg-black/60"
-              style={{ height: `${FRACAO_CORTADA * 100}%` }}
+              className="pointer-events-none absolute inset-x-0 top-0 h-[var(--corte)] bg-black/60"
               aria-hidden
             />
             <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60"
-              style={{ height: `${FRACAO_CORTADA * 100}%` }}
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[var(--corte)] bg-black/60"
               aria-hidden
             />
             <div
-              className="pointer-events-none absolute inset-x-0 border-y border-dashed border-white/50"
-              style={{
-                top: `${FRACAO_CORTADA * 100}%`,
-                bottom: `${FRACAO_CORTADA * 100}%`,
-              }}
+              className="pointer-events-none absolute inset-x-0 top-[var(--corte)] bottom-[var(--corte)] border-y border-dashed border-white/50"
               aria-hidden
             />
           </div>
@@ -261,14 +258,14 @@ export function CapaModal({ open, onClose, short }: Props) {
             >
               {ganchoAte > 0 && duracao > 0 && (
                 <div
-                  className="pointer-events-none absolute inset-y-0 left-0 rounded-l-[6px] bg-iris-suave"
-                  style={{ width: `${posicaoNaRegua(ganchoAte, duracao) * 100}%` }}
+                  className="pointer-events-none absolute inset-y-0 left-0 rounded-l-[6px] bg-iris-suave w-[var(--larg)]"
+                  style={{ '--larg': `${posicaoNaRegua(ganchoAte, duracao) * 100}%` } as CSSProperties}
                   aria-hidden
                 />
               )}
               <div
-                className="pointer-events-none absolute inset-y-0 w-0.5 bg-[var(--wb-accent)]"
-                style={{ left: `${posicaoNaRegua(instante.seg, duracao) * 100}%` }}
+                className="pointer-events-none absolute inset-y-0 w-0.5 left-[var(--pos)] bg-iris"
+                style={{ '--pos': `${posicaoNaRegua(instante.seg, duracao) * 100}%` } as CSSProperties}
                 aria-hidden
               />
             </div>
@@ -432,7 +429,7 @@ function ArteDaCapa({
             readOnly
             rows={7}
             aria-label="Prompt da arte da capa"
-            className="w-full resize-y rounded-[8px] border border-fio-2 bg-poco p-2 font-code text-micro leading-relaxed text-fg-3 outline-none"
+            className="w-full resize-y rounded-[8px] border border-fio-2 bg-poco p-2 font-code text-micro leading-relaxed text-fg-3 outline-none focus-visible:ring-2 focus-visible:ring-foco"
           />
         )}
       </section>

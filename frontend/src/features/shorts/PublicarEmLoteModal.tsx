@@ -330,7 +330,7 @@ function LinhaDoShort({
         className={cn(
           'flex w-full items-center gap-2.5 rounded-[8px] border px-2.5 py-2 text-left transition-colors',
           marcado
-            ? 'border-[var(--wb-accent)] bg-iris-suave'
+            ? 'border-iris bg-iris-suave'
             : 'border-fio-2 hover:bg-poco',
         )}
       >
@@ -338,7 +338,7 @@ function LinhaDoShort({
           className={cn(
             'flex size-4 flex-none items-center justify-center rounded-[4px] border',
             marcado
-              ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-sobre-iris'
+              ? 'border-iris bg-iris text-sobre-iris'
               : 'border-fio-2',
           )}
         >

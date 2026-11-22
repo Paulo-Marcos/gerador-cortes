@@ -68,7 +68,7 @@ export function ListaDeSegmentos({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-code text-micro font-bold uppercase tracking-[0.08em] text-fg-3">
+        <p className="font-code text-micro font-bold text-fg-3">
           {colado
             ? `${segmentos.length} segmentos · ${Math.round(duracaoLiquida(short))}s de vídeo`
             : 'um segmento só'}

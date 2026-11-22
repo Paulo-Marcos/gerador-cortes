@@ -32,7 +32,7 @@ export function PainelDoLote({ raias, corteId, empilhado = false }: Props) {
             )}
           </h4>
           {raia.aviso && (
-            <p className="mt-1 flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+            <p className="mt-1 flex items-start gap-1 text-micro text-aviso">
               <Icon name="triangle-alert" className="mt-0.5 flex-none" />
               {raia.aviso}
             </p>
@@ -103,13 +103,13 @@ function Icone({ estado }: { estado: EstadoItemLote }) {
     return <Icon name="loader-2" className="flex-none animate-spin text-iris" />;
   }
   if (estado === 'publicado') {
-    return <Icon name="check" className="flex-none text-[var(--wb-ok-ink,var(--wb-accent))]" />;
+    return <Icon name="check" className="flex-none text-ok" />;
   }
   if (estado === 'sua_vez') {
     return <Icon name="hand" className="flex-none text-iris" />;
   }
   if (estado === 'conferir') {
-    return <Icon name="eye" className="flex-none text-[var(--wb-warn-ink,var(--wb-accent))]" />;
+    return <Icon name="eye" className="flex-none text-aviso" />;
   }
   if (estado === 'erro') {
     return <Icon name="triangle-alert" className="flex-none text-fg-3" />;

@@ -134,7 +134,7 @@ export default function ShortsProntosPage() {
                 className={cn(
                   'rounded-full border px-2.5 py-1 text-micro transition-colors',
                   filtro === f.id
-                    ? 'border-[var(--wb-accent)] bg-iris-suave font-semibold'
+                    ? 'border-iris bg-iris-suave font-semibold'
                     : 'border-fio-2 text-fg-3 hover:bg-poco',
                 )}
               >
@@ -184,8 +184,7 @@ export default function ShortsProntosPage() {
 
         {visiveis.length > 0 && (
           <div
-            className="grid gap-3"
-            style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))' }}
+            className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3"
           >
             {visiveis.map((pronto) => (
               <CartaoDaCentral
@@ -267,7 +266,7 @@ function CartaoDaCentral({
     <article
       className={cn(
         'flex flex-col overflow-hidden rounded-[12px] border bg-painel-solido',
-        marcado ? 'border-[var(--wb-accent)]' : 'border-fio-2',
+        marcado ? 'border-iris' : 'border-fio-2',
       )}
     >
       {/* R4: a moldura de vídeo também no retrato. `mat` maior que o do 16:9
@@ -291,7 +290,7 @@ function CartaoDaCentral({
             type="checkbox"
             checked={marcado}
             onChange={onMarcar}
-            className="size-3.5 accent-[var(--wb-accent)]"
+            className="size-3.5 accent-iris"
           />
           lote
         </label>
@@ -320,7 +319,7 @@ function CartaoDaCentral({
               <span
                 key={rede.id}
                 className={cn(
-                  'inline-flex items-center gap-0.5 rounded-[4px] px-1.5 py-0.5 font-code text-micro uppercase tracking-wide',
+                  'inline-flex items-center gap-0.5 rounded-[4px] px-1.5 py-0.5 font-code text-micro',
                   noAr
                     ? 'bg-ok/13 text-ok'
                     : 'bg-poco text-fg-2',

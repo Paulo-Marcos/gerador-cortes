@@ -92,7 +92,7 @@ function CartaoDoPronto({
     <article
       className={cn(
         'flex flex-col overflow-hidden rounded-[12px] border bg-painel-solido',
-        aberto ? 'border-[var(--wb-accent)]' : 'border-fio-2',
+        aberto ? 'border-iris' : 'border-fio-2',
       )}
     >
       {/* R4: moldura no retrato — `mat` 9 px, ver ShortsProntosPage. */}
@@ -162,7 +162,7 @@ function CartaoDoPronto({
             [...jaFoi].map((plataforma) => (
               <span
                 key={plataforma}
-                className="rounded-[4px] bg-ok/13 px-1.5 py-0.5 font-code text-micro uppercase tracking-wide text-ok"
+                className="rounded-[4px] bg-ok/13 px-1.5 py-0.5 font-code text-micro text-ok"
               >
                 {NOME_DA_PLATAFORMA[plataforma] ?? plataforma}
               </span>
@@ -324,10 +324,7 @@ export default function WorkspaceDoFirePage() {
 
         {naPrateleira.length > 0 && (
           <div
-            className="grid gap-3"
-            style={{
-              gridTemplateColumns: `repeat(auto-fill,minmax(${210}px,1fr))`,
-            }}
+            className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3"
           >
             {naPrateleira.map((short) => (
               <CartaoDoPronto

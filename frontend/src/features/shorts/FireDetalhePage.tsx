@@ -527,10 +527,10 @@ export function FireChrome({
       // a versao permanente do selo: "salvando…" enquanto grava, "salvo" depois.
       estado:
         estado === 'gravando'
-          ? { texto: 'salvando…', icone: 'loader', cor: 'var(--cc-info)', bg: 'var(--info-soft)' }
+          ? { texto: 'salvando…', icone: 'loader', cor: 'var(--cc-info)', bg: 'color-mix(in oklab, var(--cc-info) 13%, transparent)' }
           : estado === 'falhou'
-            ? { texto: 'não salvou', icone: 'triangle-alert', cor: 'var(--cc-aviso)', bg: 'var(--warn-soft)' }
-            : { texto: 'salvo', icone: 'circle-check', cor: 'var(--cc-ok)', bg: 'var(--ok-soft)' },
+            ? { texto: 'não salvou', icone: 'triangle-alert', cor: 'var(--cc-aviso)', bg: 'color-mix(in oklab, var(--cc-aviso) 13%, transparent)' }
+            : { texto: 'salvo', icone: 'circle-check', cor: 'var(--cc-ok)', bg: 'color-mix(in oklab, var(--cc-ok) 13%, transparent)' },
     },
     [corteId, fire?.titulo, fire?.projeto_titulo, fire?.duracao_seg, estado],
   );

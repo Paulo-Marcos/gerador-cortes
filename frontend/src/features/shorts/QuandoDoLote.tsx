@@ -113,7 +113,7 @@ function Problema({ texto }: { texto: string }) {
   return (
     <p
       role="alert"
-      className="flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]"
+      className="flex items-start gap-1 text-micro text-aviso"
     >
       <Icon name="triangle-alert" className="mt-px shrink-0" />
       {texto}
@@ -196,7 +196,7 @@ function LinhaDoItem({
     <li
       className={cn(
         'grid items-center gap-x-2 gap-y-0.5 rounded-[7px] bg-painel-solido px-2 py-1.5 sm:grid-cols-[1fr_auto_auto]',
-        problema && 'ring-1 ring-[var(--wb-warn)]',
+        problema && 'ring-1 ring-aviso',
       )}
     >
       <span className="min-w-0 truncate text-pequeno" title={rotulo}>
@@ -231,11 +231,11 @@ function LinhaDoItem({
             )}
           </>
         ) : (
-          <span className="text-[var(--wb-warn-ink,var(--wb-text-dim))]">sem data: {linha.motivo}</span>
+          <span className="text-aviso">sem data: {linha.motivo}</span>
         )}
       </span>
       {problema && (
-        <span className="text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))] sm:col-span-3">
+        <span className="text-micro text-aviso sm:col-span-3">
           {problema}
         </span>
       )}

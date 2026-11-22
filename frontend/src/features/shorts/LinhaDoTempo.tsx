@@ -12,6 +12,7 @@ import {
   mmss,
 } from './linhaDoTempoShort';
 import type { ShortSugerido } from './shortsApi';
+import type { CSSProperties } from 'react';
 
 // D-478: o bruto inteiro numa faixa, com o candidato em foco recortável no
 // arraste.
@@ -106,6 +107,7 @@ export function LinhaDoTempo({
 
   const duracaoEmFoco = bordasVisiveis ? bordasVisiveis.fim - bordasVisiveis.inicio : 0;
   const alerta = bordasVisiveis !== null && foraDaFaixaRecomendada(duracaoEmFoco);
+  const pctInicio = bordasVisiveis ? posicaoPct(bordasVisiveis.inicio, duracaoSeg) : 0;
 
   return (
     <div className="flex-none select-none">
@@ -141,6 +143,7 @@ export function LinhaDoTempo({
         {shorts.map((short) => {
           if (short.id === emFoco?.id) return null;
           const esquerda = posicaoPct(short.inicio_seg, duracaoSeg);
+          const larg = Math.max(0.4, posicaoPct(short.fim_seg, duracaoSeg) - esquerda);
           return (
             <div
               key={short.id}
@@ -149,13 +152,10 @@ export function LinhaDoTempo({
               // remover do editor. O bloco opaco de antes tapava a onda
               // justamente onde ela mais importa — dentro do trecho.
               className={cn(
-                'absolute inset-y-0 border-x border-fio-2 bg-wb-border/30',
+                'absolute inset-y-0 left-[var(--esq)] w-[var(--larg)] border-x border-fio-2 bg-fio',
                 short.status === 'rejeitado' && 'opacity-40',
               )}
-              style={{
-                left: `${esquerda}%`,
-                width: `${Math.max(0.4, posicaoPct(short.fim_seg, duracaoSeg) - esquerda)}%`,
-              }}
+              style={{ '--esq': `${esquerda}%`, '--larg': `${larg}%` } as CSSProperties}
             />
           );
         })}
@@ -163,17 +163,10 @@ export function LinhaDoTempo({
         {bordasVisiveis && (
           <div
             className={cn(
-              'absolute inset-y-0 rounded-[5px] border-2 bg-wb-accent/25',
-              alerta ? 'border-aviso' : 'border-[var(--wb-accent)]',
+              'absolute inset-y-0 left-[var(--esq)] w-[var(--larg)] rounded-[5px] border-2 bg-iris-suave',
+              alerta ? 'border-aviso' : 'border-iris',
             )}
-            style={{
-              left: `${posicaoPct(bordasVisiveis.inicio, duracaoSeg)}%`,
-              width: `${Math.max(
-                0.6,
-                posicaoPct(bordasVisiveis.fim, duracaoSeg) -
-                  posicaoPct(bordasVisiveis.inicio, duracaoSeg),
-              )}%`,
-            }}
+            style={{ '--esq': `${pctInicio}%`, '--larg': `${Math.max(0.6, posicaoPct(bordasVisiveis.fim, duracaoSeg) - pctInicio)}%` } as CSSProperties}
           />
         )}
 
@@ -201,8 +194,8 @@ export function LinhaDoTempo({
         {/* O cursor do player, por cima de tudo — é a única coisa que se move
             sozinha, e precisa ser lida sobre qualquer fundo. */}
         <div
-          className="pointer-events-none absolute inset-y-0 w-px bg-white mix-blend-difference"
-          style={{ left: `${posicaoPct(tempoAtual, duracaoSeg)}%` }}
+          className="pointer-events-none absolute inset-y-0 left-[var(--pos)] w-px bg-white mix-blend-difference"
+          style={{ '--pos': `${posicaoPct(tempoAtual, duracaoSeg)}%` } as CSSProperties}
           aria-hidden
         />
       </div>
@@ -235,13 +228,13 @@ function Alca({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className="absolute inset-y-0 w-4 -translate-x-1/2 cursor-ew-resize touch-none bg-transparent"
-      style={{ left: `${pct}%` }}
+      className="absolute inset-y-0 w-4 -translate-x-1/2 left-[var(--pos)] cursor-ew-resize touch-none bg-transparent"
+      style={{ '--pos': `${pct}%` } as CSSProperties}
     >
       <span
         className={cn(
           'pointer-events-none absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full transition-colors',
-          ativa ? 'bg-white' : 'bg-[var(--wb-accent)]',
+          ativa ? 'bg-white' : 'bg-iris',
         )}
       />
     </button>

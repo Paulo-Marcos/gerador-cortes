@@ -36,7 +36,7 @@ export function BotaoDeCluster({
       className={cn(
         'inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-pequeno font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35',
         ativo
-          ? 'bg-painel-solido text-fg shadow-[var(--wb-shadow)]'
+          ? 'bg-painel-solido text-fg shadow-topo'
           : 'text-fg-2 hover:bg-painel-solido hover:text-fg',
       )}
     >
