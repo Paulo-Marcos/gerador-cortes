@@ -105,13 +105,13 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       size="lg"
       title={
         <span className="flex items-center gap-2">
-          <Icon name={ICONE_DO_CONCEITO.publicar} size={20} className="text-accent-300" /> Publicar em massa
+          <Icon name={ICONE_DO_CONCEITO.publicar} size={20} className="text-iris" /> Publicar em massa
         </span>
       }
       description="Cada corte cai num horário da janela do canal (tela de Canais), depois do último já agendado."
     >
       {totalProntos === 0 ? (
-        <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/60 p-4 text-center text-sm text-text-300">
+        <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/60 p-4 text-center text-sm text-fg-3">
           Nenhum corte pronto para publicar no momento.
         </div>
       ) : (
@@ -132,7 +132,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
           </div>
           <QuandoDoLote {...quando.secao} modos={MODOS} rotuloDoAlvo={rotuloDoAlvo} />
           {erro && (
-            <p role="alert" className="flex items-center gap-1 text-[12px] text-error">
+            <p role="alert" className="flex items-center gap-1 text-pequeno text-error">
               <Icon name="x-circle" /> {erro}
             </p>
           )}

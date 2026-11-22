@@ -16,7 +16,7 @@ const ORIGENS: Record<string, { dica: string; cor: string; icone: ReactNode }> =
   gemini: { dica: 'Proposto pelo Gemini', cor: GEMINI_BRAND, icone: <GeminiIcon size={14} /> },
   manual: {
     dica: 'Proposto à mão (JSON colado)',
-    cor: 'var(--dim)',
+    cor: 'var(--cc-fg-3)',
     icone: <Icon name="hand" />,
   },
 };

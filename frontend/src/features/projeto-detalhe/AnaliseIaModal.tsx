@@ -139,7 +139,7 @@ function AnaliseIaModalDaLive({
       size="lg"
       title={
         <span className="flex items-center gap-2">
-          <Icon name="brain" size={20} className="text-accent-300" /> Análise IA
+          <Icon name="brain" size={20} className="text-iris" /> Análise IA
         </span>
       }
       description="Refazer a análise inteira ou gerar cortes em um intervalo específico."
@@ -171,7 +171,7 @@ function AnaliseIaModalDaLive({
 
         {/* Inputs específicos do intervalo */}
         {modo === 'intervalo' && (
-          <div className="grid grid-cols-1 gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40 p-3 sm:grid-cols-[1fr_1fr_120px]">
+          <div className="grid grid-cols-1 gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/40 p-3 sm:grid-cols-[1fr_1fr_120px]">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="inicio">
                 <Icon name="clock" className="mr-1 inline" /> Início (HH:MM:SS)
@@ -237,20 +237,20 @@ function AnaliseIaModalDaLive({
 
         {/* Aviso informativo (não bloqueia): a análise é aditiva, nunca apaga */}
         {temCortesExistentes && (
-          <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40 p-3 text-xs text-text-300">
-            <Icon name="info" size={16} className="mt-0.5 shrink-0 text-accent-300" />
+          <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/40 p-3 text-xs text-fg-3">
+            <Icon name="info" size={16} className="mt-0.5 shrink-0 text-iris" />
             <span className="flex-1">
               Este projeto já tem{' '}
-              <strong className="text-text-100">{totalCortesExistentes} cortes</strong>. A análise{' '}
-              <strong className="text-text-100">adiciona</strong> os novos aos existentes e continua a
-              numeração — <strong className="text-text-100">nada é apagado</strong>. Para remover
+              <strong className="text-fg">{totalCortesExistentes} cortes</strong>. A análise{' '}
+              <strong className="text-fg">adiciona</strong> os novos aos existentes e continua a
+              numeração — <strong className="text-fg">nada é apagado</strong>. Para remover
               cortes, use o editor.
             </span>
           </div>
         )}
 
         {/* Origem (Claude em destaque + Manual ao lado em menor destaque) */}
-        <div className="flex items-center gap-1 self-start rounded-full bg-bg-800 p-0.5 text-xs">
+        <div className="flex items-center gap-1 self-start rounded-full bg-poco p-0.5 text-xs">
           {/* A escolha do provedor foi para o botão de gerar: aqui só se
               decide COMO analisar — pela IA ou colando o JSON. */}
           <button
@@ -261,7 +261,7 @@ function AnaliseIaModalDaLive({
             }}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold transition-colors',
-              origem === 'ia' ? 'bg-bg-700 text-text-100' : 'text-text-300 hover:text-text-100',
+              origem === 'ia' ? 'bg-vidro-2 text-fg' : 'text-fg-3 hover:text-fg',
             )}
           >
             <Icon name={ICONE_DO_CONCEITO.iaGera} />
@@ -274,7 +274,7 @@ function AnaliseIaModalDaLive({
             }}
             className={cn(
               'rounded-full px-3 py-1 transition-colors',
-              origem === 'manual' ? 'bg-bg-700 text-text-100' : 'text-text-300 hover:text-text-100',
+              origem === 'manual' ? 'bg-vidro-2 text-fg' : 'text-fg-3 hover:text-fg',
             )}
           >
             Manual
@@ -283,11 +283,11 @@ function AnaliseIaModalDaLive({
 
         {origem === 'ia' && (
           <>
-            <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
-              <p className="flex items-center gap-1.5 font-semibold text-text-100">
-                <Icon name="brain" className="text-accent-300" /> Analise completa por IA
+            <div className="rounded-[var(--radius-sm)] border border-iris/40 bg-iris-suave p-3 text-xs text-fg-2">
+              <p className="flex items-center gap-1.5 font-semibold text-fg">
+                <Icon name="brain" className="text-iris" /> Analise completa por IA
               </p>
-              <p className="mt-1 text-text-300">
+              <p className="mt-1 text-fg-3">
                 Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
                 da <strong>live inteira</strong>, e em seguida emenda o{' '}
                 <strong>refazer transcrição</strong> de cada corte. Pode levar{' '}
@@ -295,7 +295,7 @@ function AnaliseIaModalDaLive({
                 são <strong>adicionados</strong> aos existentes; um corte que começa quase no mesmo
                 ponto de um atual é pulado. Nada é apagado.
               </p>
-              <p className="mt-1 text-text-300">
+              <p className="mt-1 text-fg-3">
                 <strong>As duas</strong> roda o Claude e depois o Gemini: os cortes das duas somam,
                 e na avaliação você remove o que não servir.
               </p>
@@ -420,15 +420,15 @@ function ModoButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex flex-col items-start gap-1 rounded-[var(--radius)] border p-3 text-left transition-all',
+        'flex flex-col items-start gap-1 rounded-[var(--radius)] border p-3 text-left transition-colors',
         active
-          ? 'border-accent-500/60 bg-accent-500/10'
-          : 'border-[var(--border)] bg-bg-900/40 hover:border-[var(--border-hover)]',
+          ? 'border-iris/60 bg-iris-suave'
+          : 'border-[var(--border)] bg-painel-solido/40 hover:border-[var(--border-hover)]',
       )}
     >
       <Icon name={icone} size={16} />
-      <span className="text-sm font-semibold text-text-100">{title}</span>
-      <span className="text-[11px] text-text-300">{hint}</span>
+      <span className="text-sm font-semibold text-fg">{title}</span>
+      <span className="text-micro text-fg-3">{hint}</span>
     </button>
   );
 }

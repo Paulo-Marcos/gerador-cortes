@@ -42,7 +42,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
       }
     >
       {query.isLoading && (
-        <div className="flex items-center justify-center gap-2 py-8 text-sm text-text-300">
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-fg-3">
           <Icon name="loader-2" size={16} className="animate-spin" /> Carregando…
         </div>
       )}
@@ -64,11 +64,11 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
           />
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-text-300">
+            <h3 className="mb-2 text-xs font-semibold tracking-[0.08em] text-fg-3">
               Cortes ({data.cortes.length})
             </h3>
             {data.cortes.length === 0 ? (
-              <p className="text-sm text-text-400">
+              <p className="text-sm text-fg-3">
                 Nenhum corte para auditar. Rode a Análise IA primeiro.
               </p>
             ) : (
@@ -81,11 +81,11 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
           </section>
 
           <section>
-            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-300">
+            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-[0.08em] text-fg-3">
               <Icon name="trash-2" /> Descartados ({data.descartados.length})
             </h3>
             {data.descartados.length === 0 ? (
-              <p className="text-sm text-text-400">
+              <p className="text-sm text-fg-3">
                 A IA não descartou nenhum bloco — ou esta análise rodou antes de I-034 (sem audit
                 trail persistido).
               </p>
@@ -94,10 +94,10 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
                 {data.descartados.map((d, i) => (
                   <li
                     key={i}
-                    className="rounded-md border border-[var(--border)] bg-bg-900/40 px-3 py-2 text-sm"
+                    className="rounded-md border border-[var(--border)] bg-painel-solido/40 px-3 py-2 text-sm"
                   >
-                    <div className="font-medium text-text-100">{d.tema || '(sem tema)'}</div>
-                    {d.motivo && <div className="mt-0.5 text-xs text-text-300">{d.motivo}</div>}
+                    <div className="font-medium text-fg">{d.tema || '(sem tema)'}</div>
+                    {d.motivo && <div className="mt-0.5 text-xs text-fg-3">{d.motivo}</div>}
                   </li>
                 ))}
               </ul>
@@ -157,14 +157,14 @@ function Stat({
       className={
         warn
           ? 'rounded-md border border-warn/40 bg-warn/10 px-3 py-2'
-          : 'rounded-md border border-[var(--border)] bg-bg-900/40 px-3 py-2'
+          : 'rounded-md border border-[var(--border)] bg-painel-solido/40 px-3 py-2'
       }
     >
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-400">
+      <div className="text-micro font-semibold tracking-wider text-fg-3">
         {label}
       </div>
-      <div className="mt-0.5 text-sm font-semibold text-text-100">{value}</div>
-      {hint && <div className="mt-0.5 text-[10px] text-warn">{hint}</div>}
+      <div className="mt-0.5 text-sm font-semibold text-fg">{value}</div>
+      {hint && <div className="mt-0.5 text-micro text-warn">{hint}</div>}
     </div>
   );
 }
@@ -173,17 +173,17 @@ function CorteRow({ corte }: { corte: AuditoriaCorteItem }) {
   // Mesmo critério: cortes abaixo de 8 min violam o mínimo absoluto da skill.
   const abaixoMinimo = corte.duracao_min > 0 && corte.duracao_min < 8;
   return (
-    <li className="rounded-md border border-[var(--border)] bg-bg-900/40 px-3 py-2">
+    <li className="rounded-md border border-[var(--border)] bg-painel-solido/40 px-3 py-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div className="text-sm font-semibold text-text-100">
-          <span className="mr-2 font-mono text-text-400">#{corte.numero}</span>
+        <div className="text-sm font-semibold text-fg">
+          <span className="mr-2 font-mono text-fg-3">#{corte.numero}</span>
           {corte.titulo_proposto || '(sem título)'}
         </div>
         <div
           className={
             abaixoMinimo
-              ? 'rounded-full bg-warn/20 px-2 py-0.5 text-[11px] font-semibold text-warn'
-              : 'text-[11px] text-text-400'
+              ? 'rounded-full bg-warn/20 px-2 py-0.5 text-micro font-semibold text-warn'
+              : 'text-micro text-fg-3'
           }
           title={abaixoMinimo ? 'Abaixo do mínimo de 8 min definido pela skill' : undefined}
         >
@@ -191,15 +191,15 @@ function CorteRow({ corte }: { corte: AuditoriaCorteItem }) {
         </div>
       </div>
       {corte.tema_central && (
-        <div className="mt-1 text-xs text-text-300">
-          <span className="font-semibold uppercase tracking-wider">Tema:</span> {corte.tema_central}
+        <div className="mt-1 text-xs text-fg-3">
+          <span className="font-semibold tracking-wider">Tema:</span> {corte.tema_central}
         </div>
       )}
-      <div className="mt-1.5 text-xs leading-relaxed text-text-200">
+      <div className="mt-1.5 text-xs leading-relaxed text-fg-2">
         {corte.justificativa ? (
           corte.justificativa
         ) : (
-          <span className="italic text-text-400">
+          <span className="italic text-fg-3">
             Sem justificativa registrada (corte gerado antes de I-034).
           </span>
         )}
