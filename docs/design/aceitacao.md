@@ -28,7 +28,7 @@ Conferida em 22/11/2026, na `main` em `da04eaaa` (H-24 e D-1147 já dentro), mai
 | | |
 |---|---|
 | Itens **A** (catraca ou teste) | **12 de 12 passam**: `shared/qualidade` (24 arquivos, 176 testes) e `selo.test.tsx` |
-| Itens **R** (revisão) | **27**: 19 passam (3 deles por correção desta história), 3 passam em parte (2 com parte corrigida aqui) e 5 falham; o que falta virou proposta |
+| Itens **R** (revisão) | **27**: 20 passam (4 deles por correção desta história), 2 passam em parte (um com parte corrigida aqui) e 5 falham; o que falta virou proposta |
 | Blur por tela | no máximo **3** superfícies (teto ~6); **0** no Editor, na Pós, na Revisão, na Curadoria e na Prateleira |
 | Saídas de emergência | "Reduzir efeitos", transparência reduzida e movimento reduzido zeram vidro, aurora e animação nas 17 telas |
 | Editor | pronto em **~2,2 s**, nenhum quadro acima de 50 ms ao tocar, arrastar ou clicar na onda, nenhuma long task durante o uso; **igual à `main` antes do épico** |
@@ -72,7 +72,7 @@ Conferida em 22/11/2026, na `main` em `da04eaaa` (H-24 e D-1147 já dentro), mai
 | 12 | sair com alteração pendente pede confirmação | **falha** | Configurações › Editar identidade: Esc fecha e perde o texto. Editor, Pós e Metadados passam (salvam ao sair) | **D-1197** |
 | 13 | "…", aspas curvas, espaço não separável | passa | 0 "..." na interface; a única aspa reta é texto do CHANGELOG em Novidades | — |
 | 14 | número e data por `Intl` | passa | amostra nas capturas ("dom, 22 de nov", contagens, durações) | — |
-| 15 | rótulo em frase, verbo + objeto | em parte, corrigido | "Inicio", "Play/Pause", "Ferramentas avancadas", "regiao"… corrigidos. "Marcar inicio aqui" e "Atualizar transcricao" esperam o unlock de testes travados | D-1195 · unlock |
+| 15 | rótulo em frase, verbo + objeto | passa, corrigido | antes: "Inicio", "Play/Pause", "Ferramentas avancadas", "regiao", "Marcar inicio aqui", "Atualizar transcricao"… (os dois últimos com unlock do Paulo, 22/11) | D-1195 |
 | 16 | título longo trunca, pai com `min-w-0` | passa | 0 px de overflow horizontal; o título de 150 caracteres trunca com reticências | — |
 | 17 | os quatro estados desenhados | **falha** | com o backend fora, o Editor fica em "Carregando o corte…", Análises não avisa e a Fila mostra "Nada na fila"; Shorts e Prontos avisam sem "Tentar de novo"; várias mostram "Failed to fetch" cru | **D-1204** |
 | 18 | irreversível pede diálogo; reversível oferece desfazer | passa | Remover projeto pede o diálogo destrutivo; Riscar corte oferece Desfazer | — |
@@ -100,7 +100,7 @@ Blur: superfícies com `backdrop-filter` visíveis. Os quatro números são Escu
 |---|---|---|---|---|---|
 | Biblioteca | 1 · 1 · 1 · 1 | halos | 30 (volta ao início) | 0 / 0 | 19 |
 | Cortes da live | 3 · 3 · 3 · 3 | capa | 70 | 0 / 0 | 19, 26 |
-| Editor | 0 · 0 · 0 · 0 | halos | 70 | 0 / 0 | 15 (unlock), 17, foco ao riscar |
+| Editor | 0 · 0 · 0 · 0 | halos | 70 | 0 / 0 | 17, foco ao riscar |
 | Pós | 0 · 0 · 0 · 0 | halos | 62 | 0 / 0 | 19 |
 | Metadados | 3 · 3 · 3 · 3 | capa | 48 | 0 / 0 | 10, 19, 26 |
 | Revisão | 0 · 0 · 0 · 0 | halos | 44 | 0 / 0 | 19 |
@@ -153,7 +153,7 @@ Cada pedido tem um teste que falhou antes da correção e passa depois.
 | Configurações, Metadados, Curadoria, Prateleira, Prontos, item 3: segundo `<main>` | `<main>` → `<div>` nas cinco telas | `shared/qualidade/__tests__/umMainPorTela.d1195.test.ts` |
 | todo diálogo e gaveta, item 8: rolagem vazava para trás do véu | `components/ui/dialog.tsx`: `overscroll-contain` no miolo | `components/ui/__tests__/dialogRolagemD1195.test.tsx` |
 | Editor e Curadoria, item 7: onda com foco sem anel | `index.css`: `.onda-com-foco ::part(scroll):focus-visible`; a classe em `TimelinePanel.tsx` e `ReguaDeOnda.tsx` | `features/editor/fase1/__tests__/focoNaOnda.d1195.test.tsx` |
-| Editor e Pós, item 15: rótulos sem acento e em inglês | `TimelinePanel`, `BrutoContextStrip`, `AdicionarCorteModal`, `CenaItem`, `SceneTimeline` | `shared/qualidade/__tests__/acentoNoNomeAcessivel.d1195.test.ts` |
+| Editor e Pós, item 15: rótulos sem acento e em inglês | `TimelinePanel`, `RightTabsPanel`, `BrutoContextStrip`, `AdicionarCorteModal`, `CenaItem`, `SceneTimeline`; a referência em `TimelinePanel.cores.test.tsx` e `RightTabsPanel.test.tsx` com unlock | `shared/qualidade/__tests__/acentoNoNomeAcessivel.d1195.test.ts` |
 | Metadados, Shorts, Atalhos, paleta, item 10: campos sem `autocomplete="off"`; URL com corretor | `Input`, `Busca` e `Textarea` nascem com `autocomplete="off"`; `type="url"` ganha `spellCheck={false}`; quem chama pode trocar | `components/ui/__tests__/campoSemPreenchimentoD1195.test.tsx` |
 | Biblioteca, linha do corte, Metadados, item 8: menu ⋯ sem setas | `components/ui/overflow-menu.tsx`: setas, Home, End; o foco entra no primeiro item e volta ao gatilho | `components/ui/__tests__/overflowMenuTecladoD1195.test.ts` |
 
