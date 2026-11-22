@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { CLAUDE_BRAND, ClaudeIcon } from '@/components/ui/claude-button';
 import { GEMINI_BRAND, GeminiIcon } from '@/components/ui/gemini-button';
 import { cn } from '@/lib/utils';
@@ -28,10 +29,11 @@ export function SeloDeProvider({ provider, modelo, className }: Props) {
       title={modelo ? `Gerado por ${NOME[provider]} (${modelo})` : `Gerado por ${NOME[provider]}`}
       className={cn(
         'inline-flex flex-none items-center gap-1 rounded-full border px-1.5 py-0.5',
-        'font-code text-micro font-bold uppercase tracking-[0.04em]',
+        'border-[var(--marca)] font-code text-micro font-bold tracking-[0.04em] text-[var(--marca)]',
         className,
       )}
-      style={{ borderColor: COR[provider], color: COR[provider] }}
+      // A cor da marca do provedor entra por variável CSS.
+      style={{ '--marca': COR[provider] } as CSSProperties}
     >
       <Icone size={10} />
       {NOME[provider]}

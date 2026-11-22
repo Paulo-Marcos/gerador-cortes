@@ -45,13 +45,8 @@ const PRIMEIRA_LEVA = [
 ];
 
 const EXCECOES: Record<string, number> = {
-  "src/components/PromptManualPanel.tsx": 2,
-  "src/components/ThumbnailHintsEditor.tsx": 1,
-  "src/components/ui/acao-de-ia.tsx": 1,
   "src/components/ui/button.tsx": 1,
-  "src/components/workbench/PanelShell.tsx": 3,
   "src/features/shorts/DefinirPalcoModal.tsx": 7,
-  "src/upgrade/UpgradeModal.tsx": 3,
   "src/upgrade/upgrade.css": 2,
 };
 

@@ -68,7 +68,6 @@ const EXCECOES: Record<string, number> = {
   "src/shared/palco/youtubeBackgrounds.tsx": 44,
   "src/shared/palco/youtubeChrome.tsx": 21,
   "src/upgrade/SeloDeEstado.tsx": 3,
-  "src/upgrade/UpgradeModal.tsx": 2,
 };
 
 function contarCoresSoltas(): Record<string, number> {

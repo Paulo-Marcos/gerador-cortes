@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Icon, type IconName } from '@/upgrade/Icon';
 import { ITEM_DO_MENU, ITEM_DO_MENU_PERIGOSO, PAINEL_DO_MENU } from '@/components/ui/menu';
@@ -24,7 +25,7 @@ export interface OverflowMenuItem {
   /** Explicação no hover — usado quando o item está `disabled` e o motivo importa. */
   title?: string;
   disabled?: boolean;
-  /** Ação destrutiva: rótulo em --wb-err. */
+  /** Ação destrutiva: rótulo em `erro`. */
   danger?: boolean;
   onClick?: () => void;
   /**
@@ -73,16 +74,17 @@ export function GatilhoDoMenu({
 }) {
   if (texto) {
     return (
-      <button
+      <Button
         type="button"
-        className="btn"
+        variant="secundario"
+        size="pq"
         onClick={onAlternar}
         aria-haspopup="menu"
         aria-expanded={open}
       >
         <Icon name="more-horizontal" />
         {texto}
-      </button>
+      </Button>
     );
   }
   return (
@@ -122,7 +124,7 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
       {item.icon && (
         <Icon
           name={item.icon}
-          className={item.danger ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text-mute)]'}
+          className={item.danger ? 'text-erro' : 'text-fg-2'}
         />
       )}
       <span className="flex-1">{item.label}</span>

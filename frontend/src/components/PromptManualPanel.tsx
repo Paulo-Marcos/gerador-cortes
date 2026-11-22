@@ -165,7 +165,7 @@ export function PromptManualPanel({
   return (
     <div className="flex flex-col gap-2">
       {(hint || total > 1 || !hideRetorno) && (
-        <div className="flex items-center justify-between gap-2 text-xs text-text-300">
+        <div className="flex items-center justify-between gap-2 text-xs text-fg-3">
           <div className="flex-1">
             {hint ?? (
               <p>
@@ -178,8 +178,8 @@ export function PromptManualPanel({
           {!hideRetorno && (
             <span
               className={cn(
-                'shrink-0 rounded-full px-2 py-0.5 text-[10px]',
-                todasColadas ? 'bg-success/15 text-success' : 'bg-bg-800 text-text-400',
+                'shrink-0 rounded-full px-2 py-0.5 text-micro',
+                todasColadas ? 'bg-ok/13 text-ok' : 'bg-poco text-fg-3',
               )}
             >
               {partesColadas}/{total} coladas
@@ -199,19 +199,19 @@ export function PromptManualPanel({
           <div
             key={`${part.parte}-${part.total_partes}`}
             className={cn(
-              'rounded-[var(--radius-sm)] border bg-bg-900/60 transition-colors',
-              ok ? 'border-success/40' : 'border-[var(--border)]',
+              'rounded-campo border bg-painel-solido transition-colors',
+              ok ? 'border-ok/40' : 'border-fio-2',
             )}
           >
             <div className="flex flex-wrap items-center gap-2 p-3">
-              <span className="text-xs font-semibold text-text-100">
+              <span className="text-xs font-semibold text-fg">
                 Parte {part.parte}/{part.total_partes}
               </span>
               {!hideRetorno && (
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]',
-                    ok ? 'bg-success/15 text-success' : 'bg-bg-800 text-text-400',
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-micro',
+                    ok ? 'bg-ok/13 text-ok' : 'bg-poco text-fg-3',
                   )}
                 >
                   {ok ? <><Icon name="check" />resposta colada</> : 'pendente'}
@@ -220,8 +220,8 @@ export function PromptManualPanel({
               <div className="ml-auto flex items-center gap-1.5">
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
+                  variant="secundario"
+                  size="pq"
                   onClick={() => void onCopiarParte(index)}
                   disabled={semPrompt}
                 >
@@ -229,7 +229,7 @@ export function PromptManualPanel({
                   {copiadoParte === index ? 'Copiado' : 'Copiar prompt'}
                 </Button>
                 {!hideRetorno && (
-                  <Button type="button" size="sm" onClick={() => void onColarParte(index)}>
+                  <Button type="button" variant="secundario" size="pq" onClick={() => void onColarParte(index)}>
                     {coladoParte === index ? (
                       <Icon name="circle-check" />
                     ) : (
@@ -241,11 +241,11 @@ export function PromptManualPanel({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] px-3 py-1.5 text-[11px] text-text-400">
+            <div className="flex flex-wrap items-center gap-3 border-t border-fio-2 px-3 py-1.5 text-micro text-fg-3">
               <button
                 type="button"
                 onClick={() => toggle(index, 'prompt')}
-                className="flex items-center gap-1 hover:text-text-200"
+                className="flex items-center gap-1 hover:text-fg-2"
               >
                 {exp.prompt ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
                 {labelPrompt}
@@ -254,11 +254,11 @@ export function PromptManualPanel({
                 <button
                   type="button"
                   onClick={() => toggle(index, 'json')}
-                  className="flex items-center gap-1 hover:text-text-200"
+                  className="flex items-center gap-1 hover:text-fg-2"
                 >
                   {exp.json ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
                   {labelResposta}
-                  {ok && <span className="text-text-500">({coladoTexto.length} chars)</span>}
+                  {ok && <span className="text-fg">({coladoTexto.length} chars)</span>}
                 </button>
               )}
             </div>
@@ -273,7 +273,7 @@ export function PromptManualPanel({
                       ? `Erro: ${(prompt.error as Error).message}`
                       : promptTextoParte
                 }
-                className="h-32 w-full resize-none border-t border-[var(--border)] bg-bg-950 px-2 py-1.5 font-mono text-[11px] text-text-200 outline-none"
+                className="h-32 w-full resize-none border-t border-fio-2 bg-app px-2 py-1.5 font-mono text-micro text-fg-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco"
               />
             )}
 
@@ -285,14 +285,14 @@ export function PromptManualPanel({
                   setErro(null);
                 }}
                 placeholder={jsonPlaceholder}
-                className="h-40 w-full resize-y border-t border-[var(--border)] bg-bg-900 px-2 py-1.5 font-mono text-[11px] text-text-100 outline-none focus:border-accent-500"
+                className="h-40 w-full resize-y border-t border-fio-2 bg-painel-solido px-2 py-1.5 font-mono text-micro text-fg outline-none focus:border-iris focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco"
               />
             )}
           </div>
         );
       })}
 
-      {jsonErro && <p className="text-xs text-error">{jsonErro}</p>}
+      {jsonErro && <p className="text-xs text-erro">{jsonErro}</p>}
     </div>
   );
 }

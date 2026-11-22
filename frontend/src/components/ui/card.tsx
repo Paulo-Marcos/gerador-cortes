@@ -11,7 +11,7 @@ const cardVariants = cva('', {
   variants: {
     variante: {
       legado:
-        'rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] shadow-[shadow:var(--wb-shadow)]',
+        'rounded-campo border border-fio bg-painel-solido shadow-topo',
       vidro:
         'flex flex-col gap-3 rounded-cartao border border-fio bg-vidro px-2.5 pb-3.5 pt-2.5 shadow-topo',
       deitado:
@@ -58,23 +58,6 @@ export const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDi
   <div className={cn('p-4 pt-0', className)} {...props} />
 );
 
-export const CardFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex items-center p-4 pt-0', className)} {...props} />
-);
-
 export const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h3
-    className={cn(
-      'font-editorial text-[17px] font-medium leading-tight text-[var(--wb-text)]',
-      className,
-    )}
-    {...props}
-  />
-);
-
-export const CardDescription = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn('text-sm text-[var(--wb-text-mute)]', className)} {...props} />
+  <h3 className={cn('text-secao font-medium leading-tight text-fg', className)} {...props} />
 );

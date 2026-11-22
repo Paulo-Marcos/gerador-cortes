@@ -21,7 +21,7 @@ const FORMATOS = [
 function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-4 rounded-cartao border border-fio bg-vidro p-5">
-      <h3 className="font-mono text-micro uppercase tracking-wider text-fg-3">{titulo}</h3>
+      <h3 className="font-mono text-micro tracking-wider text-fg-3">{titulo}</h3>
       {children}
     </section>
   );

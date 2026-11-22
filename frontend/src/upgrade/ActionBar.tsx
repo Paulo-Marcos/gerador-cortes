@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { CSSProperties } from 'react';
 import { Icon, ICONE_DO_CONCEITO } from './Icon';
 import type { ChromeBarra } from './UpgradeChrome';
 
@@ -26,52 +28,38 @@ import type { ChromeBarra } from './UpgradeChrome';
  */
 function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['veredito']>) {
   return aprovado ? (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 5,
-          height: 28,
-          padding: '0 9px',
-          border: '1px solid var(--ok)',
-          borderRadius: 'var(--r2)',
-          background: 'var(--ok-soft)',
-          color: 'var(--ok)',
-          fontSize: 12,
-          fontWeight: 700,
-          whiteSpace: 'nowrap',
-        }}
-      >
+    <span className="inline-flex items-center gap-1">
+      <span className="inline-flex h-7 items-center gap-[5px] whitespace-nowrap rounded-campo border border-ok bg-ok/13 px-[9px] text-pequeno font-bold text-ok">
         <Icon name="check" />
         Aprovado
       </span>
-      <button
+      <Button
         type="button"
-        className="btn"
+        variant="fantasma"
+        size="pq"
         data-decisao
         disabled={ocupado}
         onClick={onAlternar}
         title="Devolver o corte para proposto — não apaga nada"
-        style={{ color: 'var(--mute)', borderColor: 'transparent', background: 'none' }}
       >
         <Icon name="undo-2" />
         Devolver
-      </button>
+      </Button>
     </span>
   ) : (
-    <button
+    <Button
       type="button"
-      className="btn"
+      variant="secundario"
+      size="pq"
       data-decisao
       disabled={ocupado}
       onClick={onAlternar}
       title="Aprovar o corte — não renderiza nada"
-      style={{ borderColor: 'var(--ok)', color: 'var(--ok)' }}
+      className="border-ok text-ok hover:border-ok"
     >
       <Icon name="check" />
       Aprovar corte
-    </button>
+    </Button>
   );
 }
 
@@ -86,30 +74,14 @@ function MotivoDoPrimario({ motivo }: { motivo: string }) {
     <span
       id="motivo-do-primario"
       title={motivo}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        // D-1086: a quebra de linha conta só o mínimo legível (96 px), não o texto
-        // inteiro; com folga, o motivo cresce até o próprio tamanho (max-content). O
-        // crescimento alto vence o espaçador (flex 1), que só fica com o resto.
-        minWidth: 96,
-        flex: '1000 1 0',
-        maxWidth: 'max-content', // o teto de 320 px fica no texto, logo abaixo
-        fontSize: 11.5,
-        color: 'var(--warn)',
-      }}
+      // D-1086: a quebra de linha conta só o mínimo legível (96 px), não o texto
+      // inteiro; com folga, o motivo cresce até o próprio tamanho (max-content). O
+      // crescimento alto vence o espaçador (flex 1), que só fica com o resto.
+      className="inline-flex min-w-[96px] max-w-max flex-[1000_1_0] items-center gap-[5px] text-micro text-aviso"
     >
-      <Icon name="ban" style={{ flex: 'none' }} />
-      <span
-        style={{
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          maxWidth: 320,
-        }}
-      >
+      <Icon name="ban" className="flex-none" />
+      {/* O teto de 320 px e as duas linhas ficam no texto. */}
+      <span className="max-w-[320px] overflow-hidden [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">
         {motivo}
       </span>
     </span>
@@ -131,7 +103,7 @@ function EstadoDoCorte({ barra }: { barra: ChromeBarra }) {
  *  mouse, e a dica é o que explica por que não dá. */
 function atributosDoSecundario(botao: NonNullable<ChromeBarra['secundario']>) {
   return {
-    style: { color: 'var(--mute)', opacity: botao.desabilitado ? 0.5 : undefined },
+    className: cn('text-fg-2', botao.desabilitado && 'cursor-not-allowed opacity-50'),
     title: botao.titulo,
     'aria-disabled': botao.desabilitado || undefined,
     'aria-keyshortcuts': botao.tecla,
@@ -145,9 +117,8 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
     // a 12 px da janela. Sobre o vídeo (Editor e Pós) o vidro vira sólido pela sala
     // (`data-vidro`, `luzDaSala`), não por aqui.
     <div
-      className="cc-vidro-casca flex min-h-[62px] flex-none items-center gap-2 rounded-pilula py-2.5 pl-5 pr-3"
       // D-1086: rede de segurança; antes de quebrar, os textos (base 0) cedem.
-      style={{ flexWrap: 'wrap' }}
+      className="cc-vidro-casca flex min-h-[62px] flex-none flex-wrap items-center gap-2 rounded-pilula py-2.5 pl-5 pr-3"
       role="toolbar"
       aria-label="Ações da tela"
     >
@@ -155,13 +126,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       {barra.teclas?.map((t) => (
         <span
           key={t.texto}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 11.5, flex: 'none', whiteSpace: 'nowrap',
-            color: 'var(--mute)',
-          }}
+          className="inline-flex flex-none items-center gap-1.5 whitespace-nowrap text-micro text-fg-2"
         >
           {t.teclas.map((k) => (
             <kbd key={k}>{k}</kbd>
@@ -171,69 +136,74 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       ))}
 
       <EstadoDoCorte barra={barra} />
-      <div style={{ flex: 1, minWidth: 8 }} />
+      <div className="min-w-2 flex-1" />
 
       {barra.alternancias?.map((a) => (
-        <span key={a.texto} style={{ display: 'inline-flex', gap: 2 }}>
-          <button
+        <span key={a.texto} className="inline-flex gap-0.5">
+          <Button
             type="button"
-            className="btn"
+            variant="secundario"
+            size="pq"
             data-decisao
             aria-pressed={a.ativo}
             title={a.titulo}
             disabled={a.ocupado}
             onClick={a.onClick}
-            style={
+            // A cor da alternância vem de quem monta a barra (Leitura é info, Autor é íris):
+            // entra por variável CSS, e `!` vence o par `aria-pressed` do botão.
+            style={{ '--alt-cor': a.cor, '--alt-suave': a.corSuave } as CSSProperties}
+            className={
               a.ativo
-                ? { borderColor: a.cor, background: a.corSuave, color: a.cor }
-                : { color: 'var(--mute)' }
+                ? '!border-[var(--alt-cor)] !bg-[var(--alt-suave)] !text-[var(--alt-cor)]'
+                : 'text-fg-2'
             }
           >
             <Icon name={a.icone} />
             {a.texto}
-          </button>
+          </Button>
           {a.ativo && a.editar ? (
-            <button
+            <Button
               type="button"
-              className="btn btn-icon btn-ghost"
+              variant="fantasma"
+              size="icon-sm"
               data-decisao
               title={a.editar.titulo}
               aria-label={a.editar.titulo}
               onClick={a.editar.onClick}
             >
               <Icon name={ICONE_DO_CONCEITO.editar} />
-            </button>
+            </Button>
           ) : null}
         </span>
       ))}
-      {barra.alternancias?.length ? (
-        <span style={{ width: 1, height: 20, background: 'var(--line)' }} aria-hidden />
-      ) : null}
+      {barra.alternancias?.length ? <span className="h-5 w-px bg-fio-2" aria-hidden /> : null}
 
       {barra.secundario ? (
-        <button
+        <Button
           type="button"
-          className="btn"
+          variant="secundario"
+          size="pq"
           data-decisao
           {...atributosDoSecundario(barra.secundario)}
         >
           <Icon name={barra.secundario.icone} />
           {barra.secundario.texto}
           {barra.secundario.tecla ? <kbd>{barra.secundario.tecla}</kbd> : null}
-        </button>
+        </Button>
       ) : null}
 
       {barra.terciario ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-icon"
+          variant="secundario"
+          size="icon"
           data-decisao
           title={barra.terciario.titulo}
           aria-label={barra.terciario.titulo}
           onClick={barra.terciario.onClick}
         >
           <Icon name={barra.terciario.icone} />
-        </button>
+        </Button>
       ) : null}
 
       {barra.primario.desabilitado && barra.primario.motivo ? (
