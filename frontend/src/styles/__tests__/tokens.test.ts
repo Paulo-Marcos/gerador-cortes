@@ -156,7 +156,7 @@ describe('chaves do Tailwind', () => {
   // gera duas regras e a de cor vence, apagando o fio de luz da sombra.
   it('nenhuma chave de sombra repete uma chave de cor', () => {
     const ext = config.theme?.extend as Record<string, Record<string, unknown>>;
-    const cores = new Set(Object.keys(ext.colors));
+    const cores = new Set(Object.keys(config.theme?.colors as Record<string, unknown>));
     const colisoes = Object.keys(ext.boxShadow).filter((k) => cores.has(k));
     expect(colisoes).toEqual([]);
   });

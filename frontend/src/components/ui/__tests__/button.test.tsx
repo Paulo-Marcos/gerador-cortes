@@ -71,12 +71,6 @@ describe('Button — pílula de luz (D-1114)', () => {
     expect(html({ variant: 'secundario', size: 'gd' })).toContain('h-botao-gd');
   });
 
-  it('o tamanho antigo é lido na escala nova quando a variante é nova', () => {
-    expect(html({ variant: 'fantasma', size: 'sm' })).toContain('h-botao-pq');
-    expect(html({ variant: 'fantasma' })).toContain('h-botao-md');
-    expect(html({ variant: 'fantasma', size: 'icon' })).toContain('aspect-square');
-  });
-
   it('a variante icone é círculo de vidro', () => {
     const h = html({ variant: 'icone', 'aria-label': 'Fechar' } as never);
     expect(h).toContain('aspect-square');
@@ -87,30 +81,6 @@ describe('Button — pílula de luz (D-1114)', () => {
     for (const variant of ['primario', 'secundario', 'fantasma', 'destrutivo', 'destrutivo-cheio'] as const) {
       expect(html({ variant })).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     }
-  });
-});
-
-describe('Button — a API antiga segue atendida (nenhuma tela muda)', () => {
-  const ANTIGAS = {
-    default: 'btn btn-pri',
-    outline: 'btn',
-    ghost: 'btn btn-ghost',
-    danger: 'btn btn-danger',
-    secondary: 'btn btn-soft',
-  } as const;
-
-  it.each(Object.entries(ANTIGAS))('%s continua desenhado por "%s"', (variant, classes) => {
-    const h = html({ variant: variant as keyof typeof ANTIGAS });
-    expect(h).toContain(`class="${classes} `);
-    expect(h).toContain(`data-variant="${variant}"`);
-    expect(h).not.toContain('rounded-pilula');
-  });
-
-  it('sem props é o `default` de sempre, no tamanho de sempre', () => {
-    const h = html();
-    expect(h).toContain('class="btn btn-pri [&amp;_svg]:size-4');
-    expect(html({ size: 'sm' })).toContain('btn btn-pri btn-sm');
-    expect(html({ size: 'icon-sm' })).toContain('btn-icon btn-sm');
   });
 
   it('asChild mantém o filho, sem giro dentro', () => {

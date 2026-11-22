@@ -117,6 +117,10 @@ export function familiasDoIndex(html: string): string[] {
   return [...html.matchAll(/[?&]family=([^:&"]+)/g)].map((m) => decodeURIComponent(m[1]).replace(/\+/g, ' '));
 }
 
+/** D-1191: só conta o que NÃO é uma das duas famílias da Sala (o teto é zero). */
+const FAMILIAS_DA_SALA = ['Plus Jakarta Sans', 'JetBrains Mono'];
+export const familiasDeFora = (html: string) => familiasDoIndex(html).filter((f) => !FAMILIAS_DA_SALA.includes(f));
+
 
 const CORES_SOLTAS_CSS = [
   /\b(?:text|bg|border(?:-[xytrblse])?|ring(?:-offset)?|fill|stroke|from|to|via|outline|divide|placeholder|decoration|shadow|accent|caret)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{2,3})?\b/g,
@@ -131,6 +135,9 @@ const VIDEO = [
   /^src\/features\/shorts\/LegendaPrevia\.tsx$/,
   /^src\/features\/shorts\/DefinirPalcoModal\.tsx$/,
   /^src\/upgrade\/MolduraDeVideo\.tsx$/,
+  // D-1191 (H-24c): as prévias que desenham o quadro do vídeo e as amostras de cor do canal (§9.4).
+  /^src\/features\/shorts\/(?:GanchoPrevia|PalcoPrevia)\.tsx$/,
+  /^src\/features\/channels\/(?:ChannelCard|ChannelThemeSection)\.tsx$/,
 ];
 const DEFINE_TOKENS = [/^src\/styles\/tokens\.css$/, /^src\/index\.css$/];
 
@@ -166,6 +173,8 @@ export const DEFINICOES: Record<string, Definicao> = {
     porque: 'Sem caixa-alta como hierarquia: o peso e o tamanho da escala tipográfica fazem esse papel',
     alvo: CODIGO,
     contar: contarRegex(/\buppercase\b|\btextTransform\b|\btext-transform\b/g),
+    // D-1191: o chrome do YouTube desenhado no quadro do vídeo (§9.4).
+    isentos: [/^src\/shared\/palco\//],
     exemplos: [
       ['className="text-xs uppercase tracking-wide"', 1],
       ["style={{ textTransform: 'uppercase' }}", 2],
@@ -267,10 +276,10 @@ export const DEFINICOES: Record<string, Definicao> = {
     nome: 'fontesDoIndex',
     porque: 'O `index.html` só pede Plus Jakarta Sans e JetBrains Mono; as fontes do vídeo carregam sob demanda',
     alvo: /^index\.html$/,
-    contar: (html) => familiasDoIndex(html).length,
+    contar: (html) => familiasDeFora(html).length,
     exemplos: [
       ['href="https://fonts.googleapis.com/css2?family=Geist:wght@400&family=Geist+Mono:wght@500&display=swap"', 2],
-      ['href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300..800&display=swap"', 1],
+      ['href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300..800&display=swap"', 0],
     ],
   },
   // Extensão da `corLiteral` (D-849), que só olha .ts e .tsx: o mesmo vocabulário nos .css.
@@ -294,6 +303,8 @@ export const DEFINICOES: Record<string, Definicao> = {
     porque: 'Use a escala `text-micro`, `text-pequeno`, `text-corpo`, `text-linha`, `text-secao`, `text-titulo` ou `text-display`',
     alvo: CODIGO,
     contar: contarRegex(/\btext-\[\d+(?:\.\d+)?(?:px|rem|em)\]/g),
+    // D-1191: a prévia do palco usa px na escala do vídeo (§9.4).
+    isentos: [/^src\/features\/shorts\/DefinirPalcoModal\.tsx$/],
     exemplos: [
       ['className="text-[9.5px] text-[13px] text-[1.1rem]"', 3],
       ['className="text-[length:var(--x)] text-[#fff] text-corpo"', 0],

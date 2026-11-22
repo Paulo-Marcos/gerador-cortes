@@ -85,6 +85,6 @@ describe('ConfirmDialog · escolha opcional (D-993)', () => {
 
   it('pedido sem escolha não desenha opção nenhuma', () => {
     const { html } = encenar([], { ...PEDIDO, escolha: undefined });
-    expect(html).not.toContain('aria-pressed');
+    expect(html).not.toContain('aria-pressed=');
   });
 });

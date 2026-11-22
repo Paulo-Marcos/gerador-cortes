@@ -6,9 +6,8 @@
 // `max-width: 1240px`. Dois lugares, um dia discordariam — e o sintoma
 // seria a lista de cortes sumindo dos dois lugares ao mesmo tempo.
 //
-// Agora o JS manda. O `upgrade.css` só guarda o limiar para o que é
-// puramente visual (`.two` / `.two-b`), com um comentário apontando
-// para cá.
+// Agora o JS manda (o `upgrade.css`, que guardava o limiar das colunas `.two`
+// e `.two-b`, saiu na D-1191).
 // ─────────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react';

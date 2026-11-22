@@ -212,7 +212,6 @@ describe('a roupa da sala (§8.2)', () => {
       const proprios = [...html.matchAll(/<button[^>]*>/g)].map((m) => m[0]).filter((b) => !b.includes('aria-haspopup'));
       expect(proprios.length).toBeGreaterThan(0);
       for (const b of proprios) {
-        expect(b).toContain('data-sala');
         expect(b).toMatch(/focus-visible:outline-foco/);
       }
     }

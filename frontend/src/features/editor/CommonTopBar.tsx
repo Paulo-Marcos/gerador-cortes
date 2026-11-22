@@ -77,7 +77,7 @@ export function CommonTopBar({
           #{corte.numero}
         </Link>
         <h1
-          className="truncate text-[19px] font-medium leading-tight tracking-[-0.01em] text-fg"
+          className="truncate text-titulo text-fg"
           title={titulo}
         >
           {titulo}

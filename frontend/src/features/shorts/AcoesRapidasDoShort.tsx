@@ -108,7 +108,7 @@ export function GerarCapaComIA({
         {escrever.isPending ? 'Escrevendo o prompt…' : 'Gerar capa com IA'}
       </Button>
       {escrever.isError ? (
-        <span role="alert" className="text-micro leading-snug text-error">
+        <span role="alert" className="text-micro leading-snug text-erro">
           {(escrever.error as Error).message}
         </span>
       ) : (
@@ -157,7 +157,7 @@ function GerarGancho({ short, corteId }: { short: ShortSugerido; corteId: string
         {escrever.isPending ? 'Escrevendo o gancho…' : 'Gerar gancho'}
       </Button>
       {escrever.isError && (
-        <span role="alert" className="text-micro leading-snug text-error">
+        <span role="alert" className="text-micro leading-snug text-erro">
           {(escrever.error as Error).message}
         </span>
       )}

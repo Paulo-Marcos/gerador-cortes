@@ -194,7 +194,6 @@ describe('escala, estilo, data-sala e foco (§8.2)', () => {
     // A barra é da casca (H-13); o que o editor desenha é que precisa cumprir.
     const doEditor = naTela.filter((b) => !b.includes('data-decisao') && !b.includes('data-alternancia'));
     for (const botao of doEditor) {
-      expect(botao, botao).toContain('data-sala=""');
       expect(botao, botao).toMatch(/focus-visible:outline-foco|focus-visible:ring/);
     }
   });

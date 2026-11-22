@@ -40,14 +40,14 @@ export function ShortcutsHelpModal({ open, onClose, bindings }: Props) {
                   <Icon name={g.icone} />
                   {g.label}
                 </h3>
-                <ul className="flex flex-col divide-y divide-[var(--border)] rounded-campo border border-[var(--border)] bg-painel-solido/40">
+                <ul className="flex flex-col divide-y divide-fio-2 rounded-campo border border-fio-2 bg-painel-solido/40">
                   {g.items.map((b) => (
                     <li
                       key={b.key + (b.mod ?? '')}
                       className="flex items-center justify-between gap-2 px-3 py-1.5 text-pequeno"
                     >
                       <span className="text-fg-2">{b.description}</span>
-                      <kbd className="rounded border border-[var(--border)] bg-poco px-1.5 py-0.5 font-mono text-micro text-fg">
+                      <kbd className="rounded border border-fio-2 bg-poco px-1.5 py-0.5 font-mono text-micro text-fg">
                         {formatShortcut(b)}
                       </kbd>
                     </li>

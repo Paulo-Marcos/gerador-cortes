@@ -111,7 +111,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       description="Cada corte cai num horário da janela do canal (tela de Canais), depois do último já agendado."
     >
       {totalProntos === 0 ? (
-        <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/60 p-4 text-center text-sm text-fg-3">
+        <div className="rounded-campo border border-fio-2 bg-painel-solido/60 p-4 text-center text-sm text-fg-3">
           Nenhum corte pronto para publicar no momento.
         </div>
       ) : (
@@ -132,7 +132,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
           </div>
           <QuandoDoLote {...quando.secao} modos={MODOS} rotuloDoAlvo={rotuloDoAlvo} />
           {erro && (
-            <p role="alert" className="flex items-center gap-1 text-pequeno text-error">
+            <p role="alert" className="flex items-center gap-1 text-pequeno text-erro">
               <Icon name="x-circle" /> {erro}
             </p>
           )}

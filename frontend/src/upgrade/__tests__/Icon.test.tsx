@@ -48,7 +48,7 @@ describe('Icon', () => {
     const tag = svg(
       renderToStaticMarkup(<Icon name="loader-2" className="animate-spin" style={{ marginTop: 2 }} />),
     );
-    expect(tag).toContain('flex-shrink:0');
+    expect(tag).toContain('shrink-0');
     expect(tag).toContain('margin-top:2px');
     expect(tag).toContain('animate-spin');
   });
@@ -83,7 +83,7 @@ describe('ICONE_DO_CONCEITO', () => {
     expect(NOMES_DE_ICONE).not.toContain('pencil');
     const desenho = (nome: 'pen' | 'text-cursor-input') => svg(renderToStaticMarkup(<Icon name={nome} />));
     expect(desenho(ICONE_DO_CONCEITO.renomear)).toMatch(/class="lucide lucide-text-cursor-input/);
-    expect(desenho(ICONE_DO_CONCEITO.editar)).toMatch(/class="lucide lucide-pen"/);
+    expect(desenho(ICONE_DO_CONCEITO.editar)).toMatch(/class="lucide lucide-pen[ "]/);
   });
 
   it('todo nome da escala desenha um svg do lucide', () => {

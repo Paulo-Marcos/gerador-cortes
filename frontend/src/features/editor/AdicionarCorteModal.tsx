@@ -121,7 +121,7 @@ export function AdicionarCorteModal({
                 value={inicio}
                 onChange={(event) => setInicio(event.target.value)}
                 placeholder="00:00:00"
-                className="h-9 min-w-0 flex-1 rounded-campo border border-[var(--border)] bg-painel-solido px-2.5 font-mono text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
+                className="h-9 min-w-0 flex-1 rounded-campo border border-fio-2 bg-painel-solido px-2.5 font-mono text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
                 disabled={ocupado}
                 aria-invalid={!validarHms(inicio)}
               />
@@ -151,7 +151,7 @@ export function AdicionarCorteModal({
                 value={fim}
                 onChange={(event) => setFim(event.target.value)}
                 placeholder="00:01:00"
-                className="h-9 min-w-0 flex-1 rounded-campo border border-[var(--border)] bg-painel-solido px-2.5 font-mono text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
+                className="h-9 min-w-0 flex-1 rounded-campo border border-fio-2 bg-painel-solido px-2.5 font-mono text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
                 disabled={ocupado}
                 aria-invalid={!validarHms(fim)}
               />
@@ -182,14 +182,14 @@ export function AdicionarCorteModal({
             value={titulo}
             onChange={(event) => setTitulo(event.target.value)}
             placeholder="Deixe vazio para usar 'Corte manual #N'"
-            className="h-9 rounded-campo border border-[var(--border)] bg-painel-solido px-2.5 text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
+            className="h-9 rounded-campo border border-fio-2 bg-painel-solido px-2.5 text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco"
             disabled={ocupado}
             maxLength={500}
           />
         </label>
 
         {!podeSubmeter && validarHms(inicio) && validarHms(fim) && (
-          <p className="text-xs text-error">O fim precisa ser maior que o inicio.</p>
+          <p className="text-xs text-erro">O fim precisa ser maior que o inicio.</p>
         )}
         {(!validarHms(inicio) || !validarHms(fim)) && (
           <p className="text-xs text-fg-3">
@@ -197,7 +197,7 @@ export function AdicionarCorteModal({
             <span className="font-mono">01:23:45</span>).
           </p>
         )}
-        {erro && <p className="text-xs text-error">{erro}</p>}
+        {erro && <p className="text-xs text-erro">{erro}</p>}
       </div>
     </Modal>
   );

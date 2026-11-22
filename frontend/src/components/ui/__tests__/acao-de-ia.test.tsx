@@ -48,7 +48,7 @@ describe('AcaoDeIa', () => {
     ['md', '16'],
   ] as const)('tamanho %s: o ícone da ação sai a %s px, com traço 1,75', (tamanho, px) => {
     // O "IA gera" da prancha é a estrela simples (sparkle), não os brilhinhos (D-858).
-    const faisca = render({ tamanho }).match(/<svg[^>]*lucide-sparkle"[^>]*>/)?.[0] ?? '';
+    const faisca = render({ tamanho }).match(/<svg[^>]*lucide-sparkle[ "][^>]*>/)?.[0] ?? '';
     expect(faisca).toContain(`width="${px}"`);
     expect(faisca).toContain('stroke-width="1.75"');
   });

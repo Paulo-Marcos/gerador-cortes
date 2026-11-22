@@ -3,8 +3,8 @@
 // O editor tem dezenas de controles pequenos dentro de painéis (transporte, ferramentas da
 // linha do tempo, abas) que não são o `Button` da Sala: são ferramenta de painel, fantasma.
 // Para eles a forma vem daqui, uma vez: pílula, cor por token, e o FOCO DE VERDADE —
-// todo controle que leva `data-sala` sai da regra global de foco da `.ap` e precisa
-// trazer o próprio anel (`upgrade/upgrade.css`, D-1124).
+// todo controle desenha o próprio anel de foco (a regra global da casca antiga
+// saiu com o `upgrade.css`, D-1191).
 // Sem `backdrop-filter`: o editor toca vídeo (§3.6).
 
 /** O anel de foco da Sala: 2 px `cc-foco`, afastado 2 px, só no teclado. */

@@ -1,10 +1,5 @@
-/* D-599: camada visual do upgrade de layout. Fica escopada em `.ap`
-   (ver upgrade/upgrade.css) e nao redefine nenhum token --wb-*: as
-   telas atuais continuam exatamente como estao. */
-@import './upgrade/upgrade.css';
-/* D-746: rampa de temas e tokens da moldura — depois do upgrade.css. */
-@import './upgrade/upgrade-temas.css';
-/* D-1113: tokens da Sala escura (E-069). Sem consumidor até a H-03. */
+/* D-1113: tokens da Sala escura (E-069). D-1191: as camadas antigas (upgrade.css, upgrade-temas.css e a
+   ponte --wb-*) saíram; os `--cc-*` são a única fonte de cor. */
 @import './styles/tokens.css';
 
 @tailwind base;
@@ -14,120 +9,40 @@
 @layer base {
   :root {
     --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
-    --font-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
     --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
 
-    --radius-xs: 5px;
-    --radius-sm: 8px;
-    --radius: 10px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
+  /* A casca. O que o `.ap` do D-599 dava ao app inteiro e ainda vale: texto, fonte, corpo de
+     13 px e o fundo da sala. O resto do `upgrade.css` (botão `.btn`, `.card`, ponte `--wb-*`,
+     raio forçado a 4 px) saiu na D-1191. */
+  .ap {
+    color: var(--cc-fg);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--cc-bg);
+  }
 
-    /* D-1128 (E-069 H-03): a ponte. Cada variável antiga aponta para o token da
-       Sala escura pela tabela de-para (docs/design/DIRECAO.md §9.2), e o tema vem dos
-       próprios `--cc-*` (styles/tokens.css): não há mais bloco escuro aqui, nem paleta.
-       Superfície antiga vira SÓLIDA (`--cc-painel-solido`): vidro só chega com a casca
-       (H-13). O `.ap` redeclara a mesma lista (upgrade/upgrade.css) e o teste
-       `styles/__tests__/ponteDosTokens.d1128.test.ts` confere que nada fica sem destino.
-       Toda mistura de cor do app é em oklab, nunca em oklch: medido no Chrome 157
-       (18/11), misturar em oklch um hex quase neutro como `--cc-painel-solido` perde o
-       matiz (sai `none`) e pinta com matiz 0 — o cinza azulado sai marrom avermelhado.
-       Em oklab não há matiz para perder (styles/__tests__/semMisturaEmOklch.d1128). */
-    --success: var(--cc-ok);
-    --warning: var(--cc-aviso);
-    --error: var(--cc-erro);
-    --info: var(--cc-info);
+  /* Anel de foco padrão para o que não desenha o próprio (`outline-foco` do componente vence). */
+  :focus-visible {
+    outline: 2px solid var(--cc-foco);
+    outline-offset: 2px;
+  }
 
-    --wb-bg: var(--cc-bg);
-    --wb-bg-panel: var(--cc-painel-solido);
-    --wb-bg-card: var(--cc-painel-solido);
-    --wb-bg-card-elev: var(--cc-vidro-2);
-    --wb-bg-inset: var(--cc-poco);
-    --wb-bg-strip: var(--cc-poco);
-    --wb-border: var(--cc-fio-2);
-    --wb-border-soft: var(--cc-fio);
-    --wb-text: var(--cc-fg);
-    --wb-text-mute: var(--cc-fg-2);
-    --wb-text-dim: var(--cc-fg-3);
-    --wb-text-faint: var(--cc-fg-3);
-    /* O acento antigo vira íris, não feixe: a ponte não sabe qual botão é o primário
-       da tela (§9.2: esse julgamento é da história de cada tela). */
-    --wb-accent: var(--cc-iris);
-    --wb-accent-strong: var(--cc-iris-2);
-    --wb-accent-soft: var(--cc-iris-suave);
-    --wb-accent-fg: var(--cc-sobre-iris);
-    --wb-ink: var(--cc-fg);
-    --wb-ink-fg: var(--cc-sobre-iris);
-    --wb-pill-bg: var(--cc-vidro-2);
-    /* `--wb-focus` pinta o anel dos controles antigos (`ring-[var(--wb-focus)]`): o anel
-       da Sala é `--cc-foco` (§3.4). Sem ele, o foco sumiria nas telas não migradas. */
-    --wb-focus: var(--cc-foco);
-    --wb-shadow: inset 0 1px 0 var(--cc-fio-topo);
-    --wb-shadow-btn: inset 0 1px 0 var(--cc-fio-topo);
-
-    /* Estado: a cor cheia é o texto; o fundo tintado sai da cor a 13% (§4.1). */
-    --wb-ok: var(--cc-ok);
-    --wb-ok-soft: color-mix(in srgb, var(--cc-ok) 13%, transparent);
-    --wb-ok-ink: var(--cc-ok);
-    --wb-warn: var(--cc-aviso);
-    --wb-warn-soft: color-mix(in srgb, var(--cc-aviso) 13%, transparent);
-    --wb-warn-ink: var(--cc-aviso);
-    --wb-err: var(--cc-erro);
-    --wb-err-soft: color-mix(in srgb, var(--cc-erro) 13%, transparent);
-    --wb-err-ink: var(--cc-erro);
-    --wb-danger: var(--cc-erro);
-    --wb-danger-ink: var(--cc-erro);
-    --wb-info: var(--cc-info);
-    --wb-info-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
-    --wb-violet: var(--cc-info);
-    --wb-violet-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
-    /* O fogo é só glifo: onde era fundo, vira vidro (§9.2). */
-    --wb-fire: var(--cc-fire);
-    --wb-fire-soft: var(--cc-vidro-2);
-    --wb-leitura: var(--cc-info);
-    --wb-leitura-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
-
-    --tint-aprovado: color-mix(in srgb, var(--cc-ok) 13%, transparent);
-    --tint-fire: var(--cc-vidro-2);
-    --tint-leitura: color-mix(in srgb, var(--cc-info) 13%, transparent);
-    --tint-rejeitado: color-mix(in srgb, var(--cc-erro) 13%, transparent);
-
-    --tint-aprovado-soft: color-mix(in srgb, var(--cc-ok) 13%, transparent);
-    --tint-fire-soft: var(--cc-vidro-2);
-    --tint-leitura-soft: color-mix(in srgb, var(--cc-info) 13%, transparent);
-    --tint-rejeitado-soft: color-mix(in srgb, var(--cc-erro) 13%, transparent);
-
-    --bg-950: var(--wb-bg);
-    --bg-900: var(--wb-bg-panel);
-    --bg-800: var(--wb-bg-inset);
-    --bg-700: var(--wb-border-soft);
-    --bg-600: var(--wb-border);
-    --bg-500: var(--wb-text-dim);
-    --surface-1: var(--wb-bg-card);
-    --surface-2: var(--wb-bg-card-elev);
-    --surface-3: var(--wb-bg-inset);
-    --accent-200: var(--wb-accent-strong);
-    --accent-300: var(--wb-accent-soft);
-    --accent-400: var(--wb-accent);
-    --accent-500: var(--wb-accent);
-    --accent-600: var(--wb-accent);
-    --accent-700: var(--wb-accent-strong);
-    --text-100: var(--wb-text);
-    --text-200: var(--wb-text-mute);
-    --text-300: var(--wb-text-dim);
-    --text-400: var(--wb-text-dim);
-    --text-500: var(--wb-text);
-    --border: var(--wb-border);
-    --border-hover: var(--cc-fio-campo);
-    --border-accent: var(--wb-accent);
-    --accent-glow: var(--wb-focus);
-    --shadow-sm: var(--wb-shadow);
-    --shadow-md: var(--wb-shadow);
-    --shadow-lg: var(--cc-sombra-pop);
+  .ap kbd {
+    padding: 1px 5px;
+    border: 1px solid var(--cc-fio-2);
+    border-radius: 3px;
+    background: var(--cc-poco);
+    color: var(--cc-fg-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
   }
 
   * {
-    border-color: var(--wb-border);
+    border-color: var(--cc-fio-2);
   }
 
   html {
@@ -137,8 +52,8 @@
   body {
     min-height: 100vh;
     margin: 0;
-    background: var(--wb-bg);
-    color: var(--wb-text);
+    background: var(--cc-bg);
+    color: var(--cc-fg);
     font-family: var(--font-sans);
     transition:
       background-color 180ms ease,
@@ -153,13 +68,13 @@
   }
 
   ::selection {
-    background: var(--wb-accent-soft);
-    color: var(--wb-text);
+    background: var(--cc-iris-suave);
+    color: var(--cc-fg);
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
   }
 
   ::-webkit-scrollbar-track {
@@ -167,36 +82,26 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--wb-border);
+    background: var(--cc-fio-2);
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--wb-text-dim);
+    background: var(--cc-fg-3);
     background-clip: padding-box;
   }
 }
 
 @layer utilities {
-  .glass {
-    background: color-mix(in oklab, var(--wb-bg-panel) 86%, transparent);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-  }
-
-  .font-editorial {
-    font-family: var(--font-serif);
-  }
-
   .font-code {
     font-family: var(--font-mono);
   }
 
   .timeline-waveform-host ::part(scroll) {
     scrollbar-width: thin;
-    scrollbar-color: var(--wb-border) transparent;
+    scrollbar-color: var(--barra-de-rolagem, var(--cc-fio-2)) transparent;
   }
 
   .timeline-waveform-host ::part(scroll)::-webkit-scrollbar {
@@ -208,20 +113,20 @@
   }
 
   .timeline-waveform-host ::part(scroll)::-webkit-scrollbar-thumb {
-    background: var(--wb-border);
+    background: var(--barra-de-rolagem, var(--cc-fio-2));
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
 
   .timeline-waveform-host ::part(scroll)::-webkit-scrollbar-thumb:hover {
-    background: var(--wb-text-dim);
+    background: var(--cc-fg-3);
     background-clip: padding-box;
   }
 
   .timeline-native-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: var(--wb-border) transparent;
+    scrollbar-color: var(--cc-fio-2) transparent;
   }
 
   .timeline-native-scrollbar::-webkit-scrollbar {
@@ -233,14 +138,14 @@
   }
 
   .timeline-native-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--wb-border);
+    background: var(--cc-fio-2);
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
 
   .timeline-native-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--wb-text-dim);
+    background: var(--cc-fg-3);
     background-clip: padding-box;
   }
 }
@@ -288,8 +193,8 @@
       color-mix(in srgb, var(--cc-feixe-c) 75%, transparent) 100%
     );
     -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
+      linear-gradient(black 0 0) content-box,
+      linear-gradient(black 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;

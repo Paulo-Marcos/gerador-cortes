@@ -522,7 +522,11 @@ No padrão que já existe (`src/shared/qualidade/__tests__/tamanhoDeFuncao.test.
 | `fontesDoIndex` | `index.html` só pede Plus Jakarta Sans e JetBrains Mono | nova; hoje 11 famílias |
 | `semTransicaoTotal` | `transition: all`, `transition-all`, `outline-none` sem par | nova; medir |
 
-Exceções fixas, nomeadas dentro de cada catraca (pintam o vídeo ou dado de cor do canal): `src/shared/palco/**`, `features/shorts/LegendaPrevia.tsx`, a prévia de `features/shorts/DefinirPalcoModal.tsx`, `upgrade/MolduraDeVideo.tsx`, as amostras de paleta e de palco em `features/channels/**`, os componentes que desenham o quadro em `features/editor/fase2/`. A lista não cresce sem o Opus.
+Exceções fixas, nomeadas dentro de cada catraca (pintam o vídeo ou dado de cor do canal): `src/shared/palco/**`, `features/shorts/LegendaPrevia.tsx`, a prévia de `features/shorts/DefinirPalcoModal.tsx`, `upgrade/MolduraDeVideo.tsx`, as amostras de paleta e de palco em `features/channels/**`, os componentes que desenham o quadro em `features/editor/fase2/`.
+
+D-1191 (H-24c) fechou a lista, com o ok do Opus: só entra o que pinta o vídeo, o canvas ou uma cor de marca ou de dado. Além das de cima: `features/shorts/GanchoPrevia.tsx`, `PalcoPrevia.tsx` e `ParagrafoNaFonte.tsx` (desenham o quadro do vídeo; a última só repassa o `style` do texto do vídeo); os fallbacks de canvas de `features/editor/fase1/TimelinePanel.tsx` e de `features/shorts/ReguaDeOnda.tsx`; `features/shorts/coresDosShorts.ts` e `ganchoDoShort.ts` (dados de cor do gancho); as cores de marca de `components/ui/claude-button.tsx` e `gemini-button.tsx`; o véu e o scrim sobre imagem ou vídeo em `components/ui/imagem-ampliavel.tsx`, `thumbnail-placeholder.tsx`, `upgrade/SeloDeEstado.tsx` e os `bg-black/60` e `text-white` sobre o vídeo dos Shorts. **A lista está fechada**: não cresce sem o Opus.
+
+O violeta (`--cc-violeta` e `--cc-violeta-suave`, nos dois temas) é a categoria própria do trecho "Redundância" do editor: o valor é o do `--cc-info`, mas ele não se funde com o "Fora do assunto".
 
 ### 9.5 Testes, navegador e travas
 

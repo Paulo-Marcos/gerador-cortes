@@ -23,7 +23,7 @@ describe('ActionBar — alternância com ajuste', () => {
   it('ligada, o ajuste ao lado desenha a caneta do dicionário', () => {
     const html = renderToStaticMarkup(<ActionBar barra={barra(true)} />);
     const ajuste = html.match(/<button[^>]*aria-label="Editar autor e parte \(Leitura\)"[^>]*>.*?<\/button>/s)?.[0] ?? '';
-    expect(ajuste).toContain('lucide-pen"');
+    expect(ajuste).toContain('lucide-pen ');
   });
 
   it('desligada, o ajuste não aparece', () => {

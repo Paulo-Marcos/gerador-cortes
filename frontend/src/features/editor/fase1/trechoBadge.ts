@@ -33,9 +33,9 @@ export interface BadgeTrecho {
 // exatamente o que ela veio resolver.
 const AVISO = { bg: 'color-mix(in srgb, var(--cc-aviso) 13%, transparent)', fg: 'var(--cc-aviso)', token: 'var(--cc-aviso)' };
 const REDUNDANCIA = {
-  bg: 'var(--wb-violet-soft)',
-  fg: 'var(--wb-violet)',
-  token: 'var(--wb-violet)',
+  bg: 'var(--cc-violeta-suave)',
+  fg: 'var(--cc-violeta)',
+  token: 'var(--cc-violeta)',
 };
 const FORA_DO_ASSUNTO = { bg: 'color-mix(in srgb, var(--cc-info) 13%, transparent)', fg: 'var(--cc-info)', token: 'var(--cc-info)' };
 const PROBLEMA = { bg: 'color-mix(in srgb, var(--cc-erro) 13%, transparent)', fg: 'var(--cc-erro)', token: 'var(--cc-erro)' };

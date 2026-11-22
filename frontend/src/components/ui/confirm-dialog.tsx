@@ -124,19 +124,15 @@ export function ConfirmDialog({
         />
       )}
       <div className="mt-4 flex items-center justify-end gap-2">
-        {/* Foco inicial no que não faz estrago (DIRECAO §7.10): o Enter solto não destrói.
-            Os botões seguem nas variantes antigas de propósito (D-1122): as variantes de luz
-            levam `aria-pressed:` nas classes, e o teste travado deste diálogo (D-993) exige
-            que o HTML sem escolha não tenha a palavra `aria-pressed`. */}
-        <Button type="button" variant="outline" size="sm" data-autofocus onClick={onCancel}>
+        {/* Foco inicial no que não faz estrago (DIRECAO §7.10): o Enter solto não destrói. */}
+        <Button type="button" variant="secundario" size="pq" data-autofocus onClick={onCancel}>
           Cancelar
         </Button>
         <Button
           type="button"
-          variant="default"
-          size="sm"
+          variant={perigoso ? 'destrutivo-cheio' : 'primario'}
+          size="pq"
           onClick={() => (escolhidas.length === 0 ? onConfirm() : onConfirm(escolhidas))}
-          className={perigoso ? 'bg-erro-cheio text-sobre-erro hover:opacity-90' : ''}
         >
           {pedido?.confirmLabel ?? 'Confirmar'}
         </Button>

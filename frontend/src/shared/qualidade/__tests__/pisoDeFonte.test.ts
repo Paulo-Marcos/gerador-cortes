@@ -45,9 +45,7 @@ const PRIMEIRA_LEVA = [
 ];
 
 const EXCECOES: Record<string, number> = {
-  "src/components/ui/button.tsx": 1,
   "src/features/shorts/DefinirPalcoModal.tsx": 7,
-  "src/upgrade/upgrade.css": 2,
 };
 
 /** Quantos textos abaixo do piso um conteúdo tem. */

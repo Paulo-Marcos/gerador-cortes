@@ -55,7 +55,6 @@ describe('D-1167 · capa-chatgpt no desenho da Sala escura', () => {
     expect(html).not.toMatch(/data-variant="(?:primario|primary)"/);
     const botoes = html.match(/<button\b[^>]*data-variant="secundario"[^>]*>/g) ?? [];
     expect(botoes.length).toBeGreaterThanOrEqual(2); // Adicionar fotos e Salvar
-    for (const tag of botoes) expect(tag).toContain('data-sala=""');
   });
 
   it('o protagonista é um rádio da Sala: o escolhido em íris, um só, com foco desenhado', () => {

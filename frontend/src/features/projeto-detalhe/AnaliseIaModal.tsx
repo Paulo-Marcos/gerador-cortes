@@ -171,7 +171,7 @@ function AnaliseIaModalDaLive({
 
         {/* Inputs específicos do intervalo */}
         {modo === 'intervalo' && (
-          <div className="grid grid-cols-1 gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/40 p-3 sm:grid-cols-[1fr_1fr_120px]">
+          <div className="grid grid-cols-1 gap-3 rounded-campo border border-fio-2 bg-painel-solido/40 p-3 sm:grid-cols-[1fr_1fr_120px]">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="inicio">
                 <Icon name="clock" className="mr-1 inline" /> Início (HH:MM:SS)
@@ -237,7 +237,7 @@ function AnaliseIaModalDaLive({
 
         {/* Aviso informativo (não bloqueia): a análise é aditiva, nunca apaga */}
         {temCortesExistentes && (
-          <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/40 p-3 text-xs text-fg-3">
+          <div className="flex items-start gap-2 rounded-campo border border-fio-2 bg-painel-solido/40 p-3 text-xs text-fg-3">
             <Icon name="info" size={16} className="mt-0.5 shrink-0 text-iris" />
             <span className="flex-1">
               Este projeto já tem{' '}
@@ -283,7 +283,7 @@ function AnaliseIaModalDaLive({
 
         {origem === 'ia' && (
           <>
-            <div className="rounded-[var(--radius-sm)] border border-iris/40 bg-iris-suave p-3 text-xs text-fg-2">
+            <div className="rounded-campo border border-iris/40 bg-iris-suave p-3 text-xs text-fg-2">
               <p className="flex items-center gap-1.5 font-semibold text-fg">
                 <Icon name="brain" className="text-iris" /> Analise completa por IA
               </p>
@@ -420,10 +420,10 @@ function ModoButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex flex-col items-start gap-1 rounded-[var(--radius)] border p-3 text-left transition-colors',
+        'flex flex-col items-start gap-1 rounded-campo border p-3 text-left transition-colors',
         active
           ? 'border-iris/60 bg-iris-suave'
-          : 'border-[var(--border)] bg-painel-solido/40 hover:border-[var(--border-hover)]',
+          : 'border-fio-2 bg-painel-solido/40 hover:border-campo',
       )}
     >
       <Icon name={icone} size={16} />
