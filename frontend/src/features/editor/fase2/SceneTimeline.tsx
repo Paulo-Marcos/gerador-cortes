@@ -446,7 +446,7 @@ export function SceneTimeline({
             )}
             {hasSelectedRegion && (
               <div className="flex items-center gap-1">
-                <Tooltip label="[: ajusta o INICIO da regiao travada para o tempo atual" side="bottom">
+                <Tooltip label="[: ajusta o INÍCIO da região travada para o tempo atual" side="bottom">
                   <button
                     type="button"
                     data-sala=""
@@ -457,7 +457,7 @@ export function SceneTimeline({
                     [
                   </button>
                 </Tooltip>
-                <Tooltip label="]: ajusta o FIM da regiao travada para o tempo atual" side="bottom">
+                <Tooltip label="]: ajusta o FIM da região travada para o tempo atual" side="bottom">
                   <button
                     type="button"
                     data-sala=""

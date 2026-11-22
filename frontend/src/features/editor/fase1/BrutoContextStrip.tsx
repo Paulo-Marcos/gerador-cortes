@@ -202,8 +202,8 @@ function IntervaloEditor({
           aria-label="Início do intervalo"
         />
         <CurrentTimeButton
-          ariaLabel="Usar tempo atual no inicio"
-          title="Usar tempo atual no inicio"
+          ariaLabel="Usar tempo atual no início"
+          title="Usar tempo atual no início"
           onClick={() => setInicio(currentTimeHms)}
         />
       </div>
