@@ -1180,7 +1180,7 @@ export function TimelinePanel({
             type="button"
             onClick={onSetInicioAqui}
             disabled={!onSetInicioAqui}
-            aria-label="Marcar inicio aqui"
+            aria-label="Marcar início aqui"
             data-sala=""
             className={FERRAMENTA_TEXTO}
           >

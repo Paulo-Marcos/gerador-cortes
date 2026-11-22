@@ -8,10 +8,6 @@ import { arquivosRastreados } from './catraca';
 // pronuncia errado. A lista abaixo é das palavras que a auditoria achou, não um dicionário.
 const SEM_ACENTO = /\b(?:inicio|Inicio|avancadas|regiao|transcricao|Play\/Pause)\b/;
 
-// Ainda sem acento porque um teste travado (testes-sao-contrato) cita o texto exato;
-// a troca da referência espera o unlock do dono.
-const PENDENTES = new Set(['Marcar inicio aqui', 'Atualizar transcricao']);
-
 function rotulos(): string[] {
   return arquivosRastreados()
     .filter((c) => c.endsWith('.tsx'))
@@ -20,7 +16,7 @@ function rotulos(): string[] {
 
 describe('nome acessível com acento e em português', () => {
   it('nenhum aria-label ou label de dica traz as palavras sem acento que a auditoria achou', () => {
-    const ruins = rotulos().filter((r) => SEM_ACENTO.test(r.split(': ')[1]) && !PENDENTES.has(r.split(': ')[1]));
+    const ruins = rotulos().filter((r) => SEM_ACENTO.test(r.split(': ')[1]));
     expect(ruins).toEqual([]);
   });
 });

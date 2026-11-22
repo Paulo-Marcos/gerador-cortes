@@ -61,10 +61,10 @@ function render(desvios?: Desvio[]) {
 }
 
 describe('RightTabsPanel — header', () => {
-  it('mantém "Atualizar transcricao" no header e NÃO renderiza o rodapé "Mais ações"', () => {
+  it('mantém "Atualizar transcrição" no header e NÃO renderiza o rodapé "Mais ações"', () => {
     const html = render();
 
-    expect(html).toContain('aria-label="Atualizar transcricao"');
+    expect(html).toContain('aria-label="Atualizar transcrição"');
     expect(html).not.toContain('Mais ações');
   });
 
