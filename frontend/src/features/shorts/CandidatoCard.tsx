@@ -15,7 +15,6 @@ import { semMarcas } from '@video-renderer/public-api';
 import { useFechoDoShort } from './useFechoDoShort';
 import { AcoesRapidasDoShort } from './AcoesRapidasDoShort';
 import { Icon } from '@/upgrade/Icon';
-import type { CSSProperties } from 'react';
 
 // D-492: o card de um candidato, reorganizado.
 //
@@ -265,7 +264,7 @@ export function CandidatoCard({
                 // A cor HERDADA: lida só do trecho, o ponto ficava branco em
                 // todo card que segue o gancho padrão — e trocar o padrão
                 // parecia não mudar nada.
-                style={{ '--cor': corDoGancho || '#ffffff' } as CSSProperties}
+                style={{ '--cor': corDoGancho || '#ffffff' } as import('react').CSSProperties}
               />
             ) : (
               <Icon name="plus" className="flex-none opacity-70" />
