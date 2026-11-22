@@ -12,8 +12,8 @@ describe('Card', () => {
         <CardContent>c</CardContent>
       </Card>,
     );
-    expect(h).toContain('var(--wb-bg-card)');
-    expect(h).toContain('var(--wb-border-soft)');
+    expect(h).toContain('bg-painel-solido');
+    expect(h).toContain('border-fio');
     expect(h).not.toContain('rounded-cartao');
   });
 

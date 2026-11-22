@@ -113,7 +113,7 @@ describe('App · o aviso empurra a casca', () => {
     // Com 100dvh a casca teria a janela inteira debaixo do aviso, e os 31 px
     // dele sairiam do pé da tela — o rodapé do Workspace (D-870) mora lá.
     const casca = readFileSync(resolve(__dirname, '../../../upgrade/UpgradeShell.tsx'), 'utf-8');
-    expect(casca).toContain("height: '100%',");
+    expect(casca).toContain('h-full');
     expect(casca).not.toContain('100dvh');
   });
 });

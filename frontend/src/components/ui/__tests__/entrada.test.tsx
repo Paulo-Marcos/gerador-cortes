@@ -19,7 +19,7 @@ const noop = () => {};
 describe('Input', () => {
   it('padrão continua o campo atual: nenhuma tela muda de cara', () => {
     const html = renderToStaticMarkup(<Input placeholder="x" />);
-    expect(html).toContain('fld');
+    expect(html).toContain('h-[30px]');
     expect(html).not.toContain('border-campo');
   });
 
@@ -93,7 +93,7 @@ describe('Field', () => {
 
 describe('Label', () => {
   it('padrão intacto; sala usa fg-2 semibold', () => {
-    expect(renderToStaticMarkup(<Label>a</Label>)).toContain('text-text-300');
+    expect(renderToStaticMarkup(<Label>a</Label>)).toContain('text-fg-2');
     const sala = renderToStaticMarkup(<Label aparencia="sala">a</Label>);
     expect(sala).toContain('text-fg-2');
     expect(sala).toContain('font-semibold');

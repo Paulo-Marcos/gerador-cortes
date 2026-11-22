@@ -27,7 +27,7 @@ function casca(rota: string) {
   );
 }
 
-const colunas = (html: string) => /grid-template-columns:([^;"]+)/.exec(html)?.[1];
+const colunas = (html: string) => /--colunas:([^;"]+)/.exec(html)?.[1];
 const atributo = (html: string, nome: string) => new RegExp(`<div class="ap [^"]*"[^>]*${nome}="([^"]*)"`).exec(html)?.[1];
 
 afterEach(() => {

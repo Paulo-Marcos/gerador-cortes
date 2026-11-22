@@ -164,8 +164,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
           {a.ativo && a.editar ? (
             <Button
               type="button"
-              variant="fantasma"
-              size="icon-sm"
+              variant="fantasma" size="pq" soIcone
               data-decisao
               title={a.editar.titulo}
               aria-label={a.editar.titulo}
@@ -195,8 +194,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       {barra.terciario ? (
         <Button
           type="button"
-          variant="secundario"
-          size="icon"
+          variant="secundario" size="pq" soIcone
           data-decisao
           title={barra.terciario.titulo}
           aria-label={barra.terciario.titulo}

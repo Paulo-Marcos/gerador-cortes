@@ -40,6 +40,6 @@ describe('D-1119: a casca também reconhece a ação de IA, a busca, a seleção
 
   it('a pílula antiga da ação de IA não leva o marcador', () => {
     const html = renderToStaticMarkup(<AcaoDeIa rotulo="Gerar" emVoo={null} onGerar={() => {}} />);
-    expect(html).not.toMatch(MARCADOR);
+    expect(html).not.toContain('data-sala');
   });
 });

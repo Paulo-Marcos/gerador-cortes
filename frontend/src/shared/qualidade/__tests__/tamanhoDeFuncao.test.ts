@@ -113,7 +113,7 @@ const EXCECOES: Record<string, number> = {
   "src/hooks/useLipSyncPreview.ts::useLipSyncPreview.useEffect#2": 102,
   "src/shared/palco/youtubeBackgrounds.tsx::FundoThumb": 110,
   "src/shared/palco/youtubeLayout.ts::normalizeYoutubeLayout": 106,
-  "src/upgrade/ActionBar.tsx::ActionBar": 120,
+  "src/upgrade/ActionBar.tsx::ActionBar": 118,
   "src/upgrade/UpgradeShell.tsx::Casca": 114,
 };
 

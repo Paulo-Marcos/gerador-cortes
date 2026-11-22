@@ -53,7 +53,7 @@ describe('a casca montada', () => {
     expect(html).not.toContain('<nav');
     expect(html).not.toContain('<header');
     expect(html).not.toContain('Editor de cortes');
-    expect(html).toContain('grid-template-columns:1fr');
+    expect(html).toContain('--colunas:1fr');
   });
 });
 

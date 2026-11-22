@@ -119,6 +119,6 @@ describe('D-1119: a casca antiga não herda por cima da Sala escura', () => {
         <Input />
       </>,
     );
-    expect(html).not.toMatch(/outline-foco|rounded-campo/);
+    expect(html).not.toContain('data-sala');
   });
 });

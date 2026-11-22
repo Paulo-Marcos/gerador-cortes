@@ -21,8 +21,8 @@ describe('AcaoDeIa — aparência Sala escura (D-1114)', () => {
   it('o padrão continua sendo o desenho antigo', () => {
     const h = render();
     expect(h).toContain('data-aparencia="legada"');
-    expect(h).toContain('--wb-border');
-    expect(h).toContain('#D97757');
+    expect(h).toContain('border-fio-2');
+    expect(h).toContain('--marca:#D97757');
     expect(h).not.toContain('rounded-pilula');
   });
 
