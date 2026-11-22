@@ -91,8 +91,8 @@ function CartaoDoPronto({
   return (
     <article
       className={cn(
-        'flex flex-col overflow-hidden rounded-[12px] border bg-[var(--wb-bg-card)]',
-        aberto ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
+        'flex flex-col overflow-hidden rounded-[12px] border bg-painel-solido',
+        aberto ? 'border-[var(--wb-accent)]' : 'border-fio-2',
       )}
     >
       {/* R4: moldura no retrato — `mat` 9 px, ver ShortsProntosPage. */}
@@ -114,8 +114,8 @@ function CartaoDoPronto({
           // vídeo quebrado.
           <div className="absolute inset-0 grid place-items-center p-4 text-center">
             <div>
-              <Icon name="clapperboard" ilustracao={24} className="mx-auto text-[var(--wb-text-mute)]" />
-              <p className="mt-2 text-[12px] font-semibold text-[var(--wb-text-dim)]">
+              <Icon name="clapperboard" ilustracao={24} className="mx-auto text-fg-2" />
+              <p className="mt-2 text-pequeno font-semibold text-fg-3">
                 aprovado, falta o arquivo
               </p>
               <Button
@@ -138,10 +138,10 @@ function CartaoDoPronto({
       </MolduraDeVideo>
 
       <div className="flex flex-col gap-1.5 p-2.5">
-        <h3 className="line-clamp-2 text-[12.5px] font-bold leading-snug" title={short.titulo}>
+        <h3 className="line-clamp-2 text-pequeno font-bold leading-snug" title={short.titulo}>
           {short.titulo}
         </h3>
-        <div className="flex items-center gap-2 font-code text-[10.5px] tabular-nums text-[var(--wb-text-mute)]">
+        <div className="flex items-center gap-2 font-code text-micro tabular-nums text-fg-2">
           <span>{mmss(short.inicio_seg)}</span>
           <span>{Math.round(short.duracao_seg)}s</span>
           <div className="flex-1" />
@@ -157,12 +157,12 @@ function CartaoDoPronto({
             novo e torcer para o backend recusar os repetidos. */}
         <div className="flex flex-wrap items-center gap-1">
           {jaFoi.size === 0 ? (
-            <span className="text-[10.5px] text-[var(--wb-text-mute)]">ainda não publicado</span>
+            <span className="text-micro text-fg-2">ainda não publicado</span>
           ) : (
             [...jaFoi].map((plataforma) => (
               <span
                 key={plataforma}
-                className="rounded-[4px] bg-[var(--wb-ok-soft)] px-1.5 py-0.5 font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-ok-ink)]"
+                className="rounded-[4px] bg-ok/13 px-1.5 py-0.5 font-code text-micro uppercase tracking-wide text-ok"
               >
                 {NOME_DA_PLATAFORMA[plataforma] ?? plataforma}
               </span>
@@ -170,7 +170,7 @@ function CartaoDoPronto({
           )}
           {capa.data?.tem_capa && (
             <span
-              className="ml-auto inline-flex items-center gap-0.5 text-[10px] text-[var(--wb-text-mute)]"
+              className="ml-auto inline-flex items-center gap-0.5 text-micro text-fg-2"
               title="Este short tem capa escolhida"
             >
               <Icon name="image" />
@@ -195,7 +195,7 @@ function CartaoDoPronto({
           o lote não deve ser o único caminho. Ele abre sob demanda para o
           cartão não voltar a ser a parede de controles da tela de edição. */}
       {pronto && aberto && (
-        <div className="border-t border-[var(--wb-border-soft)]">
+        <div className="border-t border-fio">
           <PainelPublicacao
             short={short}
             corteId={corteId}
@@ -284,7 +284,7 @@ export default function WorkspaceDoFirePage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        'flex min-h-0 flex-col overflow-hidden text-fg',
         '',
         '',
       )}
@@ -292,24 +292,24 @@ export default function WorkspaceDoFirePage() {
 
       <main className="">
         {isLoading && (
-          <p className="py-16 text-center text-[13px] text-[var(--wb-text-mute)]">
+          <p className="py-16 text-center text-corpo text-fg-2">
             Carregando a prateleira…
           </p>
         )}
 
         {isError && (
-          <p className="py-16 text-center text-[13px] leading-relaxed text-[var(--wb-text-dim)]">
+          <p className="py-16 text-center text-corpo leading-relaxed text-fg-3">
             Não consegui carregar os shorts: {(error as Error)?.message ?? 'erro desconhecido'}
           </p>
         )}
 
         {!isLoading && !isError && naPrateleira.length === 0 && (
           <div className="mx-auto max-w-md py-16 text-center">
-            <Icon name="layout-grid" ilustracao={28} className="mx-auto text-[var(--wb-text-mute)]" />
-            <p className="mt-3 text-[14px] font-semibold text-[var(--wb-text)]">
+            <Icon name="layout-grid" ilustracao={28} className="mx-auto text-fg-2" />
+            <p className="mt-3 text-linha font-semibold text-fg">
               Nada aprovado ainda neste corte
             </p>
-            <p className="mt-2 text-[13px] leading-relaxed text-[var(--wb-text-mute)]">
+            <p className="mt-2 text-corpo leading-relaxed text-fg-2">
               O workspace mostra só o que passou pela curadoria. Aprove os trechos na tela de
               edição e eles aparecem aqui, prontos para o despacho.
             </p>

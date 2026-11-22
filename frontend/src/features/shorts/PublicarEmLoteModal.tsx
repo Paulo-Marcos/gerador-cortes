@@ -194,7 +194,7 @@ export function PublicarEmLoteModal({
     >
       <div className="space-y-4">
         {criar.isError && (
-          <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-2.5 text-[12px] text-[var(--wb-text-dim)]">
+          <p className="rounded-[8px] bg-poco p-2.5 text-pequeno text-fg-3">
             {motivoDoErro(criar.error, 'não consegui criar o lote')}
           </p>
         )}
@@ -258,7 +258,7 @@ export function PublicarEmLoteModal({
                 candidatos.length > 0 && (
                   <button
                     type="button"
-                    className="text-[11.5px] text-[var(--wb-accent)]"
+                    className="text-micro text-iris"
                     onClick={() =>
                       setSelecionados((atual) =>
                         atual.length === candidatos.length ? [] : candidatos.map((c) => c.id),
@@ -271,7 +271,7 @@ export function PublicarEmLoteModal({
               }
             >
               {candidatos.length === 0 ? (
-                <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-3 text-[12px] text-[var(--wb-text-mute)]">
+                <p className="rounded-[8px] bg-poco p-3 text-pequeno text-fg-2">
                   Nenhum short renderizado ainda. O lote parte do MP4 final.
                 </p>
               ) : (
@@ -291,7 +291,7 @@ export function PublicarEmLoteModal({
                   única hora em que a pergunta tem assunto. Vale para as três
                   plataformas: "já subiu" não quer dizer "subiu certo". */}
               {repetidos > 0 && (
-                <div className="rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
+                <div className="rounded-[9px] bg-poco p-2.5">
                   <Interruptor
                     ligado={republicar}
                     onChange={setRepublicar}
@@ -330,27 +330,27 @@ function LinhaDoShort({
         className={cn(
           'flex w-full items-center gap-2.5 rounded-[8px] border px-2.5 py-2 text-left transition-colors',
           marcado
-            ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-            : 'border-[var(--wb-border)] hover:bg-[var(--wb-bg-inset)]',
+            ? 'border-[var(--wb-accent)] bg-iris-suave'
+            : 'border-fio-2 hover:bg-poco',
         )}
       >
         <span
           className={cn(
             'flex size-4 flex-none items-center justify-center rounded-[4px] border',
             marcado
-              ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
-              : 'border-[var(--wb-border)]',
+              ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-sobre-iris'
+              : 'border-fio-2',
           )}
         >
           {marcado && <Icon name="check" />}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[12.5px]">
+        <span className="min-w-0 flex-1 truncate text-pequeno">
           {short.titulo || `Trecho ${short.numero}`}
           {short.origem && (
-            <span className="ml-1.5 text-[11px] text-[var(--wb-text-mute)]">· {short.origem}</span>
+            <span className="ml-1.5 text-micro text-fg-2">· {short.origem}</span>
           )}
         </span>
-        <span className="flex-none font-code text-[11px] text-[var(--wb-text-mute)]">
+        <span className="flex-none font-code text-micro text-fg-2">
           {Math.round(short.duracao_seg)}s
         </span>
         {/* Já publicado é INFORMAÇÃO, não filtro: o item continua na lista e o
@@ -358,7 +358,7 @@ function LinhaDoShort({
         {[...jaPublicado].map((plataforma) => (
           <span
             key={plataforma}
-            className="flex-none rounded-[5px] bg-[var(--wb-bg-inset)] px-1.5 py-0.5 text-[10.5px] text-[var(--wb-text-mute)]"
+            className="flex-none rounded-[5px] bg-poco px-1.5 py-0.5 text-micro text-fg-2"
           >
             já em {rotuloCurto(plataforma)}
           </span>
@@ -377,7 +377,7 @@ function RodapeDoLoteEmCurso({ cancelado }: { cancelado: boolean }) {
   return (
     <div className="flex items-center gap-2">
       {cancelar.isError && (
-        <span className="text-[11.5px] text-[var(--wb-text-dim)]">
+        <span className="text-micro text-fg-3">
           não consegui cancelar — tente de novo
         </span>
       )}

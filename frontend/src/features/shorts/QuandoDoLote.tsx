@@ -73,7 +73,7 @@ export function QuandoDoLote(props: Props) {
 
 function DataUnica({ agendarPara, onAgendarPara, problemaDoAgendamento, notas }: Props) {
   return (
-    <div className="space-y-2 rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
+    <div className="space-y-2 rounded-[9px] bg-poco p-2.5">
       <Input
         type="datetime-local"
         value={agendarPara}
@@ -94,14 +94,14 @@ function Notas({ notas }: { notas: NotaDeAgendamento[] }) {
   return (
     <ul className="space-y-1">
       {notas.map((nota) => (
-        <li key={nota.plataforma} className="flex gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
+        <li key={nota.plataforma} className="flex gap-1.5 text-micro text-fg-3">
           <span
-            className={nota.como === 'sozinho' ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text-mute)]'}
+            className={nota.como === 'sozinho' ? 'text-iris' : 'text-fg-2'}
           >
             {nota.como === 'sozinho' ? '●' : '○'}
           </span>
           <span>
-            <b className="font-medium text-[var(--wb-text)]">{nota.plataforma}</b> — {nota.texto}
+            <b className="font-medium text-fg">{nota.plataforma}</b> — {nota.texto}
           </span>
         </li>
       ))}
@@ -113,7 +113,7 @@ function Problema({ texto }: { texto: string }) {
   return (
     <p
       role="alert"
-      className="flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]"
+      className="flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]"
     >
       <Icon name="triangle-alert" className="mt-px shrink-0" />
       {texto}
@@ -133,8 +133,8 @@ function AgendaDistribuida({
 }: Props) {
   const resumo = resumoDaAgenda(linhas);
   return (
-    <div className="space-y-2 rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
-      <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-[var(--wb-text-dim)]">
+    <div className="space-y-2 rounded-[9px] bg-poco p-2.5">
+      <div className="flex flex-wrap items-center gap-2 text-micro text-fg-3">
         {carregandoAgenda ? (
           <span className="inline-flex items-center gap-1">
             <Icon name="loader-2" className="animate-spin" /> calculando a agenda…
@@ -146,7 +146,7 @@ function AgendaDistribuida({
             {resumo.comData} com data
             {resumo.semData > 0 && <> · {resumo.semData} sem data</>}
             {' · '}
-            <span className="text-[var(--wb-text-mute)]">
+            <span className="text-fg-2">
               a partir do último já marcado em cada rede
             </span>
           </span>
@@ -156,7 +156,7 @@ function AgendaDistribuida({
           type="button"
           onClick={onRecalcular}
           disabled={carregandoAgenda || linhas.length === 0}
-          className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-accent)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 text-micro text-iris disabled:opacity-40"
         >
           <Icon name="rotate-ccw" />
           recalcular
@@ -195,13 +195,13 @@ function LinhaDoItem({
   return (
     <li
       className={cn(
-        'grid items-center gap-x-2 gap-y-0.5 rounded-[7px] bg-[var(--wb-bg-panel)] px-2 py-1.5 sm:grid-cols-[1fr_auto_auto]',
+        'grid items-center gap-x-2 gap-y-0.5 rounded-[7px] bg-painel-solido px-2 py-1.5 sm:grid-cols-[1fr_auto_auto]',
         problema && 'ring-1 ring-[var(--wb-warn)]',
       )}
     >
-      <span className="min-w-0 truncate text-[12px]" title={rotulo}>
+      <span className="min-w-0 truncate text-pequeno" title={rotulo}>
         {rotulo}
-        <span className="ml-1.5 text-[11px] text-[var(--wb-text-mute)]">
+        <span className="ml-1.5 text-micro text-fg-2">
           → {rotuloCurto(linha.plataforma)}
         </span>
       </span>
@@ -211,9 +211,9 @@ function LinhaDoItem({
         aria-label={`Data de ${rotulo} no ${rotuloCurto(linha.plataforma)}`}
         value={linha.agendar_para}
         onChange={(e) => onAjustar(e.target.value)}
-        className="h-7 w-[200px] text-[11.5px]"
+        className="h-7 w-[200px] text-micro"
       />
-      <span className="text-[11px] text-[var(--wb-text-dim)]">
+      <span className="text-micro text-fg-3">
         {linha.agendar_para ? (
           <>
             {dataLegivel(linha.agendar_para)}
@@ -222,8 +222,8 @@ function LinhaDoItem({
                 className={cn(
                   'ml-1.5 rounded-[5px] px-1.5 py-0.5',
                   linha.intensidade === 'forte'
-                    ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
-                    : 'bg-[var(--wb-bg-inset)]',
+                    ? 'bg-ok/13 text-ok'
+                    : 'bg-poco',
                 )}
               >
                 {ROTULO_DA_INTENSIDADE[linha.intensidade] ?? linha.intensidade}
@@ -235,7 +235,7 @@ function LinhaDoItem({
         )}
       </span>
       {problema && (
-        <span className="text-[11px] text-[var(--wb-warn-ink,var(--wb-text-dim))] sm:col-span-3">
+        <span className="text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))] sm:col-span-3">
           {problema}
         </span>
       )}

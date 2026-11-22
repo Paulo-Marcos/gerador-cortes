@@ -66,14 +66,14 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
       <button
         type="button"
         onClick={onEscreverPost}
-        className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
+        className="flex items-center gap-2 rounded-[8px] border border-fio px-2.5 py-2 text-left transition-colors hover:bg-poco"
       >
         <Icon name="file-text" className="flex-none opacity-70" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12.5px] font-semibold text-[var(--wb-text)]">
+          <span className="block truncate text-pequeno font-semibold text-fg">
             {post.data?.titulo || 'Escrever o post'}
           </span>
-          <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
+          <span className="block truncate text-micro text-fg-2">
             {escrevendoPost
               ? 'a IA está escrevendo o post…'
               : post.data?.gerado
@@ -89,14 +89,14 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
       <button
         type="button"
         onClick={onEscolherCapa}
-        className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
+        className="flex items-center gap-2 rounded-[8px] border border-fio px-2.5 py-2 text-left transition-colors hover:bg-poco"
       >
         <Icon name="image" className="flex-none opacity-70" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12.5px] font-semibold text-[var(--wb-text)]">
+          <span className="block truncate text-pequeno font-semibold text-fg">
             {capa.data?.tem_capa ? 'Capa escolhida' : 'Escolher a capa'}
           </span>
-          <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
+          <span className="block truncate text-micro text-fg-2">
             {capa.data?.tem_capa
               ? `o quadro de ${comSegundos(capa.data.instante_seg)}`
               : 'sem capa — a plataforma escolhe um quadro sozinha'}
@@ -105,10 +105,10 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
       </button>
 
       {previa.isLoading && (
-        <p className="text-[12px] text-[var(--wb-text-mute)]">Montando os pacotes…</p>
+        <p className="text-pequeno text-fg-2">Montando os pacotes…</p>
       )}
       {previa.isError && (
-        <p className="text-[12px] text-[var(--wb-text-dim)]">
+        <p className="text-pequeno text-fg-3">
           {(previa.error as Error)?.message ?? 'nao consegui montar os pacotes'}
         </p>
       )}
@@ -125,7 +125,7 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
         />
       ))}
       {publicar.isSuccess && (
-        <p className="text-[12px] text-[var(--wb-ok-ink)]">
+        <p className="text-pequeno text-ok">
           {publicar.data?.url ?? publicar.data?.pasta ?? 'pronto'}
         </p>
       )}
@@ -133,12 +133,12 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
           entrado — e so este aviso separa isso de "deu tudo certo". */}
       {publicar.isSuccess &&
         (publicar.data?.avisos ?? []).map((aviso) => (
-          <p key={aviso} className="flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+          <p key={aviso} className="flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
             <Icon name="triangle-alert" className="mt-px" />{aviso}
           </p>
         ))}
       {publicar.isError && (
-        <p className="text-[12px] text-[var(--wb-text-dim)]">
+        <p className="text-pequeno text-fg-3">
           {(publicar.error as Error)?.message ?? 'falhou'}
         </p>
       )}
@@ -164,16 +164,16 @@ function Destino({
   const porApi = pacote.modo === 'api';
 
   return (
-    <article className="rounded-[8px] border border-[var(--wb-border)] p-2.5">
+    <article className="rounded-[8px] border border-fio-2 p-2.5">
       <div className="flex items-center gap-2">
-        <h4 className="flex-1 truncate text-[13px] font-bold">{pacote.rotulo}</h4>
+        <h4 className="flex-1 truncate text-corpo font-bold">{pacote.rotulo}</h4>
         {/* D-603: o "já está no ar" que só ele sabe.
             Só nos destinos que NÃO são API, e não por capricho: onde a máquina
             sobe sozinha, ela também sabe o resultado; onde o upload termina no
             celular ou num Chrome que travou, a única fonte é ele. */}
         {!porApi &&
           (jaPublicado ? (
-            <span className="inline-flex flex-none items-center gap-1 text-[11px] font-semibold text-[var(--wb-ok-ink)]">
+            <span className="inline-flex flex-none items-center gap-1 text-micro font-semibold text-ok">
               <Icon name="check" />
               no ar
             </span>
@@ -187,12 +187,12 @@ function Destino({
       </div>
 
       {pacote.avisos.map((aviso) => (
-        <p key={aviso} className="mt-1 flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+        <p key={aviso} className="mt-1 flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
           <Icon name="triangle-alert" className="mt-px" />{aviso}
         </p>
       ))}
 
-      <p className="mt-1 truncate text-[11.5px] text-[var(--wb-text-mute)]" title={pacote.titulo}>
+      <p className="mt-1 truncate text-micro text-fg-2" title={pacote.titulo}>
         {pacote.titulo_visivel}
         {pacote.titulo.length > pacote.titulo_visivel.length && '…'}
       </p>
@@ -234,7 +234,7 @@ function MarcaManual({ ocupado, onMarcar }: { ocupado: boolean; onMarcar: () => 
           onMarcar();
           setPerguntando(false);
         }}
-        className="text-[var(--wb-ok-ink)]"
+        className="text-ok"
       >
         <Icon name="check" />
         confirmar

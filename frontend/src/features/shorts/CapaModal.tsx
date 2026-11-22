@@ -133,7 +133,7 @@ export function CapaModal({ open, onClose, short }: Props) {
       {/* As abas ficam ACIMA da prévia, e não ao lado dos botões: a origem da
           capa muda o trabalho inteiro do lado direito, e um seletor escondido
           entre controles leria como mais um ajuste. */}
-      <div className="mb-3 flex items-center gap-1 rounded-[9px] bg-[var(--wb-bg-inset)] p-1">
+      <div className="mb-3 flex items-center gap-1 rounded-[9px] bg-poco p-1">
         {ABAS.map(({ id, rotulo, nota }) => (
           <button
             key={id}
@@ -143,8 +143,8 @@ export function CapaModal({ open, onClose, short }: Props) {
             title={nota}
             className={
               origem === id
-                ? 'flex-1 rounded-[7px] bg-[var(--wb-bg-panel)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--wb-text)] shadow-[var(--wb-shadow)]'
-                : 'flex-1 rounded-[7px] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]'
+                ? 'flex-1 rounded-[7px] bg-painel-solido px-3 py-1.5 text-pequeno font-bold text-fg shadow-[var(--wb-shadow)]'
+                : 'flex-1 rounded-[7px] px-3 py-1.5 text-pequeno font-semibold text-fg-2 transition-colors hover:text-fg'
             }
           >
             {rotulo}
@@ -155,7 +155,7 @@ export function CapaModal({ open, onClose, short }: Props) {
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="space-y-2">
           {/* A prévia com as guias da vitrine por cima. */}
-          <div className="relative mx-auto w-full max-w-[240px] overflow-hidden rounded-[8px] border border-[var(--wb-border)] bg-black">
+          <div className="relative mx-auto w-full max-w-[240px] overflow-hidden rounded-[8px] border border-fio-2 bg-black">
             {/* D-581: na aba da ARTE a prévia mostra a imagem GRAVADA, e não o
                 vídeo. Ali a pergunta é "a arte que subi sobrevive ao recorte?",
                 e responder isso com um frame do vídeo seria mostrar outra
@@ -198,11 +198,11 @@ export function CapaModal({ open, onClose, short }: Props) {
               aria-hidden
             />
           </div>
-          <p className="text-center text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          <p className="text-center text-micro leading-relaxed text-fg-2">
             O claro é o que a vitrine do perfil mostra. O escuro some no recorte 3:4.
           </p>
           {origem === 'arte' && !capa.data?.tem_capa && (
-            <p className="text-center text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+            <p className="text-center text-micro leading-relaxed text-fg-2">
               Ainda é o vídeo: a arte aparece aqui depois que você subir.
             </p>
           )}
@@ -223,7 +223,7 @@ export function CapaModal({ open, onClose, short }: Props) {
               >
                 <Icon name="chevron-left" />
               </Button>
-              <span className="font-code text-[14px] tabular-nums text-[var(--wb-text)]">
+              <span className="font-code text-linha tabular-nums text-fg">
                 {comSegundos(instante.seg)}
               </span>
               <Button
@@ -235,7 +235,7 @@ export function CapaModal({ open, onClose, short }: Props) {
               >
                 <Icon name="chevron-right" />
               </Button>
-              <span className="ml-2 font-code text-[11px] text-[var(--wb-text-mute)]">
+              <span className="ml-2 font-code text-micro text-fg-2">
                 de {comSegundos(duracao)}
               </span>
             </div>
@@ -257,11 +257,11 @@ export function CapaModal({ open, onClose, short }: Props) {
                 const caixa = e.currentTarget.getBoundingClientRect();
                 setSeg(instanteDaPosicao((e.clientX - caixa.left) / caixa.width, duracao));
               }}
-              className="relative h-8 cursor-pointer rounded-[6px] bg-[var(--wb-bg-inset)]"
+              className="relative h-8 cursor-pointer rounded-[6px] bg-poco"
             >
               {ganchoAte > 0 && duracao > 0 && (
                 <div
-                  className="pointer-events-none absolute inset-y-0 left-0 rounded-l-[6px] bg-[var(--wb-accent-soft)]"
+                  className="pointer-events-none absolute inset-y-0 left-0 rounded-l-[6px] bg-iris-suave"
                   style={{ width: `${posicaoNaRegua(ganchoAte, duracao) * 100}%` }}
                   aria-hidden
                 />
@@ -292,14 +292,14 @@ export function CapaModal({ open, onClose, short }: Props) {
               </Button>
             </div>
 
-            <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+            <p className="text-micro leading-relaxed text-fg-3">
               {recadoDoInstante(instante)}
             </p>
           </section>
           )}
 
           {origem === 'quadro' && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-3">
             <Button
               size="sm"
               disabled={gerar.isPending || duracao <= 0}
@@ -309,7 +309,7 @@ export function CapaModal({ open, onClose, short }: Props) {
               {gerar.isPending ? 'tirando…' : 'Usar este quadro'}
             </Button>
             {gerar.isError && (
-              <span className="text-[11.5px] text-[var(--wb-text-dim)]">
+              <span className="text-micro text-fg-3">
                 {(gerar.error as Error)?.message ?? 'não consegui tirar o quadro'}
               </span>
             )}
@@ -317,7 +317,7 @@ export function CapaModal({ open, onClose, short }: Props) {
                 um quadro qualquer — normalmente um meio-piscar. Dizer isso aqui
                 evita a leitura de que a etapa virou obrigatória. */}
             {!capa.data?.tem_capa && !gerar.isPending && (
-              <span className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+              <span className="text-micro leading-relaxed text-fg-2">
                 Sem isto, a plataforma escolhe um quadro sozinha.
               </span>
             )}
@@ -325,12 +325,12 @@ export function CapaModal({ open, onClose, short }: Props) {
           )}
 
           {capa.data?.tem_capa && (
-            <div className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
+            <div className="flex items-center gap-2 border-t border-fio pt-3">
               <ImagemAmpliavel
                 src={capaImagemUrl(short.id, capa.data.instante_seg)} alt="Capa gravada" className="flex-none"
-                imgClassName="h-16 w-9 rounded-[4px] border border-[var(--wb-border)] object-cover"
+                imgClassName="h-16 w-9 rounded-[4px] border border-fio-2 object-cover"
               />
-              <span className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+              <span className="text-micro leading-relaxed text-fg-2">
                 Capa gravada em {comSegundos(capa.data.instante_seg)}.
               </span>
             </div>
@@ -383,7 +383,7 @@ function ArteDaCapa({
 
   return (
     <div className="space-y-3">
-      <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+      <p className="text-micro leading-relaxed text-fg-2">
         O app escreve o prompt; quem desenha é você, no seu agente capista. A capa nasce 9:16, mas
         a grade do Instagram e a do TikTok mostram só o quadrado central — o prompt já pede a
         composição que sobrevive aos três recortes.
@@ -391,7 +391,7 @@ function ArteDaCapa({
 
       {/* Passo 1 — o prompt. */}
       <section className="space-y-2">
-        <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">1. Gerar o prompt</p>
+        <p className="text-pequeno font-semibold text-fg">1. Gerar o prompt</p>
         <div className="flex flex-wrap items-center gap-2">
           <AcaoDeIa
             rotulo={texto ? 'Refazer prompt' : 'Gerar prompt'}
@@ -414,14 +414,14 @@ function ArteDaCapa({
             // mesma escuridão do render antes da D-568 — e aqui a tentação é
             // fechar a janela, que é justamente o que não custa mais nada
             // porque o prompt fica gravado.
-            <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+            <span className="text-micro text-fg-2">
               lendo o trecho — costuma levar alguns minutos. Pode fechar: o prompt fica guardado.
             </span>
           )}
         </div>
 
         {gerarPrompt.isError && (
-          <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+          <p className="text-micro leading-relaxed text-fg-3">
             {(gerarPrompt.error as Error)?.message ?? 'não consegui escrever o prompt'}
           </p>
         )}
@@ -432,7 +432,7 @@ function ArteDaCapa({
             readOnly
             rows={7}
             aria-label="Prompt da arte da capa"
-            className="w-full resize-y rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-2 font-code text-[11px] leading-relaxed text-[var(--wb-text-dim)] outline-none"
+            className="w-full resize-y rounded-[8px] border border-fio-2 bg-poco p-2 font-code text-micro leading-relaxed text-fg-3 outline-none"
           />
         )}
       </section>
@@ -440,8 +440,8 @@ function ArteDaCapa({
       <PassoDesenharCapa shortId={short.id} prompt={texto} ocupado={subir.isPending} />
 
       {/* Passo 3 — a volta. */}
-      <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
-        <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">3. Subir a arte</p>
+      <section className="space-y-2 border-t border-fio pt-3">
+        <p className="text-pequeno font-semibold text-fg">3. Subir a arte</p>
         <input
           ref={seletor}
           type="file"
@@ -466,25 +466,25 @@ function ArteDaCapa({
             {subir.isPending ? 'subindo…' : 'Escolher a imagem'}
           </Button>
           {!subir.isPending && (
-            <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+            <span className="text-micro text-fg-2">
               ou copie a imagem e cole com{' '}
-              <kbd className="rounded-[4px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-1 font-code text-[10.5px] text-[var(--wb-text-dim)]">
+              <kbd className="rounded-[4px] border border-fio-2 bg-poco px-1 font-code text-micro text-fg-3">
                 Ctrl+V
               </kbd>
             </span>
           )}
           {subir.isSuccess && (
-            <span className="text-[11.5px] text-[var(--wb-ok-ink)]">
+            <span className="text-micro text-ok">
               arte gravada como a capa deste short
             </span>
           )}
         </div>
         {subir.isError && (
-          <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+          <p className="text-micro leading-relaxed text-fg-3">
             {(subir.error as Error)?.message ?? 'não consegui subir a arte'}
           </p>
         )}
-        <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="text-micro leading-relaxed text-fg-2">
           A arte substitui o quadro do vídeo — quem publica usa um arquivo só.
         </p>
       </section>

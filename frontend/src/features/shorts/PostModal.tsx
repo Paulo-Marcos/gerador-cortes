@@ -43,7 +43,7 @@ import type { ShortIdentificado } from './shortsApi';
 // decide a escrita é saber ONDE o texto é cortado, e isso se vê, não se conta.
 
 const TONS: Record<TomDoTitulo, string> = {
-  vazio: 'text-[var(--wb-text-mute)]',
+  vazio: 'text-fg-2',
   cabe: 'text-[var(--wb-ok-ink,var(--wb-accent))]',
   corta: 'text-[var(--wb-warn-ink,var(--wb-text-dim))]',
 };
@@ -104,21 +104,21 @@ export function PostModal({ open, onClose, short }: Props) {
             <SeloDeProvider provider={geradoPor} modelo={ultima.data?.model} />
           )}
           {escrevendo && (
-            <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+            <span className="text-micro text-fg-2">
               lendo a transcrição deste trecho…
             </span>
           )}
           {gerar.isError && (
-            <span className="text-[11.5px] text-[var(--wb-text-dim)]">
+            <span className="text-micro text-fg-3">
               {(gerar.error as Error)?.message ?? 'não consegui escrever'}
             </span>
           )}
         </div>
 
-        <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
+        <section className="space-y-2 border-t border-fio pt-3">
           <label
             htmlFor="post-titulo"
-            className="block text-[12.5px] font-semibold text-[var(--wb-text)]"
+            className="block text-pequeno font-semibold text-fg"
           >
             Título
           </label>
@@ -127,30 +127,30 @@ export function PostModal({ open, onClose, short }: Props) {
             value={titulo}
             onChange={(e) => setTitulo(e.target.value.slice(0, TITULO_MAX))}
             placeholder="o que aparece abaixo do vídeo"
-            className="w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2.5 py-2 text-[14px] font-semibold text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)]"
+            className="w-full rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 text-linha font-semibold text-fg outline-none focus:border-[var(--wb-accent)]"
           />
           {/* O corte visto, não contado: um "62/100" é verdadeiro e não ajuda
               a decidir onde pôr o peso da frase. */}
           {titulo.trim() && (
-            <p className="rounded-[6px] bg-[var(--wb-bg-inset)] px-2 py-1.5 text-[12.5px] leading-snug">
-              <span className="text-[var(--wb-text)]">{parteVisivel(titulo)}</span>
+            <p className="rounded-[6px] bg-poco px-2 py-1.5 text-pequeno leading-snug">
+              <span className="text-fg">{parteVisivel(titulo)}</span>
               {parteEscondida(titulo) && (
                 <>
-                  <span className="text-[var(--wb-text-mute)]">{parteEscondida(titulo)}</span>
-                  <span className="ml-1 font-code text-[10px] uppercase text-[var(--wb-text-mute)]">
+                  <span className="text-fg-2">{parteEscondida(titulo)}</span>
+                  <span className="ml-1 font-code text-micro uppercase text-fg-2">
                     ← só depois do “mais”
                   </span>
                 </>
               )}
             </p>
           )}
-          <p className={cn('text-[11.5px] leading-relaxed', TONS[tom])}>{recadoDoTitulo(tom)}</p>
+          <p className={cn('text-micro leading-relaxed', TONS[tom])}>{recadoDoTitulo(tom)}</p>
         </section>
 
-        <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
+        <section className="space-y-2 border-t border-fio pt-3">
           <label
             htmlFor="post-descricao"
-            className="block text-[12.5px] font-semibold text-[var(--wb-text)]"
+            className="block text-pequeno font-semibold text-fg"
           >
             Descrição
           </label>
@@ -160,18 +160,18 @@ export function PostModal({ open, onClose, short }: Props) {
             onChange={(e) => setDescricao(e.target.value)}
             rows={3}
             placeholder="o contexto de quem já parou"
-            className="w-full resize-none rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2.5 py-2 text-[13px] leading-relaxed text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)]"
+            className="w-full resize-none rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 text-corpo leading-relaxed text-fg outline-none focus:border-[var(--wb-accent)]"
           />
-          <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+          <p className="text-micro leading-relaxed text-fg-2">
             Não escreva o link do corte longo: o sistema o acrescenta sozinho quando o corte já
             está publicado.
           </p>
         </section>
 
-        <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
+        <section className="space-y-2 border-t border-fio pt-3">
           <label
             htmlFor="post-tags"
-            className="block text-[12.5px] font-semibold text-[var(--wb-text)]"
+            className="block text-pequeno font-semibold text-fg"
           >
             Hashtags
           </label>
@@ -180,15 +180,15 @@ export function PostModal({ open, onClose, short }: Props) {
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="juros financiamento economia"
-            className="w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2.5 py-2 font-code text-[12.5px] text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)]"
+            className="w-full rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 font-code text-pequeno text-fg outline-none focus:border-[var(--wb-accent)]"
           />
           {/* Cada plataforma corta num ponto. Sem isto o operador escreve dez
               achando que todas valem em todo lugar. */}
           {hashtags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-code text-micro tabular-nums text-fg-2">
               {cortePorPlataforma(hashtags.length).map(({ plataforma, usa }) => (
                 <span key={plataforma}>
-                  {plataforma}: <span className="text-[var(--wb-text-dim)]">{usa}</span>
+                  {plataforma}: <span className="text-fg-3">{usa}</span>
                   {usa < hashtags.length && ` de ${hashtags.length}`}
                 </span>
               ))}
@@ -196,7 +196,7 @@ export function PostModal({ open, onClose, short }: Props) {
           )}
         </section>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-3">
           <Button
             size="sm"
             disabled={ocupado}
@@ -211,12 +211,12 @@ export function PostModal({ open, onClose, short }: Props) {
               curadoria, como sempre fez. Dizer isso aqui evita a leitura de que
               esta etapa virou obrigatória. */}
           {!post.data?.gerado && (
-            <span className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+            <span className="text-micro leading-relaxed text-fg-2">
               Sem isto, a publicação usa “{short.titulo}”.
             </span>
           )}
           {salvar.isError && (
-            <span className="text-[11.5px] text-[var(--wb-text-dim)]">
+            <span className="text-micro text-fg-3">
               {(salvar.error as Error)?.message ?? 'não consegui gravar'}
             </span>
           )}

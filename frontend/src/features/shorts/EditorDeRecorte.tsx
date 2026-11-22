@@ -74,7 +74,7 @@ export function ControlesDoRecorte({
       </Button>
       {marcados.length > 0 && (
         <>
-          <span className="font-code text-[10px] text-[var(--wb-text-mute)]">
+          <span className="font-code text-micro text-fg-2">
             {marcados.join(', ')} · deste short
           </span>
           <Button variant="ghost" size="sm" disabled={ocupado} onClick={onDesfazer}>

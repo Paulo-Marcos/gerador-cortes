@@ -68,7 +68,7 @@ export function PresetDoPalcoModal(props: Props) {
   if (esperando || (props.presetId && !achado)) {
     return (
       <Modal open onClose={props.onClose} title="Palco do corte" size="sm">
-        <p className="text-[12.5px] text-[var(--wb-text-dim)]">
+        <p className="text-pequeno text-fg-3">
           {esperando ? 'Carregando o preset…' : 'Este preset não existe mais.'}
         </p>
       </Modal>
@@ -136,7 +136,7 @@ function EditorDoPresetDePalco({
           onChange={(e) => setNome(e.target.value)}
           aria-label="Nome do preset de palco"
           placeholder="ex.: rosto cheio com a textura do canal"
-          className="h-8 max-w-[260px] text-[12px]"
+          className="h-8 max-w-[260px] text-pequeno"
         />
         <Button
           size="sm"
@@ -153,7 +153,7 @@ function EditorDoPresetDePalco({
           </Button>
         )}
       </div>
-      <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
+      <label className="flex items-center gap-1.5 text-micro text-fg-3">
         <input
           type="checkbox"
           checked={virarPadrao}
@@ -161,11 +161,11 @@ function EditorDoPresetDePalco({
         />
         usar como palco padrão deste corte
       </label>
-      <p className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+      <p className="text-micro leading-relaxed text-fg-2">
         Nada disto é gravado no trecho #{base.numero}: ele só empresta o quadro da live para a
         prévia e para os recortes.
       </p>
-      {erro && <p className="text-[11.5px] text-[var(--wb-warn-ink)]">{erro}</p>}
+      {erro && <p className="text-micro text-aviso">{erro}</p>}
     </div>
   );
 

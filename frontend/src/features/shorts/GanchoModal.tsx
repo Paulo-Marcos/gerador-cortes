@@ -57,7 +57,7 @@ import { Icon } from '@/upgrade/Icon';
 const INSTANTE_DA_PREVIA_SEG = 0.5;
 
 const TONS: Record<TomDoGancho, string> = {
-  vazio: 'text-[var(--wb-text-mute)]',
+  vazio: 'text-fg-2',
   curto: 'text-[var(--wb-warn-ink,var(--wb-text-dim))]',
   ideal: 'text-[var(--wb-ok-ink,var(--wb-accent))]',
   longo: 'text-[var(--wb-warn-ink,var(--wb-text-dim))]',
@@ -277,7 +277,7 @@ export function GanchoModal({
           <section className="space-y-2">
             <label
               htmlFor="gancho-texto"
-              className="block text-[12.5px] font-semibold text-[var(--wb-text)]"
+              className="block text-pequeno font-semibold text-fg"
             >
               O que aparece nos primeiros segundos
             </label>
@@ -287,17 +287,17 @@ export function GanchoModal({
               onChange={(e) => setTexto(e.target.value)}
               rows={2}
               placeholder="ninguém te conta isso sobre *juros* (entre * fica no acento)"
-              className="w-full resize-none rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2.5 py-2 font-display text-[15px] font-bold leading-snug text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)]"
+              className="w-full resize-none rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 font-display text-linha font-bold leading-snug text-fg outline-none focus:border-[var(--wb-accent)]"
             />
             <div className="flex items-baseline gap-2">
-              <span className={cn('font-code text-[11px] tabular-nums', TONS[tom])}>
+              <span className={cn('font-code text-micro tabular-nums', TONS[tom])}>
                 {palavrasEscritas} {palavrasEscritas === 1 ? 'palavra' : 'palavras'}
-                <span className="text-[var(--wb-text-mute)]">
+                <span className="text-fg-2">
                   {' '}
                   · alvo {PALAVRAS_MIN}–{PALAVRAS_MAX}
                 </span>
               </span>
-              <span className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+              <span className="text-micro leading-relaxed text-fg-3">
                 {recadoDoTom(tom)}
               </span>
             </div>
@@ -307,7 +307,7 @@ export function GanchoModal({
               ate um clique levar uma para o campo, onde ainda da para editar.
               O gancho e a promessa do short: escolher por ele seria a decisao
               mais editorial da tela tomada pela maquina. */}
-          <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
+          <section className="space-y-2 border-t border-fio pt-3">
             <div className="flex flex-wrap items-center gap-2">
               <AcaoDeIa
                 rotulo={
@@ -326,7 +326,7 @@ export function GanchoModal({
                 // O tempo real medido no canal foi de quase quatro minutos. Sem
                 // dizer isso, o spinner vira a mesma escuridão do render antes
                 // da D-568 — e aqui é pior, porque a tentação é fechar a janela.
-                <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+                <span className="text-micro text-fg-2">
                   lendo a transcrição deste trecho — costuma levar alguns minutos. Pode fechar:
                   as variações ficam guardadas.
                 </span>
@@ -334,7 +334,7 @@ export function GanchoModal({
             </div>
 
             {gerar.isError && (
-              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+              <p className="text-micro leading-relaxed text-fg-3">
                 {(gerar.error as Error)?.message ?? 'não consegui gerar'}
               </p>
             )}
@@ -343,7 +343,7 @@ export function GanchoModal({
                 modelo pode nao ter produzido nada aproveitavel, e isso e uma
                 resposta, nao uma falha silenciosa. */}
             {gerar.isSuccess && gerar.data?.variacoes.length === 0 && (
-              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+              <p className="text-micro leading-relaxed text-fg-3">
                 A IA não devolveu nada aproveitável desta vez. Tente de novo ou escreva o seu.
               </p>
             )}
@@ -361,16 +361,16 @@ export function GanchoModal({
                         className={cn(
                           'flex w-full items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
                           variacao === texto
-                            ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-                            : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                            ? 'border-[var(--wb-accent)] bg-iris-suave'
+                            : 'border-fio hover:bg-poco',
                         )}
                       >
-                        <span className="flex-1 text-[13px] font-semibold leading-snug">
+                        <span className="flex-1 text-corpo font-semibold leading-snug">
                           {variacao}
                         </span>
                         <span
                           className={cn(
-                            'flex-none font-code text-[10px] tabular-nums',
+                            'flex-none font-code text-micro tabular-nums',
                             TONS[tomDela],
                           )}
                         >
@@ -388,7 +388,7 @@ export function GanchoModal({
               A ordem é a da dúvida real: escrita a frase, a pergunta seguinte é
               "dá para ler?" — e era ali que o gancho branco sumia dentro da
               legenda branca. Quanto tempo ela fica é a decisão de depois. */}
-          <section className="border-t border-[var(--wb-border-soft)] pt-3">
+          <section className="border-t border-fio pt-3">
             <button
               type="button"
               role="switch"
@@ -412,10 +412,10 @@ export function GanchoModal({
                 />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[12.5px] font-semibold text-[var(--wb-text)]">
+                <span className="block text-pequeno font-semibold text-fg">
                   Aparência própria neste trecho
                 </span>
-                <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
+                <span className="block truncate text-micro text-fg-2">
                   {personalizado
                     ? 'cor, destaque, tempo e lugar só deste short'
                     : `segue o padrão do corte — ${resumoDaAparenciaPadrao(padrao)}`}
@@ -426,10 +426,10 @@ export function GanchoModal({
 
           {personalizado && (
           <>
-          <section className="space-y-2.5 border-t border-[var(--wb-border-soft)] pt-3">
+          <section className="space-y-2.5 border-t border-fio pt-3">
             <div>
-              <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">Cor do gancho</p>
-              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+              <p className="text-pequeno font-semibold text-fg">Cor do gancho</p>
+              <p className="text-micro leading-relaxed text-fg-2">
                 A legenda também é branca e divide o quadro com ele. Uma cor só do gancho é o que
                 diz ao olho qual dos dois é a promessa.
               </p>
@@ -450,7 +450,7 @@ export function GanchoModal({
                     'h-7 w-7 rounded-[7px] border-2 transition-transform disabled:opacity-45',
                     cor === hex
                       ? 'border-[var(--wb-accent)] scale-110'
-                      : 'border-[var(--wb-border)] hover:border-[var(--wb-text-dim)]',
+                      : 'border-fio-2 hover:border-[var(--wb-text-dim)]',
                   )}
                   // Amostra sobre xadrez escuro: a cor do gancho é julgada
                   // CONTRA vídeo, e um fundo claro faria o branco desaparecer
@@ -461,8 +461,8 @@ export function GanchoModal({
             </div>
 
             <div>
-              <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">Destaque</p>
-              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+              <p className="text-pequeno font-semibold text-fg">Destaque</p>
+              <p className="text-micro leading-relaxed text-fg-2">
                 O que separa o texto do vídeo por trás. Veja o efeito na prévia ao lado.
               </p>
             </div>
@@ -475,12 +475,12 @@ export function GanchoModal({
                 className={cn(
                   'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
                   realce === ''
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-                    : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                    ? 'border-[var(--wb-accent)] bg-iris-suave'
+                    : 'border-fio hover:bg-poco',
                 )}
               >
-                <span className="flex-none text-[12.5px] font-semibold">Do padrão</span>
-                <span className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+                <span className="flex-none text-pequeno font-semibold">Do padrão</span>
+                <span className="text-micro leading-snug text-fg-2">
                   {padrao?.realce
                     ? `o do corte (${REALCES_DO_GANCHO.find((r) => r.id === padrao.realce)?.nome ?? padrao.realce})`
                     : 'véu, enquanto o corte não tiver padrão'}
@@ -496,12 +496,12 @@ export function GanchoModal({
                   className={cn(
                     'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
                     realce === id
-                      ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-                      : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                      ? 'border-[var(--wb-accent)] bg-iris-suave'
+                      : 'border-fio hover:bg-poco',
                   )}
                 >
-                  <span className="flex-none text-[12.5px] font-semibold">{nome}</span>
-                  <span className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+                  <span className="flex-none text-pequeno font-semibold">{nome}</span>
+                  <span className="text-micro leading-snug text-fg-2">
                     {nota}
                   </span>
                 </button>
@@ -512,10 +512,10 @@ export function GanchoModal({
           {/* D-600: o LUGAR. O gesto principal é o arraste na prévia ao lado —
               esta seção existe para a largura, que não tem alça, e para o
               caminho de volta à herança, que um arraste não sabe expressar. */}
-          <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
+          <section className="space-y-2 border-t border-fio pt-3">
             <div>
-              <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">Onde ele fica</p>
-              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+              <p className="text-pequeno font-semibold text-fg">Onde ele fica</p>
+              <p className="text-micro leading-relaxed text-fg-2">
                 Arraste o gancho na prévia ao lado. A largura da caixa é o que decide onde a
                 frase quebra de linha.
               </p>
@@ -535,7 +535,7 @@ export function GanchoModal({
               >
                 <Icon name="minus" />
               </Button>
-              <span className="font-code text-[13px] tabular-nums text-[var(--wb-text)]">
+              <span className="font-code text-corpo tabular-nums text-fg">
                 {Math.round(lugarNaTela.largura)}% de largura
               </span>
               <Button
@@ -554,17 +554,17 @@ export function GanchoModal({
               </Button>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
+              <span className="font-code text-micro tabular-nums text-fg-2">
                 {Math.round(lugarNaTela.x)}% / {Math.round(lugarNaTela.y)}% do quadro
               </span>
               {noLugarDoPadrao ? (
-                <span className="text-[11px] text-[var(--wb-text-mute)]">do padrão</span>
+                <span className="text-micro text-fg-2">do padrão</span>
               ) : (
                 <button
                   type="button"
                   disabled={ocupado}
                   onClick={() => setLugarProprio({ x: 0, y: 0, largura: 0 })}
-                  className="text-[11.5px] text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+                  className="text-micro text-iris underline-offset-2 hover:underline disabled:opacity-45"
                 >
                   usar o lugar do padrão
                 </button>
@@ -572,8 +572,8 @@ export function GanchoModal({
             </div>
           </section>
 
-          <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
-            <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">
+          <section className="space-y-2 border-t border-fio pt-3">
+            <p className="text-pequeno font-semibold text-fg">
               Quanto tempo em tela
             </p>
             <div className="flex items-center gap-2">
@@ -586,7 +586,7 @@ export function GanchoModal({
               >
                 <Icon name="minus" />
               </Button>
-              <span className="font-code text-[13px] tabular-nums text-[var(--wb-text)]">
+              <span className="font-code text-corpo tabular-nums text-fg">
                 {duracaoNaTela.toFixed(1)}s
               </span>
               <Button
@@ -603,15 +603,15 @@ export function GanchoModal({
                   type="button"
                   disabled={ocupado}
                   onClick={() => setAteSeg(0)}
-                  className="text-[11.5px] text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+                  className="text-micro text-iris underline-offset-2 hover:underline disabled:opacity-45"
                 >
                   usar a do padrão
                 </button>
               ) : (
-                <span className="text-[11px] text-[var(--wb-text-mute)]">do padrão</span>
+                <span className="text-micro text-fg-2">do padrão</span>
               )}
             </div>
-            <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+            <p className="text-micro leading-relaxed text-fg-2">
               Abaixo de {DURACAO_MIN_SEG.toFixed(1)}s a frase é vista, não lida. Acima de{' '}
               {DURACAO_MAX_SEG.toFixed(1)}s ela deixa de ser abertura e vira uma segunda legenda.
             </p>
@@ -619,7 +619,7 @@ export function GanchoModal({
           </>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-3">
             <Button
               size="sm"
               disabled={ocupado}
@@ -646,7 +646,7 @@ export function GanchoModal({
                 type="button"
                 disabled={ocupado}
                 onClick={() => setTexto(short.gancho)}
-                className="text-[11.5px] text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+                className="text-micro text-iris underline-offset-2 hover:underline disabled:opacity-45"
               >
                 partir do gancho que a IA escreveu
               </button>
@@ -663,13 +663,13 @@ export function GanchoModal({
             // Sem palco não há o que desenhar do vídeo aqui, mas a pergunta do
             // modal é a OCUPAÇÃO do texto — e essa a moldura 9:16 responde.
             <div
-              className="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-[8px] border border-[var(--wb-border)] bg-black"
+              className="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-[8px] border border-fio-2 bg-black"
               style={{ aspectRatio: '9 / 16', containerType: 'inline-size' }}
             >
               {sobreposicoes}
             </div>
           )}
-          <p className="text-center text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          <p className="text-center text-micro leading-relaxed text-fg-2">
             Como sai em {INSTANTE_DA_PREVIA_SEG.toFixed(1)}s de short — com a legenda daquele
             instante, que é o que divide a tela com o gancho.
           </p>

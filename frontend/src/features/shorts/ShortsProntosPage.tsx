@@ -116,7 +116,7 @@ export default function ShortsProntosPage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        'flex min-h-0 flex-col overflow-hidden text-fg',
         '',
         '',
       )}
@@ -132,10 +132,10 @@ export default function ShortsProntosPage() {
                 aria-pressed={filtro === f.id}
                 onClick={() => setFiltro(f.id)}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-[11.5px] transition-colors',
+                  'rounded-full border px-2.5 py-1 text-micro transition-colors',
                   filtro === f.id
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] font-semibold'
-                    : 'border-[var(--wb-border)] text-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-inset)]',
+                    ? 'border-[var(--wb-accent)] bg-iris-suave font-semibold'
+                    : 'border-fio-2 text-fg-3 hover:bg-poco',
                 )}
               >
                 {f.texto} <span className="font-code tabular-nums">{contagens[f.id]}</span>
@@ -145,7 +145,7 @@ export default function ShortsProntosPage() {
             {visiveis.length > 0 && (
               <button
                 type="button"
-                className="text-[11.5px] text-[var(--wb-accent)]"
+                className="text-micro text-iris"
                 onClick={() =>
                   setSelecionados(todosVisiveisMarcados ? [] : visiveis.map((p) => p.id))
                 }
@@ -157,22 +157,22 @@ export default function ShortsProntosPage() {
         )}
 
         {isLoading && (
-          <p className="py-16 text-center text-[13px] text-[var(--wb-text-mute)]">
+          <p className="py-16 text-center text-corpo text-fg-2">
             Juntando os shorts prontos…
           </p>
         )}
 
         {isError && (
-          <p className="py-16 text-center text-[13px] text-[var(--wb-text-dim)]">
+          <p className="py-16 text-center text-corpo text-fg-3">
             Não consegui carregar os prontos: {(error as Error)?.message ?? 'erro desconhecido'}
           </p>
         )}
 
         {!isLoading && !isError && prontos.length === 0 && (
           <div className="mx-auto max-w-md py-16 text-center">
-            <Icon name="layout-grid" ilustracao={28} className="mx-auto text-[var(--wb-text-mute)]" />
-            <p className="mt-3 text-[14px] font-semibold">Nada esperando publicação</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-[var(--wb-text-mute)]">
+            <Icon name="layout-grid" ilustracao={28} className="mx-auto text-fg-2" />
+            <p className="mt-3 text-linha font-semibold">Nada esperando publicação</p>
+            <p className="mt-2 text-corpo leading-relaxed text-fg-2">
               Todo short renderizado já está no YouTube, no TikTok e no Instagram. Os próximos que
               você renderizar na fábrica aparecem aqui.
             </p>
@@ -199,7 +199,7 @@ export default function ShortsProntosPage() {
         )}
 
         {prontos.length > 0 && visiveis.length === 0 && (
-          <p className="py-10 text-center text-[13px] text-[var(--wb-text-mute)]">
+          <p className="py-10 text-center text-corpo text-fg-2">
             Nenhum short neste filtro.
           </p>
         )}
@@ -266,8 +266,8 @@ function CartaoDaCentral({
   return (
     <article
       className={cn(
-        'flex flex-col overflow-hidden rounded-[12px] border bg-[var(--wb-bg-card)]',
-        marcado ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
+        'flex flex-col overflow-hidden rounded-[12px] border bg-painel-solido',
+        marcado ? 'border-[var(--wb-accent)]' : 'border-fio-2',
       )}
     >
       {/* R4: a moldura de vídeo também no retrato. `mat` maior que o do 16:9
@@ -284,7 +284,7 @@ function CartaoDaCentral({
           className="absolute inset-0 h-full w-full"
         />
         <label
-          className="absolute left-2 top-2 flex cursor-pointer items-center gap-1 rounded-[6px] bg-black/60 px-1.5 py-1 text-[11px] text-white"
+          className="absolute left-2 top-2 flex cursor-pointer items-center gap-1 rounded-[6px] bg-black/60 px-1.5 py-1 text-micro text-white"
           title="Incluir no lote"
         >
           <input
@@ -299,12 +299,12 @@ function CartaoDaCentral({
 
       <div className="flex flex-col gap-2 p-2.5">
         <div>
-          <h3 className="line-clamp-2 text-[12.5px] font-bold leading-snug" title={pronto.titulo}>
+          <h3 className="line-clamp-2 text-pequeno font-bold leading-snug" title={pronto.titulo}>
             {pronto.titulo || `Trecho ${pronto.numero}`}
           </h3>
           <Link
             to={`/shorts/${pronto.corte_id}/workspace`}
-            className="block truncate text-[11px] text-[var(--wb-text-mute)] hover:text-[var(--wb-accent)]"
+            className="block truncate text-micro text-fg-2 hover:text-iris"
             title={pronto.corte_titulo}
           >
             {origemDoPronto(pronto)} · {Math.round(pronto.duracao_seg)}s
@@ -320,10 +320,10 @@ function CartaoDaCentral({
               <span
                 key={rede.id}
                 className={cn(
-                  'inline-flex items-center gap-0.5 rounded-[4px] px-1.5 py-0.5 font-code text-[9.5px] uppercase tracking-wide',
+                  'inline-flex items-center gap-0.5 rounded-[4px] px-1.5 py-0.5 font-code text-micro uppercase tracking-wide',
                   noAr
-                    ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
-                    : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
+                    ? 'bg-ok/13 text-ok'
+                    : 'bg-poco text-fg-2',
                 )}
                 title={noAr ? `já está no ${rede.rotulo}` : `falta no ${rede.rotulo}`}
               >
@@ -379,16 +379,16 @@ function BotaoDoFecho({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-2 rounded-[8px] border px-2.5 py-1.5 text-left transition-colors hover:bg-[var(--wb-bg-inset)]',
-        falta ? 'border-dashed border-[var(--wb-border)]' : 'border-[var(--wb-border-soft)]',
+        'flex items-center gap-2 rounded-[8px] border px-2.5 py-1.5 text-left transition-colors hover:bg-poco',
+        falta ? 'border-dashed border-fio-2' : 'border-fio',
       )}
     >
-      <span className={cn('flex-none', falta ? 'text-[var(--wb-accent)]' : 'opacity-70')}>
+      <span className={cn('flex-none', falta ? 'text-iris' : 'opacity-70')}>
         {icone}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[12px] font-semibold">{titulo}</span>
-        <span className="block truncate text-[10.5px] text-[var(--wb-text-mute)]">{nota}</span>
+        <span className="block truncate text-pequeno font-semibold">{titulo}</span>
+        <span className="block truncate text-micro text-fg-2">{nota}</span>
       </span>
     </button>
   );

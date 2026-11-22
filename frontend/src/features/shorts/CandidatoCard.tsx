@@ -148,20 +148,20 @@ export function CandidatoCard({
         onClick={onSelecionar}
         className={cn(
           'flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-1.5 opacity-70 transition-opacity hover:opacity-100',
-          emFoco ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
-          'bg-[var(--wb-bg-inset)]',
+          emFoco ? 'border-[var(--wb-accent)]' : 'border-fio-2',
+          'bg-poco',
         )}
       >
-        <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
+        <span className="font-code text-micro tabular-nums text-fg-2">
           {notaVisivel(short)}
         </span>
         <span
-          className="min-w-0 flex-1 truncate text-[12px] text-[var(--wb-text-dim)] line-through"
+          className="min-w-0 flex-1 truncate text-pequeno text-fg-3 line-through"
           title={short.titulo}
         >
           {short.titulo}
         </span>
-        <span className="flex-none font-code text-[10px] tabular-nums text-[var(--wb-text-mute)]">
+        <span className="flex-none font-code text-micro tabular-nums text-fg-2">
           {mmss(short.inicio_seg)} · {Math.round(short.duracao_seg)}s
         </span>
         <Button
@@ -185,10 +185,10 @@ export function CandidatoCard({
       onClick={onSelecionar}
       onFocusCapture={onSelecionar}
       className={cn(
-        'cursor-pointer rounded-[12px] border bg-[var(--wb-bg-card)] transition-shadow',
+        'cursor-pointer rounded-[12px] border bg-painel-solido transition-shadow',
         emFoco
           ? 'border-[var(--wb-accent)] shadow-[var(--wb-shadow)]'
-          : 'border-[var(--wb-border)] hover:border-[var(--wb-text-dim)]',
+          : 'border-fio-2 hover:border-[var(--wb-text-dim)]',
       )}
     >
       {/* ── Identidade ─────────────────────────────────────────────── */}
@@ -196,21 +196,21 @@ export function CandidatoCard({
         <span
           title={short.origem === 'manual' ? 'Trecho seu — sem nota da IA' : 'Nota da IA'}
           className={cn(
-            'grid h-9 w-9 flex-none place-items-center rounded-[9px] font-code text-[14px] font-bold tabular-nums',
-            tomDaNota(short) === 'ok' && 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]',
-            tomDaNota(short) === 'info' && 'bg-[var(--wb-info-soft)] text-[var(--wb-info)]',
-            tomDaNota(short) === 'inerte' && 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
+            'grid h-9 w-9 flex-none place-items-center rounded-[9px] font-code text-linha font-bold tabular-nums',
+            tomDaNota(short) === 'ok' && 'bg-ok/13 text-ok',
+            tomDaNota(short) === 'info' && 'bg-info/13 text-info',
+            tomDaNota(short) === 'inerte' && 'bg-poco text-fg-2',
           )}
         >
           {notaVisivel(short)}
         </span>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[13.5px] font-bold leading-tight" title={short.titulo}>
+          <h3 className="truncate text-corpo font-bold leading-tight" title={short.titulo}>
             {short.titulo}
           </h3>
           {short.gancho && (
-            <p className="mt-0.5 line-clamp-2 text-[12px] italic leading-snug text-[var(--wb-text-dim)]">
+            <p className="mt-0.5 line-clamp-2 text-pequeno italic leading-snug text-fg-3">
               “{short.gancho}”
             </p>
           )}
@@ -240,10 +240,10 @@ export function CandidatoCard({
             // Preenchido ele volta a ser texto, que é o certo — ali o conteúdo
             // é o assunto, e a moldura seria ruído sobre algo já resolvido.
             className={cn(
-              'mt-1 flex w-full items-center gap-1 rounded-[6px] px-1 py-0.5 text-left text-[11.5px] leading-snug transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-45',
+              'mt-1 flex w-full items-center gap-1 rounded-[6px] px-1 py-0.5 text-left text-micro leading-snug transition-colors hover:bg-poco disabled:opacity-45',
               short.gancho_tela
-                ? 'text-[var(--wb-text)]'
-                : 'border border-dashed border-[var(--wb-border)] text-[var(--wb-text-mute)] hover:border-[var(--wb-accent)] hover:text-[var(--wb-text)]',
+                ? 'text-fg'
+                : 'border border-dashed border-fio-2 text-fg-2 hover:border-[var(--wb-accent)] hover:text-fg',
             )}
           >
             {short.gancho_tela ? (
@@ -260,7 +260,7 @@ export function CandidatoCard({
                     ? `Gancho em ${corDoGancho}${short.gancho_cor ? '' : ' (do padrão do corte)'}`
                     : 'Gancho em branco (o padrão)'
                 }
-                className="h-2.5 w-2.5 flex-none rounded-full border border-[var(--wb-border)]"
+                className="h-2.5 w-2.5 flex-none rounded-full border border-fio-2"
                 // A cor HERDADA: lida só do trecho, o ponto ficava branco em
                 // todo card que segue o gancho padrão — e trocar o padrão
                 // parecia não mudar nada.
@@ -279,7 +279,7 @@ export function CandidatoCard({
           <SeloDeEstado tom={aparencia.tom}>{aparencia.rotulo}</SeloDeEstado>
           {short.origem === 'manual' && (
             <span
-              className="font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-text-mute)]"
+              className="font-code text-micro uppercase tracking-wide text-fg-2"
               title="Marcado por você — a regeração não apaga"
             >
               seu
@@ -302,10 +302,10 @@ export function CandidatoCard({
             key={etapa.sigla}
             title={`${etapa.sigla.toLowerCase()} — ${etapa.feito ? 'feito' : 'pendente'}`}
             className={cn(
-              'grid h-[14px] place-items-center rounded-[2px] px-1.5 font-code text-[9px] font-bold',
+              'grid h-[14px] place-items-center rounded-[2px] px-1.5 font-code text-micro font-bold',
               etapa.feito
-                ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
-                : 'border border-[var(--wb-border-soft)] text-[var(--wb-text-mute)]',
+                ? 'bg-ok/13 text-ok'
+                : 'border border-fio text-fg-2',
             )}
           >
             {etapa.sigla}
@@ -314,8 +314,8 @@ export function CandidatoCard({
       </div>
 
       {/* ── Números que decidem, numa linha só ─────────────────────── */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-2 font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]">
-        <span className="font-semibold text-[var(--wb-text-dim)]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-2 font-code text-micro tabular-nums text-fg-2">
+        <span className="font-semibold text-fg-3">
           {mmss(short.inicio_seg)} → {mmss(short.fim_seg)}
         </span>
         {/* D-604: a duração é a LÍQUIDA, que o backend já manda somada. Num short
@@ -324,7 +324,7 @@ export function CandidatoCard({
         <span>{Math.round(short.duracao_seg)}s</span>
         {temColagem(short) && (
           <span
-            className="rounded-[5px] bg-[var(--wb-accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--wb-accent-strong)]"
+            className="rounded-[5px] bg-iris-suave px-1.5 py-0.5 text-micro font-semibold text-iris-2"
             title="Este short é montado por segmentos separados do bruto. O que fica entre eles não entra."
           >
             {efetivos(short).length} segmentos
@@ -349,7 +349,7 @@ export function CandidatoCard({
       </div>
 
       {short.justificativa && !aberto && (
-        <p className="px-3 pb-2 text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="px-3 pb-2 text-pequeno leading-relaxed text-fg-2">
           {short.justificativa}
         </p>
       )}
@@ -375,7 +375,7 @@ export function CandidatoCard({
           das bordas —, e oito cards mostrando listas de pedaços reconstruiriam a
           parede de controles que a D-492 desmontou. */}
       {aberto && (
-        <div className="border-t border-[var(--wb-border-soft)] px-3 py-2">
+        <div className="border-t border-fio px-3 py-2">
           <ListaDeSegmentos
             short={short}
             tempoAtualSeg={tempoAtualSeg}
@@ -388,7 +388,7 @@ export function CandidatoCard({
       )}
 
       {/* ── Produção: uma ação em destaque ─────────────────────────── */}
-      <footer className="flex flex-wrap items-center gap-1.5 border-t border-[var(--wb-border-soft)] p-3">
+      <footer className="flex flex-wrap items-center gap-1.5 border-t border-fio p-3">
         <Button
           variant="outline"
           size="sm"
@@ -454,7 +454,7 @@ export function CandidatoCard({
       {/* R4: o motivo é sobre o CARTÃO, não sobre a seleção — com `emFoco`,
           sete de oito cartões ficavam apagados sem explicação. */}
       {ocupado && !renderizando && (
-        <p className="flex items-center gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-1.5 text-[11px] text-[var(--wb-warn-ink)]">
+        <p className="flex items-center gap-1.5 border-t border-fio px-3 py-1.5 text-micro text-aviso">
           <Icon name="ban" className="flex-none" />
           Aguarde: uma gravação, prévia ou render deste corte ainda está em andamento.
         </p>
@@ -512,8 +512,8 @@ function PlayerDoArquivo({
   nota?: string;
 }) {
   return (
-    <div className="border-t border-[var(--wb-border-soft)] p-3">
-      <p className="mb-1.5 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)]">
+    <div className="border-t border-fio p-3">
+      <p className="mb-1.5 font-code text-micro uppercase tracking-wide text-fg-2">
         {titulo}
       </p>
       <video
@@ -523,7 +523,7 @@ function PlayerDoArquivo({
         className="mx-auto max-h-[300px] w-auto rounded-[9px] bg-black"
       />
       {nota && (
-        <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">{nota}</p>
+        <p className="mt-1.5 text-micro leading-relaxed text-fg-2">{nota}</p>
       )}
     </div>
   );

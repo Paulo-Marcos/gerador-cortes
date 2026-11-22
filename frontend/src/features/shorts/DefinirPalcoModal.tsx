@@ -238,19 +238,19 @@ export function DefinirPalcoModal({
                   className={cn(
                     'w-full rounded-[8px] border px-2.5 py-2 text-left transition-colors disabled:opacity-45',
                     arranjoEmUso === arranjo.chave
-                      ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-                      : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                      ? 'border-[var(--wb-accent)] bg-iris-suave'
+                      : 'border-fio hover:bg-poco',
                   )}
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="text-[12.5px] font-semibold">{arranjo.nome}</span>
                     {arranjoEmUso === arranjo.chave && (
-                      <Icon name="check" className="text-[var(--wb-accent-strong)]" />
+                      <Icon name="check" className="text-iris-2" />
                     )}
                   </div>
                   {/* O impedimento no lugar do porquê: a opção desabilitada
                       precisa dizer o que falta, senão vira adivinhação. */}
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-fg-2">
                     {arranjo.possivel
                       ? arranjo.porque
                       : `${arranjo.impedimento} — clique para marcar e ajuste o retângulo em "De onde vem cada janela".`}
@@ -272,7 +272,7 @@ export function DefinirPalcoModal({
                 O diagnóstico vem junto, e é o que mais importa aqui: sem região
                 marcada o palco usa o quadro inteiro e a moldura da live entra
                 no short. Um short torto tem que dizer por que está torto. */}
-            <div className="mb-2 rounded-[7px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2">
+            <div className="mb-2 rounded-[7px] border border-fio bg-poco p-2">
               <PalcoDoCorte corteId={corteId} />
             </div>
             {/* D-552: o preset de RECORTES do canal (o que traz as regiões)
@@ -282,7 +282,7 @@ export function DefinirPalcoModal({
                 Aqui ele está junto do que descreve: de onde sai cada janela. */}
             {!rascunho && (
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
                 preset de recortes
               </span>
               <select
@@ -290,7 +290,7 @@ export function DefinirPalcoModal({
                 value={short.palco_preset}
                 disabled={ocupado || !presetDoCorte.data}
                 onChange={(e) => onAplicar({ palco_preset: e.target.value })}
-                className="h-7 max-w-[220px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+                className="h-7 max-w-[220px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
               >
                 <option value="">
                   {presetDoCorte.data?.preset
@@ -310,7 +310,7 @@ export function DefinirPalcoModal({
                 bloqueada e o texto mandava marcar num lugar sem botão. */}
             {faltando.length > 0 && (
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+                <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
                   marcar
                 </span>
                 {faltando.map((regiao) => (
@@ -326,7 +326,7 @@ export function DefinirPalcoModal({
                     {REGIAO[regiao] ?? regiao}
                   </Button>
                 ))}
-                <span className="text-[11px] text-[var(--wb-text-mute)]">
+                <span className="text-[11px] text-fg-2">
                   {Object.keys(recortesDaFonte).length === 0
                     ? 'Nenhuma região ainda: escolha um preset de recortes ou marque aqui e ajuste o retângulo sobre a live.'
                     : 'A tela dividida precisa da pessoa e da tela.'}
@@ -339,7 +339,7 @@ export function DefinirPalcoModal({
                     enquadramento — não são dois controles. */}
                 {arranjoEmUso === 'cheia' && Object.keys(recortesDaFonte).length > 1 && (
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                    <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+                    <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
                       preenche com
                     </span>
                     {Object.keys(recortesDaFonte).map((regiao) => (
@@ -371,7 +371,7 @@ export function DefinirPalcoModal({
                     }
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+                <p className="mt-1 text-[11px] text-fg-2">
                   Arraste os retângulos sobre o quadro da live. O que você não mexer continua
                   vindo do preset do corte.
                 </p>
@@ -435,7 +435,7 @@ export function DefinirPalcoModal({
                 voltar ao tamanho do arranjo
               </Button>
             </div>
-            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+            <p className="mt-1 text-[11px] text-fg-2">
               Quanto da largura do quadro o vídeo ocupa. Em tela cheia ele cobre os 100% e o
               fundo não aparece; abaixo disso o palco do canal fica visível em volta.
               {movendo && ' Arraste os blocos na prévia ao lado; os cantos redimensionam.'}
@@ -447,7 +447,7 @@ export function DefinirPalcoModal({
                 jeito de aparecer. O arraste aproxima, o campo fecha — é a mesma
                 dupla da régua e das bordas finas, só que aqui as duas ficam. */}
             {movendo && planoNaTela && (
-              <div className="mt-2 border-t border-[var(--wb-border-soft)] pt-2">
+              <div className="mt-2 border-t border-fio pt-2">
                 <CamposDoPalco
                   slots={planoNaTela.slots}
                   ajustados={planoNaTela.ajustados}
@@ -466,12 +466,12 @@ export function DefinirPalcoModal({
               value={short.moldura}
               disabled={ocupado}
               onChange={(e) => onAplicar({ moldura: e.target.value })}
-              className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+              className="h-7 rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
             >
               <option value="palco">Palco do canal</option>
               <option value="nenhuma">Sem moldura</option>
             </select>
-            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+            <p className="mt-1 text-[11px] text-fg-2">
               A assinatura do canal em volta do short.
             </p>
           </Secao>
@@ -510,15 +510,15 @@ export function DefinirPalcoModal({
                     className={cn(
                       'h-7 w-7 rounded-full border-2 transition-transform disabled:opacity-50',
                       ativa
-                        ? 'border-[var(--sel-line)] ring-2 ring-[var(--sel-line)]'
-                        : 'border-[var(--wb-border)] hover:scale-110',
+                        ? 'border-campo ring-2 ring-[var(--cc-fio-campo)]'
+                        : 'border-fio-2 hover:scale-110',
                     )}
                     style={{ background: opcao.hex }}
                   />
                 );
               })}
             </div>
-            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+            <p className="mt-1 text-[11px] text-fg-2">
               A cor da palavra que está sendo dita. O resto da frase fica branco. Dá para ver
               na prévia ao lado enquanto o player anda.
             </p>
@@ -532,11 +532,11 @@ export function DefinirPalcoModal({
                 valor={short.legenda_fonte}
                 onEscolher={(familia) => onAplicar({ legenda_fonte: familia })}
                 rotulo="Fonte da legenda"
-                classeDaEscolhida="border-[var(--sel-line)] bg-[var(--sel-bg)]"
+                classeDaEscolhida="border-campo bg-vidro-3"
                 desabilitado={ocupado}
               />
             </div>
-            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+            <p className="mt-1 text-[11px] text-fg-2">
               A fonte da legenda queimada. Passe o mouse para o nome de cada uma.
             </p>
 
@@ -546,8 +546,8 @@ export function DefinirPalcoModal({
                 lugar da legenda pertence a esta seção, e não a uma tela nova.
                 O gesto é ARRASTAR na prévia ao lado, e não digitar dois números:
                 a pergunta "está em cima de alguém?" só se responde olhando. */}
-            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
-              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-fio pt-2.5">
+              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
                 largura
               </span>
               <Button
@@ -566,7 +566,7 @@ export function DefinirPalcoModal({
               >
                 <Icon name="minimize-2" />
               </Button>
-              <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
+              <span className="font-code text-[11px] tabular-nums text-fg-2">
                 {Math.round(lugarDaLegenda.largura)}%
               </span>
               <Button
@@ -601,7 +601,7 @@ export function DefinirPalcoModal({
                 </Button>
               )}
             </div>
-            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+            <p className="mt-1 text-[11px] text-fg-2">
               {movendo
                 ? 'Solte "mover o palco" para arrastar a legenda: os dois usam o mesmo gesto na prévia.'
                 : legendaNoLugarDela
@@ -646,7 +646,7 @@ export function DefinirPalcoModal({
             `self-start` antes do `sticky`: item de grid estica por padrão, e um
             item da altura da linha inteira não tem para onde grudar. */}
         <div className="flex flex-col items-center gap-1 lg:sticky lg:top-0 lg:self-start">
-          <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+          <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
             como vai sair
           </span>
           {planoNaTela ? (
@@ -680,7 +680,7 @@ export function DefinirPalcoModal({
               </RascunhoDoPalcoContext.Provider>
             </div>
           ) : (
-            <p className="text-[11.5px] text-[var(--wb-text-mute)]">
+            <p className="text-[11.5px] text-fg-2">
               Sem região marcada, o short sai do recorte simples do quadro.
             </p>
           )}
@@ -702,10 +702,10 @@ export function Secao({
   return (
     <section>
       <h3 className="mb-1.5 flex items-center gap-1.5">
-        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--wb-bg-inset)] font-code text-[9.5px] font-bold text-[var(--wb-text-mute)]">
+        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-poco font-code text-[9.5px] font-bold text-fg-2">
           {numero}
         </span>
-        <span className="font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+        <span className="font-code text-[10.5px] uppercase tracking-[0.06em] text-fg-2">
           {titulo}
         </span>
       </h3>

@@ -39,7 +39,7 @@ export function Secao({
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
-        <h3 className="text-[12px] font-bold uppercase tracking-wide text-[var(--wb-text-mute)]">
+        <h3 className="text-pequeno font-bold uppercase tracking-wide text-fg-2">
           {titulo}
         </h3>
         <div className="flex-1" />
@@ -79,13 +79,13 @@ export function Interruptor({
         className="mt-0.5 size-3.5 flex-none accent-[var(--wb-accent)]"
       />
       <span className="min-w-0">
-        <span className="block text-[12px] font-semibold">{titulo}</span>
+        <span className="block text-pequeno font-semibold">{titulo}</span>
         <span
           className={cn(
-            'block text-[11px]',
+            'block text-micro',
             alerta && ligado
               ? 'text-[var(--wb-warn-ink,var(--wb-text-dim))]'
-              : 'text-[var(--wb-text-mute)]',
+              : 'text-fg-2',
           )}
         >
           {nota}
@@ -115,15 +115,15 @@ export function Caixa({
       className={cn(
         'flex min-w-[180px] flex-1 flex-col items-start gap-0.5 rounded-[9px] border px-3 py-2 text-left transition-colors',
         marcada
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-          : 'border-[var(--wb-border)] hover:bg-[var(--wb-bg-inset)]',
+          ? 'border-[var(--wb-accent)] bg-iris-suave'
+          : 'border-fio-2 hover:bg-poco',
       )}
     >
-      <span className="flex items-center gap-1.5 text-[12.5px] font-bold">
+      <span className="flex items-center gap-1.5 text-pequeno font-bold">
         {marcada && <Icon name="check" />}
         {titulo}
       </span>
-      <span className="text-[11px] text-[var(--wb-text-mute)]">{nota}</span>
+      <span className="text-micro text-fg-2">{nota}</span>
     </button>
   );
 }

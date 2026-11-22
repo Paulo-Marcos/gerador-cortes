@@ -20,7 +20,7 @@ export function ShortsDesteCorte({ corteId }: { corteId: string }) {
         flex: 'none',
         fontSize: 12,
         whiteSpace: 'nowrap',
-        color: 'var(--accent)',
+        color: 'var(--cc-iris)',
       }}
     >
       <Icon name="flame" />

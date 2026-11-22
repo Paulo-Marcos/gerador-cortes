@@ -40,7 +40,7 @@ interface Props {
 export function AcoesRapidasDoShort({ short, corteId, faltaCapa, onAbrirCapa }: Props) {
   if (short.status === 'sugerido' || short.status === 'rejeitado') return null;
   return (
-    <div className="flex flex-col gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-2">
+    <div className="flex flex-col gap-1.5 border-t border-fio px-3 py-2">
       <div className="flex flex-wrap items-start gap-2">
         <GerarCapaComIA shortId={short.id} />
         {!short.gancho_tela?.trim() && <GerarGancho short={short} corteId={corteId} />}
@@ -52,7 +52,7 @@ export function AcoesRapidasDoShort({ short, corteId, faltaCapa, onAbrirCapa }: 
             e.stopPropagation();
             onAbrirCapa();
           }}
-          className="flex items-center gap-1.5 text-left text-[11.5px] text-[var(--wb-warn-ink)] hover:underline"
+          className="flex items-center gap-1.5 text-left text-micro text-aviso hover:underline"
         >
           <Icon name="image" className="flex-none" />
           Falta escolher a capa — sem ela a plataforma pega um quadro qualquer.
@@ -108,7 +108,7 @@ export function GerarCapaComIA({
         {escrever.isPending ? 'Escrevendo o prompt…' : 'Gerar capa com IA'}
       </Button>
       {escrever.isError ? (
-        <span role="alert" className="text-[11px] leading-snug text-error">
+        <span role="alert" className="text-micro leading-snug text-error">
           {(escrever.error as Error).message}
         </span>
       ) : (
@@ -157,12 +157,12 @@ function GerarGancho({ short, corteId }: { short: ShortSugerido; corteId: string
         {escrever.isPending ? 'Escrevendo o gancho…' : 'Gerar gancho'}
       </Button>
       {escrever.isError && (
-        <span role="alert" className="text-[11px] leading-snug text-error">
+        <span role="alert" className="text-micro leading-snug text-error">
           {(escrever.error as Error).message}
         </span>
       )}
       {escrever.isSuccess && !escrever.data && (
-        <span className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+        <span className="text-micro leading-snug text-fg-2">
           A IA não trouxe um gancho aproveitável. Tente de novo ou escreva no modal.
         </span>
       )}

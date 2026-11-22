@@ -81,7 +81,7 @@ function JanelasDeExemplo({ plano }: { plano: PlanoDesenhavel }) {
   return plano.recortes.map(({ regiao, janela }) => (
     <div
       key={regiao}
-      className="pointer-events-none absolute flex items-center justify-center border border-dashed border-[var(--wb-border)]"
+      className="pointer-events-none absolute flex items-center justify-center border border-dashed border-fio-2"
       style={{
         left: `${(janela.x / largura) * 100}%`,
         top: `${(janela.y / altura) * 100}%`,
@@ -89,7 +89,7 @@ function JanelasDeExemplo({ plano }: { plano: PlanoDesenhavel }) {
         height: `${(janela.h / altura) * 100}%`,
       }}
     >
-      <span className="rounded-full bg-[var(--wb-bg-panel)] px-2 py-0.5 text-[11px] text-[var(--wb-text-mute)]">
+      <span className="rounded-full bg-painel-solido px-2 py-0.5 text-micro text-fg-2">
         {ROTULO[regiao] ?? regiao}
       </span>
     </div>
@@ -132,11 +132,11 @@ export function DefinirPalcoDoCanalModal({ onClose }: { onClose: () => void }) {
           {palco.rascunho && palco.efetivo ? (
             <PalcoDoTipoNoModal tipo="short" rascunho={palco.rascunho} efetivo={palco.efetivo} onMudar={palco.mudar} />
           ) : (
-            <p className="text-sm text-[var(--wb-text-mute)]">Carregando o palco…</p>
+            <p className="text-sm text-fg-2">Carregando o palco…</p>
           )}
         </Secao>
         <div className="flex flex-col items-center gap-1 lg:sticky lg:top-0 lg:self-start">
-          <span className="font-code text-[11px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+          <span className="font-code text-micro uppercase tracking-[0.06em] text-fg-2">
             como vai sair
           </span>
           <div className="w-full max-w-[220px]">
@@ -147,7 +147,7 @@ export function DefinirPalcoDoCanalModal({ onClose }: { onClose: () => void }) {
               </PalcoPrevia>
             </RascunhoDoPalcoContext.Provider>
           </div>
-          <p className="text-center text-[11px] text-[var(--wb-text-mute)]">
+          <p className="text-center text-micro text-fg-2">
             Um palco de exemplo: o vídeo de cada short entra nas janelas.
           </p>
         </div>

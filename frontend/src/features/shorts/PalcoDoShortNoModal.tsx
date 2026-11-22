@@ -55,9 +55,9 @@ export function PalcoDoShortNoModal({ palco, emPreset = false }: { palco: Return
     <div className="grid gap-2">
       <PalcoDoTipoNoModal tipo="short" rascunho={palco.rascunho} efetivo={palco.efetivo} onMudar={palco.mudar} />
       {emPreset ? (
-        <p className="text-[11.5px] text-[var(--wb-text-mute)]">Vai junto no preset: aplicá-lo traz este palco.</p>
+        <p className="text-micro text-fg-2">Vai junto no preset: aplicá-lo traz este palco.</p>
       ) : (
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-[var(--wb-text-mute)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-micro text-fg-2">
         <span>{palco.salvando ? 'Salvando no corte…' : 'Vale só para os shorts deste corte.'}</span>
         {palco.origem === 'corte' && (
           <Button type="button" variant="ghost" size="sm" onClick={palco.herdar} disabled={palco.salvando}>

@@ -57,7 +57,7 @@ export function PainelDaRegua({
   if (duracaoRegua <= 0 || shorts.length === 0) return null;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
+    <div className="min-h-0 flex-1 overflow-y-auto rounded-[10px] border border-fio-2 bg-painel-solido p-2.5">
       {/* D-550: de volta a regua lisa enquanto a `ReguaDeOnda` nao
           desenha os blocos coloridos. Ela ja tem onda e zoom, mas os
           trechos nao aparecem — e perder a cor de cada trecho custa
@@ -117,7 +117,7 @@ export function PainelDaRegua({
               funcionalidade não veio. A régua lisa continua sendo a
               resposta certa; o que faltava era ela se explicar. */}
           {!onda.isLoading && (
-            <p className="mt-1.5 font-code text-[10.5px] leading-relaxed text-[var(--wb-text-mute)]">
+            <p className="mt-1.5 font-code text-micro leading-relaxed text-fg-2">
               {temBruto === false
                 ? 'Régua lisa: sem o bruto em disco não há onda nem zoom. Gere o bruto deste corte para ter a régua do editor.'
                 : 'Régua lisa: não deu para ler o áudio do bruto, então não há onda nem zoom neste corte.'}

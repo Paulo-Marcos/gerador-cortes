@@ -51,10 +51,10 @@ export function KitDoShortModal({ open, onClose, short }: Props) {
       }
     >
       {previa.isLoading && (
-        <p className="text-[12px] text-[var(--wb-text-mute)]">Montando os textos de cada rede…</p>
+        <p className="text-pequeno text-fg-2">Montando os textos de cada rede…</p>
       )}
       {previa.isError && (
-        <p className="text-[12px] text-[var(--wb-text-dim)]">
+        <p className="text-pequeno text-fg-3">
           {(previa.error as Error)?.message ?? 'não consegui montar os textos'}
         </p>
       )}
@@ -74,10 +74,10 @@ function KitDaRede({ pacote }: { pacote: PacotePublicacao }) {
   const temTitulo = pacote.plataforma === 'youtube_shorts';
 
   return (
-    <article className="flex flex-col gap-2 rounded-[9px] border border-[var(--wb-border)] p-2.5">
-      <h4 className="text-[13px] font-bold">{pacote.rotulo}</h4>
+    <article className="flex flex-col gap-2 rounded-[9px] border border-fio-2 p-2.5">
+      <h4 className="text-corpo font-bold">{pacote.rotulo}</h4>
       {pacote.avisos.map((aviso) => (
-        <p key={aviso} className="flex items-start gap-1 text-[11px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+        <p key={aviso} className="flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
           <Icon name="triangle-alert" className="mt-px" />{aviso}
         </p>
       ))}
@@ -108,7 +108,7 @@ function CampoCopiavel({ rotulo, texto, linhas }: { rotulo: string; texto: strin
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--wb-text-mute)]">
+        <span className="flex-1 text-micro font-semibold uppercase tracking-wide text-fg-2">
           {rotulo}
           <span className="ml-1 font-code normal-case tracking-normal">{texto.length}</span>
         </span>
@@ -133,7 +133,7 @@ function CampoCopiavel({ rotulo, texto, linhas }: { rotulo: string; texto: strin
         readOnly
         value={texto || '—'}
         rows={linhas}
-        className="w-full resize-none rounded-[7px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2 text-[12px] leading-snug text-[var(--wb-text)]"
+        className="w-full resize-none rounded-[7px] border border-fio bg-poco p-2 text-pequeno leading-snug text-fg"
       />
     </div>
   );

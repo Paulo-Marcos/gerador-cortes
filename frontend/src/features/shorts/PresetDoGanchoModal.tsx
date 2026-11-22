@@ -74,7 +74,7 @@ export function PresetDoGanchoModal(props: Props) {
   if (props.presetId && !achado) {
     return (
       <Modal open onClose={props.onClose} title="Editar o gancho padrão" size="sm">
-        <p className="text-[12.5px] text-[var(--wb-text-dim)]">
+        <p className="text-pequeno text-fg-3">
           {presets.isLoading ? 'Carregando o preset…' : 'Este preset não existe mais.'}
         </p>
       </Modal>
@@ -186,7 +186,7 @@ function EditorDoPresetDeGancho({
                     'h-7 w-7 rounded-[7px] border-2 transition-transform',
                     cor === opcao.hex
                       ? 'scale-110 border-[var(--wb-accent)]'
-                      : 'border-[var(--wb-border)] hover:border-[var(--wb-text-dim)]',
+                      : 'border-fio-2 hover:border-[var(--wb-text-dim)]',
                   )}
                   style={{ backgroundColor: opcao.hex || '#ffffff' }}
                 />
@@ -199,7 +199,7 @@ function EditorDoPresetDeGancho({
                 title="Outra cor"
                 value={cor || '#ffffff'}
                 onChange={(e) => setCor(e.target.value)}
-                className="h-7 w-9 cursor-pointer rounded-[7px] border border-[var(--wb-border)] bg-transparent"
+                className="h-7 w-9 cursor-pointer rounded-[7px] border border-fio-2 bg-transparent"
               />
             </div>
           </Campo>
@@ -215,12 +215,12 @@ function EditorDoPresetDeGancho({
                   className={cn(
                     'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors',
                     realce === opcao.id
-                      ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
-                      : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                      ? 'border-[var(--wb-accent)] bg-iris-suave'
+                      : 'border-fio hover:bg-poco',
                   )}
                 >
-                  <span className="flex-none text-[12.5px] font-semibold">{opcao.nome}</span>
-                  <span className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+                  <span className="flex-none text-pequeno font-semibold">{opcao.nome}</span>
+                  <span className="text-micro leading-snug text-fg-2">
                     {opcao.nota}
                   </span>
                 </button>
@@ -235,7 +235,7 @@ function EditorDoPresetDeGancho({
               valor={fonte}
               onEscolher={setFonte}
               rotulo="Fonte do gancho"
-              classeDaEscolhida="border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]"
+              classeDaEscolhida="border-[var(--wb-accent)] bg-iris-suave"
             />
           </Campo>
 
@@ -285,7 +285,7 @@ function EditorDoPresetDeGancho({
                 noMaximo={lugar.largura >= LARGURA_MAX}
                 nome="a largura da caixa"
               />
-              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+              <p className="text-micro leading-relaxed text-fg-2">
                 Arraste o gancho na prévia ao lado — está em {Math.round(lugar.x)}% /{' '}
                 {Math.round(lugar.y)}% do quadro. Cada trecho ainda pode mover o seu.
               </p>
@@ -299,7 +299,7 @@ function EditorDoPresetDeGancho({
                 onChange={(e) => setNome(e.target.value)}
                 aria-label="Nome do preset de gancho"
                 placeholder="ex.: amarelo com caixa"
-                className="h-8 max-w-[260px] text-[12px]"
+                className="h-8 max-w-[260px] text-pequeno"
               />
               <Button
                 size="sm"
@@ -318,7 +318,7 @@ function EditorDoPresetDeGancho({
                 </Button>
               )}
             </div>
-            <label className="mt-2 flex items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
+            <label className="mt-2 flex items-center gap-1.5 text-micro text-fg-3">
               <input
                 type="checkbox"
                 checked={virarPadrao}
@@ -326,7 +326,7 @@ function EditorDoPresetDeGancho({
               />
               usar como gancho padrão deste corte
             </label>
-            {erro && <p className="mt-1 text-[11.5px] text-[var(--wb-warn-ink)]">{erro}</p>}
+            {erro && <p className="mt-1 text-micro text-aviso">{erro}</p>}
           </Campo>
         </div>
 
@@ -337,13 +337,13 @@ function EditorDoPresetDeGancho({
             </PalcoPrevia>
           ) : (
             <div
-              className="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-[8px] border border-[var(--wb-border)] bg-black"
+              className="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-[8px] border border-fio-2 bg-black"
               style={{ aspectRatio: '9 / 16', containerType: 'inline-size' }}
             >
               {sobreposicoes}
             </div>
           )}
-          <p className="text-center text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          <p className="text-center text-micro leading-relaxed text-fg-2">
             {amostra?.gancho_tela
               ? 'Com o gancho do trecho em foco, como sai no arquivo.'
               : 'Com uma frase de amostra — o trecho em foco ainda não tem gancho.'}
@@ -357,7 +357,7 @@ function EditorDoPresetDeGancho({
 function Campo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="mb-1.5 font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+      <h3 className="mb-1.5 font-code text-micro uppercase tracking-[0.06em] text-fg-2">
         {titulo}
       </h3>
       {children}
@@ -385,7 +385,7 @@ function Passo({
       <Button variant="outline" size="sm" aria-label={`Diminuir ${nome}`} disabled={noMinimo} onClick={menos}>
         <Icon name="minus" />
       </Button>
-      <span className="w-[46px] text-center font-code text-[13px] tabular-nums text-[var(--wb-text)]">
+      <span className="w-[46px] text-center font-code text-corpo tabular-nums text-fg">
         {rotulo}
       </span>
       <Button variant="outline" size="sm" aria-label={`Aumentar ${nome}`} disabled={noMaximo} onClick={mais}>

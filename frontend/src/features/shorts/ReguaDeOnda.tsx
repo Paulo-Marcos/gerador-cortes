@@ -280,7 +280,7 @@ export function ReguaDeOnda({
       container: caixa.current,
       waveColor: 'oklch(0.58 0.13 225 / 0.82)',
       progressColor: 'oklch(0.58 0.13 225 / 0.45)',
-      cursorColor: 'var(--wb-accent-strong)',
+      cursorColor: 'var(--cc-iris-2)',
       cursorWidth: 2,
       barWidth: 1.5,
       barGap: 0.6,
@@ -508,7 +508,7 @@ export function ReguaDeOnda({
 
   return (
     <div className="flex-none select-none">
-      <div className="mb-1 flex items-center gap-2 font-code text-[10.5px] tabular-nums text-[var(--wb-text-mute)]">
+      <div className="mb-1 flex items-center gap-2 font-code text-micro tabular-nums text-fg-2">
         <span title="Duração do bruto inteiro">{mmss(duracaoSeg)}</span>
         <div className="flex-1" />
         {emFoco && (
@@ -520,7 +520,7 @@ export function ReguaDeOnda({
                 separados seria a tela se contradizendo. */}
             {Math.round(duracaoLiquida(emFoco))}s
             {temColagem(emFoco) && (
-              <span className="ml-1 text-[var(--wb-accent-strong)]">
+              <span className="ml-1 text-iris-2">
                 ({efetivos(emFoco).length} segmentos)
               </span>
             )}
@@ -568,7 +568,7 @@ export function ReguaDeOnda({
           `--wb-border` é a própria barra. */}
       <div
         ref={caixa}
-        className="timeline-waveform-host w-full rounded-[8px] bg-[var(--wb-bg-inset)]"
+        className="timeline-waveform-host w-full rounded-[8px] bg-poco"
         style={
           {
             height: ALTURA_DA_ONDA + ALTURA_DA_BARRA,

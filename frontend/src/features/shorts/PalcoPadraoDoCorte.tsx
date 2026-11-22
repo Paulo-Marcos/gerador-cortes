@@ -75,7 +75,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex w-[58px] items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+        <span className="inline-flex w-[58px] items-center gap-1 font-code text-micro uppercase tracking-[0.06em] text-fg-2">
           <Icon name="layout-template" />
           palco
         </span>
@@ -85,7 +85,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
           value={escolhido}
           disabled={definir.isPending}
           onChange={(e) => escolher(e.target.value)}
-          className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+          className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
           {/* "cada trecho decide" e não "nenhum": sem padrão o short não fica sem
               palco — ele cai no automático, que é o que sempre foi. */}
@@ -121,13 +121,13 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
       </div>
 
       {escolhido && customizados > 0 && (
-        <p className="pl-[64px] text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+        <p className="pl-[64px] text-micro leading-relaxed text-fg-2">
           {customizados} {customizados === 1 ? 'trecho não segue' : 'trechos não seguem'} o padrão.{' '}
           <button
             type="button"
             disabled={seguir.isPending}
             onClick={fazerTodosSeguirem}
-            className="text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+            className="text-iris underline-offset-2 hover:underline disabled:opacity-45"
           >
             fazer todos seguirem
           </button>

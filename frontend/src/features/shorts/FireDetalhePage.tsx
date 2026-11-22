@@ -329,7 +329,7 @@ export default function FireDetalhePage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        'flex min-h-0 flex-col overflow-hidden text-fg',
         'h-full',
         // No shell LEGADO a pagina fica ABAIXO de um cabecalho de 3.5rem, e
         // `h-screen` a fazia medir a viewport inteira — transbordando por
@@ -527,10 +527,10 @@ export function FireChrome({
       // a versao permanente do selo: "salvando…" enquanto grava, "salvo" depois.
       estado:
         estado === 'gravando'
-          ? { texto: 'salvando…', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' }
+          ? { texto: 'salvando…', icone: 'loader', cor: 'var(--cc-info)', bg: 'var(--info-soft)' }
           : estado === 'falhou'
-            ? { texto: 'não salvou', icone: 'triangle-alert', cor: 'var(--warn)', bg: 'var(--warn-soft)' }
-            : { texto: 'salvo', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' },
+            ? { texto: 'não salvou', icone: 'triangle-alert', cor: 'var(--cc-aviso)', bg: 'var(--warn-soft)' }
+            : { texto: 'salvo', icone: 'circle-check', cor: 'var(--cc-ok)', bg: 'var(--ok-soft)' },
     },
     [corteId, fire?.titulo, fire?.projeto_titulo, fire?.duracao_seg, estado],
   );
