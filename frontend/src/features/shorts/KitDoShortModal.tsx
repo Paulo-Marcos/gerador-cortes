@@ -77,7 +77,7 @@ function KitDaRede({ pacote }: { pacote: PacotePublicacao }) {
     <article className="flex flex-col gap-2 rounded-[9px] border border-fio-2 p-2.5">
       <h4 className="text-corpo font-bold">{pacote.rotulo}</h4>
       {pacote.avisos.map((aviso) => (
-        <p key={aviso} className="flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+        <p key={aviso} className="flex items-start gap-1 text-micro text-aviso">
           <Icon name="triangle-alert" className="mt-px" />{aviso}
         </p>
       ))}
@@ -108,7 +108,7 @@ function CampoCopiavel({ rotulo, texto, linhas }: { rotulo: string; texto: strin
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <span className="flex-1 text-micro font-semibold uppercase tracking-wide text-fg-2">
+        <span className="flex-1 text-micro font-semibold text-fg-2">
           {rotulo}
           <span className="ml-1 font-code normal-case tracking-normal">{texto.length}</span>
         </span>

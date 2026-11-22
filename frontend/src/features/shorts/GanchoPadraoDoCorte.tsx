@@ -88,7 +88,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex w-[58px] items-center gap-1 font-code text-micro uppercase tracking-[0.06em] text-fg-2">
+        <span className="inline-flex w-[58px] items-center gap-1 font-code text-micro text-fg-2">
           <Icon name="type" />
           gancho
         </span>
@@ -98,7 +98,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
           value={escolhido}
           disabled={definir.isPending}
           onChange={(e) => definir.mutate(e.target.value)}
-          className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+          className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:opacity-50"
         >
           <option value="">{nomeDoCanal ? `padrão do canal (${nomeDoCanal})` : 'cada trecho decide'}</option>
           {disponiveis.map((preset) => (

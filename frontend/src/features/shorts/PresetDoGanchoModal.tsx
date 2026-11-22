@@ -31,6 +31,7 @@ import { PalcoPrevia } from './PalcoPrevia';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 import { useGuardarPresetPadrao } from './useShortsDoCorte';
 import { Icon } from '@/upgrade/Icon';
+import type { CSSProperties } from 'react';
 
 // D-594: onde a APARÊNCIA do gancho vira um preset com nome.
 //
@@ -183,12 +184,12 @@ function EditorDoPresetDeGancho({
                   aria-pressed={cor === opcao.hex}
                   onClick={() => setCor(opcao.hex)}
                   className={cn(
-                    'h-7 w-7 rounded-[7px] border-2 transition-transform',
+                    'h-7 w-7 rounded-[7px] border-2 bg-[color:var(--cor)] transition-transform',
                     cor === opcao.hex
-                      ? 'scale-110 border-[var(--wb-accent)]'
-                      : 'border-fio-2 hover:border-[var(--wb-text-dim)]',
+                      ? 'scale-110 border-iris'
+                      : 'border-fio-2 hover:border-fg-3',
                   )}
-                  style={{ backgroundColor: opcao.hex || '#ffffff' }}
+                  style={{ '--cor': opcao.hex || '#ffffff' } as CSSProperties}
                 />
               ))}
               {/* A paleta cobre o comum; o seletor livre é para a cor do canal
@@ -215,7 +216,7 @@ function EditorDoPresetDeGancho({
                   className={cn(
                     'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors',
                     realce === opcao.id
-                      ? 'border-[var(--wb-accent)] bg-iris-suave'
+                      ? 'border-iris bg-iris-suave'
                       : 'border-fio hover:bg-poco',
                   )}
                 >
@@ -235,7 +236,7 @@ function EditorDoPresetDeGancho({
               valor={fonte}
               onEscolher={setFonte}
               rotulo="Fonte do gancho"
-              classeDaEscolhida="border-[var(--wb-accent)] bg-iris-suave"
+              classeDaEscolhida="border-iris bg-iris-suave"
             />
           </Campo>
 
@@ -337,8 +338,7 @@ function EditorDoPresetDeGancho({
             </PalcoPrevia>
           ) : (
             <div
-              className="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-[8px] border border-fio-2 bg-black"
-              style={{ aspectRatio: '9 / 16', containerType: 'inline-size' }}
+              className="relative mx-auto w-full max-w-[220px] aspect-[9/16] overflow-hidden rounded-[8px] border border-fio-2 bg-black [container-type:inline-size]"
             >
               {sobreposicoes}
             </div>
@@ -357,7 +357,7 @@ function EditorDoPresetDeGancho({
 function Campo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="mb-1.5 font-code text-micro uppercase tracking-[0.06em] text-fg-2">
+      <h3 className="mb-1.5 font-code text-micro text-fg-2">
         {titulo}
       </h3>
       {children}

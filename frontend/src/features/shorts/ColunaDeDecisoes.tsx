@@ -117,7 +117,7 @@ export function ColunaDeDecisoes({
         {/* D-594: os PADRÕES do corte num bloco só — o palco e o gancho, cada
             um com escolher, editar e criar. São as duas decisões que valem
             para todos os trechos, e o operador as procura no mesmo lugar. */}
-        <p className="font-code text-micro font-bold uppercase tracking-[0.08em] text-fg-3">
+        <p className="font-code text-micro font-bold text-fg-3">
           padrões do corte
         </p>
         <PalcoPadraoDoCorte
@@ -163,7 +163,7 @@ export function ColunaDeDecisoes({
                   onSelecionar(alvo.id);
                   setAjusteAberto(alvo.id);
                 }}
-                className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+                className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:opacity-50"
               >
                 <option value="">escolher o trecho…</option>
                 {shorts.map((candidato, indice) => (

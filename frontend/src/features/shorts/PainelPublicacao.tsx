@@ -133,7 +133,7 @@ export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCap
           entrado — e so este aviso separa isso de "deu tudo certo". */}
       {publicar.isSuccess &&
         (publicar.data?.avisos ?? []).map((aviso) => (
-          <p key={aviso} className="flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+          <p key={aviso} className="flex items-start gap-1 text-micro text-aviso">
             <Icon name="triangle-alert" className="mt-px" />{aviso}
           </p>
         ))}
@@ -187,7 +187,7 @@ function Destino({
       </div>
 
       {pacote.avisos.map((aviso) => (
-        <p key={aviso} className="mt-1 flex items-start gap-1 text-micro text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+        <p key={aviso} className="mt-1 flex items-start gap-1 text-micro text-aviso">
           <Icon name="triangle-alert" className="mt-px" />{aviso}
         </p>
       ))}

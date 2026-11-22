@@ -47,7 +47,7 @@ interface Props {
 export function SeloFinalizado() {
   return (
     <span
-      className="flex-none rounded-[5px] bg-poco px-1.5 py-0.5 font-code text-micro uppercase tracking-wide text-ok"
+      className="flex-none rounded-[5px] bg-poco px-1.5 py-0.5 font-code text-micro text-ok"
       title="Os shorts deste corte já estão no YouTube, TikTok e Instagram"
     >
       finalizado

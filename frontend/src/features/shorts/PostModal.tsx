@@ -44,8 +44,8 @@ import type { ShortIdentificado } from './shortsApi';
 
 const TONS: Record<TomDoTitulo, string> = {
   vazio: 'text-fg-2',
-  cabe: 'text-[var(--wb-ok-ink,var(--wb-accent))]',
-  corta: 'text-[var(--wb-warn-ink,var(--wb-text-dim))]',
+  cabe: 'text-ok',
+  corta: 'text-aviso',
 };
 
 interface Props {
@@ -127,7 +127,7 @@ export function PostModal({ open, onClose, short }: Props) {
             value={titulo}
             onChange={(e) => setTitulo(e.target.value.slice(0, TITULO_MAX))}
             placeholder="o que aparece abaixo do vídeo"
-            className="w-full rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 text-linha font-semibold text-fg outline-none focus:border-[var(--wb-accent)]"
+            className="w-full rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 text-linha font-semibold text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco focus:border-iris"
           />
           {/* O corte visto, não contado: um "62/100" é verdadeiro e não ajuda
               a decidir onde pôr o peso da frase. */}
@@ -137,7 +137,7 @@ export function PostModal({ open, onClose, short }: Props) {
               {parteEscondida(titulo) && (
                 <>
                   <span className="text-fg-2">{parteEscondida(titulo)}</span>
-                  <span className="ml-1 font-code text-micro uppercase text-fg-2">
+                  <span className="ml-1 font-code text-micro text-fg-2">
                     ← só depois do “mais”
                   </span>
                 </>
@@ -160,7 +160,7 @@ export function PostModal({ open, onClose, short }: Props) {
             onChange={(e) => setDescricao(e.target.value)}
             rows={3}
             placeholder="o contexto de quem já parou"
-            className="w-full resize-none rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 text-corpo leading-relaxed text-fg outline-none focus:border-[var(--wb-accent)]"
+            className="w-full resize-none rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 text-corpo leading-relaxed text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco focus:border-iris"
           />
           <p className="text-micro leading-relaxed text-fg-2">
             Não escreva o link do corte longo: o sistema o acrescenta sozinho quando o corte já
@@ -180,7 +180,7 @@ export function PostModal({ open, onClose, short }: Props) {
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="juros financiamento economia"
-            className="w-full rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 font-code text-pequeno text-fg outline-none focus:border-[var(--wb-accent)]"
+            className="w-full rounded-[8px] border border-fio-2 bg-poco px-2.5 py-2 font-code text-pequeno text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco focus:border-iris"
           />
           {/* Cada plataforma corta num ponto. Sem isto o operador escreve dez
               achando que todas valem em todo lugar. */}

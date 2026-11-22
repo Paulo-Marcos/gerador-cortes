@@ -55,7 +55,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
           rotulo "palco" pareciam nomes de palco malfeitos. Eles nao nomeiam o
           palco: dizem de onde saem os recortes. O palco do short e o ARRANJO,
           que tem nomes proprios ("Tela em cima, pessoa embaixo"). */}
-      <span className="inline-flex items-center gap-1 font-code text-micro uppercase tracking-wide text-fg-2">
+      <span className="inline-flex items-center gap-1 font-code text-micro text-fg-2">
         <Icon name="crop" />
         recortes
       </span>
@@ -65,7 +65,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
         value={estado.presets_disponiveis.find((p) => p.nome === estado.preset)?.id ?? ''}
         disabled={escolher.isPending}
         onChange={(e) => escolher.mutate(e.target.value)}
-        className="rounded-[5px] border border-transparent bg-poco px-1.5 py-1 text-micro text-fg outline-none focus:border-[var(--wb-accent)] disabled:opacity-45"
+        className="rounded-[5px] border border-transparent bg-poco px-1.5 py-1 text-micro text-fg outline-none focus-visible:ring-2 focus-visible:ring-foco focus:border-iris disabled:opacity-45"
       >
         <option value="">automático</option>
         {estado.presets_disponiveis.map((preset) => (

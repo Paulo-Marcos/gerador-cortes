@@ -238,7 +238,7 @@ export function DefinirPalcoModal({
                   className={cn(
                     'w-full rounded-[8px] border px-2.5 py-2 text-left transition-colors disabled:opacity-45',
                     arranjoEmUso === arranjo.chave
-                      ? 'border-[var(--wb-accent)] bg-iris-suave'
+                      ? 'border-iris bg-iris-suave'
                       : 'border-fio hover:bg-poco',
                   )}
                 >
@@ -282,7 +282,7 @@ export function DefinirPalcoModal({
                 Aqui ele está junto do que descreve: de onde sai cada janela. */}
             {!rascunho && (
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
+              <span className="font-code text-[10px] text-fg-2">
                 preset de recortes
               </span>
               <select
@@ -290,7 +290,7 @@ export function DefinirPalcoModal({
                 value={short.palco_preset}
                 disabled={ocupado || !presetDoCorte.data}
                 onChange={(e) => onAplicar({ palco_preset: e.target.value })}
-                className="h-7 max-w-[220px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+                className="h-7 max-w-[220px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:opacity-50"
               >
                 <option value="">
                   {presetDoCorte.data?.preset
@@ -310,7 +310,7 @@ export function DefinirPalcoModal({
                 bloqueada e o texto mandava marcar num lugar sem botão. */}
             {faltando.length > 0 && (
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
+                <span className="font-code text-[10px] text-fg-2">
                   marcar
                 </span>
                 {faltando.map((regiao) => (
@@ -339,7 +339,7 @@ export function DefinirPalcoModal({
                     enquadramento — não são dois controles. */}
                 {arranjoEmUso === 'cheia' && Object.keys(recortesDaFonte).length > 1 && (
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                    <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
+                    <span className="font-code text-[10px] text-fg-2">
                       preenche com
                     </span>
                     {Object.keys(recortesDaFonte).map((regiao) => (
@@ -466,7 +466,7 @@ export function DefinirPalcoModal({
               value={short.moldura}
               disabled={ocupado}
               onChange={(e) => onAplicar({ moldura: e.target.value })}
-              className="h-7 rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+              className="h-7 rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:opacity-50"
             >
               <option value="palco">Palco do canal</option>
               <option value="nenhuma">Sem moldura</option>
@@ -547,7 +547,7 @@ export function DefinirPalcoModal({
                 O gesto é ARRASTAR na prévia ao lado, e não digitar dois números:
                 a pergunta "está em cima de alguém?" só se responde olhando. */}
             <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-fio pt-2.5">
-              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
+              <span className="font-code text-[10px] text-fg-2">
                 largura
               </span>
               <Button
@@ -646,7 +646,7 @@ export function DefinirPalcoModal({
             `self-start` antes do `sticky`: item de grid estica por padrão, e um
             item da altura da linha inteira não tem para onde grudar. */}
         <div className="flex flex-col items-center gap-1 lg:sticky lg:top-0 lg:self-start">
-          <span className="font-code text-[10px] uppercase tracking-[0.06em] text-fg-2">
+          <span className="font-code text-[10px] text-fg-2">
             como vai sair
           </span>
           {planoNaTela ? (
@@ -705,7 +705,7 @@ export function Secao({
         <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-poco font-code text-[9.5px] font-bold text-fg-2">
           {numero}
         </span>
-        <span className="font-code text-[10.5px] uppercase tracking-[0.06em] text-fg-2">
+        <span className="font-code text-[10.5px] text-fg-2">
           {titulo}
         </span>
       </h3>

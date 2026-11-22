@@ -49,7 +49,7 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
       aria-live="polite"
     >
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="font-code text-micro font-bold uppercase tracking-wide text-fg-3">
+        <span className="font-code text-micro font-bold text-fg-3">
           {erro
             ? `${estagio} falhou`
             : cancelado
@@ -131,7 +131,7 @@ function LogDoWorker({ shortId, emCurso }: { shortId: string; emCurso: boolean }
       <button
         type="button"
         onClick={() => setVerLog((v) => !v)}
-        className="mt-2 flex items-center gap-1 font-code text-micro uppercase tracking-wide text-fg-2 hover:text-fg"
+        className="mt-2 flex items-center gap-1 font-code text-micro text-fg-2 hover:text-fg"
       >
         {verLog ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
         log do worker

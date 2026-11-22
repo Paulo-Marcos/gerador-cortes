@@ -2,6 +2,7 @@ import type { ReactNode, RefObject } from 'react';
 import { brutoUrl, type PlanoDesenhavel, type ShortSugerido } from './shortsApi';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoPrevia } from './PalcoPrevia';
+import type { CSSProperties } from 'react';
 
 interface Props {
   corteId: string;
@@ -42,8 +43,8 @@ export function PlayerDoBruto({
   return (
     <div className="flex min-h-0 w-full flex-[2] items-stretch justify-center gap-3">
       <div
-        className="relative max-h-full w-full overflow-hidden rounded-[10px] bg-black"
-        style={{ aspectRatio: `${dimensoes.largura || 16} / ${dimensoes.altura || 9}` }}
+        className="relative max-h-full w-full overflow-hidden rounded-[10px] bg-black [aspect-ratio:var(--proporcao)]"
+        style={{ '--proporcao': `${dimensoes.largura || 16} / ${dimensoes.altura || 9}` } as CSSProperties}
       >
         <video
           ref={video}
@@ -93,7 +94,7 @@ export function PlayerDoBruto({
               palco", onde a prévia é fixa e o controle de tamanho já
               morava — eram metades da mesma decisão em telas diferentes.
               O gesto era bom; o lugar é que estava errado. */}
-          <span className="font-code text-micro uppercase tracking-[0.06em] text-fg-2">
+          <span className="font-code text-micro text-fg-2">
             como vai sair
           </span>
         </div>

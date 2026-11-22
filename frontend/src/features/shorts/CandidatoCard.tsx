@@ -15,6 +15,7 @@ import { semMarcas } from '@video-renderer/public-api';
 import { useFechoDoShort } from './useFechoDoShort';
 import { AcoesRapidasDoShort } from './AcoesRapidasDoShort';
 import { Icon } from '@/upgrade/Icon';
+import type { CSSProperties } from 'react';
 
 // D-492: o card de um candidato, reorganizado.
 //
@@ -148,7 +149,7 @@ export function CandidatoCard({
         onClick={onSelecionar}
         className={cn(
           'flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-1.5 opacity-70 transition-opacity hover:opacity-100',
-          emFoco ? 'border-[var(--wb-accent)]' : 'border-fio-2',
+          emFoco ? 'border-iris' : 'border-fio-2',
           'bg-poco',
         )}
       >
@@ -187,8 +188,8 @@ export function CandidatoCard({
       className={cn(
         'cursor-pointer rounded-[12px] border bg-painel-solido transition-shadow',
         emFoco
-          ? 'border-[var(--wb-accent)] shadow-[var(--wb-shadow)]'
-          : 'border-fio-2 hover:border-[var(--wb-text-dim)]',
+          ? 'border-iris shadow-topo'
+          : 'border-fio-2 hover:border-fg-3',
       )}
     >
       {/* ── Identidade ─────────────────────────────────────────────── */}
@@ -243,7 +244,7 @@ export function CandidatoCard({
               'mt-1 flex w-full items-center gap-1 rounded-[6px] px-1 py-0.5 text-left text-micro leading-snug transition-colors hover:bg-poco disabled:opacity-45',
               short.gancho_tela
                 ? 'text-fg'
-                : 'border border-dashed border-fio-2 text-fg-2 hover:border-[var(--wb-accent)] hover:text-fg',
+                : 'border border-dashed border-fio-2 text-fg-2 hover:border-iris hover:text-fg',
             )}
           >
             {short.gancho_tela ? (
@@ -260,11 +261,11 @@ export function CandidatoCard({
                     ? `Gancho em ${corDoGancho}${short.gancho_cor ? '' : ' (do padrão do corte)'}`
                     : 'Gancho em branco (o padrão)'
                 }
-                className="h-2.5 w-2.5 flex-none rounded-full border border-fio-2"
+                className="h-2.5 w-2.5 flex-none rounded-full border border-fio-2 bg-[color:var(--cor)]"
                 // A cor HERDADA: lida só do trecho, o ponto ficava branco em
                 // todo card que segue o gancho padrão — e trocar o padrão
                 // parecia não mudar nada.
-                style={{ backgroundColor: corDoGancho || '#ffffff' }}
+                style={{ '--cor': corDoGancho || '#ffffff' } as CSSProperties}
               />
             ) : (
               <Icon name="plus" className="flex-none opacity-70" />
@@ -279,7 +280,7 @@ export function CandidatoCard({
           <SeloDeEstado tom={aparencia.tom}>{aparencia.rotulo}</SeloDeEstado>
           {short.origem === 'manual' && (
             <span
-              className="font-code text-micro uppercase tracking-wide text-fg-2"
+              className="font-code text-micro text-fg-2"
               title="Marcado por você — a regeração não apaga"
             >
               seu
@@ -513,7 +514,7 @@ function PlayerDoArquivo({
 }) {
   return (
     <div className="border-t border-fio p-3">
-      <p className="mb-1.5 font-code text-micro uppercase tracking-wide text-fg-2">
+      <p className="mb-1.5 font-code text-micro text-fg-2">
         {titulo}
       </p>
       <video

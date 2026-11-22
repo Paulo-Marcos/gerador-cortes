@@ -117,7 +117,7 @@ export function LinhaDeAjuste({
               escolhido ? (escolhido.payload as unknown as PalcoShortPreset) : null,
             );
           }}
-          className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+          className="h-7 max-w-[190px] rounded-[7px] border border-fio-2 bg-painel-solido px-2 text-micro outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:opacity-50"
         >
           {/* O trecho que ninguém tocou SEGUE o padrão — e escolher esta
               opção num customizado o devolve a ele. Sem padrão no corte, o
@@ -192,7 +192,7 @@ function Grupo({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" title={dica}>
-      <span className="w-[74px] shrink-0 font-code text-micro uppercase tracking-[0.06em] text-fg-2">
+      <span className="w-[74px] shrink-0 font-code text-micro text-fg-2">
         {rotulo}
       </span>
       {children}

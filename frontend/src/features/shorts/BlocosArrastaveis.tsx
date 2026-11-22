@@ -18,11 +18,11 @@ import { arrastarSlot, paraCanvas, type Limites, type Pega, type Retangulo } fro
 // O PATCH sai no soltar, nunca durante: durante o arraste manda o estado local,
 // senão o bloco andaria atrás do cursor esperando o servidor.
 
-const CANTOS: { pega: Pega; classe: string; cursor: string }[] = [
-  { pega: 'nw', classe: 'left-0 top-0 -translate-x-1/2 -translate-y-1/2', cursor: 'nwse-resize' },
-  { pega: 'ne', classe: 'right-0 top-0 translate-x-1/2 -translate-y-1/2', cursor: 'nesw-resize' },
-  { pega: 'sw', classe: 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2', cursor: 'nesw-resize' },
-  { pega: 'se', classe: 'bottom-0 right-0 translate-x-1/2 translate-y-1/2', cursor: 'nwse-resize' },
+const CANTOS: { pega: Pega; classe: string }[] = [
+  { pega: 'nw', classe: 'left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize' },
+  { pega: 'ne', classe: 'right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-nesw-resize' },
+  { pega: 'sw', classe: 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-nesw-resize' },
+  { pega: 'se', classe: 'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize' },
 ];
 
 interface Props {
@@ -132,14 +132,14 @@ export function BlocosArrastaveis({
             className={cn(
               'pointer-events-auto absolute cursor-move touch-none border-2 border-dashed transition-colors',
               rascunho?.regiao === regiao
-                ? 'border-[var(--wb-accent)] bg-wb-accent/15'
-                : 'border-white/70 hover:border-[var(--wb-accent)] hover:bg-wb-accent/10',
+                ? 'border-iris bg-iris-suave'
+                : 'border-white/70 hover:border-iris hover:bg-iris-suave',
             )}
           >
-            <span className="absolute left-1 top-1 rounded-[4px] bg-black/70 px-1 font-code text-micro font-bold uppercase tracking-wide text-white">
+            <span className="absolute left-1 top-1 rounded-[4px] bg-black/70 px-1 font-code text-micro font-bold text-white">
               {nome}
             </span>
-            {CANTOS.map(({ pega, classe, cursor }) => (
+            {CANTOS.map(({ pega, classe }) => (
               <span
                 key={pega}
                 role="button"
@@ -149,7 +149,6 @@ export function BlocosArrastaveis({
                 onPointerMove={mover(regiao)}
                 onPointerUp={soltar}
                 onPointerCancel={soltar}
-                style={{ cursor }}
                 className={cn(
                   'absolute h-3 w-3 touch-none rounded-[2px] border border-black/40 bg-white',
                   classe,

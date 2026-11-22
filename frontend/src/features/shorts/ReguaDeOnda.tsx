@@ -191,7 +191,7 @@ function desenhar(plugin: Plugin, shorts: ShortSugerido[], emFoco: ShortSugerido
       rejeitado ? BORDA_DO_REJEITADO : bordaDoShort(indice)
     }`;
     elemento.style.borderRight = elemento.style.borderLeft;
-    elemento.style.outline = shortId === emFoco?.id ? '2px solid var(--wb-accent)' : 'none';
+    elemento.style.outline = shortId === emFoco?.id ? '2px solid var(--cc-iris)' : 'none';
     // D-604: o segmento que NÃO é o primeiro da ordem ganha um tracejado no
     // topo. É a pista, na própria régua, de que aquele bloco é continuação de
     // outro — sem ela, dois blocos da mesma cor pareceriam dois shorts parecidos.
@@ -572,7 +572,7 @@ export function ReguaDeOnda({
         style={
           {
             height: ALTURA_DA_ONDA + ALTURA_DA_BARRA,
-            '--wb-border': 'var(--wb-text-dim)',
+            '--wb-border': 'var(--cc-fg-3)',
           } as React.CSSProperties
         }
         role="presentation"
