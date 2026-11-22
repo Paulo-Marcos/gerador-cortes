@@ -65,8 +65,7 @@ export function CommonTopBar({
 
   return (
     <header
-      className="flex flex-shrink-0 items-center gap-3 border-b border-fio bg-painel-solido px-5"
-      style={{ height: 56 }}
+      className="flex h-14 flex-shrink-0 items-center gap-3 border-b border-fio bg-painel-solido px-5"
     >
       {/* Esquerda */}
       <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
@@ -78,7 +77,7 @@ export function CommonTopBar({
           #{corte.numero}
         </Link>
         <h1
-          className="truncate text-[19px] font-medium leading-tight tracking-[-0.01em] text-[var(--wb-ink)]"
+          className="truncate text-[19px] font-medium leading-tight tracking-[-0.01em] text-fg"
           title={titulo}
         >
           {titulo}
@@ -130,7 +129,7 @@ function MoreMenu({ items }: { items: MoreMenuItem[] }) {
           aria-label="Mais acoes"
           aria-expanded={open}
           className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-campo transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+            'flex h-8 w-8 items-center justify-center rounded-campo transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco',
             open
               ? 'bg-poco text-fg'
               : 'text-fg-2 hover:bg-vidro-2 hover:text-fg',
@@ -230,7 +229,7 @@ export function ReadingModal({
             disabled={disabled}
             placeholder="Autor"
             autoFocus
-            className="h-9 rounded-etiqueta border border-fio-2 bg-painel-solido px-3 text-sm font-medium text-fg outline-none focus:border-info"
+            className="h-9 rounded-etiqueta border border-fio-2 bg-painel-solido px-3 text-sm font-medium text-fg outline-none focus:border-info focus-visible:ring-2 focus-visible:ring-foco"
           />
         </label>
         <label className="grid gap-1.5 text-xs font-semibold text-fg-3">
@@ -241,7 +240,7 @@ export function ReadingModal({
             value={draftPart}
             onChange={(event) => setDraftPart(event.target.value)}
             disabled={disabled}
-            className="h-9 rounded-etiqueta border border-fio-2 bg-painel-solido px-3 text-sm font-medium text-fg outline-none focus:border-info"
+            className="h-9 rounded-etiqueta border border-fio-2 bg-painel-solido px-3 text-sm font-medium text-fg outline-none focus:border-info focus-visible:ring-2 focus-visible:ring-foco"
           />
         </label>
       </form>

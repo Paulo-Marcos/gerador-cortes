@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -311,7 +311,10 @@ function PontuacaoDaLive({ live }: { live: RankingLive }) {
       <div className="flex w-[132px] items-center gap-2.5">
         <span className="num w-8 text-right text-linha font-bold text-fg">{score}</span>
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-vidro-3">
-          <div className="h-full bg-iris" style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
+          <div
+            className="h-full w-[var(--largura)] bg-iris"
+            style={{ '--largura': `${Math.max(0, Math.min(100, score))}%` } as CSSProperties}
+          />
         </div>
       </div>
     </Tooltip>

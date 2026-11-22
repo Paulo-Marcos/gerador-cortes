@@ -36,18 +36,18 @@ export function ShortcutsHelpModal({ open, onClose, bindings }: Props) {
           (g) =>
             g.items.length > 0 && (
               <div key={g.grupo} className="flex flex-col gap-1">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-text-400">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-fg-3">
                   <Icon name={g.icone} />
                   {g.label}
                 </h3>
-                <ul className="flex flex-col divide-y divide-[var(--border)] rounded-campo border border-[var(--border)] bg-bg-900/40">
+                <ul className="flex flex-col divide-y divide-[var(--border)] rounded-campo border border-[var(--border)] bg-painel-solido/40">
                   {g.items.map((b) => (
                     <li
                       key={b.key + (b.mod ?? '')}
                       className="flex items-center justify-between gap-2 px-3 py-1.5 text-pequeno"
                     >
-                      <span className="text-text-200">{b.description}</span>
-                      <kbd className="rounded border border-[var(--border)] bg-bg-800 px-1.5 py-0.5 font-mono text-micro text-text-100">
+                      <span className="text-fg-2">{b.description}</span>
+                      <kbd className="rounded border border-[var(--border)] bg-poco px-1.5 py-0.5 font-mono text-micro text-fg">
                         {formatShortcut(b)}
                       </kbd>
                     </li>

@@ -113,7 +113,7 @@ export function BlocosPanel({
 
       {arranjo?.bruto_desatualizado && (
         // Não apagamos o bruto: o contrato desta casa é avisar, não destruir.
-        <p className="flex-shrink-0 bg-[var(--wb-warn-soft)] px-3 py-1.5 text-micro text-[var(--wb-warn-ink)]">
+        <p className="flex-shrink-0 bg-aviso/13 px-3 py-1.5 text-micro text-aviso">
           A ordem mudou — o bruto gerado ainda está na ordem antiga. Gere de novo para ver.
         </p>
       )}
@@ -140,7 +140,7 @@ export function BlocosPanel({
               className={cn(
                 'mb-1 flex items-center gap-2 rounded-[6px] border px-2 py-1.5 transition-colors',
                 alvo === indice && arrastando !== indice
-                  ? 'border-[var(--wb-accent)] bg-poco'
+                  ? 'border-iris bg-poco'
                   : 'border-fio',
                 arrastando === indice && 'opacity-50',
               )}

@@ -24,9 +24,9 @@ export function AlertasConferirFaixa({ alertas, onSeek, onConferir, conferindoId
     <div
       role="list"
       aria-label="Alertas para conferir"
-      className="flex flex-shrink-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-fio bg-[var(--wb-warn-soft)] px-3 py-1.5"
+      className="flex flex-shrink-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-fio bg-aviso/13 px-3 py-1.5"
     >
-      <span className="flex flex-none items-center gap-1 text-micro font-semibold text-[var(--wb-warn-ink)]">
+      <span className="flex flex-none items-center gap-1 text-micro font-semibold text-aviso">
         <Icon name="flag" />
         Conferir ({pendentes.length})
       </span>
@@ -34,7 +34,7 @@ export function AlertasConferirFaixa({ alertas, onSeek, onConferir, conferindoId
         <div
           key={alerta.id}
           role="listitem"
-          className="flex max-w-[420px] flex-none items-center gap-1 rounded-campo border border-[var(--wb-warn)] bg-painel-solido pl-2"
+          className="flex max-w-[420px] flex-none items-center gap-1 rounded-campo border border-aviso bg-painel-solido pl-2"
         >
           <button
             type="button"
@@ -42,7 +42,7 @@ export function AlertasConferirFaixa({ alertas, onSeek, onConferir, conferindoId
             title={`Ir para o trecho: ${alerta.motivo}`}
             className="flex min-w-0 items-center gap-1.5 py-0.5 text-micro text-fg"
           >
-            <span className="flex-none font-mono font-semibold text-[var(--wb-warn-ink)]">
+            <span className="flex-none font-mono font-semibold text-aviso">
               {segParaHms(alerta.inicio_seg)}
             </span>
             <span className="truncate">{alerta.motivo || 'Afirmação a conferir'}</span>
