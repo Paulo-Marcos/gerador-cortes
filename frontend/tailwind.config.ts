@@ -15,6 +15,11 @@ const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      // D-1181: o degrau 13 (§9.2 da Sala escura) não está na escala padrão do
+      // Tailwind 3. Sem ele, `bg-ok/13` não gera CSS e o fundo some em silêncio.
+      opacity: {
+        13: '0.13',
+      },
       colors: {
       // D-1113 (E-069 H-02): chaves da Sala escura (D-1111 §4.6), ao lado das antigas.
       // `info` fica de fora de propósito: a chave já existe (`--info`) e sobrescrevê-la
