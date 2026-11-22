@@ -43,6 +43,9 @@
   --cc-erro-cheio: #ff7b7b;
   --cc-sobre-erro: #1d0508;
   --cc-info: #7fc8ff;
+  /* D-1191: categoria própria (trecho "Fora do assunto" × "Tema/Violeta"); valor igual ao info. */
+  --cc-violeta: #7fc8ff;
+  --cc-violeta-suave: color-mix(in srgb, var(--cc-violeta) 13%, transparent);
   --cc-fire: #ff9d57;
   --cc-canal-a: #b9f24a;
   --cc-canal-b: #ffe45c;
@@ -94,6 +97,8 @@
   --cc-erro-cheio: #c9283a;
   --cc-sobre-erro: #ffffff;
   --cc-info: #0a5fa6;
+  --cc-violeta: #0a5fa6;
+  --cc-violeta-suave: color-mix(in srgb, var(--cc-violeta) 13%, transparent);
   --cc-fire: #b84a00;
   --cc-canal-a: #6fae00;
   --cc-canal-b: #d9a400;

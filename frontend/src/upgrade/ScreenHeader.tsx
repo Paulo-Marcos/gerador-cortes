@@ -1,4 +1,5 @@
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { Button } from '@/components/ui/button';
 import { OverflowMenu, type OverflowMenuItem } from '@/components/ui/overflow-menu';
 import type { ProviderIA } from '@/lib/providerIa';
 import { Icon, type IconName } from './Icon';
@@ -87,15 +88,16 @@ export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
             onGerar={a.ia.onGerar}
           />
         ) : (
-          <button
+          <Button
             key={a.texto}
             type="button"
-            className={a.forte ? 'btn btn-pri' : 'btn'}
+            variant={a.forte ? 'primario' : 'secundario'}
+            size="pq"
             onClick={a.onClick}
           >
             <Icon name={a.icone} />
             {a.texto}
-          </button>
+          </Button>
         ),
       )}
     </>

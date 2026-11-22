@@ -76,7 +76,7 @@ function ChipDoMotivo({
   return (
     <li
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[7px] border px-2 py-[3px] text-pequeno',
+        'inline-flex items-center gap-1.5 rounded-etiqueta border px-2 py-[3px] text-pequeno',
         motivo.ativo
           ? 'border-fio-2 bg-poco text-fg'
           : 'border-dashed border-fio-2 text-fg-2',

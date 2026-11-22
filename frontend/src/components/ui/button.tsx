@@ -3,64 +3,11 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
-// D-1114 (E-069 H-07): o botão da Sala escura, a "pílula de luz", mora aqui ao lado do
-// legado. As cinco variantes antigas (`default`, `outline`, `ghost`, `danger`,
-// `secondary`) seguem desenhadas pelo `.btn*` do D-599: é o mapa que mantém cada tela
-// atual igual. As variantes novas têm nome em português (`primario`, `secundario`,
-// `fantasma`, `destrutivo`, `destrutivo-cheio`, `icone`) e não usam `backdrop-filter`
-// (DIRECAO §3.6: o desfoque é da casca, o botão aparece em dezenas por tela).
-//
-// D-599: com a casca nova o botão passa a ser o `.btn` do handoff — 30 px,
-// canto de 4 px, superfície de vidro. Não é troca de cor: é o MESMO botão
-// que a tela de Componentes mostra, então tudo que usa `<Button>` (e é
-// quase tudo) adota o padrão sem reescrever chamada por chamada.
-
-const AP_VARIANTS: Record<string, string> = {
-  default: 'btn btn-pri',
-  outline: 'btn',
-  ghost: 'btn btn-ghost',
-  danger: 'btn btn-danger',
-  secondary: 'btn btn-soft',
-};
-
-const AP_SIZES: Record<string, string> = {
-  default: '',
-  sm: 'btn-sm',
-  icon: 'btn-icon',
-  'icon-sm': 'btn-icon btn-sm',
-};
-
-// Proporções do protótipo Workbench 1c (D-395/validação 3): botões
-// menores e mais densos — fonte 10.5–11.5px bold, raio 8–9px, padding
-// 6–7px×12–14px. `default` usa --wb-accent-fg (não branco fixo) para
-// respeitar a paleta ativa.
-const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
-  {
-    variants: {
-      variant: {
-        default:
-          'border border-transparent bg-[var(--wb-accent)] text-[var(--wb-accent-fg)] hover:opacity-90 active:opacity-100',
-        outline:
-          'border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text)] hover:border-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-card-elev)]',
-        ghost:
-          'border border-transparent bg-transparent text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]',
-        danger:
-          'border border-transparent bg-transparent text-[var(--wb-text-mute)] hover:bg-error/10 hover:text-error',
-        secondary:
-          'border border-transparent bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-      },
-      size: {
-        default: 'h-8 px-3.5 text-[11.5px]',
-        sm: 'h-7 px-3 text-[10.5px]',
-        icon: 'h-8 w-8',
-        'icon-sm': 'h-7 w-7',
-      },
-    },
-    defaultVariants: { variant: 'default', size: 'default' },
-  },
-);
-
+// D-1114 (E-069 H-07): o botão da Sala escura, a "pílula de luz". As variantes têm nome em
+// português (`primario`, `secundario`, `fantasma`, `destrutivo`, `destrutivo-cheio`, `icone`)
+// e não usam `backdrop-filter` (DIRECAO §3.6: o desfoque é da casca, o botão aparece em
+// dezenas por tela). D-1191 (H-24c): o contrato antigo (`default`/`outline`/`ghost`/
+// `danger`/`secondary`, `btn*` do D-599) saiu junto com o `upgrade.css`.
 
 // Luz, não relevo (ADR-0018): nenhuma aresta dura embaixo. Apertar é `transform`, que
 // não participa do layout — o botão ao lado não se mexe.
@@ -123,24 +70,12 @@ export const botaoDeLuz = cva(BASE_DE_LUZ, {
   defaultVariants: { variante: 'secundario', tamanho: 'md', soIcone: false },
 });
 
-type VarianteLegada = 'default' | 'outline' | 'ghost' | 'danger' | 'secondary';
 type VarianteDeLuz = NonNullable<VariantProps<typeof botaoDeLuz>['variante']> | 'icone';
-type TamanhoLegado = 'default' | 'sm' | 'icon' | 'icon-sm';
 type TamanhoDeLuz = NonNullable<VariantProps<typeof botaoDeLuz>['tamanho']>;
 
-/** Como cada tamanho do contrato antigo se lê na escala de 30 / 38 / 46 px. */
-const TAMANHO_LEGADO_NA_ESCALA_NOVA: Record<TamanhoLegado, [TamanhoDeLuz, boolean]> = {
-  default: ['md', false],
-  sm: ['pq', false],
-  icon: ['md', true],
-  'icon-sm': ['pq', true],
-};
-
-const LEGADAS = new Set<string>(Object.keys(AP_VARIANTS));
-
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: VarianteLegada | VarianteDeLuz;
-  size?: TamanhoLegado | TamanhoDeLuz;
+  variant?: VarianteDeLuz;
+  size?: TamanhoDeLuz;
   /** Círculo, largura = altura, para o botão que só tem ícone (D-1189). */
   soIcone?: boolean;
   asChild?: boolean;
@@ -152,38 +87,18 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   carregando?: boolean;
 }
 
-function classesDoLegado(variant: VarianteLegada, size: TamanhoLegado | TamanhoDeLuz) {
-  return cn(
-    AP_VARIANTS[variant] ?? AP_VARIANTS.default,
-    AP_SIZES[size] ?? '',
-    // `[&_svg]` continua: o tamanho do glifo é o mesmo nos dois mundos.
-    // D-853: 16 px, o degrau de botão da escala do Icon (era 13, fora dela).
-    '[&_svg]:size-4 [&_svg]:shrink-0',
-  );
-}
-
-function classesDeLuz(variant: VarianteDeLuz, size: TamanhoLegado | TamanhoDeLuz, soIcone: boolean) {
-  const [tamanho, daEscalaAntiga] =
-    size in TAMANHO_LEGADO_NA_ESCALA_NOVA
-      ? TAMANHO_LEGADO_NA_ESCALA_NOVA[size as TamanhoLegado]
-      : [size as TamanhoDeLuz, false];
-  return botaoDeLuz({
-    variante: variant === 'icone' ? 'secundario' : variant,
-    tamanho,
-    soIcone: soIcone || variant === 'icone' || daEscalaAntiga,
-  });
-}
-
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant = 'default', size = 'default', soIcone = false, asChild = false, carregando = false, onClick, children, ...props },
+    { className, variant = 'secundario', size = 'md', soIcone = false, asChild = false, carregando = false, onClick, children, ...props },
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button';
     const classes = cn(
-      LEGADAS.has(variant)
-        ? classesDoLegado(variant as VarianteLegada, size)
-        : classesDeLuz(variant as VarianteDeLuz, size, soIcone),
+      botaoDeLuz({
+        variante: variant === 'icone' ? 'secundario' : variant,
+        tamanho: size,
+        soIcone: soIcone || variant === 'icone',
+      }),
       className,
     );
 
@@ -192,7 +107,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={classes}
         ref={ref}
         data-variant={variant}
-        data-sala={LEGADAS.has(variant) ? undefined : ''}
         aria-busy={carregando || undefined}
         onClick={carregando ? (e: React.MouseEvent<HTMLButtonElement>) => e.preventDefault() : onClick}
         {...props}
@@ -220,5 +134,3 @@ function GiroDeCarga() {
     />
   );
 }
-
-export { buttonVariants };

@@ -560,19 +560,19 @@ export function ReguaDeOnda({
           "não quero ela toda contida no visível" virou "coloca aí barra de
           rolagem".
 
-          O `--wb-border` local é o polegar dela. A regra do `index.css` pinta o
+          O `--barra-de-rolagem` local é o polegar dela. A regra do `index.css` pinta o
           polegar com esse token, e no tema claro ele (L 0,90) fica a quatro
           centésimos do fundo da caixa (L 0,945): a barra existia, ocupava os
           seus 10px, e era invisível. Repontar o token AQUI a torna legível sem
           mexer no arquivo de tokens — dentro desta caixa o único que lê
-          `--wb-border` é a própria barra. */}
+          `--barra-de-rolagem` é a própria barra. */}
       <div
         ref={caixa}
-        className="timeline-waveform-host w-full rounded-[8px] bg-poco"
+        className="timeline-waveform-host h-[var(--altura)] w-full rounded-[8px] bg-poco"
         style={
           {
-            height: ALTURA_DA_ONDA + ALTURA_DA_BARRA,
-            '--wb-border': 'var(--cc-fg-3)',
+            '--altura': `${ALTURA_DA_ONDA + ALTURA_DA_BARRA}px`,
+            '--barra-de-rolagem': 'var(--cc-fg-3)',
           } as React.CSSProperties
         }
         role="presentation"

@@ -17,6 +17,16 @@ module.exports = {
       { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
     ],
     '@typescript-eslint/no-explicit-any': 'warn',
+    // D-1191 (E-069 H-24): `style` só carrega variável CSS (`style={{ '--p': 42 }}`). Cor, tamanho
+    // e forma são classe do Tailwind ou do componente (DIRECAO §9.3). As exceções fixas, que
+    // pintam o vídeo ou o dado de cor do canal, ficam no override logo abaixo.
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: "JSXAttribute[name.name='style'] ObjectExpression > Property:not([key.value=/^--/])",
+        message: 'style inline só com variável CSS (`--x`). Use classe do Tailwind ou o componente (DIRECAO §9.3).',
+      },
+    ],
     // D-725: o renderer só entra pela porta pública. Chave própria (a do
     // typescript-eslint) para não ser apagada pelos `no-restricted-imports`
     // das pastas lá embaixo — no ESLint, override troca a regra inteira.
@@ -37,6 +47,25 @@ module.exports = {
   // `excludedFiles`, arquivo por arquivo. Import NOVO na direção errada barra.
   // Apertar é tirar um arquivo da lista quando ele for corrigido.
   overrides: [
+    {
+      // As exceções fixas da §9.4: pintam o quadro do vídeo ou uma cor do canal, que só existe
+      // em tempo de execução. Mesma lista da catraca `estiloInline`.
+      files: [
+        'src/shared/palco/**',
+        'src/features/shorts/LegendaPrevia.tsx',
+        'src/features/shorts/GanchoPrevia.tsx',
+        'src/features/shorts/PalcoPrevia.tsx',
+        'src/features/shorts/ParagrafoNaFonte.tsx',
+        'src/features/shorts/DefinirPalcoModal.tsx',
+        'src/upgrade/MolduraDeVideo.tsx',
+        'src/features/channels/ChannelCard.tsx',
+        'src/features/channels/ChannelThemeSection.tsx',
+        '**/__tests__/**',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+      ],
+      rules: { 'no-restricted-syntax': 'off' },
+    },
     {
       // Teste de peça interna do renderer entra direto nela: é o que ele testa.
       files: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx'],

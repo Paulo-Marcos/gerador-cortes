@@ -81,9 +81,9 @@ describe('D-1167 · Revisão na Sala escura', () => {
     expect(html).toContain('Ir para publicar');
   });
 
-  it('o botão da tela (Pasta, Editar) é da variante nova e leva data-sala', () => {
+  it('o botão da tela (Pasta, Editar) é da variante nova', () => {
     const html = tela();
-    expect(html).toMatch(/<button[^>]*data-variant="fantasma"[^>]*data-sala=""[^>]*>[\s\S]*?Editar/);
+    expect(html).toMatch(/<button[^>]*data-variant="fantasma"[^>]*>[\s\S]*?Editar/);
     expect(html).not.toMatch(/data-variant="(?:default|outline|ghost|secondary|danger)"[^>]*>[^<]*<svg[^>]*lucide-pencil/);
   });
 

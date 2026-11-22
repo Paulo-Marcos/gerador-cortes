@@ -48,7 +48,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
       )}
 
       {query.isError && (
-        <div className="flex items-start gap-2 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+        <div className="flex items-start gap-2 rounded-md border border-erro/30 bg-erro/10 px-3 py-2 text-sm text-erro">
           <Icon name="triangle-alert" size={16} className="mt-0.5 shrink-0" />
           <span>Falha ao carregar a auditoria: {(query.error as Error).message}</span>
         </div>
@@ -94,7 +94,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
                 {data.descartados.map((d, i) => (
                   <li
                     key={i}
-                    className="rounded-md border border-[var(--border)] bg-painel-solido/40 px-3 py-2 text-sm"
+                    className="rounded-md border border-fio-2 bg-painel-solido/40 px-3 py-2 text-sm"
                   >
                     <div className="font-medium text-fg">{d.tema || '(sem tema)'}</div>
                     {d.motivo && <div className="mt-0.5 text-xs text-fg-3">{d.motivo}</div>}
@@ -156,15 +156,15 @@ function Stat({
     <div
       className={
         warn
-          ? 'rounded-md border border-warn/40 bg-warn/10 px-3 py-2'
-          : 'rounded-md border border-[var(--border)] bg-painel-solido/40 px-3 py-2'
+          ? 'rounded-md border border-aviso/40 bg-aviso/10 px-3 py-2'
+          : 'rounded-md border border-fio-2 bg-painel-solido/40 px-3 py-2'
       }
     >
       <div className="text-micro font-semibold tracking-wider text-fg-3">
         {label}
       </div>
       <div className="mt-0.5 text-sm font-semibold text-fg">{value}</div>
-      {hint && <div className="mt-0.5 text-micro text-warn">{hint}</div>}
+      {hint && <div className="mt-0.5 text-micro text-aviso">{hint}</div>}
     </div>
   );
 }
@@ -173,7 +173,7 @@ function CorteRow({ corte }: { corte: AuditoriaCorteItem }) {
   // Mesmo critério: cortes abaixo de 8 min violam o mínimo absoluto da skill.
   const abaixoMinimo = corte.duracao_min > 0 && corte.duracao_min < 8;
   return (
-    <li className="rounded-md border border-[var(--border)] bg-painel-solido/40 px-3 py-2">
+    <li className="rounded-md border border-fio-2 bg-painel-solido/40 px-3 py-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="text-sm font-semibold text-fg">
           <span className="mr-2 font-mono text-fg-3">#{corte.numero}</span>
@@ -182,7 +182,7 @@ function CorteRow({ corte }: { corte: AuditoriaCorteItem }) {
         <div
           className={
             abaixoMinimo
-              ? 'rounded-full bg-warn/20 px-2 py-0.5 text-micro font-semibold text-warn'
+              ? 'rounded-full bg-aviso/13 px-2 py-0.5 text-micro font-semibold text-aviso'
               : 'text-micro text-fg-3'
           }
           title={abaixoMinimo ? 'Abaixo do mínimo de 8 min definido pela skill' : undefined}

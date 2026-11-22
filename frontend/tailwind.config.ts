@@ -14,18 +14,17 @@ const config: Config = {
   darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
-    extend: {
-      // D-1181: o degrau 13 (§9.2 da Sala escura) não está na escala padrão do
-      // Tailwind 3. Sem ele, `bg-ok/13` não gera CSS e o fundo some em silêncio.
-      opacity: {
-        13: '0.13',
-      },
-      colors: {
-      // D-1113 (E-069 H-02): chaves da Sala escura (D-1111 §4.6), ao lado das antigas.
-      // `info` fica de fora de propósito: a chave já existe (`--info`) e sobrescrevê-la
-      // mudaria a tela atual; o `--cc-info` entra quando a H-24 remover a camada antiga.
-      // Os tokens translúcidos (painel, vidro*, pop, poco, fio*) já levam o alfa
-      // e não aceitam modificador `/NN`.
+    // D-1191 (E-069 H-24c): `colors` sai de `extend` e vira `theme.colors`: a paleta padrão do
+    // Tailwind (slate, red, blue…) e as chaves antigas (bg, surface, accent, text, border, wb)
+    // deixam de existir. Só as chaves da Sala escura e o que o vídeo exige (preto e branco do
+    // scrim, `transparent`, `current`) ficam. Os tokens translúcidos (painel, vidro*, pop, poco,
+    // fio*) já levam o alfa e não aceitam modificador `/NN`.
+    colors: {
+      transparent: 'transparent',
+      current: 'currentColor',
+      inherit: 'inherit',
+      black: 'rgb(0 0 0 / <alpha-value>)',
+      white: 'rgb(255 255 255 / <alpha-value>)',
       app: { DEFAULT: cc('bg'), 2: cc('bg-2') },
       painel: { DEFAULT: 'var(--cc-painel)', solido: cc('painel-solido') },
       vidro: { DEFAULT: 'var(--cc-vidro)', 2: 'var(--cc-vidro-2)', 3: 'var(--cc-vidro-3)' },
@@ -48,76 +47,15 @@ const config: Config = {
       ok: cc('ok'),
       aviso: cc('aviso'),
       erro: { DEFAULT: cc('erro'), cheio: cc('erro-cheio') },
+      info: cc('info'),
       fire: cc('fire'),
       foco: cc('foco'),
-        bg: {
-          500: comAlfa('--bg-500'),
-          600: comAlfa('--bg-600'),
-          700: comAlfa('--bg-700'),
-          800: comAlfa('--bg-800'),
-          900: comAlfa('--bg-900'),
-          950: comAlfa('--bg-950'),
-        },
-        surface: {
-          1: comAlfa('--surface-1'),
-          2: comAlfa('--surface-2'),
-          3: comAlfa('--surface-3'),
-        },
-        accent: {
-          200: comAlfa('--accent-200'),
-          300: comAlfa('--accent-300'),
-          400: comAlfa('--accent-400'),
-          500: comAlfa('--accent-500'),
-          600: comAlfa('--accent-600'),
-          700: comAlfa('--accent-700'),
-        },
-        text: {
-          100: comAlfa('--text-100'),
-          200: comAlfa('--text-200'),
-          300: comAlfa('--text-300'),
-          400: comAlfa('--text-400'),
-          500: comAlfa('--text-500'),
-        },
-        border: {
-          DEFAULT: comAlfa('--border'),
-          hover: comAlfa('--border-hover'),
-          accent: comAlfa('--border-accent'),
-        },
-        success: comAlfa('--success'),
-        warning: comAlfa('--warning'),
-        error: comAlfa('--error'),
-        info: comAlfa('--info'),
-        wb: {
-          bg: comAlfa('--wb-bg'),
-          'bg-panel': comAlfa('--wb-bg-panel'),
-          'bg-card': comAlfa('--wb-bg-card'),
-          'bg-card-elev': comAlfa('--wb-bg-card-elev'),
-          'bg-inset': comAlfa('--wb-bg-inset'),
-          border: comAlfa('--wb-border'),
-          'border-soft': comAlfa('--wb-border-soft'),
-          text: comAlfa('--wb-text'),
-          'text-mute': comAlfa('--wb-text-mute'),
-          'text-dim': comAlfa('--wb-text-dim'),
-          accent: comAlfa('--wb-accent'),
-          'accent-strong': comAlfa('--wb-accent-strong'),
-          'accent-soft': comAlfa('--wb-accent-soft'),
-          ink: comAlfa('--wb-ink'),
-          'ink-fg': comAlfa('--wb-ink-fg'),
-          ok: comAlfa('--wb-ok'),
-          'ok-soft': comAlfa('--wb-ok-soft'),
-          warn: comAlfa('--wb-warn'),
-          'warn-soft': comAlfa('--wb-warn-soft'),
-          err: comAlfa('--wb-err'),
-          'err-soft': comAlfa('--wb-err-soft'),
-          info: comAlfa('--wb-info'),
-          'info-soft': comAlfa('--wb-info-soft'),
-          violet: comAlfa('--wb-violet'),
-          'violet-soft': comAlfa('--wb-violet-soft'),
-          fire: comAlfa('--wb-fire'),
-          'fire-soft': comAlfa('--wb-fire-soft'),
-          leitura: comAlfa('--wb-leitura'),
-          'leitura-soft': comAlfa('--wb-leitura-soft'),
-        },
+    },
+    extend: {
+      // D-1181: o degrau 13 (§9.2 da Sala escura) não está na escala padrão do
+      // Tailwind 3. Sem ele, `bg-ok/13` não gera CSS e o fundo some em silêncio.
+      opacity: {
+        13: '0.13',
       },
       backgroundImage: {
         feixe:
@@ -147,14 +85,9 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-sans)'],
-        serif: ['var(--font-serif)'],
         mono: ['var(--font-mono)'],
       },
       borderRadius: {
-        sm: 'var(--radius-sm)',
-        DEFAULT: 'var(--radius)',
-        lg: 'var(--radius-lg)',
-        xl: 'var(--radius-xl)',
         etiqueta: '6px',
         ladrilho: '9px',
         campo: '12px',
@@ -166,10 +99,6 @@ const config: Config = {
         pilula: '999px',
       },
       boxShadow: {
-        sm: 'var(--shadow-sm)',
-        DEFAULT: 'var(--shadow-md)',
-        lg: 'var(--shadow-lg)',
-        glow: 'var(--shadow-glow)',
         topo: 'inset 0 1px 0 var(--cc-fio-topo)',
         // `painel-luz`/`pop-luz`, não `painel`/`pop`: esses nomes já são cores e o
         // `shadow-*` aceita cor — a regra de cor venceria e apagaria o fio de luz.

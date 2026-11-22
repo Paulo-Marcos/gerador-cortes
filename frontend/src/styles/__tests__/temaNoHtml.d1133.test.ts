@@ -31,7 +31,7 @@ describe('o tema mora no <html> (D-1133)', () => {
   });
 
   it('nenhum tema antigo sobrou nas telas', () => {
-    const css = ler('../../upgrade/upgrade.css') + ler('../../index.css');
+    const css = ler('../../index.css');
     expect(css).not.toMatch(/\[data-theme='(papel|nevoa|ardosia)'\]/);
   });
 });

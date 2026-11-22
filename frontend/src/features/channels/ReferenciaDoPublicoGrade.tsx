@@ -64,7 +64,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
                     aria-label={`${diasDaSemana[dia] ?? dia} ${hora}h: ${ROTULO_DA_INTENSIDADE[intensidade]}`}
                     title={`${hora}h — ${ROTULO_DA_INTENSIDADE[intensidade]} (clique para trocar)`}
                     className={cn(
-                      'block h-[18px] w-[18px] rounded-[3px] transition-colors hover:ring-2 hover:ring-foco disabled:cursor-not-allowed',
+                      'block h-[18px] w-[18px] rounded-etiqueta transition-colors hover:ring-2 hover:ring-foco disabled:cursor-not-allowed',
                       COR_DA_INTENSIDADE[intensidade],
                     )}
                   />
@@ -77,7 +77,7 @@ export function ReferenciaDoPublicoGrade({ grade, diasDaSemana, onTrocar, desabi
       <p className="mt-1.5 flex flex-wrap items-center gap-3 text-micro text-fg-2">
         {(['forte', 'medio', 'fraco'] as const).map((i) => (
           <span key={i} className="inline-flex items-center gap-1">
-            <span className={cn('inline-block h-3 w-3 rounded-[3px]', COR_DA_INTENSIDADE[i])} />
+            <span className={cn('inline-block h-3 w-3 rounded-etiqueta', COR_DA_INTENSIDADE[i])} />
             {ROTULO_DA_INTENSIDADE[i]}
           </span>
         ))}

@@ -42,9 +42,9 @@ describe('página Kit', () => {
     expect(html).not.toContain('role="dialog"');
   });
 
-  it('todo botão e campo da página é da Sala (data-sala)', () => {
-    const focaveis = ['button', 'input', 'select', 'textarea'].flatMap(tagsAbertas);
-    expect(focaveis.length).toBeGreaterThan(20);
+  it('todo campo da página é da Sala (data-sala)', () => {
+    const focaveis = ['input', 'select', 'textarea'].flatMap(tagsAbertas);
+    expect(focaveis.length).toBeGreaterThan(10);
     // O <select> nativo escondido do Radix (aria-hidden) não é peça: é o espelho do formulário.
     const antigos = focaveis.filter((t) => !t.includes('data-sala') && !t.includes('aria-hidden'));
     expect(antigos).toEqual([]);

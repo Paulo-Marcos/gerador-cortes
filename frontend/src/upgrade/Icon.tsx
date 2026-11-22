@@ -161,6 +161,7 @@ import {
   ZoomOut,
   type LucideIcon,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · Ponte entre o handoff e o lucide-react.
@@ -401,10 +402,10 @@ export function Icon({ name, size = 14, ilustracao, rotulo, className, style }: 
     <Glyph
       size={ilustracao ?? size}
       strokeWidth={TRACO}
-      className={className}
       // Ícone nunca encolhe: numa linha flex apertada (trilha longa, abas da
       // Pós) o padrão `flex-shrink: 1` o espremia a 5–10 px (D-854).
-      style={{ flexShrink: 0, ...style }}
+      className={cn('shrink-0', className)}
+      style={style}
       {...(rotulo ? { role: 'img', 'aria-label': rotulo } : { 'aria-hidden': true })}
     />
   );

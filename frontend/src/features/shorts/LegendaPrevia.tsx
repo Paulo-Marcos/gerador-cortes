@@ -219,8 +219,8 @@ export function LegendaPrevia({
               // a um gesto que não acontece.
               'pointer-events-auto absolute select-none rounded-[6px] text-center outline-dashed outline-1 outline-offset-4 ' +
               (arrastando
-                ? 'cursor-grabbing outline-[var(--wb-accent)]'
-                : 'cursor-grab outline-white/30 hover:outline-[var(--wb-accent)]')
+                ? 'cursor-grabbing outline-iris'
+                : 'cursor-grab outline-white/30 hover:outline-iris')
             : 'absolute text-center'
         }
         style={{
@@ -270,7 +270,7 @@ export function LegendaPrevia({
                 key={`${token.deSeg}-${indice}`}
                 style={{
                   whiteSpace: 'pre',
-                  color: corrente ? cor || 'var(--wb-accent)' : '#ffffff',
+                  color: corrente ? cor || 'var(--cc-iris)' : '#ffffff',
                 }}
               >
                 {token.texto}

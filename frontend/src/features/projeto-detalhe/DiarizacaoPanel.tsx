@@ -52,7 +52,7 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
     );
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-painel-solido/40 p-3">
+    <div className="flex flex-col gap-3 rounded-campo border border-fio-2 bg-painel-solido/40 p-3">
       <label className="flex items-start gap-2 text-xs text-fg-2">
         <input
           type="checkbox"
@@ -73,7 +73,7 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
       </label>
 
       {usarDiarizacao && (
-        <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-3">
+        <div className="flex flex-col gap-3 border-t border-fio-2 pt-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-micro text-fg-3">
               {temFalantes

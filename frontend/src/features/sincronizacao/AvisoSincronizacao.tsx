@@ -36,7 +36,7 @@ export function AvisoSincronizacao() {
   return (
     <div
       role="status"
-      className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1 border-b border-aviso bg-aviso/13 px-4 py-1.5 text-pequeno text-aviso shadow-sm"
+      className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1 border-b border-aviso bg-aviso/13 px-4 py-1.5 text-pequeno text-aviso shadow-topo"
     >
       <Icon name="triangle-alert" className="flex-none" />
       <span className="font-bold">Fora de sincronia.</span>
