@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { Aurora } from '@/components/ui/aurora';
 import {
@@ -215,14 +215,12 @@ function Casca({ children, fila }: CascaProps) {
 
   return (
     <div
-      className={cn('ap relative isolate grid min-h-0 overflow-hidden', parte.trilho && 'gap-3 p-3')}
+      // D-879: `h-full` é o que o App lhe dá; o aviso de sincronia pode estar acima.
+      className={cn('ap relative isolate grid h-full min-h-0 grid-cols-[var(--colunas)] overflow-hidden', parte.trilho && 'gap-3 p-3')}
       data-theme={theme}
       data-glass={glass ? '1' : '0'}
       data-vidro={luz.vidro ? '1' : '0'}
-      style={{
-        gridTemplateColumns: parte.trilho ? `${expandido ? TRILHO_LARGO : TRILHO_ESTREITO} 1fr` : '1fr',
-        height: '100%', // D-879: o que o App lhe dá; o aviso de sincronia pode estar acima
-      }}
+      style={{ '--colunas': parte.trilho ? `${expandido ? TRILHO_LARGO : TRILHO_ESTREITO} 1fr` : '1fr' } as CSSProperties}
     >
       <PularParaOConteudo />
       {luz.aurora === 'nenhuma' ? null : <Aurora src={luz.src} />}

@@ -14,7 +14,7 @@ export function ThumbnailPlaceholder({
   const patternId = `thumb-pattern-${hue}`;
 
   return (
-    <div className={cn('relative aspect-video overflow-hidden bg-[var(--wb-bg-inset)]', className)}>
+    <div className={cn('relative aspect-video overflow-hidden bg-poco', className)}>
       <svg
         viewBox="0 0 320 180"
         preserveAspectRatio="xMidYMid slice"

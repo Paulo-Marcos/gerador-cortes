@@ -32,7 +32,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           aria-invalid={campo?.invalido ? true : undefined}
           aria-describedby={props['aria-describedby'] ?? campo?.describedBy}
           className={cn(
-            'fld w-full placeholder:text-[var(--dim)] focus-visible:border-[var(--accent)] focus-visible:outline-none',
+            // `!`: a casca antiga (`.ap input:where(:not([data-sala]))`) fixa fonte e raio por cima das utilidades.
+            'h-[30px] w-full !rounded-campo border border-fio-2 bg-poco px-[9px] !text-pequeno text-fg placeholder:text-fg-3 focus-visible:border-iris focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco',
             'disabled:cursor-not-allowed disabled:opacity-50',
             className,
           )}

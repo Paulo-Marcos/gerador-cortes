@@ -68,8 +68,8 @@ describe('Card legado', () => {
   it('é exatamente o cartão que as telas já usam: mesmas classes, sem acréscimo', () => {
     const h = renderToStaticMarkup(<Card />);
     expect(h).toContain(
-      'rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] shadow-[shadow:var(--wb-shadow)]',
+      'rounded-campo border border-fio bg-painel-solido shadow-topo',
     );
-    expect(h).not.toMatch(/shadow-topo|bg-vidro|rounded-cartao|flex/);
+    expect(h).not.toMatch(/bg-vidro|rounded-cartao|flex/);
   });
 });

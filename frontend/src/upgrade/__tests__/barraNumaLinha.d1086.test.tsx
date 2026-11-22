@@ -24,21 +24,22 @@ const html = renderToStaticMarkup(
 
 describe('D-1086 · a barra de ações numa fileira, com a quebra como rede', () => {
   it('o principal nunca fica fora da barra: sem largura, a barra quebra em vez de cortar', () => {
-    expect(html).toMatch(/^<div class="[^"]*cc-vidro-casca[^"]*" style="[^"]*flex-wrap:wrap/);
+    expect(html).toMatch(/^<div class="[^"]*cc-vidro-casca[^"]*flex-wrap[^"]*"/);
   });
 
   it('o motivo entra na conta da quebra só com o mínimo legível e cresce na sobra', () => {
     const motivo = html.match(/<span id="motivo-do-primario"[^>]*>/)?.[0] ?? '';
-    expect(motivo).toContain('min-width:96px');
-    expect(motivo).toContain('flex:1000 1 0');
-    expect(motivo).toContain('max-width:max-content');
+    expect(motivo).toContain('min-w-[96px]');
+    expect(motivo).toContain('flex-[1000_1_0]');
+    expect(motivo).toContain('max-w-max');
   });
 
   it('o motivo não passa de 320 px nem de duas linhas (D-870)', () => {
-    expect(html).toMatch(/-webkit-line-clamp:2;[^"]*max-width:320px[^>]*>Sem o vídeo bruto/);
+    expect(html).toMatch(/\[-webkit-line-clamp:2\][^"]*"[^>]*>Sem o vídeo bruto/);
+    expect(html).toContain('max-w-[320px]');
   });
 
   it('o lembrete de tecla não encolhe nem quebra', () => {
-    expect(html).toMatch(/<span style="[^"]*flex:none;white-space:nowrap[^"]*"><kbd>Space<\/kbd>tocar<\/span>/);
+    expect(html).toMatch(/<span class="[^"]*flex-none[^"]*whitespace-nowrap[^"]*"><kbd>Space<\/kbd>tocar<\/span>/);
   });
 });

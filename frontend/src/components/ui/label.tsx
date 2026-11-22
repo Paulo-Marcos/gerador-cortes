@@ -12,7 +12,7 @@ export const Label = React.forwardRef<
     className={cn(
       aparencia === 'sala'
         ? 'text-xs font-semibold leading-4 text-fg-2 peer-disabled:text-fg-off'
-        : 'text-xs font-medium text-text-300 peer-disabled:opacity-50',
+        : 'text-xs font-medium text-fg-2 peer-disabled:opacity-50',
       className,
     )}
     {...props}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 import type { LimpezaDoProjeto } from '@/features/projetos/limpezaDoProjeto';
 import type { EstadoProjetoKey } from '@/features/projetos/statusMaps';
 
@@ -38,14 +39,23 @@ export type TomDoSelo = 'ok' | 'aviso' | 'info' | 'erro' | 'inerte';
  *  lista de cortes tinha a sua própria cópia — e nela "aprovado" ainda saía
  *  na tinta dos botões. */
 export const COR_DO_SELO: Record<TomDoSelo, { cor: string; bg: string }> = {
-  ok: { cor: 'var(--ok)', bg: 'var(--ok-soft)' }, // fechado, nada a fazer
-  aviso: { cor: 'var(--warn)', bg: 'var(--warn-soft)' }, // convida a um ato
-  info: { cor: 'var(--info)', bg: 'var(--info-soft)' }, // em curso
-  erro: { cor: 'var(--err)', bg: 'var(--err-soft)' }, // travou
-  // R4: `--mute`, não `--dim`, e sem opacidade — o selo inerte media
+  ok: { cor: 'var(--cc-ok)', bg: 'color-mix(in srgb, var(--cc-ok) 13%, transparent)' }, // fechado, nada a fazer
+  aviso: { cor: 'var(--cc-aviso)', bg: 'color-mix(in srgb, var(--cc-aviso) 13%, transparent)' }, // convida a um ato
+  info: { cor: 'var(--cc-info)', bg: 'color-mix(in srgb, var(--cc-info) 13%, transparent)' }, // em curso
+  erro: { cor: 'var(--cc-erro)', bg: 'color-mix(in srgb, var(--cc-erro) 13%, transparent)' }, // travou
+  // R4: `fg-2`, não `fg-3`, e sem opacidade — o selo inerte media
   // 2,82-3,07 fora de Ardósia. A hierarquia continua de pé porque quem a
   // carrega é o FUNDO (transparente contra chip colorido), não a tinta.
-  inerte: { cor: 'var(--mute)', bg: 'transparent' }, // verdade fria, sem convite
+  inerte: { cor: 'var(--cc-fg-2)', bg: 'transparent' }, // verdade fria, sem convite
+};
+
+/** As mesmas cinco tintas do `COR_DO_SELO`, em classe: borda, fundo, texto e o ponto. */
+const CLASSE_DO_TOM: Record<TomDoSelo, { selo: string; ponto: string }> = {
+  ok: { selo: 'border-ok bg-ok/13 text-ok', ponto: 'bg-ok' },
+  aviso: { selo: 'border-aviso bg-aviso/13 text-aviso', ponto: 'bg-aviso' },
+  info: { selo: 'border-info bg-info/13 text-info', ponto: 'bg-info' },
+  erro: { selo: 'border-erro bg-erro/13 text-erro', ponto: 'bg-erro' },
+  inerte: { selo: 'border-fg-2 bg-transparent text-fg-2', ponto: 'bg-fg-2' },
 };
 
 export function SeloDeEstado({
@@ -64,42 +74,22 @@ export function SeloDeEstado({
    *  A arte da live vem cheia de cor alta e engoliria um fundo -soft. */
   sobreArte?: boolean;
 }) {
-  const { cor: corDoTom, bg: bgDoTom } = COR_DO_SELO[tom];
-  const cor = sobreArte ? '#fff' : corDoTom;
-  const bg = sobreArte ? 'rgb(10 14 24 / 0.62)' : bgDoTom;
+  const classes = CLASSE_DO_TOM[tom];
   return (
     <span
       title={dica}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        height: 20,
-        padding: '0 7px',
-        flex: 'none',
-        border: `1px solid ${sobreArte ? 'rgb(255 255 255 / 0.28)' : cor}`,
-        borderRadius: 'var(--r1)',
-        background: bg,
-        color: cor,
-        fontFamily: 'var(--mono)',
-        // D-859: o piso de texto é 11 px (era 9,5).
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: '.06em',
-        textTransform: 'uppercase',
-        // nowrap é obrigatório: o selo tem `height` fixa, e sem isto um
+      className={cn(
+        // nowrap é obrigatório: o selo tem altura fixa, e sem isto um
         // rótulo de duas palavras quebra em duas linhas e a segunda é
         // cortada. Foi um defeito real da rodada 3.
-        whiteSpace: 'nowrap',
-        backdropFilter: sobreArte ? 'blur(8px)' : undefined,
-      }}
+        // D-859: o piso de texto é 11 px (era 9,5).
+        'inline-flex h-5 flex-none items-center gap-[5px] whitespace-nowrap rounded-etiqueta border px-[7px] font-mono text-micro font-bold tracking-[.06em]',
+        // Sobre a arte o desfoque saiu (DIRECAO §3.6: vidro só na casca); o fundo sobe
+        // de 0,62 para 0,74 para a arte colorida não passar por baixo do texto.
+        sobreArte ? 'border-[rgb(255_255_255/0.28)] bg-[rgb(10_14_24/0.74)] text-[#fff]' : classes.selo,
+      )}
     >
-      {ponto ? (
-        <span
-          aria-hidden
-          style={{ width: 5, height: 5, borderRadius: 99, background: corDoTom, flex: 'none' }}
-        />
-      ) : null}
+      {ponto ? <span aria-hidden className={cn('size-[5px] flex-none rounded-full', classes.ponto)} /> : null}
       {children}
     </span>
   );
@@ -139,17 +129,6 @@ export const TOM_DO_PROJETO = {
   publicando: 'info',
   publicado: 'ok',
 } as const satisfies Record<EstadoProjetoKey, TomDoSelo>;
-
-/**
- * R4: a etapa da live (Baixado, Analisado, Cortes…), nas duas telas que a
- * desenham — o card da Biblioteca e a faixa do Workspace. O Workspace só
- * tinha dois estados e perdia o âmbar do "é aqui que está".
- */
-export const TOM_DA_ETAPA = {
-  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', filete: 'none' },
-  'em-curso': { bg: 'var(--warn-soft)', cor: 'var(--warn)', filete: 'inset 0 0 0 1px var(--warn)' },
-  pendente: { bg: 'var(--inset)', cor: 'var(--mute)', filete: 'none' },
-} as const;
 
 /**
  * Tom do estado do CORTE, para substituir o `TOM` do CorteLinhaAp.

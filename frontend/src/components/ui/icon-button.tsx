@@ -12,30 +12,16 @@ import { cn } from '@/lib/utils';
 // elas carregam significado, e trocar significado por estética seria
 // perder informação.
 
-const AP_SIZES: Record<NonNullable<IconButtonLegadoProps['size']>, string> = {
-  sm: 'btn btn-icon btn-sm',
-  md: 'btn btn-icon',
-  lg: 'btn btn-icon',
-  toolbar: 'btn btn-icon',
-  'toolbar-sm': 'btn btn-icon btn-sm',
-};
-
-const AP_VARIANTS: Record<VarianteLegada, string> = {
-  ghost: 'btn-ghost',
-  outline: '',
-  solid: 'btn-pri',
-  accent: 'btn-pri',
-  'err-outline': 'btn-danger',
-  inset: 'btn-soft',
-  'toggle-active': '',
-};
-
-const AP_INLINE: Partial<Record<VarianteLegada, React.CSSProperties>> = {
-  'toggle-active': {
-    borderColor: 'var(--accent)',
-    background: 'var(--accent-soft)',
-    color: 'var(--accent)',
-  },
+// O contrato antigo (`ghost`, `outline`…) segue aceito, mas desenhado pelo mesmo botão de luz:
+// toda variante antiga cai numa das quatro novas, e todo tamanho vira o círculo de 30 px.
+const LUZ_DO_LEGADO: Record<VarianteLegada, 'fantasma' | 'secundario' | 'destrutivo'> = {
+  ghost: 'fantasma',
+  outline: 'secundario',
+  solid: 'secundario',
+  accent: 'secundario',
+  'err-outline': 'destrutivo',
+  inset: 'secundario',
+  'toggle-active': 'secundario',
 };
 
 type VarianteLegada =
@@ -88,13 +74,17 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>((
       />
     );
   }
-  const { className, variant = 'ghost', size = 'md', type = 'button', style, ...resto } = props;
+  // `size` do contrato antigo não muda nada: todos viram o círculo de 30 px.
+  const { className, variant = 'ghost', type = 'button', size: _tamanho, ...resto } = props;
   return (
     <button
       ref={ref}
       type={type}
-      className={cn(AP_SIZES[size], AP_VARIANTS[variant], className)}
-      style={{ ...AP_INLINE[variant], ...style }}
+      className={cn(
+        botaoDeLuz({ variante: LUZ_DO_LEGADO[variant], tamanho: 'pq', soIcone: true }),
+        variant === 'toggle-active' && 'border-iris-fio bg-iris-suave text-iris',
+        className,
+      )}
       {...resto}
     />
   );

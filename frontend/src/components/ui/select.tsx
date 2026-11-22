@@ -88,7 +88,7 @@ export function Select({
                 key={o.valor}
                 value={o.valor}
                 disabled={o.desabilitada}
-                className="relative flex cursor-pointer select-none items-center justify-between gap-3 rounded-[10px] px-3 py-2 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-fg-off data-[highlighted]:bg-vidro-3 data-[state=checked]:text-iris-2"
+                className="relative flex cursor-pointer select-none items-center justify-between gap-3 rounded-[10px] px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco data-[disabled]:cursor-not-allowed data-[disabled]:text-fg-off data-[highlighted]:bg-vidro-3 data-[state=checked]:text-iris-2"
               >
                 <RadixSelect.ItemText>{o.rotulo}</RadixSelect.ItemText>
                 <RadixSelect.ItemIndicator>

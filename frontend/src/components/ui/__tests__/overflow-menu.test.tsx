@@ -77,8 +77,8 @@ describe('OverflowMenu', () => {
       renderToStaticMarkup(<OverflowMenu label="Mais ações" items={itens} />),
     );
     // O botão perigoso também leva a cor de erro: a conferência é no <svg>.
-    expect(svgDe(apagar)).toContain('text-[var(--wb-err)]');
-    expect(svgDe(finalizar)).toContain('text-[var(--wb-text-mute)]');
+    expect(svgDe(apagar)).toContain('text-erro');
+    expect(svgDe(finalizar)).toContain('text-fg-2');
   });
 
   it('item sem ícone não desenha svg', () => {
@@ -97,7 +97,7 @@ describe('OverflowMenu com rótulo (D-867)', () => {
   it('o gatilho é um botão do cabeçalho com o ícone ⋯ e o texto, que é o nome dele', () => {
     const html = renderToStaticMarkup(<OverflowMenu texto="Mais" items={itens} />);
     const gatilho = html.match(/<button[^>]*>.*?<\/button>/)?.[0] ?? '';
-    expect(gatilho).toContain('class="btn"');
+    expect(gatilho).toContain('h-botao-pq');
     expect(gatilho).toContain('lucide-ellipsis');
     expect(gatilho).toMatch(/>Mais<\/button>$/);
     expect(gatilho).toContain('aria-haspopup="menu"');

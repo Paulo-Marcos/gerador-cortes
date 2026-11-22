@@ -63,7 +63,6 @@ const AtalhosPage = lazy(() =>
 // nivel superior (fora do <App/>) de proposito — ver UpgradeKitPage.
 const UpgradeKitPage = lazy(() => import('@/upgrade/UpgradeKitPage'));
 // D-599 Etapa 1: a casca com os dados de demonstracao da LIVE 267.
-const UpgradeShellDemoPage = lazy(() => import('@/upgrade/UpgradeShellDemoPage'));
 // D-599 Etapa 2: a Biblioteca na linguagem nova. A troca e feita aqui, uma
 // vez, na montagem do router — a mesma leitura de flag que o AppShell faz
 // para escolher a casca. Assim tela e casca nunca ficam em versoes
@@ -126,14 +125,6 @@ export const router = createBrowserRouter([
           element: (
             <Suspense fallback={null}>
               <UpgradeKitPage />
-            </Suspense>
-          ),
-        },
-        {
-          path: '/upgrade/shell',
-          element: (
-            <Suspense fallback={null}>
-              <UpgradeShellDemoPage />
             </Suspense>
           ),
         },

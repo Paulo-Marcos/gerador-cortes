@@ -1,4 +1,5 @@
 import { NOME_DA_PREFERENCIA, PREFERENCIAS, useUpgradeTheme, type Preferencia } from '@/lib/tema';
+import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Icon, type IconName } from './Icon';
 
@@ -27,7 +28,7 @@ function Segmentado<T extends string>({
   onEscolher: (v: T) => void;
 }) {
   return (
-    <div style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 'var(--r2)', background: 'var(--inset)' }}>
+    <div className="flex gap-0.5 rounded-campo bg-poco p-0.5">
       {opcoes.map((o) => {
         const ativa = o.id === valor;
         return (
@@ -36,21 +37,11 @@ function Segmentado<T extends string>({
             type="button"
             onClick={() => onEscolher(o.id)}
             aria-pressed={ativa}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              height: 26,
-              padding: '0 10px',
-              border: 0,
-              borderRadius: 'var(--r1)',
-              background: ativa ? 'var(--panel)' : 'transparent',
-              color: ativa ? 'var(--ink)' : 'var(--mute)',
-              boxShadow: ativa ? 'var(--hi)' : 'none',
-              fontSize: 11.5,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className={cn(
+              // `!`: a casca antiga fixa fonte e raio do botão por cima das utilidades.
+              'inline-flex h-[26px] cursor-pointer items-center gap-[5px] !rounded-etiqueta border-0 px-2.5 !text-micro font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco',
+              ativa ? 'bg-painel-solido text-fg shadow-topo' : 'bg-transparent text-fg-2',
+            )}
           >
             <Icon name={o.icone} />
             {o.texto}
@@ -65,13 +56,10 @@ export function AparenciaDaCasca() {
   const { preferencia, setTheme, glass, setGlass } = useUpgradeTheme();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <span className="lbl">Aparência</span>
-      <div
-        className="card"
-        style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: 13 }}
-      >
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>Tema</span>
+    <div className="flex flex-col gap-2">
+      <span className="font-mono text-micro font-bold tracking-[0.1em] text-fg-3">Aparência</span>
+      <div className="flex flex-wrap items-center gap-3 rounded-cartao border border-fio bg-painel-solido p-[13px] shadow-topo">
+        <span className="text-corpo font-semibold">Tema</span>
         <Segmentado
           valor={preferencia}
           onEscolher={setTheme}
@@ -82,7 +70,7 @@ export function AparenciaDaCasca() {
           }))}
         />
 
-        <span style={{ width: 1, height: 22, background: 'var(--line)' }} aria-hidden />
+        <span className="h-[22px] w-px bg-fio-2" aria-hidden />
 
         {/* D-1137 (DIRECAO §3.6): a saída de emergência da luz. Ligado, tira a aurora
             e troca o vidro da casca por sólido. É o vidro desligado (`upgrade-glass`). */}

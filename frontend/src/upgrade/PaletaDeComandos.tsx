@@ -335,7 +335,7 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
           origem.current = null;
         }}
         className={cn(
-          'fixed left-1/2 top-[12vh] z-[65] flex max-h-[76dvh] w-[min(600px,calc(100vw-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-dialogo outline-none',
+          'fixed left-1/2 top-[12vh] z-[65] flex max-h-[76dvh] w-[min(600px,calc(100vw-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-dialogo outline-none focus-visible:ring-2 focus-visible:ring-foco',
           PELE_FLUTUANTE,
         )}
       >

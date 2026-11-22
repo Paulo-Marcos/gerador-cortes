@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { CLAUDE_BRAND, ClaudeIcon } from '@/components/ui/claude-button';
 import { GEMINI_BRAND, GeminiIcon } from '@/components/ui/gemini-button';
 import type { ProviderIA } from '@/lib/providerIa';
@@ -26,7 +26,7 @@ const PROVEDORES: {
 ];
 
 const TAMANHOS = {
-  sm: { altura: 'h-7', texto: 'text-[11.5px]', icone: 14, botao: 'w-7' },
+  sm: { altura: 'h-7', texto: 'text-micro', icone: 14, botao: 'w-7' },
   md: { altura: 'h-9', texto: 'text-corpo', icone: 16, botao: 'w-9' },
 } as const;
 
@@ -55,7 +55,7 @@ function classeDoProvedor(o: {
   const { sala, t, comNome } = o;
   return cn(
     'grid shrink-0 place-items-center transition-colors',
-    o.comDivisoria && (sala ? 'border-l border-fio' : 'border-l border-[var(--wb-border-soft)]'),
+    o.comDivisoria && ('border-l border-fio'),
     o.apenasProvedores && 'flex-1',
     // Partem da largura natural (auto, não 0): só assim falta espaço e o
     // verbo, e não o nome, é quem encolhe.
@@ -66,7 +66,7 @@ function classeDoProvedor(o: {
       ),
     sala
       ? 'text-fg-2 hover:bg-vidro-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco active:bg-vidro'
-      : 'hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
+      : cn(comNome ? 'text-fg' : 'text-[var(--marca)]', 'hover:bg-poco focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco'),
     'disabled:cursor-not-allowed',
     o.esmaecido && 'opacity-40',
     !comNome && t.botao,
@@ -81,13 +81,7 @@ function classeDoRotulo(o: {
   destaque: boolean;
 }) {
   const { sala, destaque } = o;
-  const cor = sala
-    ? destaque
-      ? 'text-iris'
-      : 'text-fg'
-    : destaque
-      ? 'text-[var(--wb-accent)]'
-      : 'text-[var(--wb-text)]';
+  const cor = destaque ? 'text-iris' : 'text-fg';
   return cn(
     // min-w-0: numa coluna estreita é o TEXTO que encolhe (com reticências),
     // nunca os botões dos provedores — sem eles a ação não existe.
@@ -107,7 +101,7 @@ function classeDoGrupo(sala: boolean, altura: string, className?: string) {
     'inline-flex items-stretch overflow-hidden',
     sala
       ? 'rounded-pilula border border-fio-2 bg-vidro-2 text-fg shadow-topo'
-      : 'rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-card)]',
+      : 'rounded-campo border border-fio-2 bg-painel-solido',
     altura,
     className,
   );
@@ -220,13 +214,13 @@ export function AcaoDeIa({
             esmaecido: travado && emVoo !== id,
           })}
           // Com o nome escrito, a marca fica só no ícone: o texto é neutro (D-871,
-          // a cor do painel fica para estado).
-          style={sala ? undefined : { color: comNome ? 'var(--wb-text)' : cor }}
+          // a cor do painel fica para estado). A cor da marca entra por variável CSS.
+          style={sala ? undefined : ({ '--marca': cor } as CSSProperties)}
         >
           {emVoo === id ? (
             <Icon name="loader-2" size={t.icone} className="animate-spin" />
           ) : comNome ? (
-            <span className="flex flex-none" style={sala ? undefined : { color: cor }}>
+            <span className={cn('flex flex-none', !sala && 'text-[var(--marca)]')}>
               <Icone size={t.icone} />
             </span>
           ) : (
@@ -278,7 +272,7 @@ function BotaoDasDuas({
         'flex shrink-0 items-center gap-1 border-l px-2 font-medium transition-colors',
         sala
           ? 'border-fio text-fg-2 hover:bg-vidro-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco'
-          : 'border-[var(--wb-border-soft)] text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wb-focus)]',
+          : 'border-fio text-fg hover:bg-poco focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foco',
         t.texto,
         'disabled:cursor-not-allowed',
         travado && !emVoo && 'opacity-40',
@@ -288,7 +282,11 @@ function BotaoDasDuas({
         <Icon name="loader-2" size={t.icone} className="animate-spin" />
       ) : (
         PROVEDORES.map(({ id, cor, Icone }) => (
-          <span key={id} className="flex flex-none" style={sala ? undefined : { color: cor }}>
+          <span
+            key={id}
+            className={cn('flex flex-none', !sala && 'text-[var(--marca)]')}
+            style={sala ? undefined : ({ '--marca': cor } as CSSProperties)}
+          >
             <Icone size={t.icone - 2} />
           </span>
         ))
@@ -361,7 +359,7 @@ export function MenuDeIa({
         aria-haspopup="menu"
         aria-expanded={aberto}
         className={cn(
-          'grid h-8 w-8 place-items-center rounded-[7px] text-[var(--wb-warn)] transition-colors hover:bg-[var(--wb-bg-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50',
+          'grid h-8 w-8 place-items-center rounded-etiqueta text-aviso transition-colors hover:bg-poco focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco disabled:opacity-50',
           classeGatilho,
         )}
       >
@@ -377,11 +375,11 @@ export function MenuDeIa({
           role="menu"
           aria-label={rotulo}
           className={cn(
-            'absolute top-[calc(100%+4px)] z-40 flex w-[240px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]',
+            'absolute top-[calc(100%+4px)] z-40 flex w-[240px] flex-col gap-0.5 rounded-campo border border-fio-2 bg-painel-solido p-2 shadow-pop-luz',
             alinhamento === 'esquerda' ? 'left-0' : 'right-0',
           )}
         >
-          <span className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
+          <span className="px-2 pb-1 text-micro font-semibold tracking-[0.06em] text-fg-3">
             {rotulo}
           </span>
           {PROVEDORES.map(({ id, nome, cor, Icone: IconeProvedor }) => (
@@ -393,9 +391,9 @@ export function MenuDeIa({
                 setAberto(false);
                 onGerar(id);
               }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-pequeno font-normal text-[var(--wb-text)] transition-colors hover:bg-[var(--wb-bg-inset)]"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-pequeno font-normal text-fg transition-colors hover:bg-poco"
             >
-              <span style={{ color: cor }}>
+              <span style={{ '--marca': cor } as CSSProperties} className="text-[var(--marca)]">
                 <IconeProvedor size={14} />
               </span>
               com o {nome}

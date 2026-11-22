@@ -78,10 +78,10 @@ export function ThumbnailHintsEditor({
         type="button"
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          'group inline-flex items-center gap-2 rounded-[var(--radius-sm)] border px-3 py-2 text-[12.5px] font-semibold transition-colors',
+          'group inline-flex items-center gap-2 rounded-campo border px-3 py-2 text-pequeno font-semibold transition-colors',
           hasHints
-            ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-            : 'border-dashed border-[var(--wb-accent)] text-[var(--wb-accent)] hover:bg-[var(--wb-accent-soft)]',
+            ? 'border-iris bg-iris-suave text-iris'
+            : 'border-dashed border-iris text-iris hover:bg-iris-suave',
         )}
         aria-expanded={open}
       >
@@ -89,7 +89,7 @@ export function ThumbnailHintsEditor({
         Influenciar a capa
         {hasHints && (
           <span
-            className="h-1.5 w-1.5 rounded-full bg-[var(--wb-accent)]"
+            className="h-1.5 w-1.5 rounded-full bg-iris"
             aria-label="com sugestões salvas"
           />
         )}
@@ -100,8 +100,8 @@ export function ThumbnailHintsEditor({
       </button>
 
       {open && (
-        <div className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] p-3">
-          <p className="text-[11.5px] leading-snug text-[var(--wb-text-mute)]">
+        <div className="grid gap-2 rounded-campo border border-fio bg-painel-solido p-3">
+          <p className="text-micro leading-snug text-fg-2">
             O que você escrever aqui é somado à inteligência do agente ao gerar o prompt da
             thumbnail.
           </p>
@@ -110,15 +110,14 @@ export function ThumbnailHintsEditor({
             onChange={(event) => setValue(event.target.value)}
             placeholder={PLACEHOLDER}
             rows={4}
-            className="resize-y rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-2.5 text-[12.5px] leading-relaxed text-[var(--wb-text)] outline-none focus:border-[var(--wb-accent)]"
+            className="resize-y rounded-etiqueta border border-fio-2 bg-poco p-2.5 text-pequeno leading-relaxed text-fg outline-none focus:border-iris focus-visible:ring-2 focus-visible:ring-foco"
           />
           <div className="flex items-center justify-between">
-            <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
+            <span className="font-code text-micro text-fg-3">
               {value.length} caracteres
             </span>
             <Button
-              type="button"
-              size="sm"
+              type="button" variant="secundario" size="pq"
               disabled={!dirty || saveMutation.isPending}
               onClick={() => saveMutation.mutate(value.trim())}
             >

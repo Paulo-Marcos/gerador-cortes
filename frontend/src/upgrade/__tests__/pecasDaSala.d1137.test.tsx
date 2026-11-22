@@ -70,7 +70,7 @@ describe('barra de ação em pílula', () => {
   );
 
   it('é uma barra de ferramentas de vidro, em pílula', () => {
-    expect(html).toMatch(/^<div class="cc-vidro-casca [^"]*rounded-pilula[^"]*" style="flex-wrap:wrap" role="toolbar" aria-label="Ações da tela"/);
+    expect(html).toMatch(/^<div class="cc-vidro-casca [^"]*flex-wrap[^"]*rounded-pilula[^"]*" role="toolbar" aria-label="Ações da tela"/);
   });
 
   it('o primário é o botão do feixe, e é um só', () => {

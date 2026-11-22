@@ -89,8 +89,8 @@ describe('SeloDaNota', () => {
   });
 
   it('a cor segue o tom da nota', () => {
-    expect(renderToStaticMarkup(<SeloDaNota score={{ total: 26 }} onAbrir={vi.fn()} />)).toContain('var(--ok)');
-    expect(renderToStaticMarkup(<SeloDaNota score={{ total: 18 }} onAbrir={vi.fn()} />)).toContain('var(--warn)');
+    expect(renderToStaticMarkup(<SeloDaNota score={{ total: 26 }} onAbrir={vi.fn()} />)).toContain('text-ok');
+    expect(renderToStaticMarkup(<SeloDaNota score={{ total: 18 }} onAbrir={vi.fn()} />)).toContain('text-aviso');
   });
 
   it('sem nota, nada é desenhado', () => {

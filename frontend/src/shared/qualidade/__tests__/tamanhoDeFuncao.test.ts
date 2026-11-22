@@ -113,9 +113,8 @@ const EXCECOES: Record<string, number> = {
   "src/hooks/useLipSyncPreview.ts::useLipSyncPreview.useEffect#2": 102,
   "src/shared/palco/youtubeBackgrounds.tsx::FundoThumb": 110,
   "src/shared/palco/youtubeLayout.ts::normalizeYoutubeLayout": 106,
-  "src/upgrade/ActionBar.tsx::ActionBar": 122,
-  "src/upgrade/UpgradeModal.tsx::UpgradeModal": 158,
-  "src/upgrade/UpgradeShell.tsx::Casca": 116,
+  "src/upgrade/ActionBar.tsx::ActionBar": 118,
+  "src/upgrade/UpgradeShell.tsx::Casca": 114,
 };
 
 function nomeDaFuncao(no: ts.SignatureDeclaration): string {

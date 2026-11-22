@@ -25,10 +25,10 @@ describe('IconButton (D-1114)', () => {
 
   it('o contrato antigo segue igual: sem aria-label e com o estilo inline do toggle', () => {
     const h = renderToStaticMarkup(<IconButton />);
-    expect(h).toContain('class="btn btn-icon btn-ghost"');
+    expect(h).toContain('aspect-square');
     expect(h).not.toContain('data-variant');
     const t = renderToStaticMarkup(<IconButton variant="toggle-active" size="sm" />);
-    expect(t).toContain('btn btn-icon btn-sm');
-    expect(t).toContain('border-color:var(--accent)');
+    expect(t).toContain('aspect-square');
+    expect(t).toContain('border-iris-fio bg-iris-suave text-iris');
   });
 });

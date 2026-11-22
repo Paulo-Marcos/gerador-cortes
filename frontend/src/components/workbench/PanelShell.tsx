@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useWorkbenchPanelsContext } from './WorkbenchPanelsProvider';
 import type { WorkbenchPanelId } from './useWorkbenchPanels';
@@ -25,7 +25,7 @@ interface PanelShellProps {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="whitespace-nowrap font-code text-[9px] font-extrabold tracking-[0.14em] text-[var(--wb-text-dim)]">
+    <span className="whitespace-nowrap font-code text-micro font-extrabold tracking-[0.14em] text-fg-3">
       {children}
     </span>
   );
@@ -43,12 +43,12 @@ export function PanelShell({ id, side, title, indicator, headerExtra, children }
     <aside
       aria-label={title}
       className={cn(
-        'flex flex-none flex-col overflow-hidden bg-[var(--wb-bg-panel)] transition-[width] duration-[220ms] ease-[ease]',
+        'flex w-[var(--largura)] flex-none flex-col overflow-hidden bg-painel-solido transition-[width] duration-[220ms] ease-[ease]',
         side === 'left'
-          ? 'border-r border-[var(--wb-border)]'
-          : 'border-l border-[var(--wb-border)]',
+          ? 'border-r border-fio-2'
+          : 'border-l border-fio-2',
       )}
-      style={{ width }}
+      style={{ '--largura': typeof width === 'number' ? `${width}px` : width } as CSSProperties}
     >
       {open ? (
         <>
@@ -60,7 +60,7 @@ export function PanelShell({ id, side, title, indicator, headerExtra, children }
                 type="button"
                 onClick={() => toggle(id)}
                 aria-label={`Recolher painel ${title}`}
-                className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[var(--wb-bg-inset)] text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+                className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-poco text-micro text-fg-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco"
               >
                 <Icon name={chevron} />
               </button>
@@ -73,13 +73,12 @@ export function PanelShell({ id, side, title, indicator, headerExtra, children }
           type="button"
           onClick={() => toggle(id)}
           aria-label={`Expandir painel ${title}`}
-          className="flex flex-1 cursor-pointer flex-col items-center gap-2.5 py-2.5 text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+          className="flex flex-1 cursor-pointer flex-col items-center gap-2.5 py-2.5 text-fg-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foco"
         >
           <Icon name={chevron} />
           {indicator}
           <span
-            className="font-code text-[9px] font-extrabold tracking-[0.14em]"
-            style={{ writingMode: 'vertical-rl' }}
+            className="font-code text-micro font-extrabold tracking-[0.14em] [writing-mode:vertical-rl]"
           >
             {title}
           </span>
