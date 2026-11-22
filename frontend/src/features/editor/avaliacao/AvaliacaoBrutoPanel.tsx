@@ -39,7 +39,7 @@ const COR_VEREDITO: Record<VereditoBruto, string> = {
 const COR_GRAVIDADE: Record<GravidadeApontamento, string> = {
   leve: 'border-fio-2 text-fg-3',
   media: 'border-aviso/50 text-aviso',
-  grave: 'border-error/60 text-erro',
+  grave: 'border-erro/60 text-erro',
 };
 
 // Os três mapas acima são indexados por valor que veio da REDE. O backend

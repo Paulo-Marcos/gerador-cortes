@@ -38,6 +38,23 @@ describe('opacidade sobre cor de token', () => {
   });
 });
 
+describe('fundo da casca', () => {
+  // D-846: os brilhos radiais ficavam atrás do conteúdo e disputavam com as cores de estado.
+  // D-1191: o `.ap` agora mora no `index.css`; o guarda lê o bloco de lá.
+  const semComentarios = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const blocos = [...semComentarios(ler('../../index.css')).matchAll(/(\.ap[^{]*)\{([^}]*)\}/g)].map(
+    (m) => [m[1].trim(), m[2]] as const,
+  );
+
+  it('há blocos da casca para conferir', () => {
+    expect(blocos.length).toBeGreaterThan(0);
+  });
+
+  it.each(blocos)('%s não pinta brilho radial', (_seletor, corpo) => {
+    expect(corpo).not.toMatch(/radial-gradient/);
+  });
+});
+
 describe('o acento é ação, não lugar', () => {
   // D-847: "onde estou" (item do trilho, aba, filtro, fase da live) usava o
   // mesmo vermelho de "Nova live" e de "Excluir". Seleção é tinta neutra
