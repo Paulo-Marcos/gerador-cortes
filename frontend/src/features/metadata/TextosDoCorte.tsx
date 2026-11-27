@@ -62,7 +62,7 @@ function CampoDoTitulo({ card, cut }: Props) {
           </>
         }
       />
-      <Input
+      <Input name="titulo_youtube"
         id={id}
         aparencia="sala"
         value={title}
@@ -103,7 +103,7 @@ function CampoDoTextoDaCapa({ card, cut }: Props) {
         counter={`${coverText.length}/${LIMITE_DO_TEXTO_DA_CAPA}`}
         over={coverText.length > LIMITE_DO_TEXTO_DA_CAPA}
       />
-      <Textarea
+      <Textarea name="texto_capa"
         id={id}
         rows={2}
         value={coverText}
@@ -168,7 +168,7 @@ function BlocoDeDescricao({ card }: { card: EstadoDoCard }) {
         <div className="grid gap-3 border-t border-fio p-3">
           <div>
             <ModalFieldLabel htmlFor={idDescricao} label="Descrição (os capítulos são as linhas com tempo)" />
-            <Textarea
+            <Textarea name="descricao_youtube"
               id={idDescricao}
               rows={10}
               value={description}
@@ -179,7 +179,7 @@ function BlocoDeDescricao({ card }: { card: EstadoDoCard }) {
           </div>
           <div>
             <ModalFieldLabel htmlFor={idTags} label="Tags (SEO oculto, separadas por vírgula)" />
-            <Textarea
+            <Textarea name="tags_youtube"
               id={idTags}
               rows={3}
               value={tagsText}

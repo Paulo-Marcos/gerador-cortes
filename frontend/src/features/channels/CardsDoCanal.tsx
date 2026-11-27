@@ -172,7 +172,7 @@ export function TiposDeCard({
           const semLugar = limpo && SEM_LUGAR_NO_LIMPO.includes(tipo.id);
           return (
             <label key={tipo.id} className="flex items-center gap-2 text-sm text-fg aria-disabled:opacity-50" aria-disabled={semLugar}>
-              <input
+              <input name="ocultos"
                 type="checkbox"
                 disabled={semLugar}
                 checked={!semLugar && !valor.ocultos.includes(tipo.id)}
@@ -228,7 +228,7 @@ export function larguraDoTextoConfirmada(numero: number): number {
 function LarguraDoTexto({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (valor: CardsEditaveis) => void }) {
   return (
     <div className="grid gap-1.5">
-      <CampoNumero
+      <CampoNumero campo="largura_do_texto"
         id="palco-cards-largura-texto"
         rotulo="Largura do texto"
         valor={valor.largura_do_texto ?? 0}
@@ -276,7 +276,7 @@ function PosicaoNoCheio({ valor, onMudar }: { valor: CardsEditaveis; onMudar: (v
  */
 function CaixaNoCheio({ caixa, onMudar }: { caixa: CaixaDoCard; onMudar: (caixa: CaixaDoCard | null) => void }) {
   const campo = (chave: keyof CaixaDoCard, rotulo: string, max: number, min = 0) => (
-    <CampoNumero
+    <CampoNumero campo={chave}
       id={`palco-cards-caixa-${chave}`}
       rotulo={rotulo}
       valor={caixa[chave]}

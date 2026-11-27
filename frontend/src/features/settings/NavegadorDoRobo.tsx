@@ -33,7 +33,7 @@ export function NavegadorDoRobo() {
       <span className="text-xs font-bold tracking-[0.08em] text-fg-2">
         Navegador do robô (TikTok e Instagram)
       </span>
-      <select
+      <select name="navegador"
         value={query.data?.navegador ?? 'edge'}
         disabled={query.isLoading || mutation.isPending}
         onChange={(event) => mutation.mutate(event.target.value as Navegador)}

@@ -168,7 +168,7 @@ export function ItensDoCabecalho({
       <span className="text-xs text-fg-3">Mostrar:</span>
       {ITENS_DO_CABECALHO.map((item) => (
         <label key={item.chave} className="flex items-center gap-1.5">
-          <input
+          <input name={item.chave}
             type="checkbox"
             checked={rascunho[item.chave]}
             disabled={!rascunho.cabecalhoAtivo}

@@ -208,7 +208,7 @@ export function OrigemDaCena({
       {afirma && (
         <label className="flex items-center gap-1.5 text-fg-3">
           <span className="text-micro">Fonte</span>
-          <input
+          <input name="fonte"
             type="text"
             value={cena.fonte ?? ''}
             onChange={(e) => onChange({ ...cena, fonte: e.target.value || undefined })}

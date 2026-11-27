@@ -102,7 +102,7 @@ export function LinhaDeAjuste({
           longo do tempo, então o trecho pode precisar de regiões diferentes das
           do resto do corte. Vazio herda o do corte, que segue sendo o default. */}
       <Grupo rotulo="palco" dica="Um palco salvo, ou o que este trecho tem hoje.">
-        <select
+        <select name="palco_short_preset"
           aria-label="Palco deste short"
           value={seguePadrao ? VALOR_DO_PADRAO : short.palco_short_preset}
           disabled={ocupado}

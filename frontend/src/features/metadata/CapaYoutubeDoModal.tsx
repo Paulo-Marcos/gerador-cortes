@@ -133,7 +133,7 @@ function TrocarThumbnail({ onArquivo }: { onArquivo: (arquivo: File) => void }) 
         <Icon name="upload-cloud" />
         Trocar
       </Button>
-      <input
+      <input name="file"
         ref={entrada}
         type="file"
         accept="image/*"

@@ -58,7 +58,7 @@ export function NomeDoPresetDialog({
     >
       <label className="flex flex-col gap-1">
         <span className="text-micro text-fg-3">Nome</span>
-        <Input
+        <Input name="nome"
           aparencia="sala"
           autoFocus
           value={value}

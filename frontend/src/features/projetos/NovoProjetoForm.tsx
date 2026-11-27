@@ -56,7 +56,7 @@ export function NovoProjetoForm({ primaria = false, onClose, className }: Props)
         obrigatorio
         erro={criar.isError ? `Não deu para adicionar: ${(criar.error as Error).message}` : undefined}
       >
-        <Input
+        <Input name="youtube_url" inputMode="url"
           aparencia="sala"
           type="url"
           placeholder="https://youtube.com/watch?v=…"
@@ -67,7 +67,7 @@ export function NovoProjetoForm({ primaria = false, onClose, className }: Props)
         />
       </Field>
       <Field rotulo="Canal de origem (opcional)">
-        <Input
+        <Input name="canal_origem"
           aparencia="sala"
           placeholder="Nome do canal"
           value={canal}

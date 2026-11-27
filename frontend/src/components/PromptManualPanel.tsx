@@ -264,7 +264,7 @@ export function PromptManualPanel({
             </div>
 
             {exp.prompt && (
-              <textarea
+              <textarea name="prompt"
                 readOnly
                 value={
                   prompt.isLoading
@@ -278,7 +278,7 @@ export function PromptManualPanel({
             )}
 
             {!hideRetorno && exp.json && (
-              <textarea
+              <textarea name="resposta"
                 value={coladoTexto}
                 onChange={(e) => {
                   onChangeJsonPorParte({ ...jsonPorParte, [index]: e.target.value });

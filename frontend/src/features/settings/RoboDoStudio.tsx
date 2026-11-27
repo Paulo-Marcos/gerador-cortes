@@ -45,7 +45,7 @@ export function RoboDoStudio() {
           key={opcao.chave}
           className="flex items-center gap-2 text-sm font-semibold text-fg"
         >
-          <input
+          <input name={opcao.chave}
             type="checkbox"
             checked={atual[opcao.chave]}
             disabled={query.isLoading || mutation.isPending}

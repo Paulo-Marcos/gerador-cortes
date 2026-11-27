@@ -58,12 +58,14 @@ export function Secao({
  * da consequência à vista, não do nome da opção.
  */
 export function Interruptor({
+  name,
   ligado,
   onChange,
   titulo,
   nota,
   alerta = false,
 }: {
+  name: string;
   ligado: boolean;
   onChange: (valor: boolean) => void;
   titulo: string;
@@ -72,7 +74,7 @@ export function Interruptor({
 }) {
   return (
     <label className="flex cursor-pointer items-start gap-2">
-      <input
+      <input name={name}
         type="checkbox"
         checked={ligado}
         onChange={(e) => onChange(e.target.checked)}

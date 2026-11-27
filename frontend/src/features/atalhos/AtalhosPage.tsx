@@ -258,7 +258,7 @@ function TabelaDeAtalhos() {
           opcoes={TELAS.map(({ id, rotulo }) => ({ valor: id, rotulo }))}
         />
         <div className="ml-auto w-[260px]">
-          <Busca
+          <Busca name="busca"
             value={e.busca}
             aoMudar={e.setBusca}
             aria-label="Buscar comando ou tecla"

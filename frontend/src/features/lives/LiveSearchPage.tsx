@@ -247,10 +247,10 @@ function FiltrosDaBusca(props: {
   return (
     <section className="flex flex-wrap items-end gap-4 rounded-cartao border border-fio bg-vidro p-5">
       <Field rotulo="Lives após a data" className="w-[200px]">
-        <Input aparencia="sala" type="date" value={props.afterDate} onChange={(e) => props.onData(e.target.value)} />
+        <Input name="after_date" aparencia="sala" type="date" value={props.afterDate} onChange={(e) => props.onData(e.target.value)} />
       </Field>
       <Field rotulo="Canal de origem" className="w-[260px]">
-        <Input aparencia="sala" value={props.channel} onChange={(e) => props.onCanal(e.target.value)} />
+        <Input name="canal_origem" aparencia="sala" value={props.channel} onChange={(e) => props.onCanal(e.target.value)} />
       </Field>
       <Button type="button" variant="secundario" carregando={props.buscando} onClick={props.onBuscar}>
         <Icon name="search" />

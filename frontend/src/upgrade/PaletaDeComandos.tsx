@@ -364,7 +364,7 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
       >
         <RD.Title className="sr-only">Buscar live, short, corte, tela ou ação</RD.Title>
         <div className="flex items-center gap-2 border-b border-fio p-3" onKeyDown={aoTeclar}>
-          <Busca
+          <Busca name="busca"
             ref={campo}
             value={termo}
             aoMudar={setTermo}

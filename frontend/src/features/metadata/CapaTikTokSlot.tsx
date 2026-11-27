@@ -263,7 +263,7 @@ export function CapaTikTokSlot({
       {/* Inputs próprios, disparados por clique, e não um `<label>` embrulhando o botão: a
           tela captura Ctrl+V para a thumbnail do YouTube, e um segundo alvo de arquivo no
           fluxo de foco disputaria o mesmo evento. */}
-      <input
+      <input name="arquivo"
         ref={arteRef}
         type="file"
         accept="image/*"
@@ -274,7 +274,7 @@ export function CapaTikTokSlot({
           event.currentTarget.value = '';
         }}
       />
-      <input
+      <input name="arquivo"
         ref={prontaRef}
         type="file"
         accept="image/*"
@@ -287,7 +287,7 @@ export function CapaTikTokSlot({
       />
 
       {promptArte && (
-        <Textarea
+        <Textarea name="prompt_arte"
           readOnly
           value={promptArte}
           rows={3}

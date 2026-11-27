@@ -156,7 +156,7 @@ export function AppSettingsControls() {
 
       <label className="grid gap-1.5">
         <span className={sectionLabelCls}>Filtro global padrao</span>
-        <select
+        <select name="filtro_global_padrao"
           value={selectedFilter}
           disabled={isBusy}
           onChange={(event) => updateMutation.mutate({ filtro_global_padrao: event.target.value })}
@@ -172,7 +172,7 @@ export function AppSettingsControls() {
 
       <label className="grid gap-1.5">
         <span className={sectionLabelCls}>Velocidade padrao do player</span>
-        <select
+        <select name="velocidade_player_padrao"
           value={velocidadePlayer}
           disabled={isBusy}
           onChange={(event) =>
@@ -197,7 +197,7 @@ export function AppSettingsControls() {
         <div className="grid grid-cols-2 gap-3">
           <label className={labelCls}>
             Antes do inicio (s)
-            <input
+            <input name="contexto_antes_seg" inputMode="numeric"
               type="number"
               min={CONTEXTO_MIN_SEG}
               max={CONTEXTO_ANTES_MAX_SEG}
@@ -210,7 +210,7 @@ export function AppSettingsControls() {
           </label>
           <label className={labelCls}>
             Depois do fim (s)
-            <input
+            <input name="contexto_depois_seg" inputMode="numeric"
               type="number"
               min={CONTEXTO_MIN_SEG}
               max={CONTEXTO_DEPOIS_MAX_SEG}
@@ -255,7 +255,7 @@ export function AppSettingsControls() {
 
       <label className="grid gap-1.5">
         <span className={sectionLabelCls}>Nome do mascote</span>
-        <input
+        <input name="mascote_nome"
           type="text"
           key={`mascote-${mascoteNome}`}
           defaultValue={mascoteNome}
@@ -322,7 +322,7 @@ export function AppSettingsControls() {
         <div className="grid grid-cols-2 gap-3">
           <label className={labelCls}>
             Concorrencia de overlay
-            <input
+            <input name="overlay_concurrency" inputMode="numeric"
               type="number"
               min={1}
               key={`conc-${render.overlay_concurrency}`}
@@ -334,7 +334,7 @@ export function AppSettingsControls() {
           </label>
           <label className={labelCls}>
             Tentativas por overlay
-            <input
+            <input name="overlay_max_attempts" inputMode="numeric"
               type="number"
               min={1}
               key={`att-${render.overlay_max_attempts}`}
@@ -346,7 +346,7 @@ export function AppSettingsControls() {
           </label>
           <label className={labelCls}>
             Cooldown entre renders (s)
-            <input
+            <input name="cooldown_sec" inputMode="numeric"
               type="number"
               min={0}
               key={`cd-${render.cooldown_sec}`}
@@ -358,7 +358,7 @@ export function AppSettingsControls() {
           </label>
           <label className={labelCls}>
             Qualidade do grade (QSV, 1-51)
-            <input
+            <input name="grade_global_quality" inputMode="numeric"
               type="number"
               min={1}
               max={51}
@@ -371,7 +371,7 @@ export function AppSettingsControls() {
           </label>
           <label className={labelCls}>
             Codec do overlay
-            <select
+            <select name="overlay_codec"
               value={render.overlay_codec}
               disabled={isBusy}
               onChange={(event) =>
@@ -386,7 +386,7 @@ export function AppSettingsControls() {
             </select>
           </label>
           <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-fg">
-            <input
+            <input name="bundle_cache_enabled"
               type="checkbox"
               checked={render.bundle_cache_enabled}
               disabled={isBusy}

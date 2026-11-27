@@ -189,7 +189,7 @@ function SeletorDeLive({
   return (
     <div className="flex flex-wrap items-end gap-4">
       <Field rotulo="Live" className="w-full max-w-[420px]">
-        <Select
+        <Select name="projeto_id"
           opcoes={opcoes}
           value={projetoId ?? undefined}
           onValueChange={onEscolher}

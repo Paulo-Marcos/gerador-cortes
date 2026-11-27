@@ -143,9 +143,9 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
         <div className="border-t border-dashed border-fio px-3 pb-3 pt-2">
           {/* Grid 4: Inicio / Fim / Tipo / Texto */}
           <div className="grid grid-cols-[1fr_1fr_1fr_2fr] gap-1.5">
-            <FieldNum label="Início" value={cena.inicio} onChange={(v) => set({ inicio: v })} />
-            <FieldNum label="Fim" value={cena.fim} onChange={(v) => set({ fim: v })} />
-            <FieldSelect
+            <FieldNum campo="inicio" label="Início" value={cena.inicio} onChange={(v) => set({ inicio: v })} />
+            <FieldNum campo="fim" label="Fim" value={cena.fim} onChange={(v) => set({ fim: v })} />
+            <FieldSelect campo="tipo"
               label="Tipo"
               value={cena.tipo}
               options={Object.entries(TIPOS_CENA).map(([key, m]) => ({
@@ -154,7 +154,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
               }))}
               onChange={(v) => set({ tipo: v as CenaRemotion['tipo'] })}
             />
-            <FieldText
+            <FieldText campo="texto"
               label="Texto"
               value={cena.texto ?? ''}
               onChange={(v) => set({ texto: v })}
@@ -164,13 +164,13 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
 
           {/* Grid 2: Subtexto / Contexto */}
           <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-            <FieldText
+            <FieldText campo="subtexto"
               label="Subtexto"
               value={cena.subtexto ?? ''}
               onChange={(v) => set({ subtexto: v })}
               placeholder="—"
             />
-            <FieldText
+            <FieldText campo="contexto"
               label="Contexto"
               value={cena.contexto ?? ''}
               onChange={(v) => set({ contexto: v })}
@@ -181,13 +181,13 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           {/* Comparativo: RotuloA / RotuloB */}
           {isComparativo && (
             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-              <FieldText
+              <FieldText campo="rotuloA"
                 label="Rotulo A"
                 value={cena.rotuloA ?? ''}
                 onChange={(v) => set({ rotuloA: v })}
                 placeholder="TESE / ANTES"
               />
-              <FieldText
+              <FieldText campo="rotuloB"
                 label="Rotulo B"
                 value={cena.rotuloB ?? ''}
                 onChange={(v) => set({ rotuloB: v })}
@@ -199,7 +199,7 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
           {/* Ficha: Nome curto */}
           {isFicha && (
             <div className="mt-1.5">
-              <FieldText
+              <FieldText campo="nome_curto"
                 label="Nome curto"
                 value={cena.nome_curto ?? ''}
                 onChange={(v) => set({ nome_curto: v })}
@@ -215,21 +215,21 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRiscar, onSeek, 
 
           {/* Grid 3 ConfigSelect: Sombra / Layout / Modelo */}
           <div className="grid grid-cols-3 gap-1.5">
-            <FieldSelect
+            <FieldSelect campo="sombra_nivel"
               label="Sombra"
               value={cena.sombra_nivel ?? 'auto'}
               options={SOMBRA_OPTS.map((o) => ({ value: o, label: o }))}
               onChange={(v) => set({ sombra_nivel: v as SombraOpt })}
               title="Auto usa o padrao do projeto"
             />
-            <FieldSelect
+            <FieldSelect campo="layout_card"
               label="Layout"
               value={cena.layout_card ?? 'auto'}
               options={LAYOUT_OPTS.map((o) => ({ value: o, label: o }))}
               onChange={(v) => set({ layout_card: v as LayoutOpt })}
               title="Auto usa o padrao do projeto"
             />
-            <FieldSelect
+            <FieldSelect campo="modelo_cena"
               label="Modelo"
               value={cena.modelo_cena ?? 'auto'}
               options={MODELO_OPTS.map((o) => ({ value: o, label: o }))}
@@ -275,11 +275,13 @@ function FieldLabel({ children }: { children: ReactNode }) {
 const fieldInputClass = `h-7 w-full rounded-ladrilho border border-campo bg-poco px-2 text-pequeno text-fg transition-colors hover:border-fg/60 focus-visible:border-iris motion-reduce:transition-none ${FOCO}`;
 
 function FieldText({
+  campo,
   label,
   value,
   onChange,
   placeholder,
 }: {
+  campo: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -288,7 +290,7 @@ function FieldText({
   return (
     <div className="min-w-0">
       <FieldLabel>{label}</FieldLabel>
-      <input
+      <input name={campo}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -301,10 +303,12 @@ function FieldText({
 }
 
 function FieldNum({
+  campo,
   label,
   value,
   onChange,
 }: {
+  campo: string;
   label: string;
   value: number;
   onChange: (v: number) => void;
@@ -312,7 +316,7 @@ function FieldNum({
   return (
     <div className="min-w-0">
       <FieldLabel>{label}</FieldLabel>
-      <input
+      <input name={campo} inputMode="decimal"
         type="number"
         step="0.1"
         value={value}
@@ -325,12 +329,14 @@ function FieldNum({
 }
 
 function FieldSelect({
+  campo,
   label,
   value,
   options,
   onChange,
   title,
 }: {
+  campo: string;
   label: string;
   value: string;
   options: Array<{ value: string; label: string }>;
@@ -340,7 +346,7 @@ function FieldSelect({
   return (
     <div className="min-w-0">
       <FieldLabel>{label}</FieldLabel>
-      <select
+      <select name={campo}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         data-sala=""

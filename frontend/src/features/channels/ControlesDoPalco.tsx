@@ -27,6 +27,7 @@ export function numeroConfirmado(texto: string | null, min: number, max: number)
 /** Um número com rótulo e unidade, preso entre `min` e `max`. */
 export function CampoNumero({
   id,
+  campo,
   rotulo,
   valor,
   min,
@@ -35,6 +36,8 @@ export function CampoNumero({
   onMudar,
 }: {
   id: string;
+  /** `name` do campo: a chave do contrato. */
+  campo: string;
   rotulo: string;
   valor: number;
   min: number;
@@ -55,7 +58,7 @@ export function CampoNumero({
       <Label htmlFor={id}>
         {rotulo} <span className="text-fg-3">({unidade})</span>
       </Label>
-      <Input
+      <Input name={campo} inputMode="decimal"
         id={id}
         type="number"
         step="any"
@@ -87,7 +90,7 @@ export function CampoTamanho({
   onMudar: (escala: number) => void;
 }) {
   return (
-    <CampoNumero
+    <CampoNumero campo="escala"
       id={id}
       rotulo="Tamanho"
       unidade="%"
@@ -123,7 +126,7 @@ export function CampoPosicao({
       <span className="text-xs font-medium text-fg-3">{rotulo}</span>
       {podeSerAutomatica && (
         <label className="flex items-center gap-2 text-sm text-fg">
-          <input
+          <input name="automatica"
             type="checkbox"
             checked={posicao.automatica}
             onChange={(e) => onMudar({ ...posicao, automatica: e.target.checked })}
@@ -133,7 +136,7 @@ export function CampoPosicao({
       )}
       {manual && (
         <div className="grid grid-cols-2 gap-3">
-          <CampoNumero
+          <CampoNumero campo="x"
             id={`${id}-x`}
             rotulo="X"
             unidade={`0 a ${quadro.largura} px`}
@@ -142,7 +145,7 @@ export function CampoPosicao({
             max={quadro.largura}
             onMudar={(x) => onMudar({ ...posicao, x })}
           />
-          <CampoNumero
+          <CampoNumero campo="y"
             id={`${id}-y`}
             rotulo="Y"
             unidade={`0 a ${quadro.altura} px`}
@@ -226,7 +229,7 @@ export function JanelasDoShort({
   return (
     <fieldset className="grid gap-3 rounded-campo border border-fio p-4">
       <legend className="px-1 text-xs font-medium text-fg-3">Short</legend>
-      <CampoNumero
+      <CampoNumero campo="contornoShort"
         id="palco-contorno"
         rotulo="Contorno do fundo em volta das janelas"
         unidade="px, 0 = sem contorno"

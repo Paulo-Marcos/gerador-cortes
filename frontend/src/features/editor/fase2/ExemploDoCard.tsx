@@ -86,7 +86,7 @@ export function EscolhaDoExemplo({
   return (
     <label className="grid gap-1 text-pequeno text-fg-3">
       Card de exemplo na prévia
-      <select
+      <select name="tipo"
         aria-label="Card de exemplo"
         data-sala=""
         value={valor}

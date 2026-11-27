@@ -147,7 +147,7 @@ export function TextoDaPlaca({ placa, onPlaca }: { placa: YoutubePlaca; onPlaca:
         <div className="grid gap-1.5">
           <label className={ROTULO_DO_CAMPO}>
             Nome
-            <Input
+            <Input name="nome"
               value={placa.nome}
               maxLength={80}
               placeholder="Ex.: Nome do Apresentador"
@@ -160,7 +160,7 @@ export function TextoDaPlaca({ placa, onPlaca }: { placa: YoutubePlaca; onPlaca:
           </label>
           <label className={ROTULO_DO_CAMPO}>
             Papel
-            <Input
+            <Input name="papel"
               value={placa.papel}
               maxLength={80}
               placeholder="Ex.: CTO"

@@ -62,7 +62,7 @@ function LinkDoProjeto({ salvo }: { salvo: string }) {
   return (
     <Field rotulo="Link do projeto" ajuda="Abra o projeto no ChatGPT e copie a barra de endereço. Vazio desliga o botão.">
       <div className="flex flex-wrap gap-2">
-        <Input
+        <Input name="projeto_url" inputMode="url" spellCheck={false}
           aparencia="sala"
           value={projeto}
           onChange={(e) => setProjeto(e.target.value)}
@@ -128,7 +128,7 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
           Adicionar fichas
         </Button>
       </div>
-      <input
+      <input name="arquivo"
         ref={seletor}
         type="file"
         multiple

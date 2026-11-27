@@ -78,7 +78,7 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
               <p className="mt-1 text-xs text-fg-2">{criterio.descricao}</p>
             </div>
             <div className="flex items-center gap-2 sm:justify-end">
-              <Input
+              <Input name={criterio.key}
                 id={`ranking-peso-${criterio.key}`}
                 type="number"
                 inputMode="decimal"

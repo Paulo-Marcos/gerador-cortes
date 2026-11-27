@@ -96,6 +96,7 @@ function useRenderConfig(projetoId: string) {
 // ── ConfigSelect · v3_pos.jsx:650-693 ────────────────────────
 // Label segmentado + select numa pílula compacta.
 function ConfigSelect<T extends string>({
+  campo,
   label,
   value,
   options,
@@ -104,6 +105,7 @@ function ConfigSelect<T extends string>({
   disabled,
   title,
 }: {
+  campo: string;
   label: string;
   value: T;
   options: readonly T[];
@@ -118,7 +120,7 @@ function ConfigSelect<T extends string>({
         <span className="inline-flex h-full items-center border-r border-fio px-2 text-micro text-fg-3">
           {label}
         </span>
-        <select
+        <select name={campo}
           value={value}
           onChange={(e) => onChange(e.target.value as T)}
           disabled={disabled}
@@ -145,7 +147,7 @@ function ConfigSelect<T extends string>({
 function CardSelect({ projetoId }: Props) {
   const { layout, handleLayout, pending } = useRenderConfig(projetoId);
   return (
-    <ConfigSelect<LayoutCard>
+    <ConfigSelect<LayoutCard> campo="layout_card_padrao"
       label="Card"
       value={layout}
       options={['horizontal', 'vertical'] as const}
@@ -163,7 +165,7 @@ function AvancadoSelects({ projetoId }: Props) {
   // uso real para o select.
   const { sombra, handleSombra, pending } = useRenderConfig(projetoId);
   return (
-    <ConfigSelect<Sombra>
+    <ConfigSelect<Sombra> campo="sombra_nivel_padrao"
       label="Sombra"
       value={sombra}
       options={['nenhuma', 'leve', 'media', 'forte'] as const}

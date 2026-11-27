@@ -131,7 +131,7 @@ export function EditorialSkillForm({
           <Label htmlFor="skill-corpo">Prompt (expertise editorial)</Label>
           <ResetButton onClick={() => onReset(['corpo'])} disabled={pending} />
         </div>
-        <textarea
+        <textarea name="corpo"
           id="skill-corpo"
           value={corpo}
           onChange={(e) => setCorpo(e.target.value)}
@@ -157,7 +157,7 @@ export function EditorialSkillForm({
             <Label htmlFor="skill-faixa" className="text-xs">
               Modelo
             </Label>
-            <select
+            <select name="faixa"
               id="skill-faixa"
               value={faixa}
               onChange={(e) => setFaixa(e.target.value as Faixa)}
@@ -174,7 +174,7 @@ export function EditorialSkillForm({
             <Label htmlFor="skill-thinking" className="text-xs">
               Thinking tokens
             </Label>
-            <Input
+            <Input name="thinking_tokens" inputMode="numeric"
               id="skill-thinking"
               type="number"
               min={0}
@@ -186,7 +186,7 @@ export function EditorialSkillForm({
             <Label htmlFor="skill-timeout" className="text-xs">
               Timeout (s)
             </Label>
-            <Input
+            <Input name="timeout" inputMode="numeric"
               id="skill-timeout"
               type="number"
               min={1}
@@ -208,7 +208,7 @@ export function EditorialSkillForm({
           <Label htmlFor="skill-lentes">Lentes de variação (uma por linha)</Label>
           <ResetButton onClick={() => onReset(['lentes'])} disabled={pending} />
         </div>
-        <textarea
+        <textarea name="lentes"
           id="skill-lentes"
           value={lentesText}
           onChange={(e) => setLentesText(e.target.value)}

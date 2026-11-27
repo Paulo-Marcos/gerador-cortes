@@ -125,7 +125,7 @@ export function ImagemDoCabecalho({
           )}
         </div>
       </div>
-      <input
+      <input name="arquivo"
         ref={arquivoRef}
         type="file"
         accept="image/png,image/jpeg,image/webp"

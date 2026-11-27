@@ -174,7 +174,7 @@ export function FotosDoApresentador({ estilo }: { estilo: EstiloDaCapa }) {
           Adicionar fotos
         </Button>
       </div>
-      <input
+      <input name="arquivo"
         ref={seletor}
         type="file"
         multiple
@@ -243,10 +243,10 @@ export function MetaDeClaridade({ estilo }: { estilo: EstiloDaCapa }) {
       <span className="text-linha text-fg">Meta de claridade</span>
       <div className="flex flex-wrap items-end gap-2">
         <Field rotulo="Luz média mínima (0–255)" className="w-36">
-          <Input aparencia="sala" type="number" min={0} max={255} value={luz} onChange={(e) => setLuz(e.target.value)} />
+          <Input name="luminancia_minima" inputMode="numeric" aparencia="sala" type="number" min={0} max={255} value={luz} onChange={(e) => setLuz(e.target.value)} />
         </Field>
         <Field rotulo="Pixels escuros no máximo (%)" className="w-44">
-          <Input aparencia="sala" type="number" min={0} max={100} value={escuros} onChange={(e) => setEscuros(e.target.value)} />
+          <Input name="escuros_maximo" inputMode="numeric" aparencia="sala" type="number" min={0} max={100} value={escuros} onChange={(e) => setEscuros(e.target.value)} />
         </Field>
         <Button type="button" variant="secundario" carregando={gravar.isPending} onClick={aoSalvar} disabled={!mudou}>
           Salvar

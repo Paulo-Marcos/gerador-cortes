@@ -80,7 +80,7 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
           palco
         </span>
 
-        <select
+        <select name="palco_padrao"
           aria-label="Palco padrão deste corte — vale também para a legenda"
           value={escolhido}
           disabled={definir.isPending}

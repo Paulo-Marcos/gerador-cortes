@@ -223,7 +223,7 @@ export function ReadingModal({
       >
         <label className="grid gap-1.5 text-xs font-semibold text-fg-3">
           Autor
-          <input
+          <input name="autor_leitura" type="text"
             value={draftAuthor}
             onChange={(event) => setDraftAuthor(event.target.value)}
             disabled={disabled}
@@ -234,7 +234,7 @@ export function ReadingModal({
         </label>
         <label className="grid gap-1.5 text-xs font-semibold text-fg-3">
           Parte
-          <input
+          <input name="parte_leitura" inputMode="numeric"
             type="number"
             min={1}
             value={draftPart}

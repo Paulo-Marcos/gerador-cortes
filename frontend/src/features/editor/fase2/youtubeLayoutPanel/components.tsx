@@ -567,7 +567,7 @@ export function RegionItem({
               <Icon name="minus" />
             </FineStepButton>
             <div className="min-w-0 flex-1">
-              <TimeField
+              <TimeField campo="inicio"
                 valueSeg={region.inicio}
                 ariaLabel="Início do intervalo (mm:ss)"
                 onCommit={onChangeInicio}
@@ -591,7 +591,7 @@ export function RegionItem({
               <Icon name="minus" />
             </FineStepButton>
             <div className="min-w-0 flex-1">
-              <TimeField
+              <TimeField campo="fim"
                 valueSeg={region.fim}
                 ariaLabel="Fim do intervalo (mm:ss)"
                 onCommit={onChangeFim}
@@ -607,7 +607,7 @@ export function RegionItem({
         </label>
         <label className="flex flex-col gap-0.5 text-micro text-fg-3">
           Modo
-          <select
+          <select name="modo"
             data-sala=""
             value={region.modo}
             onChange={(e) => onChangeModo(e.target.value as YoutubeLayoutMode)}
@@ -704,10 +704,10 @@ function parseTimeInput(text: string): number | null {
 }
 
 function TimeField({
-  valueSeg,
-  onCommit,
-  ariaLabel,
+  campo,
+  valueSeg, onCommit, ariaLabel,
 }: {
+  campo: string;
   valueSeg: number;
   onCommit: (seg: number) => void;
   ariaLabel: string;
@@ -730,7 +730,7 @@ function TimeField({
   };
 
   return (
-    <Input
+    <Input name={campo}
       type="text"
       inputMode="numeric"
       aria-label={ariaLabel}
