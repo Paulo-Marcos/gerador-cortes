@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type KeyboardEvent as EventoDeTecla } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Icon, type IconName } from '@/upgrade/Icon';
@@ -200,6 +200,38 @@ export function ouvirFechamento(
   };
 }
 
+/**
+ * D-1195 (DIRECAO §8.2 Foco): o menu é operável pelas setas, como o da Sala escura (Radix).
+ * Dado o item com foco (-1 = nenhum) e a tecla, devolve o próximo; `null` = a tecla não é do menu.
+ */
+export function indiceDoProximoItem(atual: number, total: number, tecla: string): number | null {
+  if (total === 0) return null;
+  if (tecla === 'ArrowDown') return atual < 0 ? 0 : (atual + 1) % total;
+  if (tecla === 'ArrowUp') return atual < 0 ? total - 1 : (atual - 1 + total) % total;
+  if (tecla === 'Home') return 0;
+  if (tecla === 'End') return total - 1;
+  return null;
+}
+
+/** O que uma tecla faz com o menu aberto: andar até um item, fechar (o Tab sai do menu) ou nada. */
+export function acaoDaTecla(atual: number, total: number, tecla: string): { andarPara: number } | 'fechar' | null {
+  const proximo = indiceDoProximoItem(atual, total, tecla);
+  if (proximo !== null) return { andarPara: proximo };
+  return tecla === 'Tab' ? 'fechar' : null;
+}
+
+/**
+ * Ao fechar, o foco volta ao gatilho só se ficou perdido: o item que tinha o foco saiu do DOM
+ * (Esc, item escolhido) e ele caiu no `<body>`. Foco que já foi para outro lugar (clique fora,
+ * um diálogo aberto pelo item) fica onde está.
+ */
+export function focoFicouPerdido(ativo: Element | null, corpo: Element | null): boolean {
+  return !ativo || ativo === corpo;
+}
+
+const ITENS_FOCAVEIS = 'button[role="menuitem"]';
+const GATILHO = '[aria-haspopup="menu"]';
+
 export function OverflowMenu({
   items,
   label = 'Mais ações',
@@ -223,6 +255,27 @@ export function OverflowMenu({
     return ouvirFechamento(document, () => wrapRef.current, fechar);
   }, [open]);
 
+  // D-1195: aberto, o foco entra no primeiro item; fechado, volta ao gatilho se ficou perdido.
+  useEffect(() => {
+    if (!open) return;
+    const wrap = wrapRef.current;
+    wrap?.querySelector<HTMLElement>(ITENS_FOCAVEIS)?.focus();
+    return () => {
+      if (focoFicouPerdido(document.activeElement, document.body)) wrap?.querySelector<HTMLElement>(GATILHO)?.focus();
+    };
+  }, [open]);
+
+  const navegar = (event: EventoDeTecla<HTMLDivElement>) => {
+    const itens = [...event.currentTarget.querySelectorAll<HTMLElement>(ITENS_FOCAVEIS)];
+    const acao = acaoDaTecla(itens.indexOf(document.activeElement as HTMLElement), itens.length, event.key);
+    if (acao === 'fechar') {
+      mudar(false);
+    } else if (acao) {
+      event.preventDefault();
+      itens[acao.andarPara]?.focus();
+    }
+  };
+
   return (
     <div
       ref={wrapRef}
@@ -241,6 +294,7 @@ export function OverflowMenu({
       {open && (
         <div
           role="menu"
+          onKeyDown={navegar}
           className={cn(
             PAINEL_DO_MENU,
             'absolute top-[calc(100%+4px)] z-40 w-[220px]',

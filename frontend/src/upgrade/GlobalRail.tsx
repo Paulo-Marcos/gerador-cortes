@@ -99,6 +99,8 @@ function ItemDoTrilho({ item, ativo, expandido, aviso }: { item: DestinoDeMenu; 
     <NavLink
       to={item.to}
       title={aviso ? `${item.texto} · ${aviso}` : item.texto}
+      // D-1195: recolhido, o link é só o ícone; o `title` é dica, não nome acessível.
+      aria-label={expandido ? undefined : aviso ? `${item.texto}, ${aviso}` : item.texto}
       aria-current={ativo ? 'page' : undefined}
       className={classesDoItem(ativo, expandido)}
     >

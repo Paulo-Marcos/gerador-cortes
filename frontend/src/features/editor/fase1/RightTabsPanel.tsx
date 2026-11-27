@@ -191,7 +191,7 @@ function CabecalhoDoPainel({
   // Decisao Paulo: refresh do header SEMPRE atualiza a transcricao,
   // independente da aba ativa. "Reanalisar trechos" continua via o botao
   // "IA" na sub-barra dentro da aba Decisões.
-  const refreshTitle = 'Atualizar transcricao';
+  const refreshTitle = 'Atualizar transcrição';
   return (
     // D-871: as quatro abas num seletor só — numa coluna de 360 px, a faixa
     // rolável deixava Transcrição e Avaliação fora da tela. Os respiros são os

@@ -137,7 +137,8 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
             <Icon name="x" />
           </RD.Close>
         </header>
-        <div className="flex-1 overflow-y-auto px-[26px] py-2">{children}</div>
+        {/* D-1195: `overscroll-contain` — chegar ao fim do miolo não rola a tela atrás do véu (§8.2). */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-[26px] py-2">{children}</div>
         {footer && (
           <footer className="flex flex-wrap items-center justify-end gap-2 px-[26px] pb-[26px] pt-4">{footer}</footer>
         )}

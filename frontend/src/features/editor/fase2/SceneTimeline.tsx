@@ -430,13 +430,13 @@ export function SceneTimeline({
           <>
             {showAddButtons && (
               <div className="flex items-center gap-1">
-                <Tooltip label="Adicionar regiao Compartilhada no tempo atual" side="bottom">
+                <Tooltip label="Adicionar região Compartilhada no tempo atual" side="bottom">
                   <button type="button" data-sala="" onClick={() => onAddRegion('compartilhada')} className={FERRAMENTA_TEXTO}>
                     <Icon name="plus" />
                     Comp.
                   </button>
                 </Tooltip>
-                <Tooltip label="Adicionar regiao Full no tempo atual" side="bottom">
+                <Tooltip label="Adicionar região Full no tempo atual" side="bottom">
                   <button type="button" data-sala="" onClick={() => onAddRegion('full')} className={FERRAMENTA_TEXTO}>
                     <Icon name="plus" />
                     Full
@@ -446,24 +446,24 @@ export function SceneTimeline({
             )}
             {hasSelectedRegion && (
               <div className="flex items-center gap-1">
-                <Tooltip label="[: ajusta o INICIO da regiao travada para o tempo atual" side="bottom">
+                <Tooltip label="[: ajusta o INÍCIO da região travada para o tempo atual" side="bottom">
                   <button
                     type="button"
                     data-sala=""
                     onClick={() => onAjustarInicioPinada?.()}
                     className={cn(FERRAMENTA_TEXTO, 'num')}
-                    aria-label="Ajustar inicio da regiao travada"
+                    aria-label="Ajustar início da região travada"
                   >
                     [
                   </button>
                 </Tooltip>
-                <Tooltip label="]: ajusta o FIM da regiao travada para o tempo atual" side="bottom">
+                <Tooltip label="]: ajusta o FIM da região travada para o tempo atual" side="bottom">
                   <button
                     type="button"
                     data-sala=""
                     onClick={() => onAjustarFimPinada?.()}
                     className={cn(FERRAMENTA_TEXTO, 'num')}
-                    aria-label="Ajustar fim da regiao travada"
+                    aria-label="Ajustar fim da região travada"
                   >
                     ]
                   </button>

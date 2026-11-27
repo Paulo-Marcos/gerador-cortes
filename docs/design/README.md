@@ -6,6 +6,7 @@ A fonte do visual do CutCut. A decisão está no [ADR-0018](../adr/0018-sistema-
 |---|---|
 | A direção completa: princípios, forma, tokens, componentes, telas, migração e catracas | [DIRECAO.md](DIRECAO.md) |
 | O CSS de referência, a fonte dos valores exatos | [referencia/sala-escura.css](referencia/sala-escura.css) |
+| A auditoria final (H-25): a lista da §8.2 tela a tela, o blur por tela e o desempenho do editor | [aceitacao.md](aceitacao.md) |
 | Design System (tokens nos dois temas, componentes com prévia) | https://claude.ai/artifact/1aukM5aXvYF1g2pB41acwr |
 | Canvas, página "G · CutCut (final)" (13 telas) | https://claude.ai/artifact/EQ46AYq2dyze9s5zxqP1yU |
 

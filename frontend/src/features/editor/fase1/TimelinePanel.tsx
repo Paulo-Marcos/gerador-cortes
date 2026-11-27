@@ -580,7 +580,7 @@ function Waveform({
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className={cn('absolute inset-0', pointer ? 'cursor-crosshair' : dragging ? 'cursor-grabbing' : 'cursor-grab')}
+          className={cn('onda-com-foco absolute inset-0', pointer ? 'cursor-crosshair' : dragging ? 'cursor-grabbing' : 'cursor-grab')}
         />
         {!pointer && (
           <div
@@ -617,24 +617,24 @@ const TransportGroup = memo(function TransportGroup({
   // D-1150 (§7.3): tocar é o círculo claro; início e fim são ferramentas fantasma.
   return (
     <div className="flex items-center gap-1">
-      <Tooltip label="Inicio do corte" side="bottom">
-        <button type="button" data-sala="" onClick={onSkipStart} aria-label="Inicio" className={FERRAMENTA_ICONE}>
+      <Tooltip label="Início do corte" side="bottom">
+        <button type="button" data-sala="" onClick={onSkipStart} aria-label="Ir para o início do corte" className={FERRAMENTA_ICONE}>
           <Icon name="chevrons-left" />
         </button>
       </Tooltip>
-      <Tooltip label="Play/Pause" side="bottom">
+      <Tooltip label="Tocar ou pausar" side="bottom">
         <button
           type="button"
           data-sala=""
           onClick={onPlay}
-          aria-label="Play/Pause"
+          aria-label="Tocar ou pausar"
           className={`inline-grid size-8 place-items-center rounded-pilula bg-fg text-app shadow-topo transition-transform duration-[120ms] active:scale-[.97] motion-reduce:transition-none ${FOCO}`}
         >
           <Icon name="play" />
         </button>
       </Tooltip>
       <Tooltip label="Fim do corte" side="bottom">
-        <button type="button" data-sala="" onClick={onSkipEnd} aria-label="Fim" className={FERRAMENTA_ICONE}>
+        <button type="button" data-sala="" onClick={onSkipEnd} aria-label="Ir para o fim do corte" className={FERRAMENTA_ICONE}>
           <Icon name="chevrons-right" />
         </button>
       </Tooltip>
@@ -848,12 +848,12 @@ function AdvancedMenu({
 
   return (
     <>
-      <Tooltip label="Ferramentas avancadas" side="bottom">
+      <Tooltip label="Ferramentas avançadas" side="bottom">
         <button
           ref={buttonRef}
           type="button"
           onClick={() => setOpen((v) => !v)}
-          aria-label="Ferramentas avancadas"
+          aria-label="Ferramentas avançadas"
           aria-expanded={open}
           data-sala=""
           className={cn(FERRAMENTA_ICONE, open && 'bg-vidro-3 text-fg')}
@@ -1180,7 +1180,7 @@ export function TimelinePanel({
             type="button"
             onClick={onSetInicioAqui}
             disabled={!onSetInicioAqui}
-            aria-label="Marcar inicio aqui"
+            aria-label="Marcar início aqui"
             data-sala=""
             className={FERRAMENTA_TEXTO}
           >

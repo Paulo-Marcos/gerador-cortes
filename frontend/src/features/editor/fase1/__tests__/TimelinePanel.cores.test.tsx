@@ -45,13 +45,13 @@ describe('TimelinePanel — cor fica para estado (D-871)', () => {
     const arvore = arvoreDaTimeline({ inicio: vi.fn(), fim: vi.fn() });
     const rotulo = (r: string) =>
       textoDe(arvore.find((e) => e.props['aria-label'] === r)!.props.children as ReactNode);
-    expect(rotulo('Marcar inicio aqui')).toBe('[Início aqui');
+    expect(rotulo('Marcar início aqui')).toBe('[Início aqui');
     expect(rotulo('Marcar fim aqui')).toBe('Fim aqui]');
   });
 
   it('os dois são neutros e iguais: sem o verde e o vermelho de antes', () => {
     const html = render();
-    const [inicio, fim] = ['Marcar inicio aqui', 'Marcar fim aqui'].map((r) => botao(html, r)[0]);
+    const [inicio, fim] = ['Marcar início aqui', 'Marcar fim aqui'].map((r) => botao(html, r)[0]);
     for (const b of [inicio, fim]) expect(b).not.toMatch(/ok-|err/);
     expect(inicio.match(/class="([^"]*)"/)![1]).toBe(fim.match(/class="([^"]*)"/)![1]);
     expect(inicio).toContain('text-fg');
@@ -96,9 +96,9 @@ describe('TimelinePanel — os marcadores fazem o que dizem (D-871)', () => {
     const arvore = arvoreDaTimeline({ inicio, fim });
     const botao = (rotulo: string) => arvore.find((e) => e.props['aria-label'] === rotulo)!;
 
-    expect(botao('Marcar inicio aqui').props.disabled).toBe(false);
+    expect(botao('Marcar início aqui').props.disabled).toBe(false);
     expect(botao('Marcar fim aqui').props.disabled).toBe(false);
-    (botao('Marcar inicio aqui').props.onClick as () => void)();
+    (botao('Marcar início aqui').props.onClick as () => void)();
     expect([inicio.mock.calls.length, fim.mock.calls.length]).toEqual([1, 0]);
     (botao('Marcar fim aqui').props.onClick as () => void)();
     expect([inicio.mock.calls.length, fim.mock.calls.length]).toEqual([1, 1]);
@@ -112,7 +112,7 @@ describe('TimelinePanel — os marcadores fazem o que dizem (D-871)', () => {
           e.type === Tooltip &&
           elementos(e.props.children as ReactNode).some((c) => c.props['aria-label'] === rotulo),
       )!.props.label;
-    expect(dica('Marcar inicio aqui')).toContain('( [ )');
+    expect(dica('Marcar início aqui')).toContain('( [ )');
     expect(dica('Marcar fim aqui')).toContain('( ] )');
   });
 });

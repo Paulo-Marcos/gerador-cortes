@@ -290,7 +290,7 @@ export default function WorkspaceDoFirePage() {
       )}
     >
 
-      <main className="">
+      <div className="">
         {isLoading && (
           <p className="py-16 text-center text-corpo text-fg-2">
             Carregando a prateleira…
@@ -340,7 +340,7 @@ export default function WorkspaceDoFirePage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       <PublicarEmLoteModal
         open={publicandoEmLote}

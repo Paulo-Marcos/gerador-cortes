@@ -30,6 +30,7 @@ export const Busca = React.forwardRef<HTMLInputElement, BuscaProps>(
           ref={ref}
           type="search"
           data-sala=""
+          autoComplete="off"
           id={id ?? campo?.id}
           value={value}
           onChange={(e) => aoMudar(e.target.value)}

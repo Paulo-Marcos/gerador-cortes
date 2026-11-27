@@ -360,7 +360,7 @@ export default function FireDetalhePage() {
         onAlternarFinalizado={onAlternarFinalizado}
       />
 
-      <main
+      <div
         className={cn(
           'grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px]',
           '',
@@ -426,7 +426,7 @@ export default function FireDetalhePage() {
           onEditarPalcoPadrao={(id) => setPresetDePalco({ id })}
           onEditarGanchoPadrao={(id) => setPresetDeGancho({ id })}
         />
-      </main>
+      </div>
       {emQuadro && (
         <DefinirPalcoModal
           open={definindoPalco}

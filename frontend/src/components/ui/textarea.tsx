@@ -17,6 +17,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         ref={ref}
         data-sala=""
+        autoComplete="off"
         id={id ?? campo?.id}
         placeholder={carregando ? frase : placeholder}
         disabled={disabled || Boolean(carregando)}
