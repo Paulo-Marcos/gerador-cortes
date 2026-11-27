@@ -4,6 +4,7 @@
 // skill muda (ex.: após um reset persistido refazer a query).
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAlteracaoPendente } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,39 @@ const textoParaLentes = (texto: string) =>
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
+
+/** Os campos numéricos chegam como texto; vazio ou inválido cai no padrão. */
+function paramsDigitados(
+  faixa: Faixa,
+  thinking: string,
+  timeout: string,
+  padrao: EditorialSkill['params_default'],
+) {
+  return {
+    faixa,
+    thinking_tokens: Number(thinking) || 0,
+    timeout: Number(timeout) || padrao.timeout,
+  };
+}
+
+interface Rascunho {
+  corpo: string;
+  faixa: Faixa;
+  thinking: string;
+  timeout: string;
+  lentesText: string;
+}
+
+/** D-1197: há alteração quando algum campo difere da skill gravada. */
+function skillMudou(skill: EditorialSkill, r: Rascunho): boolean {
+  return (
+    r.corpo !== skill.corpo ||
+    r.faixa !== skill.params.faixa ||
+    r.thinking !== String(skill.params.thinking_tokens) ||
+    r.timeout !== String(skill.params.timeout) ||
+    r.lentesText !== lentesParaTexto(skill.lentes)
+  );
+}
 
 function ResetButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
   return (
@@ -73,16 +107,16 @@ export function EditorialSkillForm({
     setLentesText(lentesParaTexto(skill.lentes));
   }, [skill]);
 
+  useAlteracaoPendente(
+    skillMudou(skill, { corpo, faixa, thinking, timeout, lentesText }),
+  );
+
   const submeter = (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     onSave({
       corpo,
-      params: {
-        faixa,
-        thinking_tokens: Number(thinking) || 0,
-        timeout: Number(timeout) || skill.params_default.timeout,
-      },
+      params: paramsDigitados(faixa, thinking, timeout, skill.params_default),
       lentes: textoParaLentes(lentesText),
     });
   };

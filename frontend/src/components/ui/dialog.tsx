@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as RD from '@radix-ui/react-dialog';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { PELE_FLUTUANTE } from '@/components/ui/superficie-flutuante';
 
@@ -70,6 +71,58 @@ export function devolverFoco(origem: OrigemDoFoco | null): void {
   if (origem?.isConnected) origem.focus();
 }
 
+// D-1197 (DIRECAO §8.2 Formulário): "sair com alteração pendente pede confirmação". Quem
+// sabe se há alteração é o formulário, que é miolo do diálogo: ele a declara pelo
+// `useAlteracaoPendente`, e o diálogo guarda a saída. Quem chama o `Dialog` não repassa nada.
+type DeclararPendencia = (quem: string, pendente: boolean) => void;
+
+const GuardaDoDialogo = React.createContext<DeclararPendencia | null>(null);
+
+/** Declara ao diálogo em volta que há alteração não salva. Fora de um diálogo, não faz nada. */
+export function useAlteracaoPendente(pendente: boolean): void {
+  const declarar = React.useContext(GuardaDoDialogo);
+  const quem = React.useId();
+  React.useEffect(() => {
+    declarar?.(quem, pendente);
+    return () => declarar?.(quem, false);
+  }, [declarar, quem, pendente]);
+}
+
+const PEDIDO_DE_DESCARTE = {
+  titulo: 'Descartar alterações?',
+  descricao: 'O que você mudou e não salvou será perdido.',
+  cancelLabel: 'Continuar editando',
+  confirmLabel: 'Descartar',
+  tone: 'danger',
+} as const;
+
+/**
+ * A saída pelo operador (Esc, clique fora e o X, que no Radix são um só pedido): com
+ * alteração pendente, pergunta antes. Fechar por código (`open={false}`, depois de salvar)
+ * não passa por aqui.
+ */
+function useGuardaDeDescarte(open: boolean, onClose: () => void) {
+  const pendentes = React.useRef(new Set<string>());
+  const [perguntando, setPerguntando] = React.useState(false);
+  if (!open && perguntando) setPerguntando(false);
+
+  const declarar = React.useCallback<DeclararPendencia>((quem, pendente) => {
+    if (pendente) pendentes.current.add(quem);
+    else pendentes.current.delete(quem);
+  }, []);
+
+  return {
+    declarar,
+    pedirSaida: () => (pendentes.current.size > 0 ? setPerguntando(true) : onClose()),
+    perguntando: open && perguntando,
+    continuarEditando: () => setPerguntando(false),
+    descartar: () => {
+      setPerguntando(false);
+      onClose();
+    },
+  };
+}
+
 export interface DialogProps {
   open: boolean;
   onClose: () => void;
@@ -85,6 +138,7 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
   const origem = React.useRef<OrigemDoFoco | null>(null);
   const caixa = React.useRef<HTMLDivElement>(null);
   const lateral = tamanho === 'lateral';
+  const guarda = useGuardaDeDescarte(open, onClose);
 
   // Quem abriu é guardado ANTES de o miolo montar: um campo com `autoFocus` toma o foco no
   // commit, e o gancho de abertura do Radix nem chega a rodar (o foco já está dentro). No
@@ -93,57 +147,69 @@ export function Dialog({ open, onClose, title, description, children, footer, ta
   if (open && typeof document !== 'undefined') origem.current = guardarOrigem(origem.current, document.activeElement);
 
   return (
-    <RD.Root open={open} onOpenChange={(aberto) => !aberto && onClose()}>
-      <RD.Overlay
-        className={cn('fixed inset-0 z-50 bg-veu', MOVIMENTO_DA_CAIXA)}
-      />
-      <RD.Content
-        ref={caixa}
-        data-sala=""
-        className={cn(
-          caixaDoDialogo({ tamanho }),
-          lateral ? 'data-[state=open]:slide-in-from-right-8' : CENTRADO,
-          MOVIMENTO_DA_CAIXA,
-          !lateral && 'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
-        )}
-        // Sem descrição, o Radix não deve apontar para uma que não existe.
-        {...(description ? {} : { 'aria-describedby': undefined })}
-        onOpenAutoFocus={(evento) => {
-          // Quem pede um foco inicial (o "Cancelar" do diálogo destrutivo, DIRECAO §7.10)
-          // marca o elemento com `data-autofocus`; sem marca, o foco vai para o próprio
-          // diálogo — o leitor de tela lê o título primeiro, sem cair num botão.
-          evento.preventDefault();
-          (caixa.current?.querySelector<HTMLElement>('[data-autofocus]') ?? caixa.current)?.focus();
-        }}
-        onCloseAutoFocus={(evento) => {
-          evento.preventDefault();
-          devolverFoco(origem.current);
-          origem.current = null;
-        }}
-      >
-        <header className="flex items-start justify-between gap-3 px-[26px] pb-3 pt-[26px]">
-          <div className="min-w-0 flex-1">
-            <RD.Title className="text-secao text-fg">{title}</RD.Title>
-            {description && <RD.Description className="mt-1 text-pequeno text-fg-2">{description}</RD.Description>}
-          </div>
-          {/* Botão próprio, e não o `IconButton`: as variantes de luz levam `aria-pressed:`
-              nas classes, e o teste travado do `ConfirmDialog` (D-993) exige que o HTML sem
-              escolha não tenha a palavra. Mesma pele do fantasma, 30 px. */}
-          <RD.Close
-            data-sala=""
-            aria-label="Fechar"
-            className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-pilula text-fg-2 transition-colors duration-150 hover:bg-vidro-2 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco motion-reduce:transition-none"
-          >
-            <Icon name="x" />
-          </RD.Close>
-        </header>
-        {/* D-1195: `overscroll-contain` — chegar ao fim do miolo não rola a tela atrás do véu (§8.2). */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-[26px] py-2">{children}</div>
-        {footer && (
-          <footer className="flex flex-wrap items-center justify-end gap-2 px-[26px] pb-[26px] pt-4">{footer}</footer>
-        )}
-        {!footer && <div className="h-[18px] shrink-0" />}
-      </RD.Content>
-    </RD.Root>
+    <GuardaDoDialogo.Provider value={guarda.declarar}>
+      <RD.Root open={open} onOpenChange={(aberto) => !aberto && guarda.pedirSaida()}>
+        <RD.Overlay
+          className={cn('fixed inset-0 z-50 bg-veu', MOVIMENTO_DA_CAIXA)}
+        />
+        <RD.Content
+          ref={caixa}
+          data-sala=""
+          className={cn(
+            caixaDoDialogo({ tamanho }),
+            lateral ? 'data-[state=open]:slide-in-from-right-8' : CENTRADO,
+            MOVIMENTO_DA_CAIXA,
+            !lateral && 'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+          )}
+          // Sem descrição, o Radix não deve apontar para uma que não existe.
+          {...(description ? {} : { 'aria-describedby': undefined })}
+          onOpenAutoFocus={(evento) => {
+            // Quem pede um foco inicial (o "Cancelar" do diálogo destrutivo, DIRECAO §7.10)
+            // marca o elemento com `data-autofocus`; sem marca, o foco vai para o próprio
+            // diálogo — o leitor de tela lê o título primeiro, sem cair num botão.
+            evento.preventDefault();
+            (caixa.current?.querySelector<HTMLElement>('[data-autofocus]') ?? caixa.current)?.focus();
+          }}
+          onCloseAutoFocus={(evento) => {
+            evento.preventDefault();
+            devolverFoco(origem.current);
+            origem.current = null;
+          }}
+        >
+          <header className="flex items-start justify-between gap-3 px-[26px] pb-3 pt-[26px]">
+            <div className="min-w-0 flex-1">
+              <RD.Title className="text-secao text-fg">{title}</RD.Title>
+              {description && <RD.Description className="mt-1 text-pequeno text-fg-2">{description}</RD.Description>}
+            </div>
+            {/* Botão próprio, e não o `IconButton`: as variantes de luz levam `aria-pressed:`
+                nas classes, e o teste travado do `ConfirmDialog` (D-993) exige que o HTML sem
+                escolha não tenha a palavra. Mesma pele do fantasma, 30 px. */}
+            <RD.Close
+              data-sala=""
+              aria-label="Fechar"
+              className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-pilula text-fg-2 transition-colors duration-150 hover:bg-vidro-2 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco motion-reduce:transition-none"
+            >
+              <Icon name="x" />
+            </RD.Close>
+          </header>
+          {/* D-1195: `overscroll-contain` — chegar ao fim do miolo não rola a tela atrás do véu (§8.2). */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-[26px] py-2">{children}</div>
+          {footer && (
+            <footer className="flex flex-wrap items-center justify-end gap-2 px-[26px] pb-[26px] pt-4">{footer}</footer>
+          )}
+          {!footer && <div className="h-[18px] shrink-0" />}
+        </RD.Content>
+      </RD.Root>
+      {/* Ao lado da caixa, e não dentro dela: o `translate` e o `overflow-hidden` da caixa
+          prenderiam o `fixed` da confirmação. Só se desenha quando pergunta — a confirmação
+          é ela mesma um `Dialog`, e desenhá-la sempre não teria fim. */}
+      {guarda.perguntando && (
+        <ConfirmDialog
+          pedido={PEDIDO_DE_DESCARTE}
+          onCancel={guarda.continuarEditando}
+          onConfirm={guarda.descartar}
+        />
+      )}
+    </GuardaDoDialogo.Provider>
   );
 }

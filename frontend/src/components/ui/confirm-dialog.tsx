@@ -20,6 +20,8 @@ export interface PedidoConfirmacao {
   /** Detalhe do estado atual que sera' afetado (ex.: "12 cenas"). */
   detalhe?: string;
   confirmLabel: string;
+  /** D-1197: o rótulo de quem não faz nada; sem ele, "Cancelar". */
+  cancelLabel?: string;
   /** `danger` quando a acao descarta trabalho ja feito. */
   tone?: 'danger' | 'default';
   /**
@@ -126,7 +128,7 @@ export function ConfirmDialog({
       <div className="mt-4 flex items-center justify-end gap-2">
         {/* Foco inicial no que não faz estrago (DIRECAO §7.10): o Enter solto não destrói. */}
         <Button type="button" variant="secundario" size="pq" data-autofocus onClick={onCancel}>
-          Cancelar
+          {pedido?.cancelLabel ?? 'Cancelar'}
         </Button>
         <Button
           type="button"
