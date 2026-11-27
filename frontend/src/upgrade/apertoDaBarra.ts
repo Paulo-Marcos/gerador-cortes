@@ -29,6 +29,14 @@ export const NIVEL_MAX = 3;
 /** O `minWidth` do espaçador da barra: abaixo disso não há folga. */
 export const ESPACADOR_MIN_PX = 8;
 
+/** D-1196: abaixo disto, um subtítulo cortado não diz nada ("10…") e, com o painel
+ *  atrás, parece um contador. */
+export const SUBTITULO_MIN_PX = 96;
+
+export function subtituloEspremido(el: { clientWidth: number; scrollWidth: number } | null): boolean {
+  return el !== null && el.scrollWidth > el.clientWidth && el.clientWidth < SUBTITULO_MIN_PX;
+}
+
 /** O degrau atual e a largura da barra em que cada degrau foi cedido. */
 export type Aperto = { nivel: number; cedeuEm: number[] };
 
@@ -44,12 +52,14 @@ export type MedidaDaBarra = {
   trilha: number;
   /** Quanto o conteúdo passa da barra. */
   transbordo: number;
+  /** O subtítulo está na barra, cortado a ponto de não se ler. */
+  subtituloEspremido?: boolean;
 };
 
-/** Sem folga, com algo fora da barra ou a trilha espremida. Só a folga não
- *  basta: uma trilha curta ("Fila") cabe inteira com folga zero. */
+/** Subtítulo ilegível; ou sem folga, com algo fora da barra ou a trilha espremida.
+ *  Só a folga não basta: uma trilha curta ("Fila") cabe inteira com folga zero. */
 export function estaApertada(m: Omit<MedidaDaBarra, 'largura'>): boolean {
-  return m.folga <= 0 && (m.transbordo > 0 || m.trilha < TRILHA_MIN_PX);
+  return Boolean(m.subtituloEspremido) || (m.folga <= 0 && (m.transbordo > 0 || m.trilha < TRILHA_MIN_PX));
 }
 
 /**
@@ -120,6 +130,7 @@ export function useApertoDaBarra(chave: string) {
       folga: espacador.current.offsetWidth - ESPACADOR_MIN_PX,
       trilha: trilha.current.offsetWidth,
       transbordo: b.scrollWidth - b.clientWidth,
+      subtituloEspremido: subtituloEspremido(trilha.current.querySelector<HTMLElement>('[data-subtitulo]')),
     };
     setAperto((a) => proximoAperto(a, medida));
   }, [aperto, largura, chave]);

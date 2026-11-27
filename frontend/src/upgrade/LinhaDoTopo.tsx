@@ -79,7 +79,8 @@ export function LinhaDoTopo({ trilha, titulo, etapas, atual, seletorCompacto = f
         {etapas}
         {cabecalho?.sub && folga && pecas.subtitulo ? (
           // O subtítulo encolhe muito antes da trilha: ele cede primeiro, ela rola por último.
-          <span className="min-w-0 shrink-[50] truncate pl-1 text-pequeno text-fg-3">{cabecalho.sub}</span>
+          // D-1196: sobre a aurora com a capa, só `fg-2` sobre `painel` passa 4,5:1 (§8.1).
+          <span data-subtitulo className="min-w-0 shrink-[50] truncate rounded-pilula bg-painel px-2.5 py-1 text-pequeno text-fg-2">{cabecalho.sub}</span>
         ) : null}
       </div>
 
