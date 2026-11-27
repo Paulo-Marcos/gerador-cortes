@@ -183,7 +183,7 @@ describe('CorteLinhaAp (D-868)', () => {
   it('uma ação por linha: Editar e o principal com rótulo, o resto no ⋯', () => {
     const html = linha(desenhar({}));
     expect(html.match(/data-variant="link-de-acao"/g)).toHaveLength(1);
-    expect(html).toMatch(/>Aprovar<\/button>/);
+    expect(html).toMatch(/>Editar<\/button>/);
     expect(html).toContain('aria-label="Mais ações do corte 7"');
     for (const antigo of ['title="Pós-produção"', 'aria-label="Metadados do corte"', 'title="Abrir a pasta do corte"'])
       expect(html).not.toContain(antigo);
@@ -191,7 +191,7 @@ describe('CorteLinhaAp (D-868)', () => {
 
   it('alvos de 32 px: Editar, o principal e o ⋯ (grande)', () => {
     const html = linha(desenhar({}));
-    expect(html).toMatch(/data-variant="link-de-acao"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?Aprovar/);
+    expect(html).toMatch(/data-variant="link-de-acao"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?Editar/);
     expect(h.mais!.grande).toBe(true);
   });
 
@@ -209,10 +209,10 @@ describe('CorteLinhaAp (D-868)', () => {
 });
 
 describe('CorteLinhaAp · o principal faz o que diz (D-868)', () => {
-  it('Aprovar aprova; Voltar devolve a proposto', () => {
+  it('Editar abre o editor; Trazer de volta devolve a proposto', () => {
     desenhar({});
-    h.primario!.aprovar();
-    expect(h.aprovar).toHaveBeenCalledOnce();
+    h.primario!.editar();
+    expect(h.navegar).toHaveBeenCalledWith('/projetos/p1/cortes/c7');
     h.primario!.voltar();
     expect(h.atualizar.mock.calls[0][0]).toEqual({ status: 'proposto' });
   });
@@ -230,14 +230,15 @@ describe('CorteLinhaAp · o principal faz o que diz (D-868)', () => {
     expect(h.navegar).toHaveBeenCalledWith('/projetos/p1/cortes/c7');
   });
 
-  it('o principal forte é o do botão primário; Aprovar é o comum', () => {
+  it('o principal forte é o do botão primário; Editar é o comum', () => {
     expect(arvoreDaLinha({ status: 'aprovado' }).find((e) => e.type === LinkDeAcao)).toBeDefined();
     expect(arvoreDaLinha().some((e) => /btn-pri/.test(e.props.className ?? ''))).toBe(false);
   });
 
   it('aprovar que falha avisa (D-746)', () => {
-    desenhar({});
-    h.primario!.aprovar();
+    const alvo = { closest: () => null, parentElement: null };
+    const artigo = arvoreDaLinha()[0] as unknown as ReactElement<{ onKeyDown: (e: unknown) => void }>;
+    artigo.props.onKeyDown({ key: 'a', target: alvo, currentTarget: alvo, preventDefault: vi.fn(), stopPropagation: vi.fn() });
     expect(typeof h.aprovar.mock.calls[0][1].onError).toBe('function');
   });
 
@@ -385,7 +386,7 @@ describe('CorteLinhaAp · a barra e a largura (D-868)', () => {
     expect(timecode).toBeGreaterThan(-1);
     expect(barra).toBeGreaterThan(timecode);
     expect(html.indexOf('data-estado')).toBeGreaterThan(barra);
-    expect(html.indexOf('data-estado')).toBeLessThan(html.indexOf('Aprovar'));
+    expect(html.indexOf('data-estado')).toBeLessThan(html.indexOf('Editar'));
   });
 });
 

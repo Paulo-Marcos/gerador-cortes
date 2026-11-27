@@ -68,7 +68,8 @@ export const LinhaDaLista = React.forwardRef<HTMLLIElement, LinhaDaListaProps>(f
         'hover:border-fio hover:bg-vidro',
         atual && 'border-fio-2 bg-vidro-2 shadow-topo',
         marcada && 'border-iris-fio bg-iris-suave hover:border-iris-fio hover:bg-iris-suave',
-        riscada && 'text-fg-3 line-through',
+        // O traço é de quem desenha o título (D-1154): aqui ele desceria até a ação da linha.
+        riscada && 'text-fg-3',
         className,
       )}
       {...props}

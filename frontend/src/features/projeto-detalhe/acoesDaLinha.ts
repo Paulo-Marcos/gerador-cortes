@@ -38,7 +38,7 @@ export type Primario = { texto: string; icone: IconName; forte: boolean; acao: (
 export function primarioDaLinha(
   estado: EstadoLinha,
   h: {
-    aprovar: () => void;
+    editar: () => void;
     voltar: () => void;
     enviarYoutube: () => void;
     proximo: Pick<Primario, 'texto' | 'icone' | 'acao'>;
@@ -47,7 +47,7 @@ export function primarioDaLinha(
 ): Primario {
   return {
     publicado: { texto: 'No ar', icone: 'external-link', forte: false, acao: h.abrirNoYoutube },
-    rejeitado: { texto: 'Voltar', icone: 'undo-2', forte: false, acao: h.voltar },
+    rejeitado: { texto: 'Trazer de volta', icone: 'undo-2', forte: false, acao: h.voltar },
     // D-746: o verbo do resultado; o clique abre a conferência, não envia.
     pronto: {
       texto: 'Enviar ao YouTube',
@@ -56,7 +56,8 @@ export function primarioDaLinha(
       acao: h.enviarYoutube,
     },
     aprovado: { ...h.proximo, forte: true },
-    proposto: { texto: 'Aprovar', icone: 'check', forte: false, acao: h.aprovar },
+    // D-1154: aprovar não é a ação da linha — vai pela tecla A, pelo lote e pela barra.
+    proposto: { texto: 'Editar', icone: ICONE_DO_CONCEITO.editar, forte: false, acao: h.editar },
   }[estado] as Primario;
 }
 

@@ -25,7 +25,9 @@ describe('Lista', () => {
   it('atual, marcada e riscada têm cada um a sua marca', () => {
     expect(renderToStaticMarkup(<LinhaDaLista atual>a</LinhaDaLista>)).toContain('aria-current="true"');
     expect(renderToStaticMarkup(<LinhaDaLista marcada>a</LinhaDaLista>)).toContain('bg-iris-suave');
-    expect(renderToStaticMarkup(<LinhaDaLista riscada>a</LinhaDaLista>)).toContain('line-through');
+    const riscada = renderToStaticMarkup(<LinhaDaLista riscada>a</LinhaDaLista>);
+    expect(riscada).toContain('data-riscada="true"');
+    expect(riscada).not.toContain('line-through');
   });
 
   it('nunca leva fio de luz nem feixe (§3.1)', () => {

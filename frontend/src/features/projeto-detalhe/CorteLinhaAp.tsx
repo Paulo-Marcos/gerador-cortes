@@ -198,7 +198,7 @@ export function CorteLinhaAp({
   };
 
   const primario = primarioDaLinha(estado, {
-    aprovar: () => aprovar.mutate(undefined, { onError: avisarFalha('aprovar') }),
+    editar: irEditor,
     voltar: () => atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('voltar') }),
     enviarYoutube: onEnviarYoutube,
     proximo: montarProximoDaLinha(tira, projetoId, status.corte_id, navigate, corte),
