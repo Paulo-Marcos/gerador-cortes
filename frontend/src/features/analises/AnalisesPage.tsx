@@ -2,7 +2,9 @@
 // abas e, em cada aba, o resultado. Tela de leitura: nenhum botão primário (PRIMARIOS_POR_TELA).
 // O "Exportar CSV de todas as lives" mora no cabeçalho da casca, como secundária.
 import { useMemo, useState } from 'react';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { Kpi } from '@/components/ui/kpi';
+import { mensagemErro } from '@/lib/mensagemErro';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { analisesApi } from './api';
 import { calcularKpis } from './kpisDasAnalises';
@@ -29,6 +31,19 @@ export function FaixaDeKpis() {
     () => calcularKpis(ytStatus.data, llmCalls.data?.chamadas),
     [ytStatus.data, llmCalls.data],
   );
+
+  // D-1204: consulta caída não é "Sem dados": o KPI afirmaria que nada foi sincronizado.
+  const falhas = [ytStatus, llmCalls].filter((q) => q.isError && !q.data);
+  if (falhas.length > 0) {
+    return (
+      <EstadoDeErro
+        className="flex-none p-6"
+        titulo="Não consegui carregar os números das análises"
+        motivo={mensagemErro(falhas[0].error, 'O backend não respondeu. Tente de novo.')}
+        aoTentar={() => falhas.forEach((q) => void q.refetch())}
+      />
+    );
+  }
 
   return (
     <section aria-label="Resumo" className="grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">

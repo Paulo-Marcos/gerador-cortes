@@ -2,6 +2,7 @@
 // lista era fixa no código; agora é do canal (ADR-0012). Acrescentar põe um
 // chip novo no diálogo dali para frente; esconder o tira dos chips sem apagar o
 // histórico — os cortes que já saíram por ele continuam contados nas análises.
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,8 @@ export function MotivosDeExclusaoSection() {
     acrescentar.mutate(nome, { onSuccess: () => setNome('') });
   }
 
-  const falha = query.error ?? acrescentar.error ?? mostrar.error;
+  // A falha da leitura é o estado de erro da seção; a de gravar fica junto do formulário.
+  const falha = acrescentar.error ?? mostrar.error;
 
   return (
     <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
@@ -30,6 +32,14 @@ export function MotivosDeExclusaoSection() {
         Os chips que aparecem ao excluir um corte proposto pela IA. Esconder tira o chip do diálogo; os
         cortes que já saíram por ele continuam contados nas análises.
       </p>
+      {query.isError && !query.data && (
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui carregar os motivos de exclusão"
+          motivo={mensagemErro(query.error, 'O backend não respondeu. Tente de novo.')}
+          aoTentar={() => void query.refetch()}
+        />
+      )}
       {query.data && (
         <ul className="flex flex-wrap gap-1.5" aria-label="Motivos do canal">
           {query.data.motivos.map((motivo) => (

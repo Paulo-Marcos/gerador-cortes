@@ -1,3 +1,4 @@
+import { mensagemErro } from '@/lib/mensagemErro';
 import type { Corte, StatusCorte, StatusExportCorte } from '@/types/models';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 import { estaAprovado } from '@/lib/statusDoCorte';
@@ -123,7 +124,7 @@ export function falhaDaConsulta(q: {
 }) {
   if (!q.isError || q.data) return null;
   return {
-    mensagem: q.error instanceof Error ? q.error.message : 'Não consegui carregar os cortes.',
+    mensagem: mensagemErro(q.error, 'Não consegui carregar os cortes.'),
     tentarDeNovo: () => void q.refetch(),
   };
 }

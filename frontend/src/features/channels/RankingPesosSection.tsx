@@ -2,7 +2,7 @@
 // o I/O (hooks em useRankingPesos) e delega a renderização ao formulário burro. Os
 // pesos (views/likes/comentários/sentimento/recência) e a meia-vida da recência,
 // antes só no .env, viram editáveis por canal — com o rótulo de cada critério à mostra.
-import { Button } from '@/components/ui/button';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { useToast } from '@/components/ui/toaster';
 import type { RankingPesosPayload } from '@/features/channels/api/pesosRanking';
 import { RankingPesosForm } from './RankingPesosForm';
@@ -56,17 +56,12 @@ export function RankingPesosSection() {
       )}
 
       {pesosQuery.isError && (
-        <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
-          <p className="flex items-center gap-2 text-linha text-fg">
-            <Icon name="triangle-alert" size={16} className="text-erro" />
-            {mensagemErro(pesosQuery.error, 'Não foi possível carregar os pesos.')}
-          </p>
-          <div>
-            <Button type="button" variant="secundario" size="pq" onClick={() => pesosQuery.refetch()}>
-              Tentar de novo
-            </Button>
-          </div>
-        </div>
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui carregar os pesos"
+          motivo={mensagemErro(pesosQuery.error, 'O backend não respondeu. Tente de novo.')}
+          aoTentar={() => void pesosQuery.refetch()}
+        />
       )}
 
       {criterios.length > 0 && (

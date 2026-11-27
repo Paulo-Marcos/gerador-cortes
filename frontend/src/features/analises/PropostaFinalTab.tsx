@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { mensagemErro } from '@/lib/mensagemErro';
 import { EstadoVazio } from '@/components/ui/estado-vazio';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
@@ -209,6 +210,18 @@ function SeletorDeLive({
 export function PropostaFinalTab() {
   const [projetoId, setProjetoId] = useState<string | null>(null);
   const telemetria = useTelemetriaCortes(projetoId);
+  const projetos = useProjetosAnalises();
+
+  // D-1204: sem a lista não há o que escolher; pedir "Escolha uma live" esconderia a falha.
+  if (projetos.isError && !projetos.data) {
+    return (
+      <EstadoDeErro
+        titulo="Não consegui carregar a lista de lives"
+        motivo={mensagemErro(projetos.error, 'O backend não respondeu. Tente de novo.')}
+        aoTentar={() => void projetos.refetch()}
+      />
+    );
+  }
 
   return (
     <div className="grid content-start gap-5">

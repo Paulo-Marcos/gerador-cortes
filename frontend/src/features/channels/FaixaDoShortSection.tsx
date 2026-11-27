@@ -1,6 +1,7 @@
 // D-997: seção "Duração dos shorts" na tela de Canais. Container: lê e grava a
 // faixa do canal ativo e entrega ao formulário burro. Antes a faixa era fixa no
 // config.py (15 a 90 s); agora é do canal, como pede o ADR-0012.
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toaster';
 import { faixaDoShortApi } from '@/features/channels/api/faixaDoShort';
@@ -29,9 +30,12 @@ export function FaixaDoShortSection() {
         descartado antes de chegar a você.
       </p>
       {query.isError && (
-        <p role="alert" className="text-xs text-erro">
-          {mensagemErro(query.error, 'Não foi possível carregar a faixa dos shorts.')}
-        </p>
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui carregar a faixa dos shorts"
+          motivo={mensagemErro(query.error, 'O backend não respondeu. Tente de novo.')}
+          aoTentar={() => void query.refetch()}
+        />
       )}
       {query.data && (
         <FaixaDoShortForm

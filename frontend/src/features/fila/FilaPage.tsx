@@ -5,7 +5,8 @@ import {
 } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { LinhaDaLista, Lista } from '@/components/ui/lista';
 import { Progresso } from '@/components/ui/progresso';
@@ -153,8 +154,14 @@ function LinhaJob({
   );
 }
 
+/** D-1204: a consulta falhou. Nunca o "Nada na fila": ninguém sabe se há algo rodando. */
+function FalhaDaFila(props: { motivo: string; aoTentar: () => void; className?: string }) {
+  return <EstadoDeErro titulo="Não consegui consultar a fila" {...props} />;
+}
+
 export default function FilaPage() {
-  const { jobs, removeJob, cancelJob, clearAll } = useWorkbenchQueue();
+  const { jobs, removeJob, cancelJob, clearAll, falha, carregando, tentarDeNovo } =
+    useWorkbenchQueue();
 
   const rodando = jobs.filter((j) => j.estado === 'rodando').length;
   const esperando = jobs.filter((j) => j.estado === 'aguardando').length;
@@ -163,7 +170,10 @@ export default function FilaPage() {
 
   useDefinirChrome(
     {
-      sub: `${rodando} rodando · ${esperando} na espera · ${concluidos} concluído${concluidos === 1 ? '' : 's'}`,
+      // D-1204: sem resposta, "0 rodando" seria afirmar o que ninguém sabe.
+      sub: falha
+        ? 'sem resposta do backend'
+        : `${rodando} rodando · ${esperando} na espera · ${concluidos} concluído${concluidos === 1 ? '' : 's'}`,
       acoes:
         terminais.length > 0
           ? [
@@ -178,7 +188,7 @@ export default function FilaPage() {
             ]
           : [],
     },
-    [rodando, esperando, concluidos, terminais.length],
+    [rodando, esperando, concluidos, terminais.length, falha],
   );
 
   // `clearAll` continua existindo para o painel do Workbench; aqui ele não é
@@ -188,17 +198,30 @@ export default function FilaPage() {
   if (jobs.length === 0) {
     return (
       <div className="h-full overflow-auto px-7 py-6">
-        <EstadoVazio
-          icone="inbox"
-          titulo="Nada na fila"
-          descricao="Download, análise, render e publicação aparecem aqui enquanto rodam — venha de qual tela vier."
-        />
+        {falha ? (
+          <FalhaDaFila motivo={falha} aoTentar={tentarDeNovo} />
+        ) : carregando ? (
+          <EstadoCarregando frase="Consultando a fila…" linhas={2} />
+        ) : (
+          <EstadoVazio
+            icone="inbox"
+            titulo="Nada na fila"
+            descricao="Download, análise, render e publicação aparecem aqui enquanto rodam — venha de qual tela vier."
+          />
+        )}
       </div>
     );
   }
 
   return (
     <div className="h-full overflow-auto px-7 py-6 text-fg">
+      {falha ? (
+        <FalhaDaFila
+          motivo={`${falha} O que está abaixo é o último estado conhecido.`}
+          aoTentar={tentarDeNovo}
+          className="mb-4 max-w-[960px] p-5"
+        />
+      ) : null}
       <Lista colunas="1fr" aria-label="Jobs da fila" className="max-w-[960px]">
         {jobs.map((job) => (
           <LinhaJob

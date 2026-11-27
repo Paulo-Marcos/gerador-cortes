@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   createContext,
   useCallback,
@@ -10,6 +9,7 @@ import {
 } from 'react';
 import { filaGlobalApi } from './api';
 import { rotuloCurtoProjeto } from './rotulo';
+import { useConsultaDaFila, useSituacaoDaFila, type SituacaoDaFila } from './useConsultaDaFila';
 
 // ─────────────────────────────────────────────────────────────
 // Fila global de jobs pesados (DE-PARA §0; D-417). O backend é a
@@ -472,7 +472,7 @@ export function agruparFila(jobs: QueueJob[]): GrupoFila[] {
   });
 }
 
-interface WorkbenchQueueContextValue {
+interface WorkbenchQueueContextValue extends SituacaoDaFila {
   jobs: QueueJob[];
   /** A fila como a UI desenha: uma linha por alvo (D-425). */
   grupos: GrupoFila[];
@@ -497,19 +497,12 @@ function readStoredQueue(): EstadoFila {
   }
 }
 
-const POLL_ATIVO_MS = 2_000;
-const POLL_OCIOSO_MS = 5_000;
-
 export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoFila>(() => readStoredQueue());
 
   const temAtivo = estado.jobs.some((job) => ehAtivo(job.estado));
-  const filaGlobal = useQuery({
-    queryKey: ['workbench', 'fila-global'],
-    // O contrato estendido (`jobs`) só é consumido aqui — daí o cast local.
-    queryFn: async () => (await filaGlobalApi.filaGlobal()) as unknown as { jobs?: JobRemoto[] },
-    refetchInterval: temAtivo ? POLL_ATIVO_MS : POLL_OCIOSO_MS,
-  });
+  const filaGlobal = useConsultaDaFila<JobRemoto>(temAtivo);
+  const situacao = useSituacaoDaFila(filaGlobal);
 
   const remotos = filaGlobal.data?.jobs;
   const atualizadoEm = filaGlobal.dataUpdatedAt;
@@ -594,8 +587,8 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
   const grupos = useMemo(() => agruparFila(estado.jobs), [estado.jobs]);
 
   const value = useMemo(
-    () => ({ jobs: estado.jobs, grupos, registerJob, removeJob, cancelJob, clearAll }),
-    [estado.jobs, grupos, registerJob, removeJob, cancelJob, clearAll],
+    () => ({ jobs: estado.jobs, grupos, registerJob, removeJob, cancelJob, clearAll, ...situacao }),
+    [estado.jobs, grupos, registerJob, removeJob, cancelJob, clearAll, situacao],
   );
 
   return <WorkbenchQueueContext.Provider value={value}>{children}</WorkbenchQueueContext.Provider>;

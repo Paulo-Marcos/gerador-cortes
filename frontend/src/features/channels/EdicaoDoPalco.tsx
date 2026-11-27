@@ -1,3 +1,4 @@
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toaster';
 import type { PalcoComponentes } from '@/features/channels/api/canais';
@@ -107,7 +108,7 @@ function EstadoDoPalco({
 }: {
   canaisCarregados: boolean;
   temCanal: boolean;
-  palcoQuery: { isLoading: boolean; isError: boolean; error: unknown };
+  palcoQuery: { isLoading: boolean; isError: boolean; error: unknown; refetch: () => unknown };
 }) {
   if (canaisCarregados && !temCanal) {
     return <p className="text-sm text-fg-3">Nenhum canal ativo. Selecione um canal para editar o palco.</p>;
@@ -121,7 +122,14 @@ function EstadoDoPalco({
     );
   }
   if (palcoQuery.isError) {
-    return <p className="text-sm text-[var(--cc-erro)]">{mensagemErro(palcoQuery.error, 'Não foi possível carregar o palco.')}</p>;
+    return (
+      <EstadoDeErro
+        className="p-5"
+        titulo="Não consegui carregar o palco"
+        motivo={mensagemErro(palcoQuery.error, 'O backend não respondeu. Tente de novo.')}
+        aoTentar={() => void palcoQuery.refetch()}
+      />
+    );
   }
   return null;
 }

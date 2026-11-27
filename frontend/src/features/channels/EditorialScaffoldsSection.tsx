@@ -2,8 +2,8 @@
 // orquestra o I/O (hooks em useEditorialScaffolds) e delega a renderização aos
 // componentes burros. Lista os 5 scaffolds (contrato de saída) do canal ativo,
 // mostra se cada um foi customizado e abre o editor com o guardrail do contrato.
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import type { EditorialScaffold } from '@/features/channels/api/scaffolds';
@@ -78,22 +78,12 @@ export function EditorialScaffoldsSection() {
       )}
 
       {scaffoldsQuery.isError && (
-        <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
-          <p className="flex items-center gap-2 text-linha text-fg">
-            <Icon name="triangle-alert" size={16} className="text-erro" />
-            {mensagemErro(scaffoldsQuery.error, 'Não foi possível carregar os scaffolds.')}
-          </p>
-          <div>
-            <Button
-              type="button"
-              variant="secundario"
-              size="pq"
-              onClick={() => scaffoldsQuery.refetch()}
-            >
-              Tentar de novo
-            </Button>
-          </div>
-        </div>
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui carregar os scaffolds"
+          motivo={mensagemErro(scaffoldsQuery.error, 'O backend não respondeu. Tente de novo.')}
+          aoTentar={() => void scaffoldsQuery.refetch()}
+        />
       )}
 
       {scaffolds.length > 0 && (

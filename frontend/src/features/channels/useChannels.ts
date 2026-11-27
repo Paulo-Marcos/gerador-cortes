@@ -24,6 +24,13 @@ const YOUTUBE_AUTH_KEY = ['youtube-auth-status'] as const;
 const TEMAS_KEY = ['temas'] as const;
 const temaDoCanalKey = (id: string) => ['tema-canal', id] as const;
 
+/** D-1204: sem a lista, "0 canais · nenhum ativo" afirmaria o que ninguém sabe. */
+export function subDosCanais(total: number, ativo: string | undefined, semLista: boolean): string {
+  if (semLista) return 'sem a lista de canais';
+  const contagem = `${total} ${total === 1 ? 'canal' : 'canais'}`;
+  return ativo ? `${contagem} · ativo: ${ativo}` : `${contagem} · nenhum ativo`;
+}
+
 export function useCanais() {
   return useQuery<ListaCanaisResponse>({
     queryKey: CANAIS_KEY,

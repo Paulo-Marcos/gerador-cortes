@@ -2,6 +2,7 @@
 // COMPLETA das cenas Remotion (17 cores) + o preset tipográfico. É por-canal
 // (settings.db) e opt-in: sem escolha, o canal renderiza o default "atual".
 // Componente "burro" quanto a I/O — consome os hooks de useChannels.
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { CartaoDeOpcao } from '@/components/ui/cartao-de-opcao';
 import { GrupoDeRadio } from '@/components/ui/radio';
 import { useToast } from '@/components/ui/toaster';
@@ -99,9 +100,12 @@ export function ChannelThemeSection() {
       )}
 
       {temasQuery.isError && (
-        <p className="text-corpo text-erro">
-          {mensagemErro(temasQuery.error, 'Não foi possível carregar os temas.')}
-        </p>
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui carregar os temas"
+          motivo={mensagemErro(temasQuery.error, 'O backend não respondeu. Tente de novo.')}
+          aoTentar={() => void temasQuery.refetch()}
+        />
       )}
 
       {canalAtivo && temasQuery.data && (

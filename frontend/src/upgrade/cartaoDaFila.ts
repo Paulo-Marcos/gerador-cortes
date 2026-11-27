@@ -75,6 +75,8 @@ export function filaDoTrilho(
   naFila: boolean,
   onAbrir?: () => void,
   lote: ResumoDoLote | null = null,
+  /** D-1204: a consulta da fila falhou; sem job guardado, "vazia" seria um chute. */
+  semResposta = false,
 ): FilaDoTrilho | undefined {
   const ativos = jobs.filter((j) => j.estado === 'rodando' || j.estado === 'aguardando');
   const comLote = lotePedeAtencao(lote);
@@ -82,8 +84,9 @@ export function filaDoTrilho(
     return { titulo: 'Fila · lote', sub: textoDoLote(lote), progresso: lote.progresso, onAbrir };
   }
   if (ativos.length === 0) {
+    const parada = jobs.length > 0 ? 'nada rodando' : 'vazia';
     return naFila
-      ? { titulo: 'Fila', sub: jobs.length > 0 ? 'nada rodando' : 'vazia', progresso: 0, to: '/fila' }
+      ? { titulo: 'Fila', sub: semResposta ? 'sem resposta' : parada, progresso: 0, to: '/fila' }
       : undefined;
   }
   const rodando = ativos.find((j) => j.estado === 'rodando') ?? ativos[0];

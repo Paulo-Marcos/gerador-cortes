@@ -24,6 +24,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { mensagemErro } from '@/lib/mensagemErro';
 import { cn } from '@/lib/utils';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
@@ -54,9 +56,35 @@ const FILTROS: Array<{ id: FiltroDosProntos; texto: string }> = [
   { id: 'sem_capa', texto: 'Sem capa' },
 ];
 
+/** D-1204: sem resposta, "0 shorts faltando" seria dizer que está tudo no ar. */
+function resumoDosProntos(
+  semResposta: boolean,
+  total: number,
+  contagens: { sem_post: number; sem_capa: number },
+) {
+  if (semResposta) return 'sem a lista de prontos';
+  return [
+    `${total} short${total === 1 ? '' : 's'} faltando em alguma rede`,
+    contagens.sem_post > 0 ? `${contagens.sem_post} sem post` : null,
+    contagens.sem_capa > 0 ? `${contagens.sem_capa} sem capa` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function FalhaDosProntos({ erro, aoTentar }: { erro: unknown; aoTentar: () => void }) {
+  return (
+    <EstadoDeErro
+      titulo="Não consegui carregar os shorts prontos"
+      motivo={mensagemErro(erro, 'O backend não respondeu. Tente de novo.')}
+      aoTentar={aoTentar}
+    />
+  );
+}
+
 export default function ShortsProntosPage() {
 
-  const { data, isLoading, isError, error } = useShortsProntos();
+  const { data, isLoading, isError, error, refetch } = useShortsProntos();
   const [filtro, setFiltro] = useState<FiltroDosProntos>('todos');
   const [selecionados, setSelecionados] = useState<string[]>([]);
   // Cada abertura do lote é um modal novo (via `key`): ele nasce com a seleção
@@ -89,13 +117,7 @@ export default function ShortsProntosPage() {
       : escolhidos.length > 0
         ? `Publicar ${escolhidos.length} selecionado${escolhidos.length === 1 ? '' : 's'}`
         : `Publicar todos (${alvoDoLote.length})`;
-  const resumo = [
-    `${prontos.length} short${prontos.length === 1 ? '' : 's'} faltando em alguma rede`,
-    contagens.sem_post > 0 ? `${contagens.sem_post} sem post` : null,
-    contagens.sem_capa > 0 ? `${contagens.sem_capa} sem capa` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const resumo = resumoDosProntos(isError && !data, prontos.length, contagens);
 
   useDefinirChrome(
     {
@@ -163,9 +185,7 @@ export default function ShortsProntosPage() {
         )}
 
         {isError && (
-          <p className="py-16 text-center text-corpo text-fg-3">
-            Não consegui carregar os prontos: {(error as Error)?.message ?? 'erro desconhecido'}
-          </p>
+          <FalhaDosProntos erro={error} aoTentar={() => void refetch()} />
         )}
 
         {!isLoading && !isError && prontos.length === 0 && (

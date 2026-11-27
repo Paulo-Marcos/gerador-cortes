@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { IconButton } from '@/components/ui/icon-button';
@@ -266,7 +267,15 @@ function GrupoDaGaveta({ titulo, quantos, children }: { titulo: string; quantos:
 }
 
 /** D-897: o lote de publicação no topo, os três grupos embaixo. "Nada rodando" só sem nenhum dos dois. */
-function ConteudoDaFila({ grupos }: { grupos: GrupoFila[] }) {
+function ConteudoDaFila({
+  grupos,
+  falha,
+  aoTentar,
+}: {
+  grupos: GrupoFila[];
+  falha: string | null;
+  aoTentar: () => void;
+}) {
   // Lido aqui, e não recebido da gaveta: este conteúdo monta a cada abertura,
   // e é essa montagem que pergunta de novo ao backend (lote disparado em outra aba).
   const lote = useLoteDaFila();
@@ -274,7 +283,10 @@ function ConteudoDaFila({ grupos }: { grupos: GrupoFila[] }) {
   return (
     <div className="flex flex-col gap-4 pb-2">
       <LoteNaFila lote={lote} />
-      {grupos.length === 0 && !lote ? (
+      {falha ? (
+        <EstadoDeErro className="p-5" titulo="Não consegui consultar a fila" motivo={falha} aoTentar={aoTentar} />
+      ) : null}
+      {grupos.length === 0 && !lote && !falha ? (
         <p className="m-0 px-3 py-7 text-center text-corpo text-fg-3">Nada rodando agora.</p>
       ) : null}
       <GrupoDaGaveta titulo="Agora" quantos={agora.length}>
@@ -324,7 +336,7 @@ export function GavetaDaFila({
   /** Conteúdo alternativo (vitrines/teste). Em uso normal, omitir. */
   children?: ReactNode;
 }) {
-  const { grupos } = useWorkbenchQueue();
+  const { grupos, falha, tentarDeNovo } = useWorkbenchQueue();
   const lote = useLoteDaFila();
   useFecharComCtrlJ(aberta, aoFechar);
 
@@ -336,7 +348,7 @@ export function GavetaDaFila({
       onClose={aoFechar}
       tamanho="lateral"
       title="Fila de processamento"
-      description={resumoDaFila(grupos, Boolean(lote))}
+      description={falha ? 'sem resposta do backend' : resumoDaFila(grupos, Boolean(lote))}
       footer={
         <div className="flex w-full items-center gap-3">
           <p className="m-0 min-w-0 flex-1 text-pequeno text-fg-3">Os renders seguem com a gaveta fechada.</p>
@@ -347,7 +359,7 @@ export function GavetaDaFila({
         </div>
       }
     >
-      {children ?? <ConteudoDaFila grupos={grupos} />}
+      {children ?? <ConteudoDaFila grupos={grupos} falha={falha} aoTentar={tentarDeNovo} />}
     </Dialog>
   );
 }

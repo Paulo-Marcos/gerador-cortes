@@ -15,6 +15,7 @@ import { ORIGEM_API } from '@/lib/apiBase';
 import { useEditorPage } from './useEditorPage';
 import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
 import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { mensagemErro } from '@/lib/mensagemErro';
 import { CabecalhoDoCorte } from './CabecalhoDoCorte';
 
 function appendQueryParams(url: string, params: Record<string, string>): string {
@@ -22,11 +23,33 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
   return `${url}${url.includes('?') ? '&' : '?'}${search}`;
 }
 
+interface ConsultaDoEditor {
+  isError: boolean;
+  data?: unknown;
+  error: unknown;
+  refetch: () => unknown;
+}
+
+/** D-1204: o estado de erro do Editor, ou `null` quando as duas consultas têm o que mostrar. */
+function falhaDoEditor(consultas: ConsultaDoEditor[]) {
+  const falhas = consultas.filter((q) => q.isError && !q.data);
+  if (falhas.length === 0) return null;
+  return (
+    <EstadoDeErro className="h-full" titulo="Não foi possível carregar o corte"
+      motivo={mensagemErro(falhas[0].error, 'O backend não respondeu. Tente de novo.')}
+      aoTentar={() => falhas.forEach((q) => void q.refetch())} />
+  );
+}
+
 export function EditorPage() {
   const { adicionarDesvio, adicionarTrechoAqui, alternarVelocidade, atualizarCorte, bindings, brutoMutationPendenteNoCorteAtual, brutoPronto, brutoStatusAtual, confirmacao, contextoCorte, corte, corteId, corteQuery, corteUI, cortes, cortesQuery, currentTime, dividirCorte, exportStatusQ, handleGerarBrutoPrincipal, handleGerarTrechosIA, intervaloAberto, irParaPos, isDirty, juntarCortes, liquidoSeg, metaClaudeStatus, nextCut, onChangeDesvio, onChangeSpeed, onCriarCorteDaSelecao, onDividirCorteAqui, onJuntarProximoCorte, onSeekTimeline, onSelectDesvioByTime, patchDirty, playbackRate, playerRef, pointerMode, previousCut, projeto, projetoId, qc, riscados, riscar, salvarMudancas, selectedDesvioIdx, setCurrentTime, setFimAtual, setInicioAtual, setIntervaloAberto, setPointerMode, setShortcutsOpen, setSmartPlay, setTrechoLocked, setTrechosManualOpen, setWaveformRefreshKey, shortcutsOpen, sincTrans, smartPlay, statusBruto, toggleAprovado, toggleFire, toggleLeitura, trechoLocked, trechosClaudePendente, trechosManualOpen, waveformRefreshKey, waveformWindowRef } = useEditorPage();
 
 
   if (!projetoId) return <Navigate to="/projetos" replace />;
+
+  // D-1204: antes do vazio e do "carregando": sem dado, a falha ficaria presa em um dos dois.
+  const falha = falhaDoEditor([corteQuery, cortesQuery]);
+  if (falha) return falha;
 
   if (!corteId && !cortesQuery.isLoading && cortes.length === 0) {
     return (
@@ -37,13 +60,6 @@ export function EditorPage() {
 
   if (corteQuery.isLoading || cortesQuery.isLoading || !corteUI) {
     return <EstadoCarregando className="p-6" frase="Carregando o corte…" linhas={2} />;
-  }
-
-  if (corteQuery.isError) {
-    return (
-      <EstadoDeErro className="h-full" titulo="Não foi possível carregar o corte"
-        motivo={(corteQuery.error as Error).message} />
-    );
   }
 
   const videoOriginal = `${ORIGEM_API}/videos/${projetoId}/video.mkv`;

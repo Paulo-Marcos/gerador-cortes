@@ -1,6 +1,7 @@
 // D-908: seção "Horários de publicação" na página de Canais. Container:
 // orquestra o I/O (hooks em useEscalonamento) e delega à grade do público e ao
 // formulário de cada destino. É daqui que o lote de shorts tira a janela do canal.
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
@@ -62,17 +63,12 @@ export function EscalonamentoSection() {
       )}
 
       {query.isError && (
-        <div className="grid gap-3 rounded-campo border border-erro/30 p-4">
-          <p className="flex items-center gap-2 text-linha text-fg">
-            <Icon name="triangle-alert" size={16} className="text-erro" />
-            {mensagemErro(query.error, 'Não foi possível carregar os horários.')}
-          </p>
-          <div>
-            <Button type="button" variant="secundario" size="pq" onClick={() => query.refetch()}>
-              Tentar de novo
-            </Button>
-          </div>
-        </div>
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui carregar os horários"
+          motivo={mensagemErro(query.error, 'O backend não respondeu. Tente de novo.')}
+          aoTentar={() => void query.refetch()}
+        />
       )}
 
       {dados && (

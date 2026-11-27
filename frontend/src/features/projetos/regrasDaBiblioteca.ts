@@ -1,3 +1,4 @@
+import { SEM_BACKEND } from '@/lib/mensagemErro';
 import type { CorteDoMapa } from '@/components/ui/mapa-da-live';
 import { rotuloDoDia, type DiaDaRegua } from '@/components/ui/regua-de-dias';
 import { sortProjetosPorPublicacao } from '@/features/projetos/bibliotecaFiltros';
@@ -119,6 +120,6 @@ export function cortesDoMapa(cortes: Corte[], projetoId: string): CorteDoMapa[] 
 
 /** O motivo do erro em palavras do operador: a falha de rede chega como "Failed to fetch". */
 export function motivoDoErro(erro: unknown): string {
-  if (erro instanceof TypeError) return 'O app não conseguiu falar com o backend. Confira se ele está rodando.';
+  if (erro instanceof TypeError) return SEM_BACKEND;
   return erro instanceof Error && erro.message ? erro.message : 'A lista de lives não chegou.';
 }
