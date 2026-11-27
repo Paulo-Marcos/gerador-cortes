@@ -6,6 +6,7 @@ import { rawEditorPath } from '@/features/post-production/postProductionNavigati
 import { mensagemErro } from '@/lib/mensagemErro';
 import type { Corte } from '@/types/models';
 import { cortesApi } from './api/cortes';
+import { pedirFocoNoTitulo } from './focoNoCorte';
 import { AvisoDoRiscado } from './AvisoDoRiscado';
 import { MOTIVOS_APAGADO } from './motivoApagado';
 import { bloqueioDoRiscar, mensagemDoRiscado, proximoDepoisDeRiscar } from './riscarCorte';
@@ -46,7 +47,11 @@ export function useRiscarCorte(
         await cortesApi.trazerDeVolta(alvo.id);
         atualizar();
         if (aoDesfazer) aoDesfazer(alvo);
-        else navigate(rawEditorPath(projetoId, alvo.id));
+        else {
+          // D-1201: o botão Desfazer some com o aviso; o foco volta ao corte riscado.
+          pedirFocoNoTitulo(alvo.id);
+          navigate(rawEditorPath(projetoId, alvo.id));
+        }
       } catch (erro) {
         notify(mensagemErro(erro, 'Não deu para desfazer.'), { tone: 'error' });
       }
@@ -91,6 +96,9 @@ export function useRiscarCorte(
         // é descartado: a saída o grava no corte riscado, como em qualquer troca de
         // corte. A D-883 descartava porque o corte excluído sumia e o salvar dava
         // 404; o riscado continua no banco e guarda o trabalho do operador.
+        // D-1201: no editor, o foco segue junto. A lista do Workspace passa `cortes`
+        // vazio e move o foco ela mesma (D-1096).
+        if (proximo) pedirFocoNoTitulo(proximo.id);
         seguir(indiceDoProximo);
       },
       onError: (erro) => notify(mensagemErro(erro, 'Não deu para riscar o corte.'), { tone: 'error' }),
