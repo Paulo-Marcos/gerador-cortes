@@ -1,5 +1,5 @@
 import * as RD from '@radix-ui/react-dialog';
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Busca } from '@/components/ui/busca';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,10 @@ import { destinosDaPaleta, projetoDaRota } from './upgradeRoutes';
 // Tab gira, prefixos @ # > para quem já sabe. Caixa vazia mostra as
 // últimas buscas e os últimos lugares. A regra (filtro, prefixo,
 // histórico de buscas) mora em `fontesDaPaleta`.
+//
+// D-1200 · combobox ARIA 1.2 com lista: o foco nunca sai do campo, e quem
+// diz ao leitor de tela qual linha as setas escolheram é o
+// `aria-activedescendant`. Por isso as opções ficam fora da ordem do Tab.
 // ─────────────────────────────────────────────────────────────────
 
 const ACOES: ItemDaPaleta[] = [
@@ -145,55 +149,72 @@ function SemResultado({ vazio, escopo, aoProcurarEmTudo }: { vazio: boolean; esc
   );
 }
 
+/** O id é do item, não da posição: o leitor de tela segue o item quando a lista muda. */
+const idDaOpcao = (idDaLista: string, item: ItemDaPaleta) => `${idDaLista}-${item.id}`;
+
+function anuncioDosResultados(total: number, vazio: boolean): string {
+  if (total === 0) return vazio ? '' : 'Nenhum resultado';
+  return total === 1 ? '1 resultado' : `${total} resultados`;
+}
+
 function ResultadosDaPaleta({
+  idDaLista,
   grupos,
   indice,
   aoPassar,
   aoEscolher,
 }: {
+  idDaLista: string;
   grupos: GrupoDaPaleta[];
   indice: number;
   aoPassar: (i: number) => void;
   aoEscolher: (item: ItemDaPaleta) => void;
 }) {
   let posicao = -1;
-  return grupos.map((g) => (
-    <div key={g.titulo || 'resultados'}>
-      {g.titulo ? (
-        <span className="flex items-center gap-1.5 px-2.5 pb-1 pt-2 text-micro text-fg-3">
-          <Icon name={g.icone} />
-          {g.titulo}
-        </span>
-      ) : null}
-      {g.itens.map((d) => {
-        posicao += 1;
-        const i = posicao;
-        const ativo = i === indice;
-        return (
-          <button
-            key={d.id}
-            type="button"
-            data-sala=""
-            data-ativo={ativo || undefined}
-            onMouseEnter={() => aoPassar(i)}
-            onClick={() => aoEscolher(d)}
-            className={cn(
-              'flex w-full items-center gap-2.5 rounded-[10px] border border-transparent px-2.5 py-2 text-left text-fg',
-              'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco',
-              ativo && 'border-iris-fio bg-iris-suave',
-            )}
-          >
-            <Icon name={d.icone} className={cn('flex-none', ativo ? 'text-iris-2' : 'text-fg-3')} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-corpo font-semibold">{d.rotulo}</span>
-              {d.contexto ? <span className="block truncate text-micro text-fg-3">{d.contexto}</span> : null}
-            </span>
-            {g.titulo ? null : <span className="flex-none text-micro text-fg-3">{DICA_DO_ESCOPO[d.escopo]}</span>}
-          </button>
-        );
-      })}
-    </div>
-  ));
+  return grupos.map((g, n) => {
+    const idDoTitulo = g.titulo ? `${idDaLista}-grupo-${n}` : undefined;
+    return (
+      <div key={g.titulo || 'resultados'} role={idDoTitulo ? 'group' : undefined} aria-labelledby={idDoTitulo}>
+        {g.titulo ? (
+          <span id={idDoTitulo} className="flex items-center gap-1.5 px-2.5 pb-1 pt-2 text-micro text-fg-3">
+            <Icon name={g.icone} />
+            {g.titulo}
+          </span>
+        ) : null}
+        {g.itens.map((d) => {
+          posicao += 1;
+          const i = posicao;
+          const ativo = i === indice;
+          return (
+            <button
+              key={d.id}
+              type="button"
+              data-sala=""
+              id={idDaOpcao(idDaLista, d)}
+              role="option"
+              aria-selected={ativo}
+              tabIndex={-1}
+              data-ativo={ativo || undefined}
+              onMouseEnter={() => aoPassar(i)}
+              onClick={() => aoEscolher(d)}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-[10px] border border-transparent px-2.5 py-2 text-left text-fg',
+                'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco',
+                ativo && 'border-iris-fio bg-iris-suave',
+              )}
+            >
+              <Icon name={d.icone} className={cn('flex-none', ativo ? 'text-iris-2' : 'text-fg-3')} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-corpo font-semibold">{d.rotulo}</span>
+                {d.contexto ? <span className="block truncate text-micro text-fg-3">{d.contexto}</span> : null}
+              </span>
+              {g.titulo ? null : <span className="flex-none text-micro text-fg-3">{DICA_DO_ESCOPO[d.escopo]}</span>}
+            </button>
+          );
+        })}
+      </div>
+    );
+  });
 }
 
 function RodapeDaPaleta() {
@@ -318,6 +339,8 @@ function usePaleta(aberta: boolean, onFechar: () => void) {
 export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFechar: () => void }) {
   const { termo, setTermo, escopo, vazio, grupos, lista, indice, setIndice, campo, origem, aoTeclar, escolher, escolherEscopo } =
     usePaleta(aberta, onFechar);
+  const idDaLista = useId();
+  const ativo = lista[indice];
 
   return (
     <RD.Root open={aberta} onOpenChange={(a) => !a && onFechar()}>
@@ -347,17 +370,36 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
             aoMudar={setTermo}
             placeholder="Buscar live, short, corte ou tela…  (@ shorts · # cortes · > ações)"
             aria-label="Buscar live, short, corte, tela ou ação"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={lista.length > 0}
+            aria-controls={idDaLista}
+            aria-activedescendant={ativo ? idDaOpcao(idDaLista, ativo) : undefined}
           />
           <Kbd>Esc</Kbd>
         </div>
         <EscoposDaPaleta escopo={escopo} aoEscolher={escolherEscopo} />
         <div className="max-h-[380px] overflow-auto p-1.5">
+          {/* A lista existe mesmo vazia (o `aria-controls` não aponta para o nada); a frase de
+              vazio, que tem botão, fica fora dela. */}
+          <div id={idDaLista} role="listbox" aria-label="Resultados">
+            {lista.length === 0 ? null : (
+              <ResultadosDaPaleta
+                idDaLista={idDaLista}
+                grupos={grupos}
+                indice={indice}
+                aoPassar={setIndice}
+                aoEscolher={escolher}
+              />
+            )}
+          </div>
           {lista.length === 0 ? (
             <SemResultado vazio={vazio} escopo={escopo} aoProcurarEmTudo={() => escolherEscopo('tudo')} />
-          ) : (
-            <ResultadosDaPaleta grupos={grupos} indice={indice} aoPassar={setIndice} aoEscolher={escolher} />
-          )}
+          ) : null}
         </div>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {anuncioDosResultados(lista.length, vazio)}
+        </p>
         <RodapeDaPaleta />
       </RD.Content>
     </RD.Root>
