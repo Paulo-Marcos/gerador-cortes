@@ -21,7 +21,9 @@ export function TituloDaLive({ titulo, resumo }: { titulo: string; resumo: strin
         {leve ? `${leve} ` : null}
         <span className="font-extrabold">{forte}</span>
       </p>
-      {resumo ? <p className="mt-1 text-pequeno text-fg-3">{resumo}</p> : null}
+      {/* D-1196: aqui atrás está a aurora com a capa. Só `fg-2` sobre `painel` passa 4,5:1
+          com qualquer capa (§8.1); o `-ml-2.5` mantém o texto alinhado ao título. */}
+      {resumo ? <p className="-ml-2.5 mt-1 w-fit max-w-full rounded-pilula bg-painel px-2.5 py-0.5 text-pequeno text-fg-2">{resumo}</p> : null}
     </div>
   );
 }

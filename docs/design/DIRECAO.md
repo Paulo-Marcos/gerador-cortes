@@ -402,7 +402,7 @@ Prontos, Buscar lives, Ranking, Padrões de capa, Atalhos, Novidades, workspace 
 
 ### 8.1 Contraste medido (WCAG 2.x sobre os valores da §4.1)
 
-Fundos de referência: painel = `cc-painel` sobre `cc-bg` (`#0c0e13` / `#fafafc`); "aurora forte" = o painel com a parte mais clara da aurora atrás (`#221f2b` / `#d9d6ea`), que é o pior caso real.
+Fundos de referência: painel = `cc-painel` sobre `cc-bg` (`#0c0e13` / `#fafafc`); "aurora forte" = o painel com a parte mais clara da aurora atrás (`#221f2b` / `#d9d6ea`). É o caso de uma capa comum, **não** o pior: veja "Sobre a aurora com qualquer capa".
 
 | Par | Escuro | Claro | Piso |
 |---|---|---|---|
@@ -420,6 +420,15 @@ Fundos de referência: painel = `cc-painel` sobre `cc-bg` (`#0c0e13` / `#fafafc`
 | `fio-campo` / painel · bg (borda de controle) | 3,3 · 3,2 | 3,1 · 3,0 | 3,0 |
 
 Todos passam. Restrições: `fg-3` não vai direto sobre a aurora sem painel; `fg-off` só em controle desabilitado; `fio` e `fio-2` são decoração e nunca borda de controle; no claro, cor de estado só sobre painel (sobre a aurora forte `ok` cai a 4,1). A H-02 transforma a tabela em teste.
+
+**Sobre a aurora com qualquer capa (D-1196).** A capa é imagem do YouTube e pode ser branca ou preta. Os dois extremos de luminância, na força de `--cc-aurora-forca` sobre o `bg` e os halos, dão o pior caso real: branca no Escuro, preta no Claro. Texto direto sobre a aurora, sem superfície, não tem garantia:
+
+| Par, no pior caso | Escuro (capa branca) | Claro (capa preta) | Piso |
+|---|---|---|---|
+| `fg` · `fg-2` · `fg-3` direto na aurora | 2,3 · 1,4 · 1,0 | 6,5 · 3,5 · 2,2 | 4,5 |
+| `fg` · `fg-2` · `fg-3` sobre `cc-painel` na aurora | 9,1 · 5,5 · 3,4 | 14,7 · 7,8 · 5,1 | 4,5 |
+
+Regra: texto pequeno sobre a aurora com capa vai em `fg-2` (ou `fg`) sobre `bg-painel`. É o que fazem o resumo da live e o subtítulo da linha do topo; `styles/__tests__/subtituloSobreAurora.d1196.test.tsx` mede os dois. A aurora não muda: escurecê-la até o `fg-3` passar apagaria a luz da sala. Na linha do topo, o subtítulo cortado abaixo de 96 px sai (degrau 1 do aperto), para o painel não virar um selo com "10…".
 
 ### 8.2 Lista de aceitação (Web Interface Guidelines da Vercel, adaptada)
 
