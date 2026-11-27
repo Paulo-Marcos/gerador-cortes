@@ -20,6 +20,7 @@ function fire(parcial: Partial<FireComBruto> = {}): FireComBruto {
     live_em_disco: true,
     tem_edicao: false,
     finalizado_em: null,
+    capa_path: '',
     shorts: { total: 3, sugerido: 0, aprovado: 1, rejeitado: 0, renderizado: 2 },
     redes: [
       { plataforma: 'youtube_shorts', publicados: 2, completa: true },

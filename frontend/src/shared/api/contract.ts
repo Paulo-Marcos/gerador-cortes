@@ -7403,6 +7403,8 @@ export interface components {
         FireDaFabrica: {
             /** Bruto Mb */
             bruto_mb: number;
+            /** Capa Path */
+            capa_path: string;
             /** Corte Id */
             corte_id: string;
             /** Duracao Seg */
