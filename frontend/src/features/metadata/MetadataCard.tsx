@@ -4,7 +4,7 @@ import { Modal } from '@/components/ui/modal';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
+import type { Corte, StatusExportCorte } from '@/types/models';
 import { CapasDoModal } from './CapasDoModal';
 import { ComoApareceNoYouTube } from './ComoApareceNoYouTube';
 import { PromptImportModal } from './PromptImportModal';
@@ -28,7 +28,6 @@ export function MetadataCard(props: {
   cut: Corte;
   status?: StatusExportCorte;
   innerRef?: (element: HTMLElement | null) => void;
-  onMetaLoaded?: (corteId: string, meta: MetadadoCorte) => void;
   variant?: VarianteDoCard;
   /** O nome do canal ativo, para o "Como aparece no YouTube". */
   canal?: string;

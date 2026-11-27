@@ -12,6 +12,7 @@ import { mensagemErro } from '@/lib/mensagemErro';
 import type { MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
 import { MetadataCard } from './MetadataCard';
+import { useMetadadosDosCortes } from './useMetadadosDosCortes';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import { COR_DO_SELO } from '@/upgrade/SeloDeEstado';
@@ -21,6 +22,11 @@ function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
   if (meta?.prompt_thumbnail || meta?.texto_capa) return 'partial';
   return 'empty';
 }
+
+// D-1174: o status de exportação responde antes. Lido o metadado, vale o dele: o status se atualiza
+// de tempo em tempo e traria de volta a capa que o operador acabou de remover.
+const caminhoDaCapa = (meta?: MetadadoCorte, status?: StatusExportCorte) =>
+  meta ? meta.thumbnail_path : status?.thumbnail_path;
 
 /**
  * D-427: a aba de trabalho amarrada a um corte chega aqui com `?corte=` —
@@ -63,7 +69,6 @@ function subDosMetadados(semLista: boolean, stats: { ready: number; total: numbe
 export function MetadataPage() {
   const { id: projetoId } = useParams();
   const [activeId, ativarCorte] = useCorteAtivoNaUrl();
-  const [metaById, setMetaById] = useState<Record<string, MetadadoCorte>>({});
   const [publicarOpen, setPublicarOpen] = useState(false);
   const cortesQuery = useCortesProjeto(projetoId);
   const exportQuery = useExportStatus(projetoId);
@@ -80,6 +85,8 @@ export function MetadataPage() {
     [cortesQuery.data],
   );
 
+  const metaById = useMetadadosDosCortes(cuts);
+
   const statusMap = useMemo(
     () => new Map((exportQuery.data?.cortes ?? []).map((status) => [status.corte_id, status] as const)),
     [exportQuery.data],
@@ -88,10 +95,6 @@ export function MetadataPage() {
   useEffect(() => {
     if (!activeId && cuts[0]) ativarCorte(cuts[0].id);
   }, [activeId, cuts, ativarCorte]);
-
-  const handleMetaLoaded = useCallback((corteId: string, meta: MetadadoCorte) => {
-    setMetaById((current) => ({ ...current, [corteId]: meta }));
-  }, []);
 
   const stats = useMemo(() => {
     const total = cuts.length;
@@ -138,7 +141,7 @@ export function MetadataPage() {
                 num: String(c.numero),
                 titulo: c.titulo_proposto,
                 legenda: `#${c.numero} · ${c.inicio_hms}`,
-                thumb: resolveThumbUrl(projetoId ?? '', metaById[c.id]?.thumbnail_path) ?? undefined,
+                thumb: resolveThumbUrl(projetoId ?? '', caminhoDaCapa(metaById[c.id], statusMap.get(c.id))) ?? undefined,
                 dot: DOT[metadadoStatus(metaById[c.id], statusMap.get(c.id))],
                 ativo: c.id === activeId,
                 onClick: () => ativarCorte(c.id),
@@ -219,7 +222,6 @@ export function MetadataPage() {
               cut={corteAtivo}
               status={statusMap.get(corteAtivo.id)}
               canal={canal}
-              onMetaLoaded={handleMetaLoaded}
             />
           )
         )}

@@ -10,7 +10,7 @@ import { metadadosApi, type MetadadoPatch } from './api/metadados';
 import { useRascunhoDoCard } from './rascunhoDoCard';
 import { useVersaoDoDesfazer } from './versaoDoDesfazer';
 import { applyCoverEmojis, applyReadingTitlePrefix } from '@/lib/readingMetadata';
-import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
+import type { Corte, StatusExportCorte } from '@/types/models';
 import type { PromptModalKind } from './PromptImportModal';
 
 
@@ -28,7 +28,6 @@ export function useMetadataCard({
   cut,
   status,
   active = false,
-  onMetaLoaded,
   variant = 'card',
 }: {
   projetoId: string;
@@ -37,7 +36,6 @@ export function useMetadataCard({
   /** Corte em foco na lista: só ele nasce expandido (DE-PARA-v3 §5). */
   active?: boolean;
   innerRef?: (element: HTMLElement | null) => void;
-  onMetaLoaded?: (corteId: string, meta: MetadadoCorte) => void;
   /** 'modal' = corpo denso do protótipo (AUDITORIA-v3 §6): sem header próprio,
       labels mono com contador à direita, descrição+tags sempre visíveis. */
   variant?: 'card' | 'modal';
@@ -99,11 +97,6 @@ export function useMetadataCard({
     if (modal) return;
     setExpanded(active);
   }, [active, modal]);
-
-  useEffect(() => {
-    if (!meta) return;
-    onMetaLoaded?.(cut.id, meta);
-  }, [cut.id, meta, onMetaLoaded]);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: metadataKey(cut.id) });

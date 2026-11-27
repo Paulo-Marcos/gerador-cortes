@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -35,11 +36,13 @@ describe('D-1204 · Metadados com o backend fora', () => {
   it('diz o que falhou em português e tentar refaz a consulta', () => {
     h.refetch = vi.fn();
     const html = renderToStaticMarkup(
-      <MemoryRouter initialEntries={['/p/p1']}>
-        <Routes>
-          <Route path="/p/:id" element={<MetadataPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/p/p1']}>
+          <Routes>
+            <Route path="/p/:id" element={<MetadataPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     esperarEstadoDeErro(html, h.erros as EstadoDeErroProps[], 'Erro ao carregar cortes').aoTentar?.();
     expect(h.refetch).toHaveBeenCalledTimes(1);
