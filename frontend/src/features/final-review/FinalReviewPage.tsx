@@ -29,6 +29,7 @@ import {
 import { settingsApi } from '@/features/settings/api';
 import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import { ApoioDaRevisao } from './ApoioDaRevisao';
+import { primarioDaRevisao } from './primarioDaRevisao';
 
 // Atalhos Ctrl+J/K (F-041): mesmos limites usados na tela Bruta.
 const SPEED_MIN = 0.25;
@@ -361,12 +362,10 @@ export function FinalReviewPage() {
             icone: 'tags',
             onClick: () => setMetadataOpen(true),
           },
-          primario: {
-            texto: 'Ir para publicar',
-            icone: ICONE_DO_CONCEITO.publicar,
-            // Publicar é na live, com a conferência de canal, título e capa.
-            onClick: () => navigate(`/projetos/${projetoId}`),
-          },
+          // Publicar é na live, com a conferência de canal, título e capa.
+          primario: primarioDaRevisao(exportStatusQ.data?.cortes ?? [], () =>
+            navigate(`/projetos/${projetoId}`),
+          ),
         }}
       />
 
