@@ -8,6 +8,7 @@ import { useCortesProjeto } from '@/features/editor/useCortes';
 import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
+import { mensagemErro } from '@/lib/mensagemErro';
 import type { MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
 import { MetadataCard } from './MetadataCard';
@@ -46,6 +47,12 @@ const DOT = {
   partial: COR_DO_SELO.aviso.cor,
   empty: COR_DO_SELO.inerte.cor,
 } as const;
+
+/** D-1204: sem a lista, "0 de 0 cortes prontos" afirmaria o que ninguém sabe. */
+function subDosMetadados(semLista: boolean, stats: { ready: number; total: number; thumbs: number }) {
+  if (semLista) return 'sem a lista de cortes';
+  return `${stats.ready} de ${stats.total} cortes prontos · ${stats.thumbs} capas`;
+}
 
 /**
  * A tela de Metadados e capas (D-1167, E-069 H-19, DIRECAO §7.5): três colunas. A da esquerda
@@ -113,7 +120,7 @@ export function MetadataPage() {
   useDefinirChrome(
     {
       titulo: corteAtivo ? `Metadados & capas — Corte #${corteAtivo.numero}` : 'Metadados & capas',
-      sub: `${stats.ready} de ${stats.total} cortes prontos · ${stats.thumbs} capas`,
+      sub: subDosMetadados(cortesQuery.isError, stats),
       // O primeiro slot da trilha de Metadados é a LIVE, o segundo o corte.
       rotulos: [projetoQuery.data?.titulo_live ?? 'Live', ...(corteAtivo ? [`#${corteAtivo.numero}`] : [])],
       lista:
@@ -178,7 +185,7 @@ export function MetadataPage() {
             }
           : undefined,
     },
-    [cuts, activeId, stats, metaById, statusMap, cortesProntos.length, projetoQuery.data?.titulo_live],
+    [cuts, activeId, stats, metaById, statusMap, cortesProntos.length, projetoQuery.data?.titulo_live, cortesQuery.isError],
   );
 
   if (!projetoId) {
@@ -193,7 +200,7 @@ export function MetadataPage() {
         ) : cortesQuery.isError ? (
           <EstadoDeErro
             titulo="Erro ao carregar cortes"
-            motivo={cortesQuery.error instanceof Error ? cortesQuery.error.message : 'Tente novamente.'}
+            motivo={mensagemErro(cortesQuery.error, 'Tente novamente.')}
             aoTentar={() => void cortesQuery.refetch()}
           />
         ) : cuts.length === 0 ? (

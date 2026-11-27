@@ -3,6 +3,8 @@
 // vazia de forma elegante: sem vídeos, orienta a reautorizar o OAuth e
 // sincronizar. Nunca quebra se o backend pedir reautorização.
 import { Button } from '@/components/ui/button';
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { mensagemErro } from '@/lib/mensagemErro';
 import { EstadoVazio } from '@/components/ui/estado-vazio';
 import { Selo } from '@/components/ui/selo';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -152,6 +154,18 @@ export function YoutubeDesempenhoTab() {
         }),
     });
   };
+
+  // D-1204: consulta caída não é "ainda não há estatísticas".
+  const falhas = [status, duracao, titulo].filter((q) => q.isError && !q.data);
+  if (falhas.length > 0) {
+    return (
+      <EstadoDeErro
+        titulo="Não consegui carregar o desempenho do YouTube"
+        motivo={mensagemErro(falhas[0].error, 'O backend não respondeu. Tente de novo.')}
+        aoTentar={() => falhas.forEach((q) => void q.refetch())}
+      />
+    );
+  }
 
   return (
     <div className="grid content-start gap-5">

@@ -29,6 +29,7 @@ import { SituacaoDosCanais } from './SituacaoDosCanais';
 import { AparenciaDaCasca } from '@/upgrade/AparenciaDaCasca';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import {
+  subDosCanais,
   useCanais,
   useConectarYoutube,
   useCriarCanal,
@@ -150,16 +151,15 @@ export function ChannelsPage() {
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const totalCanais = canaisQuery.data?.canais.length ?? 0;
   const nomeDoAtivo = canaisQuery.data?.canais.find((c) => c.ativo)?.nome;
+  const sub = subDosCanais(totalCanais, nomeDoAtivo, canaisQuery.isError && !canaisQuery.data);
   useDefinirChrome(
     {
-      sub: nomeDoAtivo
-        ? `${totalCanais} ${totalCanais === 1 ? 'canal' : 'canais'} · ativo: ${nomeDoAtivo}`
-        : `${totalCanais} ${totalCanais === 1 ? 'canal' : 'canais'} · nenhum ativo`,
+      sub,
       // D-1172 (§7.7): "Novo canal" é secundária (a tela não tem primária, §5). Sai do corpo
       // para o cabeçalho, onde ficam as ações da tela.
       acoes: [{ icone: 'plus', texto: 'Novo canal', onClick: () => setDialogo({ tipo: 'criar' }) }],
     },
-    [totalCanais, nomeDoAtivo],
+    [sub],
   );
   const criar = useCriarCanal();
   const editar = useEditarCanal();

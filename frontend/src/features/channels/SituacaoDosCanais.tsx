@@ -1,3 +1,4 @@
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { Button } from '@/components/ui/button';
 import { mensagemErro } from '@/lib/mensagemErro';
 import { Icon } from '@/upgrade/Icon';
@@ -28,17 +29,12 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
 
   if (erro) {
     return (
-      <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-5">
-        <p className="flex items-center gap-2 text-linha text-fg">
-          <Icon name="triangle-alert" size={16} className="text-erro" />
-          {mensagemErro(erro, 'Não foi possível carregar os canais.')}
-        </p>
-        <div>
-          <Button type="button" variant="secundario" size="pq" onClick={onTentarDeNovo}>
-            Tentar de novo
-          </Button>
-        </div>
-      </div>
+      <EstadoDeErro
+        className="p-5"
+        titulo="Não consegui carregar os canais"
+        motivo={mensagemErro(erro, 'O backend não respondeu. Tente de novo.')}
+        aoTentar={onTentarDeNovo}
+      />
     );
   }
 

@@ -32,6 +32,7 @@ import { Busca } from '@/components/ui/busca';
 import { Chip } from '@/components/ui/chip';
 import { EstadoCarregando, EstadoVazio } from '@/components/ui/estado-vazio';
 import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { mensagemErro } from '@/lib/mensagemErro';
 import { Lista } from '@/components/ui/lista';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { agruparPorLive } from './agrupamentoPorLive';
@@ -56,6 +57,8 @@ export interface AcoesDosShorts {
   aoFiltrar: (filtro: FiltroDeFire) => void;
   aoBuscar: (busca: string) => void;
   aoLimpar: () => void;
+  /** D-1204: refaz a consulta dos Fires quando ela falha. */
+  aoTentar?: () => void;
 }
 
 function Filtros({ estado, aoFiltrar }: { estado: EstadoDosShorts; aoFiltrar: AcoesDosShorts['aoFiltrar'] }) {
@@ -104,10 +107,11 @@ function Grupos({ estado }: { estado: EstadoDosShorts }) {
 }
 
 /** Os quatro estados da tela: carregando, erro, vazio (fábrica ou filtro) e com dados. */
-function Corpo({ estado, aoLimpar }: { estado: EstadoDosShorts; aoLimpar: () => void }) {
+function Corpo({ estado, acoes }: { estado: EstadoDosShorts; acoes: AcoesDosShorts }) {
+  const { aoLimpar, aoTentar } = acoes;
   if (estado.carregando) return <EstadoCarregando frase="Procurando os Fires…" linhas={4} />;
   if (estado.erro !== undefined) {
-    return <EstadoDeErro titulo="Não consegui carregar os Fires" motivo={estado.erro} />;
+    return <EstadoDeErro titulo="Não consegui carregar os Fires" motivo={estado.erro} aoTentar={aoTentar} />;
   }
   if (estado.fires.length === 0) {
     return (
@@ -146,13 +150,13 @@ export function ConteudoDosShorts({ estado, acoes }: { estado: EstadoDosShorts; 
           </div>
         </div>
       ) : null}
-      <Corpo estado={estado} aoLimpar={acoes.aoLimpar} />
+      <Corpo estado={estado} acoes={acoes} />
     </div>
   );
 }
 
 export default function ShortsPage() {
-  const { data, isLoading, isError, error } = useFires();
+  const { data, isLoading, isError, error, refetch } = useFires();
   const { data: andamento } = useAndamentoDasLives();
   const [filtro, setFiltro] = useState<FiltroDeFire>('todos');
   const [busca, setBusca] = useState('');
@@ -160,17 +164,19 @@ export default function ShortsPage() {
   const fires = useMemo(() => data?.fires ?? [], [data]);
   const prontos = useMemo(() => contarPorFiltro(fires).prontos, [fires]);
 
-  useDefinirChrome({ sub: `${fires.length} fire com bruto · ${prontos} com short pronto` }, [fires.length, prontos]);
+  const sub = isError ? 'sem a lista de Fires' : `${fires.length} fire com bruto · ${prontos} com short pronto`;
+  useDefinirChrome({ sub }, [sub]);
 
   const estado: EstadoDosShorts = {
     fires,
     andamento: andamento?.lives ?? [],
     carregando: isLoading,
-    erro: isError ? ((error as Error)?.message ?? 'erro desconhecido') : undefined,
+    erro: isError ? mensagemErro(error, 'erro desconhecido') : undefined,
     filtro,
     busca,
   };
   const acoes: AcoesDosShorts = {
+    aoTentar: () => void refetch(),
     aoFiltrar: setFiltro,
     aoBuscar: setBusca,
     aoLimpar: () => {

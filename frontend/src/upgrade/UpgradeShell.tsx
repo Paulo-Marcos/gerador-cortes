@@ -230,7 +230,7 @@ function Casca({ children, fila }: CascaProps) {
           onAlternar={alternar}
           telaAtual={tela}
           menu={menu}
-          fila={fila ?? filaDoTrilho(filaGlobal?.jobs ?? [], tela === 'fila', gaveta.abrir, lote && resumoDoLote(lote))}
+          fila={fila ?? filaDoTrilho(filaGlobal?.jobs ?? [], tela === 'fila', gaveta.abrir, lote && resumoDoLote(lote), Boolean(filaGlobal?.falha))}
           filaAtiva={tela === 'fila'}
           filaComErro={jobComErro}
         />

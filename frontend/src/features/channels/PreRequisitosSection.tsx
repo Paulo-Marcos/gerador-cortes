@@ -1,5 +1,7 @@
 // D-627: cartão "Pré-requisitos" na aba Aplicação. Quem instala o app numa
 // máquina nova vê aqui, antes da primeira live, o que falta e como resolver.
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
+import { mensagemErro } from '@/lib/mensagemErro';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAmbiente, type Ambiente, type EstadoItem, type ItemAmbiente } from './useAmbiente';
@@ -68,7 +70,7 @@ export function PreRequisitosLista({ ambiente }: { ambiente: Ambiente }) {
 }
 
 export function PreRequisitosSection() {
-  const { data, isLoading, isFetching, isError, refetch } = useAmbiente();
+  const { data, isLoading, isFetching, isError, error, refetch } = useAmbiente();
   return (
     <section className="grid gap-3 rounded-campo border border-fio bg-painel-solido p-5">
       <header className="flex items-center gap-3">
@@ -91,9 +93,12 @@ export function PreRequisitosSection() {
       </header>
       {isLoading && <p className="text-sm text-fg-2">Checando a máquina…</p>}
       {isError && (
-        <p className="text-sm text-erro">
-          Não foi possível checar: o backend respondeu com erro.
-        </p>
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui checar os pré-requisitos"
+          motivo={mensagemErro(error, 'O backend respondeu com erro. Tente de novo.')}
+          aoTentar={() => void refetch()}
+        />
       )}
       {data && <PreRequisitosLista ambiente={data} />}
     </section>

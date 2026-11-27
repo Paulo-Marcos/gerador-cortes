@@ -77,7 +77,7 @@ EXCECOES = {
     "frontend/src/features/shorts/ReguaDeOnda.tsx": 582,
     "frontend/src/features/shorts/useShortsDoCorte.ts": 658,
     "frontend/src/shared/atalhos/shortcutsRegistry.ts": 695,
-    "frontend/src/shared/filaGlobal/useWorkbenchQueue.tsx": 619,
+    "frontend/src/shared/filaGlobal/useWorkbenchQueue.tsx": 612,
     "frontend/src/shared/palco/youtubeBackgrounds.tsx": 638,
     "frontend/src/shared/palco/youtubeLayout.ts": 753,
     "video-renderer/src/cenas-v2/CenaComparativo.tsx": 512,

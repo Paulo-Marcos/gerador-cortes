@@ -2,8 +2,8 @@
 // (hooks em useEditorialSkills) e delega a renderização aos componentes burros
 // (card na lista, form no modal). Lista as 5 skills editoriais do canal ativo,
 // mostra se cada uma foi customizada e abre o editor com corpo/params/lentes.
+import { EstadoDeErro } from '@/components/ui/estado-de-erro';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import type { CampoReset, EditorialSkill, UpdateSkillPayload } from '@/features/channels/api/skillsEditoriais';
@@ -105,17 +105,12 @@ export function EditorialSkillsSection() {
       )}
 
       {skillsQuery.isError && (
-        <div className="grid gap-3 rounded-campo border border-erro/30 bg-[color-mix(in_oklab,var(--cc-erro)_10%,var(--cc-painel-solido))] p-4">
-          <p className="flex items-center gap-2 text-linha text-fg">
-            <Icon name="triangle-alert" size={16} className="text-erro" />
-            {mensagemErro(skillsQuery.error, 'Não foi possível carregar as skills.')}
-          </p>
-          <div>
-            <Button type="button" variant="secundario" size="pq" onClick={() => skillsQuery.refetch()}>
-              Tentar de novo
-            </Button>
-          </div>
-        </div>
+        <EstadoDeErro
+          className="p-5"
+          titulo="Não consegui carregar as skills"
+          motivo={mensagemErro(skillsQuery.error, 'O backend não respondeu. Tente de novo.')}
+          aoTentar={() => void skillsQuery.refetch()}
+        />
       )}
 
       {skills.length > 0 && (
