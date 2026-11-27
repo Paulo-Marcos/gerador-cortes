@@ -1,4 +1,14 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type ReactNode,
+} from 'react';
 import { cn } from '@/lib/utils';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
@@ -26,6 +36,7 @@ export interface Toast {
   message: string;
   tone: ToastTone;
   conteudo?: ReactNode;
+  duracaoMs?: number;
 }
 
 interface NotifyOptions {
@@ -68,13 +79,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         title: options.title,
         tone: options.tone ?? 'success',
         conteudo: options.conteudo,
+        duracaoMs: options.duracaoMs,
       };
 
       setToasts((current) => [...current, toast]);
-      window.setTimeout(() => dismiss(id), options.duracaoMs ?? 3200);
       return id;
     },
-    [dismiss],
+    [],
   );
 
   const value = useMemo(() => ({ notify, dismiss }), [dismiss, notify]);
@@ -110,36 +121,80 @@ export function ToastViewport({
       className="pointer-events-none fixed bottom-[74px] right-5 z-[80] grid w-[min(380px,calc(100vw-40px))] gap-2"
     >
       {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          role={toast.tone === 'error' ? 'alert' : 'status'}
-          data-tone={toast.tone}
-          className={cn(
-            'pointer-events-none flex items-center gap-3 rounded-[18px] border border-fio-2 bg-pop py-2.5 pl-2.5 pr-3.5 text-fg shadow-pop-luz',
-            'animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none',
-            COR_DO_TOM[toast.tone],
-          )}
-        >
-          <span className="inline-grid size-8 flex-none place-items-center rounded-full bg-[color-mix(in_srgb,var(--c)_16%,transparent)] text-[var(--c)]">
-            <Icon name={ICONE_DO_TOM[toast.tone]} />
-          </span>
-          <span className="min-w-0 flex-1 text-pequeno">
-            {toast.title ? <b className="font-bold">{toast.title} </b> : null}
-            <span className="font-normal text-fg-2">{toast.message}</span>
-            {toast.conteudo ? <span className="pointer-events-auto mt-1.5 block">{toast.conteudo}</span> : null}
-          </span>
-          <IconButton
-            variant="fantasma"
-            size="pq"
-            aria-label="Fechar aviso"
-            title="Fechar aviso"
-            onClick={() => onDismiss(toast.id)}
-            className="pointer-events-auto"
-          >
-            <Icon name="x" />
-          </IconButton>
-        </div>
+        <Aviso key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
+    </div>
+  );
+}
+
+const DURACAO_PADRAO_MS = 3200;
+
+/**
+ * D-1201: o relógio do aviso para enquanto o foco ou o mouse estão nele, e segue do
+ * ponto em que parou. Sem isso o Desfazer sumia debaixo de quem o estava usando, e o
+ * foco caía no <body>.
+ */
+function useRelogioDoAviso(duracaoMs: number, vencer: () => void) {
+  const [comFoco, setComFoco] = useState(false);
+  const [comMouse, setComMouse] = useState(false);
+  const resta = useRef(duracaoMs);
+  const vencerAtual = useRef(vencer);
+  useEffect(() => {
+    vencerAtual.current = vencer;
+  });
+  const parado = comFoco || comMouse;
+  useEffect(() => {
+    if (parado) return;
+    const inicio = Date.now();
+    const relogio = window.setTimeout(() => vencerAtual.current(), resta.current);
+    return () => {
+      window.clearTimeout(relogio);
+      resta.current = Math.max(0, resta.current - (Date.now() - inicio));
+    };
+  }, [parado]);
+
+  return {
+    onMouseEnter: () => setComMouse(true),
+    onMouseLeave: () => setComMouse(false),
+    onFocus: () => setComFoco(true),
+    // O foco que passa de um botão a outro do próprio aviso não saiu dele.
+    onBlur: (e: FocusEvent<HTMLElement>) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) setComFoco(false);
+    },
+  };
+}
+
+function Aviso({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
+  const relogio = useRelogioDoAviso(toast.duracaoMs ?? DURACAO_PADRAO_MS, () => onDismiss(toast.id));
+  return (
+    <div
+      {...relogio}
+      role={toast.tone === 'error' ? 'alert' : 'status'}
+      data-tone={toast.tone}
+      className={cn(
+        'pointer-events-none flex items-center gap-3 rounded-[18px] border border-fio-2 bg-pop py-2.5 pl-2.5 pr-3.5 text-fg shadow-pop-luz',
+        'animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none',
+        COR_DO_TOM[toast.tone],
+      )}
+    >
+      <span className="inline-grid size-8 flex-none place-items-center rounded-full bg-[color-mix(in_srgb,var(--c)_16%,transparent)] text-[var(--c)]">
+        <Icon name={ICONE_DO_TOM[toast.tone]} />
+      </span>
+      <span className="min-w-0 flex-1 text-pequeno">
+        {toast.title ? <b className="font-bold">{toast.title} </b> : null}
+        <span className="font-normal text-fg-2">{toast.message}</span>
+        {toast.conteudo ? <span className="pointer-events-auto mt-1.5 block">{toast.conteudo}</span> : null}
+      </span>
+      <IconButton
+        variant="fantasma"
+        size="pq"
+        aria-label="Fechar aviso"
+        title="Fechar aviso"
+        onClick={() => onDismiss(toast.id)}
+        className="pointer-events-auto"
+      >
+        <Icon name="x" />
+      </IconButton>
     </div>
   );
 }

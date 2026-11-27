@@ -1,9 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconButton } from '@/components/ui/icon-button';
 import { Icon } from '@/components/ui/icon';
 import { MapaDaLive } from '@/components/ui/mapa-da-live';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Corte } from '@/types/models';
+import { consumirPedidoDeFoco, pedirFocoNoTitulo } from './focoNoCorte';
 import { cortesDoMapa, sobretituloDoCorte } from './mapaDoEditor';
 import { acharCorteVizinho, separarRiscados } from './riscarCorte';
 import { RiscadosDaLista } from './RiscadosDaLista';
@@ -34,6 +36,22 @@ export type CabecalhoDoCorteProps = {
 
 const SO_A_PISTA = '[&_[data-parte=aberto]]:hidden [&_[data-parte=tempos]]:hidden';
 
+/** D-1201 (§8.2, Foco): quem riscou ou trocou de corte segue no título do corte novo,
+ *  não no <body>. É o título visível, para o anel aparecer: o `h1` da linha do topo é
+ *  só do leitor de tela. E não é a pílula do mapa, onde ← e → andariam no mapa e no
+ *  vídeo ao mesmo tempo. */
+function TituloDoCorte({ corteId, titulo }: { corteId: string; titulo: string }) {
+  const alvo = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (consumirPedidoDeFoco(corteId)) alvo.current?.focus();
+  }, [corteId]);
+  return (
+    <h2 ref={alvo} className="mt-0.5 truncate text-titulo text-fg" tabIndex={-1} title={titulo}>
+      {titulo}
+    </h2>
+  );
+}
+
 export function CabecalhoDoCorte({
   projetoId,
   tituloLive,
@@ -47,18 +65,20 @@ export function CabecalhoDoCorte({
   const anterior = acharCorteVizinho(cortes, corte.id, -1);
   const proximo = acharCorteVizinho(cortes, corte.id, 1);
   const { riscados } = separarRiscados(cortes);
+  const irPara = (alvo: Corte) => {
+    pedirFocoNoTitulo(alvo.id);
+    navigate(caminhoDoCorte(alvo));
+  };
   const abrir = (id: string) => {
     const alvo = cortes.find((c) => c.id === id);
-    if (alvo && alvo.id !== corte.id) navigate(caminhoDoCorte(alvo));
+    if (alvo && alvo.id !== corte.id) irPara(alvo);
   };
 
   return (
     <header data-parte="cabecalho-do-corte" className="flex flex-none items-center gap-6 pb-3 pt-1">
       <div className="min-w-0 flex-1">
         <p className="truncate text-pequeno text-iris">{sobretituloDoCorte(cortes, corte, tituloLive)}</p>
-        <h2 className="mt-0.5 truncate text-titulo text-fg" title={corte.titulo_proposto}>
-          {corte.titulo_proposto}
-        </h2>
+        <TituloDoCorte corteId={corte.id} titulo={corte.titulo_proposto} />
       </div>
       <div className="flex w-[min(46%,560px)] flex-none items-center gap-2">
         <IconButton
@@ -68,7 +88,7 @@ export function CabecalhoDoCorte({
           aria-keyshortcuts="J"
           title="Corte anterior · J"
           disabled={!anterior}
-          onClick={() => anterior && navigate(caminhoDoCorte(anterior))}
+          onClick={() => anterior && irPara(anterior)}
         >
           <Icon name="chevron-left" />
         </IconButton>
@@ -87,7 +107,7 @@ export function CabecalhoDoCorte({
           aria-keyshortcuts="K"
           title="Próximo corte · K"
           disabled={!proximo}
-          onClick={() => proximo && navigate(caminhoDoCorte(proximo))}
+          onClick={() => proximo && irPara(proximo)}
         >
           <Icon name="chevron-right" />
         </IconButton>
