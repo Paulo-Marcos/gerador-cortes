@@ -7,6 +7,7 @@
 // editor não removê-los sem querer.
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAlteracaoPendente } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { PromptUtilitario } from '@/features/channels/api/promptsUtilitarios';
@@ -30,6 +31,15 @@ function placeholderPresente(texto: string, nome: string): boolean {
   return texto.includes(`{${nome}}`);
 }
 
+/** O que o texto do editor perdeu do contrato de saída. */
+function faltasDoContrato({ placeholders, marcador }: PromptUtilitario, texto: string) {
+  return {
+    faltando: placeholders.filter((p) => !placeholderPresente(texto, p)),
+    marcadorAusente:
+      marcador.length > 0 && !texto.toLowerCase().includes(marcador.toLowerCase()),
+  };
+}
+
 export function PromptUtilitarioForm({ prompt, pending, onSave, onReset, onCancel }: Props) {
   const [texto, setTexto] = useState(prompt.prompt);
 
@@ -38,15 +48,15 @@ export function PromptUtilitarioForm({ prompt, pending, onSave, onReset, onCance
     setTexto(prompt.prompt);
   }, [prompt]);
 
+  useAlteracaoPendente(texto !== prompt.prompt);
+
   const submeter = (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     onSave(texto);
   };
 
-  const faltando = prompt.placeholders.filter((p) => !placeholderPresente(texto, p));
-  const marcadorAusente =
-    prompt.marcador.length > 0 && !texto.toLowerCase().includes(prompt.marcador.toLowerCase());
+  const { faltando, marcadorAusente } = faltasDoContrato(prompt, texto);
 
   return (
     <form onSubmit={submeter} className="grid gap-5">

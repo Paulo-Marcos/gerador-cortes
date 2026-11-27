@@ -7,6 +7,7 @@
 // editor não removê-los sem querer.
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAlteracaoPendente } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { EditorialScaffold } from '@/features/channels/api/scaffolds';
@@ -30,6 +31,11 @@ function placeholderPresente(texto: string, nome: string): boolean {
   return texto.includes(`{${nome}}`);
 }
 
+/** O contrato tem marcador e o texto do editor o perdeu (sem olhar a caixa). */
+function marcadorFaltando(texto: string, marcador: string): boolean {
+  return marcador.length > 0 && !texto.toLowerCase().includes(marcador.toLowerCase());
+}
+
 export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCancel }: Props) {
   const [texto, setTexto] = useState(scaffold.scaffold);
 
@@ -38,6 +44,8 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
     setTexto(scaffold.scaffold);
   }, [scaffold]);
 
+  useAlteracaoPendente(texto !== scaffold.scaffold);
+
   const submeter = (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
@@ -45,9 +53,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
   };
 
   const faltando = scaffold.placeholders.filter((p) => !placeholderPresente(texto, p));
-  const marcadorAusente =
-    scaffold.marcador.length > 0 &&
-    !texto.toLowerCase().includes(scaffold.marcador.toLowerCase());
+  const marcadorAusente = marcadorFaltando(texto, scaffold.marcador);
 
   return (
     <form onSubmit={submeter} className="grid gap-5">
