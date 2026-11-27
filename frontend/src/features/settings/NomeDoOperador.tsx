@@ -63,7 +63,7 @@ export function NomeDoOperador() {
           ajuda="Aparece na saudação da Biblioteca. Vale para o app todo, não para um canal."
           className="min-w-[260px] flex-1"
         >
-          <Input
+          <Input name="nome"
             aparencia="sala"
             value={rascunho}
             maxLength={60}

@@ -52,7 +52,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
   return (
     <>
       <div className="flex flex-wrap items-center gap-1.5">
-        <Input
+        <Input name="nome"
           value={nomeNovo}
           onChange={(e) => setNomeNovo(e.target.value)}
           placeholder="ex.: rosto cheio da live de terça"
@@ -81,7 +81,7 @@ export function PresetsDoPalco({ comoEstaHoje, onAplicar, ocupado, estilo = 'atu
           >
             {renomeando === preset.id ? (
               <>
-                <Input
+                <Input name="nome"
                   value={nomeEditado}
                   onChange={(e) => setNomeEditado(e.target.value)}
                   className="h-7 max-w-[200px] text-pequeno"

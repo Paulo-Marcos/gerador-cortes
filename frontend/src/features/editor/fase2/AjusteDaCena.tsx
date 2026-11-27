@@ -94,7 +94,7 @@ function PedidoDoAjuste({ bloqueio, pedir }: { bloqueio: string | null; pedir: (
     <form onSubmit={enviar} className="mx-2.5 mb-2 flex flex-col gap-1">
       <label className="flex flex-col gap-1 text-micro text-fg-2">
         Pedir ajuste desta cena à IA
-        <input
+        <input name="pedido"
           type="text"
           value={pedido}
           maxLength={500}

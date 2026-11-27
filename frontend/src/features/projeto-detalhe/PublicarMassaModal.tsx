@@ -118,7 +118,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
         <div className="flex flex-col gap-4">
           <div className="flex w-1/2 flex-col gap-1.5">
             <Label htmlFor="qtd">Quantidade (máx. {totalProntos})</Label>
-            <Input
+            <Input name="quantidade" inputMode="numeric"
               id="qtd"
               type="number"
               min={1}

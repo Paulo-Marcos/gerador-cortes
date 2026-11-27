@@ -43,7 +43,7 @@ export function MotivosDeExclusaoSection() {
         </ul>
       )}
       <form onSubmit={aoAcrescentar} className="flex flex-wrap items-center gap-2">
-        <Input
+        <Input name="rotulo"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           placeholder="Motivo novo (ex.: Opinião polêmica)"

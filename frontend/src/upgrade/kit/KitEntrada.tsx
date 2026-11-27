@@ -32,22 +32,22 @@ function BlocoDeCampos() {
   return (
     <Bloco titulo="Campo · estados">
       <Field rotulo="Repouso (vazio)" ajuda="Até 100 caracteres">
-        <Input aparencia="sala" placeholder="Título do corte" />
+        <Input name="titulo" aparencia="sala" placeholder="Título do corte" />
       </Field>
       <Field rotulo="Preenchido">
-        <Input aparencia="sala" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+        <Input name="titulo" aparencia="sala" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
       </Field>
       <Field rotulo="Erro" erro="Informe o título do corte" obrigatorio>
-        <Input aparencia="sala" defaultValue="" placeholder="Título do corte" />
+        <Input name="titulo" aparencia="sala" defaultValue="" placeholder="Título do corte" />
       </Field>
       <Field rotulo="Desabilitado">
-        <Input aparencia="sala" disabled defaultValue="Definido pela live" />
+        <Input name="titulo" aparencia="sala" disabled defaultValue="Definido pela live" />
       </Field>
       <Field rotulo="Carregando">
-        <Input aparencia="sala" carregando="Buscando as capas da live…" />
+        <Input name="capas" aparencia="sala" carregando="Buscando as capas da live…" />
       </Field>
       <Field rotulo="Texto longo" ajuda="A descrição vai ao YouTube">
-        <Textarea defaultValue="Resumo do trecho em que o convidado explica o método." />
+        <Textarea name="resumo" defaultValue="Resumo do trecho em que o convidado explica o método." />
       </Field>
     </Bloco>
   );
@@ -58,24 +58,24 @@ function BlocoDeBuscaESelect() {
   const [formato, setFormato] = useState<string | undefined>('mp4');
   return (
     <Bloco titulo="Busca e select">
-      <Busca
+      <Busca name="busca"
         value={busca}
         aoMudar={setBusca}
         placeholder="Buscar corte"
         aria-label="Buscar corte"
       />
-      <Busca value="" aoMudar={() => {}} carregando="Buscando cortes…" aria-label="Buscando" />
+      <Busca name="busca" value="" aoMudar={() => {}} carregando="Buscando cortes…" aria-label="Buscando" />
       <Field rotulo="Formato de saída">
-        <Select opcoes={FORMATOS} value={formato} onValueChange={setFormato} />
+        <Select name="formato" opcoes={FORMATOS} value={formato} onValueChange={setFormato} />
       </Field>
       <Field rotulo="Select com erro" erro="Escolha um formato">
-        <Select opcoes={FORMATOS} placeholder="Selecione" />
+        <Select name="formato" opcoes={FORMATOS} placeholder="Selecione" />
       </Field>
       <Field rotulo="Select desabilitado">
-        <Select opcoes={FORMATOS} value="mp4" disabled />
+        <Select name="formato" opcoes={FORMATOS} value="mp4" disabled />
       </Field>
       <Field rotulo="Select carregando">
-        <Select opcoes={FORMATOS} carregando="Buscando canais…" />
+        <Select name="canal" opcoes={FORMATOS} carregando="Buscando canais…" />
       </Field>
     </Bloco>
   );

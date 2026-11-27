@@ -192,7 +192,7 @@ function IntervaloEditor({
   return (
     <div className="flex items-center gap-2 rounded-pilula border border-iris-fio bg-iris-suave px-3 py-1">
       <div className="flex items-center gap-1">
-        <input
+        <input name="inicio_hms" type="text"
           value={inicio}
           onChange={(e) => setInicio(e.target.value)}
           data-sala=""
@@ -209,7 +209,7 @@ function IntervaloEditor({
       </div>
       <span className="font-mono text-pequeno text-iris">→</span>
       <div className="flex items-center gap-1">
-        <input
+        <input name="fim_hms" type="text"
           value={fim}
           onChange={(e) => setFim(e.target.value)}
           data-sala=""

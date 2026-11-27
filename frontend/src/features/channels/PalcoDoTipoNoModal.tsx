@@ -99,7 +99,7 @@ export function PainelDoComponente({ aba, ...props }: Props & { aba: Aba }) {
   return (
     <div className="grid gap-3">
       <label className="flex items-center gap-2 text-sm text-fg">
-        <input type="checkbox" checked={rascunho.placaAtiva} onChange={(e) => onMudar({ ...rascunho, placaAtiva: e.target.checked })} />
+        <input name="placaAtiva" type="checkbox" checked={rascunho.placaAtiva} onChange={(e) => onMudar({ ...rascunho, placaAtiva: e.target.checked })} />
         Mostrar a placa (nome e papel de quem fala)
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -122,14 +122,14 @@ function CabecalhoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) {
   return (
     <div className="grid gap-3">
       <label className="flex items-center gap-2 text-sm text-fg">
-        <input type="checkbox" checked={rascunho.cabecalhoAtivo} onChange={(e) => onMudar({ ...rascunho, cabecalhoAtivo: e.target.checked })} />
+        <input name="cabecalhoAtivo" type="checkbox" checked={rascunho.cabecalhoAtivo} onChange={(e) => onMudar({ ...rascunho, cabecalhoAtivo: e.target.checked })} />
         Mostrar o cabeçalho
       </label>
       <ItensDoCabecalho rascunho={rascunho} onMudar={onMudar} />
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="grid gap-1">
           <Label htmlFor={`modal-${tipo}-nome`}>Nome</Label>
-          <Input
+          <Input name="nome"
             id={`modal-${tipo}-nome`}
             value={rascunho.nome}
             disabled={!rascunho.mostrarNome}
@@ -139,7 +139,7 @@ function CabecalhoNoModal({ tipo, rascunho, efetivo, onMudar }: Props) {
         </div>
         <div className="grid gap-1">
           <Label htmlFor={`modal-${tipo}-handle`}>@</Label>
-          <Input
+          <Input name="handle"
             id={`modal-${tipo}-handle`}
             value={rascunho.handle}
             disabled={!rascunho.mostrarHandle}

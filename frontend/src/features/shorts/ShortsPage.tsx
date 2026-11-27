@@ -142,7 +142,7 @@ export function ConteudoDosShorts({ estado, acoes }: { estado: EstadoDosShorts; 
         <div className="flex flex-wrap items-center gap-3">
           <Filtros estado={estado} aoFiltrar={acoes.aoFiltrar} />
           <div className="ml-auto w-full max-w-[260px]">
-            <Busca value={estado.busca} aoMudar={acoes.aoBuscar} placeholder="Buscar por título, live ou tema" aria-label="Buscar cortes" />
+            <Busca name="busca" value={estado.busca} aoMudar={acoes.aoBuscar} placeholder="Buscar por título, live ou tema" aria-label="Buscar cortes" />
           </div>
         </div>
       ) : null}

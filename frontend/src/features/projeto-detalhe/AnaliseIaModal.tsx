@@ -176,7 +176,7 @@ function AnaliseIaModalDaLive({
               <Label htmlFor="inicio">
                 <Icon name="clock" className="mr-1 inline" /> Início (HH:MM:SS)
               </Label>
-              <Input
+              <Input name="inicio_hms"
                 id="inicio"
                 placeholder="00:00:00"
                 value={inicioHms}
@@ -192,7 +192,7 @@ function AnaliseIaModalDaLive({
                 <Icon name="clock" className="mr-1 inline" /> Fim (HH:MM:SS)
               </Label>
               <div className="flex gap-2">
-                <Input
+                <Input name="fim_hms"
                   id="fim"
                   placeholder="00:10:00"
                   value={fimHms}
@@ -216,7 +216,7 @@ function AnaliseIaModalDaLive({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="blocos">Blocos do prompt</Label>
-              <Input
+              <Input name="blocos" inputMode="numeric"
                 id="blocos"
                 type="number"
                 min={1}

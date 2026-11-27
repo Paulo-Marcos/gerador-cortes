@@ -194,7 +194,7 @@ function EditorDoPresetDeGancho({
               ))}
               {/* A paleta cobre o comum; o seletor livre é para a cor do canal
                   que não está nela. O backend normaliza o hex de qualquer um. */}
-              <input
+              <input name="cor"
                 type="color"
                 aria-label="Outra cor"
                 title="Outra cor"
@@ -295,7 +295,7 @@ function EditorDoPresetDeGancho({
 
           <Campo titulo="Guardar o preset">
             <div className="flex flex-wrap items-center gap-1.5">
-              <Input
+              <Input name="nome"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 aria-label="Nome do preset de gancho"
@@ -320,7 +320,7 @@ function EditorDoPresetDeGancho({
               )}
             </div>
             <label className="mt-2 flex items-center gap-1.5 text-micro text-fg-3">
-              <input
+              <input name="virar_padrao"
                 type="checkbox"
                 checked={virarPadrao}
                 onChange={(e) => setVirarPadrao(e.target.checked)}

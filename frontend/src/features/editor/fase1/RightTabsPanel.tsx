@@ -322,11 +322,11 @@ function TranscriptList({
       <div className="flex-shrink-0 space-y-2 border-b border-fio px-3 py-2.5">
         <div className="flex h-[30px] items-center gap-2 rounded-campo border border-fio bg-poco px-2.5">
           <Icon name="search" className="text-fg-3" />
-          <input
+          <input name="busca" type="search"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar palavra..."
-            className="flex-1 bg-transparent text-pequeno text-fg outline-none placeholder:text-fg-3 focus-visible:ring-2 focus-visible:ring-foco"
+            className="flex-1 bg-transparent [&::-webkit-search-cancel-button]:appearance-none text-pequeno text-fg outline-none placeholder:text-fg-3 focus-visible:ring-2 focus-visible:ring-foco"
           />
           <span className="font-mono text-micro text-fg-3">⌘F</span>
         </div>

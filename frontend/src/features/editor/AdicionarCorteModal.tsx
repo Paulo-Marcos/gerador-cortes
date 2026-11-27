@@ -116,7 +116,7 @@ export function AdicionarCorteModal({
               Inicio
             </span>
             <div className="flex gap-1.5">
-              <input
+              <input name="inicio_hms"
                 type="text"
                 value={inicio}
                 onChange={(event) => setInicio(event.target.value)}
@@ -146,7 +146,7 @@ export function AdicionarCorteModal({
               Fim
             </span>
             <div className="flex gap-1.5">
-              <input
+              <input name="fim_hms"
                 type="text"
                 value={fim}
                 onChange={(event) => setFim(event.target.value)}
@@ -177,7 +177,7 @@ export function AdicionarCorteModal({
           <span className="text-micro font-semibold tracking-[0.08em] text-fg-3">
             Titulo (opcional)
           </span>
-          <input
+          <input name="titulo_proposto"
             type="text"
             value={titulo}
             onChange={(event) => setTitulo(event.target.value)}

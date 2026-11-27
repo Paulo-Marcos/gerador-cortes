@@ -292,7 +292,7 @@ export function PublicarEmLoteModal({
                   plataformas: "já subiu" não quer dizer "subiu certo". */}
               {repetidos > 0 && (
                 <div className="rounded-[9px] bg-poco p-2.5">
-                  <Interruptor
+                  <Interruptor name="republicar"
                     ligado={republicar}
                     onChange={setRepublicar}
                     titulo={`Republicar ${repetidos} ${repetidos === 1 ? 'envio que já foi' : 'envios que já foram'}`}

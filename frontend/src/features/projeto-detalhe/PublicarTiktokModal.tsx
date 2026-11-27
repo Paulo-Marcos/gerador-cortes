@@ -157,7 +157,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
           <>
             <div className="flex flex-wrap items-center gap-2 rounded-[8px] bg-poco px-2.5 py-2">
               <label className="flex items-center gap-1.5 text-micro text-fg-3">
-                <input
+                <input name="agendar"
                   type="checkbox"
                   checked={Boolean(agendarPara)}
                   onChange={(e) => marcarDiaEHora(e.target.checked)}
@@ -166,7 +166,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
               </label>
               {Boolean(agendarPara) && (
                 <>
-                  <Input
+                  <Input name="agendar_para"
                     type="datetime-local"
                     value={agendarPara}
                     step={PASSO_EM_SEGUNDOS}
@@ -180,7 +180,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                 </>
               )}
               <label className="flex w-full items-center gap-1.5 text-micro text-fg-3">
-                <input
+                <input name="publicar_sozinho"
                   type="checkbox"
                   checked={publicarSozinho}
                   onChange={(e) => setPublicarSozinho(e.target.checked)}

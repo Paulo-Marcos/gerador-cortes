@@ -50,7 +50,7 @@ export function EscolhaDoEstilo({ painel, rascunho, onMudar, semCorte = false }:
       {painel.efetivo.estilo === 'limpo' && (
         <label className="grid gap-1 text-pequeno text-fg-2">
           Fundo
-          <select
+          <select name="fundo"
             aria-label="Fundo da capa"
             className={CAMPO}
             value={rascunho.fundo ?? ''}
@@ -85,7 +85,7 @@ export function ComponentesDaCapa({ painel, rascunho, onMudar }: Props) {
             aria-disabled={!disponivel}
             title={disponivel ? undefined : 'Só no estilo limpo.'}
           >
-            <input
+            <input name="visiveis"
               type="checkbox"
               disabled={!disponivel}
               checked={disponivel && Boolean(painel.efetivo.visiveis[componente])}

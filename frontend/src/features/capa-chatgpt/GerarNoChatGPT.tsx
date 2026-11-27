@@ -236,7 +236,7 @@ function ElencoDaCapa({ elenco, ocupado }: { elenco: ElencoConferido; ocupado: b
               pessoa
             </Button>
           ) : (
-            <Input
+            <Input name="nome"
               aparencia="sala"
               autoFocus
               value={novo}
@@ -294,7 +294,7 @@ function ChipDaPessoa({ pessoa, versao, desabilitado, onFoto, onTirar }: ChipPro
             <Icon name="image-plus" size={16} />
           </span>
         )}
-        <input
+        <input name="arquivo"
           type="file"
           accept="image/png,image/jpeg,image/webp"
           className="sr-only"

@@ -64,7 +64,7 @@ export function ListaCompleta({ projetos, onVoltar }: { projetos: Projeto[]; onV
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full max-w-[280px]">
-          <Busca value={busca} aoMudar={setBusca} placeholder="Buscar pelo título da live" aria-label="Buscar pelo título da live" />
+          <Busca name="busca" value={busca} aoMudar={setBusca} placeholder="Buscar pelo título da live" aria-label="Buscar pelo título da live" />
         </div>
         {FILTERS.map((f) => (
           <Chip key={f.key} pressionado={f.key === filtro} contagem={contagens[f.key]} onClick={() => setFiltro(f.key)}>
@@ -72,7 +72,7 @@ export function ListaCompleta({ projetos, onVoltar }: { projetos: Projeto[]; onV
           </Chip>
         ))}
         <div className="ml-auto w-[190px]">
-          <Select
+          <Select name="ordem"
             aria-label="Ordenar as lives"
             opcoes={OPCOES_DE_ORDEM}
             value={ordem}

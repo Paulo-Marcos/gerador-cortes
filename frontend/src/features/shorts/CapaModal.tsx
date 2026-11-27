@@ -424,7 +424,7 @@ function ArteDaCapa({
         )}
 
         {texto && (
-          <textarea
+          <textarea name="prompt"
             value={texto}
             readOnly
             rows={7}
@@ -439,7 +439,7 @@ function ArteDaCapa({
       {/* Passo 3 — a volta. */}
       <section className="space-y-2 border-t border-fio pt-3">
         <p className="text-pequeno font-semibold text-fg">3. Subir a arte</p>
-        <input
+        <input name="arquivo"
           ref={seletor}
           type="file"
           accept="image/png,image/jpeg,image/webp"

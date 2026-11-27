@@ -285,7 +285,7 @@ export function DefinirPalcoModal({
               <span className="font-code text-[10px] text-fg-2">
                 preset de recortes
               </span>
-              <select
+              <select name="palco_preset"
                 aria-label="Preset de recortes deste short"
                 value={short.palco_preset}
                 disabled={ocupado || !presetDoCorte.data}
@@ -461,7 +461,7 @@ export function DefinirPalcoModal({
 
           {secoes.moldura && (
           <Secao numero={secoes.moldura} titulo="A moldura">
-            <select
+            <select name="moldura"
               aria-label="Moldura do short"
               value={short.moldura}
               disabled={ocupado}

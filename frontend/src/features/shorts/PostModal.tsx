@@ -122,7 +122,7 @@ export function PostModal({ open, onClose, short }: Props) {
           >
             Título
           </label>
-          <input
+          <input name="titulo" type="text"
             id="post-titulo"
             value={titulo}
             onChange={(e) => setTitulo(e.target.value.slice(0, TITULO_MAX))}
@@ -154,7 +154,7 @@ export function PostModal({ open, onClose, short }: Props) {
           >
             Descrição
           </label>
-          <textarea
+          <textarea name="descricao"
             id="post-descricao"
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
@@ -175,7 +175,7 @@ export function PostModal({ open, onClose, short }: Props) {
           >
             Hashtags
           </label>
-          <input
+          <input name="hashtags" type="text"
             id="post-tags"
             value={tags}
             onChange={(e) => setTags(e.target.value)}

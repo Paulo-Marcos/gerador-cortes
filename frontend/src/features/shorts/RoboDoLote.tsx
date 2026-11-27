@@ -23,7 +23,7 @@ export function RoboDoLote(p: Props) {
           nossas e quebram em dias diferentes — desligar o robô de uma não pode
           desligar o da outra. */}
       {p.temTiktok && (
-        <Interruptor
+        <Interruptor name="tiktok_assistido"
           ligado={p.tiktokAssistido}
           onChange={p.onTiktok}
           titulo="TikTok: o robô sobe pelo navegador"
@@ -31,7 +31,7 @@ export function RoboDoLote(p: Props) {
         />
       )}
       {p.temInstagram && (
-        <Interruptor
+        <Interruptor name="instagram_assistido"
           ligado={p.instagramAssistido}
           onChange={p.onInstagram}
           titulo="Instagram: o robô sobe pelo navegador"
@@ -39,7 +39,7 @@ export function RoboDoLote(p: Props) {
         />
       )}
       {temRobo && (
-        <Interruptor
+        <Interruptor name="publicar_sozinho"
           ligado={p.publicarSozinho}
           onChange={p.onSozinho}
           titulo="…e também aperta o botão final"

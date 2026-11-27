@@ -87,7 +87,7 @@ export function ModelosDeIa() {
               .map((papel) => (
                 <label key={papel.key} className="grid content-start gap-1">
                   <span className="text-sm font-semibold text-fg">{papel.rotulo}</span>
-                  <select
+                  <select name={papel.key}
                     aria-label={`${grupo.titulo} · ${papel.rotulo}`}
                     value={papel.valor}
                     disabled={mutation.isPending}

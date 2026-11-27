@@ -119,7 +119,7 @@ export function PromptUtilitarioForm({ prompt, pending, onSave, onReset, onCance
             Resetar para o padrão
           </button>
         </div>
-        <textarea
+        <textarea name="prompt"
           id="prompt-utilitario-texto"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}

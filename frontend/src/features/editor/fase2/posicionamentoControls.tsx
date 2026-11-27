@@ -232,7 +232,7 @@ export function SharedRectEditor({
             className="flex flex-col gap-0.5 text-micro text-fg-3"
           >
             {field}
-            <Input
+            <Input name={field} inputMode="numeric"
               type="number"
               step="1"
               value={rect[field]}
@@ -245,7 +245,7 @@ export function SharedRectEditor({
         {baseRect ? (
           <label className="flex flex-col gap-0.5 text-micro text-fg-3">
             escala
-            <Input
+            <Input name="escala" inputMode="numeric"
               type="number"
               step="1"
               value={scalePercent}
@@ -261,7 +261,7 @@ export function SharedRectEditor({
               className="flex flex-col gap-0.5 text-micro text-fg-3"
             >
               {field}
-              <Input
+              <Input name={field} inputMode="numeric"
                 type="number"
                 step="1"
                 value={rect[field]}

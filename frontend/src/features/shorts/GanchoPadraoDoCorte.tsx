@@ -93,7 +93,7 @@ export function GanchoPadraoDoCorte({ corteId, onEditar }: Props) {
           gancho
         </span>
 
-        <select
+        <select name="gancho_padrao"
           aria-label="Gancho padrão deste corte — cor, destaque, fonte, tamanho e duração"
           value={escolhido}
           disabled={definir.isPending}

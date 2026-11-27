@@ -83,18 +83,18 @@ function KitDaRede({ pacote }: { pacote: PacotePublicacao }) {
       ))}
       {temTitulo ? (
         <>
-          <CampoCopiavel rotulo="Título" texto={pacote.titulo} linhas={2} />
-          <CampoCopiavel rotulo="Descrição" texto={pacote.descricao} linhas={7} />
+          <CampoCopiavel campo="titulo" rotulo="Título" texto={pacote.titulo} linhas={2} />
+          <CampoCopiavel campo="descricao" rotulo="Descrição" texto={pacote.descricao} linhas={7} />
         </>
       ) : (
-        <CampoCopiavel rotulo="Legenda" texto={pacote.legenda} linhas={9} />
+        <CampoCopiavel campo="legenda" rotulo="Legenda" texto={pacote.legenda} linhas={9} />
       )}
-      <CampoCopiavel rotulo="Hashtags" texto={pacote.hashtags.join(' ')} linhas={2} />
+      <CampoCopiavel campo="hashtags" rotulo="Hashtags" texto={pacote.hashtags.join(' ')} linhas={2} />
     </article>
   );
 }
 
-function CampoCopiavel({ rotulo, texto, linhas }: { rotulo: string; texto: string; linhas: number }) {
+function CampoCopiavel({ campo, rotulo, texto, linhas }: { campo: string; rotulo: string; texto: string; linhas: number }) {
   // `falhou` existe porque o navegador pode recusar a área de transferência (aba
   // sem foco, permissão negada) — e um clique mudo faria colar o texto ANTERIOR.
   const [resultado, setResultado] = useState<'copiado' | 'falhou' | null>(null);
@@ -129,7 +129,7 @@ function CampoCopiavel({ rotulo, texto, linhas }: { rotulo: string; texto: strin
               : 'copiar'}
         </Button>
       </div>
-      <textarea
+      <textarea name={campo}
         readOnly
         value={texto || '—'}
         rows={linhas}

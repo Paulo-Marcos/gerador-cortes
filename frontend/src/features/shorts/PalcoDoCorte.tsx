@@ -60,7 +60,7 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
         recortes
       </span>
 
-      <select
+      <select name="preset"
         aria-label="Preset do canal de onde saem os recortes"
         value={estado.presets_disponiveis.find((p) => p.nome === estado.preset)?.id ?? ''}
         disabled={escolher.isPending}

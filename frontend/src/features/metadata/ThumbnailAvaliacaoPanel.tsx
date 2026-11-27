@@ -137,7 +137,7 @@ export function ThumbnailAvaliacaoPanel({ corteId }: { corteId: string }) {
               </div>
             </div>
           ))}
-          <Textarea
+          <Textarea name="comentario"
             value={comentario}
             onChange={(event) => setComentario(event.target.value)}
             rows={2}

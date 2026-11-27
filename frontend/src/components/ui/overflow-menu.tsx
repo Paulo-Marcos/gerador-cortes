@@ -139,7 +139,7 @@ export function ItemDoMenu({ item, onFechar }: { item: OverflowMenuItem; onFecha
     return (
       <label role="menuitem" className={cn(itemClass, 'cursor-pointer')}>
         {conteudo}
-        <input
+        <input name="arquivo"
           type="file"
           accept={item.accept}
           className="hidden"

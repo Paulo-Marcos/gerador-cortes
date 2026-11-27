@@ -159,7 +159,7 @@ function CampoQuantos({
   return (
     <label className="flex items-center gap-1.5 text-pequeno">
       Quantos
-      <Input
+      <Input name="quantidade" inputMode="numeric"
         type="number"
         min={1}
         max={total}

@@ -137,7 +137,7 @@ function CampoDeLado({
   return (
     <label className="inline-flex items-center gap-0.5">
       <span className="font-code text-micro text-fg-2">{lado}</span>
-      <input
+      <input name={lado} type="text" inputMode="numeric"
         value={mostrado}
         disabled={ocupado}
         aria-label={`${lado} do bloco`}

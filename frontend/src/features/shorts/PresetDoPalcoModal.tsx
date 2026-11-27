@@ -131,7 +131,7 @@ function EditorDoPresetDePalco({
   const rodape = (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Input
+        <Input name="nome"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           aria-label="Nome do preset de palco"
@@ -154,7 +154,7 @@ function EditorDoPresetDePalco({
         )}
       </div>
       <label className="flex items-center gap-1.5 text-micro text-fg-3">
-        <input
+        <input name="virar_padrao"
           type="checkbox"
           checked={virarPadrao}
           onChange={(e) => setVirarPadrao(e.target.checked)}

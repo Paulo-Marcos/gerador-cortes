@@ -286,7 +286,7 @@ function CartaoDaCentral({
           className="absolute left-2 top-2 flex cursor-pointer items-center gap-1 rounded-[6px] bg-black/60 px-1.5 py-1 text-micro text-white"
           title="Incluir no lote"
         >
-          <input
+          <input name="selecionados"
             type="checkbox"
             checked={marcado}
             onChange={onMarcar}

@@ -57,7 +57,7 @@ export function FaixaDoShortForm({ faixa, pending, erroDoServidor, onSave }: Pro
       <div className="flex flex-wrap items-end gap-4">
         <div className="grid gap-1">
           <Label htmlFor="faixa-short-min">Mínimo (s)</Label>
-          <Input
+          <Input name="duracao_min_seg"
             id="faixa-short-min"
             type="number"
             inputMode="numeric"
@@ -70,7 +70,7 @@ export function FaixaDoShortForm({ faixa, pending, erroDoServidor, onSave }: Pro
         </div>
         <div className="grid gap-1">
           <Label htmlFor="faixa-short-max">Máximo (s)</Label>
-          <Input
+          <Input name="duracao_max_seg"
             id="faixa-short-max"
             type="number"
             inputMode="numeric"

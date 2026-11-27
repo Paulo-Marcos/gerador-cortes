@@ -74,7 +74,7 @@ export function QuandoDoLote(props: Props) {
 function DataUnica({ agendarPara, onAgendarPara, problemaDoAgendamento, notas }: Props) {
   return (
     <div className="space-y-2 rounded-[9px] bg-poco p-2.5">
-      <Input
+      <Input name="agendar_para"
         type="datetime-local"
         value={agendarPara}
         /* `step` põe o seletor do navegador na mesma grade de 5 em 5 do TikTok.
@@ -205,7 +205,7 @@ function LinhaDoItem({
           → {rotuloCurto(linha.plataforma)}
         </span>
       </span>
-      <Input
+      <Input name="agendar_para"
         type="datetime-local"
         step={PASSO_EM_SEGUNDOS}
         aria-label={`Data de ${rotulo} no ${rotuloCurto(linha.plataforma)}`}

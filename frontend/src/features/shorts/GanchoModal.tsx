@@ -282,7 +282,7 @@ export function GanchoModal({
             >
               O que aparece nos primeiros segundos
             </label>
-            <textarea
+            <textarea name="gancho_tela"
               id="gancho-texto"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}

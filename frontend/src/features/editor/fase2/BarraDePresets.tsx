@@ -111,7 +111,7 @@ export function PresetsNaFaixa({
   return (
     <div role="group" aria-label="Presets" className="flex items-center gap-1">
       <Icon name="bookmark" className="text-fg-3" />
-      <select
+      <select name="preset"
         aria-label="Preset do estilo"
         value={selecionado}
         onChange={(e) => e.target.value && onAplicar(e.target.value)}

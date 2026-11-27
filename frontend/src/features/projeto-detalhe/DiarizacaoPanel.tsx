@@ -54,7 +54,7 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
   return (
     <div className="flex flex-col gap-3 rounded-campo border border-fio-2 bg-painel-solido/40 p-3">
       <label className="flex items-start gap-2 text-xs text-fg-2">
-        <input
+        <input name="usar_diarizacao"
           type="checkbox"
           checked={usarDiarizacao}
           onChange={(e) => onToggleUsar(e.target.checked)}
@@ -102,7 +102,7 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
               {speakers.map((sid) => (
                 <div key={sid} className="flex items-center gap-2">
                   <span className="w-24 shrink-0 font-mono text-micro text-fg-3">{sid}</span>
-                  <Input
+                  <Input name="nome"
                     value={rascunho[sid]?.nome ?? ''}
                     onChange={(e) => setNome(sid, e.target.value)}
                     placeholder="Nome (ex.: Pedro)"

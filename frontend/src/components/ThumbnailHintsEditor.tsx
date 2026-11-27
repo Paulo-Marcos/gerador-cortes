@@ -105,7 +105,7 @@ export function ThumbnailHintsEditor({
             O que você escrever aqui é somado à inteligência do agente ao gerar o prompt da
             thumbnail.
           </p>
-          <textarea
+          <textarea name="hints"
             value={value}
             onChange={(event) => setValue(event.target.value)}
             placeholder={PLACEHOLDER}

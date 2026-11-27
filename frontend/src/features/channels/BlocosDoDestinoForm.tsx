@@ -86,19 +86,19 @@ export function BlocosDoDestinoForm({
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <CampoNumero
+        <CampoNumero campo="itens_por_bloco"
           id={`${destino.destino}-itens`}
           rotulo="Itens por bloco"
           valor={valores.itens_por_bloco}
           onChange={(v) => mudar({ itens_por_bloco: v })}
         />
-        <CampoNumero
+        <CampoNumero campo="teto_por_dia"
           id={`${destino.destino}-teto`}
           rotulo="Teto por dia"
           valor={valores.teto_por_dia}
           onChange={(v) => mudar({ teto_por_dia: v })}
         />
-        <CampoNumero
+        <CampoNumero campo="intervalo_minimo_min"
           id={`${destino.destino}-intervalo`}
           rotulo="Intervalo mínimo (min)"
           valor={valores.intervalo_minimo_min}
@@ -165,7 +165,7 @@ function BlocosDoDia({
       <div className="flex flex-wrap items-center gap-2">
         {blocos.map((bloco, i) => (
           <span key={i} className="inline-flex items-center gap-1">
-            <Input
+            <Input name="blocos"
               type="time"
               step={300}
               aria-label={`Bloco ${i + 1}`}
@@ -250,11 +250,13 @@ function DiasAtivos({
 
 function CampoNumero({
   id,
+  campo,
   rotulo,
   valor,
   onChange,
 }: {
   id: string;
+  campo: string;
   rotulo: string;
   valor: number;
   onChange: (valor: number) => void;
@@ -264,7 +266,7 @@ function CampoNumero({
       <Label htmlFor={id} className="text-xs text-fg-2">
         {rotulo}
       </Label>
-      <Input
+      <Input name={campo}
         id={id}
         type="number"
         inputMode="numeric"

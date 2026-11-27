@@ -91,7 +91,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
       {criando && (
         <div className="grid gap-1.5">
           <Label htmlFor="canal-id">Id do canal (slug da pasta)</Label>
-          <Input
+          <Input name="id"
             id="canal-id"
             value={id}
             onChange={(e) => setId(e.target.value)}
@@ -107,7 +107,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
 
       <div className="grid gap-1.5">
         <Label htmlFor="canal-nome">Nome de exibição</Label>
-        <Input
+        <Input name="nome"
           id="canal-nome"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
@@ -117,7 +117,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
 
       <div className="grid gap-1.5">
         <Label htmlFor="canal-handle">Handle</Label>
-        <Input
+        <Input name="handle"
           id="canal-handle"
           value={handle}
           onChange={(e) => setHandle(e.target.value)}
@@ -127,7 +127,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
 
       <div className="grid gap-1.5">
         <Label htmlFor="canal-credito">Crédito</Label>
-        <Input
+        <Input name="credito"
           id="canal-credito"
           value={credito}
           onChange={(e) => setCredito(e.target.value)}
@@ -137,7 +137,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
 
       <div className="grid gap-1.5">
         <Label htmlFor="canal-youtube-channel-id">Canal-fonte (YouTube)</Label>
-        <Input
+        <Input name="youtube_channel_id"
           id="canal-youtube-channel-id"
           value={youtubeChannelId}
           onChange={(e) => setYoutubeChannelId(e.target.value)}
@@ -157,7 +157,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
             <Label htmlFor="canal-primaria" className="text-xs">
               Primária
             </Label>
-            <Input
+            <Input name="primaria"
               id="canal-primaria"
               value={paleta.primaria}
               onChange={(e) => setPaletaCampo('primaria', e.target.value)}
@@ -168,7 +168,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
             <Label htmlFor="canal-secundaria" className="text-xs">
               Secundária
             </Label>
-            <Input
+            <Input name="secundaria"
               id="canal-secundaria"
               value={paleta.secundaria}
               onChange={(e) => setPaletaCampo('secundaria', e.target.value)}
@@ -179,7 +179,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
             <Label htmlFor="canal-acento" className="text-xs">
               Acento
             </Label>
-            <Input
+            <Input name="acento"
               id="canal-acento"
               value={paleta.acento}
               onChange={(e) => setPaletaCampo('acento', e.target.value)}

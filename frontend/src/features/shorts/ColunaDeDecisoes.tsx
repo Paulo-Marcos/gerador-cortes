@@ -146,7 +146,7 @@ export function ColunaDeDecisoes({
           {shorts.length > 0 && (
             <label className="flex items-center gap-1.5 text-micro text-fg-2">
               somar este instante a
-              <select
+              <select name="short_id"
                 aria-label="Somar este instante como segmento de qual trecho"
                 value=""
                 disabled={edicao.ocupado || duracaoRegua <= 0}

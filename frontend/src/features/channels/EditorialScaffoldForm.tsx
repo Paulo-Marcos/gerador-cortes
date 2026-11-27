@@ -116,7 +116,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
             Resetar para o padrão
           </button>
         </div>
-        <textarea
+        <textarea name="scaffold"
           id="scaffold-texto"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
