@@ -76,9 +76,10 @@ const fontes = readdirSync(DA_PASTA)
 
 describe('D-1167 · Revisão na Sala escura', () => {
   it('uma só primária, acesa: a da barra de ação', () => {
+    status = statusExportPendente({ corte_id: 'c1', numero: 1, titulo: 'Corte 1', pronto_publicar: true });
     const html = tela();
     esperarPrimarios(html, 'Revisao');
-    expect(html).toContain('Ir para publicar');
+    expect(html).toContain('Publicar 1 corte');
   });
 
   it('o botão da tela (Pasta, Editar) é da variante nova', () => {

@@ -25,7 +25,7 @@ export const REGRAS: { conceito: string; rotulo: RegExp; icone: IconName; exempl
     conceito: 'publicar',
     rotulo: /^(publicar\b|ir para publicar|enviar .*ao youtube|subir para o tiktok)/i,
     icone: ICONE_DO_CONCEITO.publicar,
-    exemplos: ['Publicar este', 'Ir para publicar', 'Enviar ao YouTube agora', 'Subir para o TikTok (robô ou pacote)'],
+    exemplos: ['Publicar este', 'Enviar ao YouTube agora', 'Subir para o TikTok (robô ou pacote)'],
   },
   {
     conceito: 'editar',
