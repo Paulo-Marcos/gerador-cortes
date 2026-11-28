@@ -267,9 +267,9 @@ function Casca({ children, fila }: CascaProps) {
             {comLinhaDoTopo || !parte.cabecalho ? null : (
               <ScreenHeader
                 titulo={titulo}
-                sobretitulo={sobretituloDaTela(tela, trilha)}
+                sobretitulo={chrome.sobretitulo ?? sobretituloDaTela(tela, trilha)}
                 sub={chrome.sub}
-                acoes={chrome.acoes}
+                acoes={chrome.acoes} destaque={chrome.destaque}
                 onAbrirBusca={abrirBusca}
               />
             )}

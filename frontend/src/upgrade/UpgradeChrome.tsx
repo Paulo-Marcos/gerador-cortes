@@ -212,6 +212,11 @@ export type Chrome = {
   /** Sobrescreve o título do cabeçalho quando ele depende de dados
       ("Corte #7 — O erro do BC"). Sem isso vale o título da rota. */
   titulo?: string;
+  /** D-1151: o trecho do título que vai no feixe; `null` não acende nenhum. Sem o
+      campo, é a última palavra. Só o cabeçalho de tela o lê. */
+  destaque?: string | null;
+  /** D-1151: o sobretítulo do cabeçalho. Sem ele, o grupo do trilho. */
+  sobretitulo?: string;
   /** Subtítulo do cabeçalho — sempre com número, nunca decorativo. */
   sub?: string;
   acoes?: ScreenAction[];
