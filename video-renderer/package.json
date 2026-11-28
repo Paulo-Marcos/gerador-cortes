@@ -6,26 +6,26 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@remotion/captions": "4.0.535",
-    "@remotion/cli": "4.0.535",
-    "@remotion/google-fonts": "4.0.535",
-    "@remotion/media-utils": "4.0.535",
-    "@remotion/tailwind-v4": "4.0.535",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "remotion": "4.0.535",
-    "tailwindcss": "4.3.3",
+    "@remotion/captions": "4.0.547",
+    "@remotion/cli": "4.0.547",
+    "@remotion/google-fonts": "4.0.547",
+    "@remotion/media-utils": "4.0.547",
+    "@remotion/tailwind-v4": "4.0.547",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.547",
+    "tailwindcss": "4.3.5",
     "zod": "4.6.7"
   },
   "overrides": {
     "zod": "$zod"
   },
   "devDependencies": {
-    "@remotion/eslint-config-flat": "4.0.535",
-    "@types/react": "19.3.0",
-    "@types/web": "0.0.358",
+    "@remotion/eslint-config-flat": "4.0.547",
+    "@types/react": "19.3.3",
+    "@types/web": "0.0.367",
     "eslint": "9.19.0",
-    "prettier": "3.9.10",
+    "prettier": "3.10.1",
     "typescript": "5.9.3"
   },
   "scripts": {
