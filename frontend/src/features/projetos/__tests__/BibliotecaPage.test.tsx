@@ -71,7 +71,7 @@ describe('Biblioteca cheia (§7.1)', () => {
   });
 
   it('o "Continue" leva o fio de luz, um selo, o mini-mapa, "Abrir a live" e o destino', () => {
-    const continua = html.slice(html.indexOf('aria-label="Continue de onde parou"'), html.indexOf('Os últimos 8 dias'));
+    const continua = html.slice(html.indexOf('aria-label="Continue de onde parou"'), html.indexOf('As últimas 3 lives'));
     expect(continua).toContain('cc-fio');
     expect(continua).toContain('A live do destaque');
     expect((continua.match(/data-tom="/g) ?? []).length).toBe(1);
@@ -85,11 +85,11 @@ describe('Biblioteca cheia (§7.1)', () => {
     expect((html.match(/data-fio-de-luz/g) ?? []).length).toBe(1);
   });
 
-  it('a régua tem os oito dias, com a casa tracejada no dia sem live', () => {
-    expect(html).toContain('Os últimos 8 dias');
-    expect((html.match(/data-dia="/g) ?? []).length).toBe(8);
+  it('a régua tem uma casa por live, e nenhuma vazia', () => {
+    expect(html).toContain('As últimas 3 lives');
+    expect((html.match(/data-dia="/g) ?? []).length).toBe(3);
     expect(html).toMatch(/data-dia="2026-11-18" data-tem-live="sim"/);
-    expect(html).toMatch(/data-dia="2026-11-19" data-tem-live="nao"/);
+    expect(html).not.toContain('data-tem-live="nao"');
   });
 
   it('"Esperando você" e "No ar há pouco", e o caminho para a lista inteira', () => {

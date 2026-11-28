@@ -55,7 +55,7 @@ describe('estado da casa (a segunda linha da saudação)', () => {
   });
 });
 
-describe('régua dos últimos 8 dias', () => {
+describe('régua das últimas 8 lives', () => {
   it('lê a data da live nos três formatos', () => {
     expect(diaDaLive('20261118')).toBe('2026-11-18');
     expect(diaDaLive('20261118153000')).toBe('2026-11-18');
@@ -63,14 +63,14 @@ describe('régua dos últimos 8 dias', () => {
     expect(diaDaLive('')).toBe('');
   });
 
-  it('tem oito casas, de sete dias atrás até hoje, e só hoje marcado', () => {
-    const dias = diasDaRegua([], new Date(2026, 10, 20, 9));
-    expect(dias.map((d) => d.data)).toEqual([
-      '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16',
-      '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20',
-    ]);
+  it('sem lives não há casa, e só a casa da live de hoje é marcada', () => {
+    expect(diasDaRegua([], new Date(2026, 10, 20, 9))).toEqual([]);
+    const dias = diasDaRegua(
+      [projeto({ id: 'ontem', data_live: '20261119' }), projeto({ id: 'hoje', data_live: '20261120' })],
+      new Date(2026, 10, 20, 9),
+    );
+    expect(dias.map((d) => d.data)).toEqual(['2026-11-19', '2026-11-20']);
     expect(dias.filter((d) => d.hoje).map((d) => d.data)).toEqual(['2026-11-20']);
-    expect(dias.every((d) => d.lives.length === 0)).toBe(true);
   });
 
   it('põe cada live no dia dela, com capa, destino e o ponto de estado', () => {
@@ -89,7 +89,7 @@ describe('régua dos últimos 8 dias', () => {
         estado: 'Baixando',
       },
     ]);
-    expect(dias.flatMap((d) => d.lives).map((l) => l.id)).toEqual(['a']);
+    expect(dias.flatMap((d) => d.lives).map((l) => l.id)).toEqual(['velha', 'a']);
   });
 });
 
