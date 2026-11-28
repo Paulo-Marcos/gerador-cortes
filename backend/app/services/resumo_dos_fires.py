@@ -9,9 +9,76 @@ como lentidao ja no primeiro uso real.
 
 from __future__ import annotations
 
-from app.models import PublicacaoShort, Short, StatusShort
+from app.core.channel_paths import resolver_do_projeto
+from app.domain.short.capa_do_fire import escolher_capa_do_fire
+from app.domain.short.shorts_prontos import redes_do_corte
+from app.models import MetadadoCorte, MetadadoShort, PublicacaoShort, Short, StatusShort
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def completar(db: AsyncSession, fires: list[dict]) -> None:
+    """Preenche em cada Fire os sinais que saem de consulta em lote."""
+    if not fires:
+        return
+    ids = [f["corte_id"] for f in fires]
+    contagens = await contar_shorts_por_corte(db, ids)
+    edicoes = await edicao_por_corte(db, ids)
+    publicados = await publicados_por_corte(db, ids)
+    dos_prontos = await capas_dos_prontos_por_corte(db, ids)
+    verticais = await capa_vertical_por_corte(db, ids)
+    for fire in fires:
+        corte_id = fire["corte_id"]
+        fire["shorts"] = contagens.get(corte_id, contagem_vazia())
+        fire["tem_edicao"] = edicoes.get(corte_id, False)
+        # D-905: a rede acende quando TODOS os prontos do corte ja subiram.
+        fire["redes"] = redes_do_corte(fire["shorts"]["renderizado"], publicados.get(corte_id, {}))
+        fire["capa_path"] = _capa(
+            fire["projeto_id"], dos_prontos.get(corte_id, []), verticais.get(corte_id, "")
+        )
+
+
+def _capa(projeto_id: str, dos_prontos: list[str], vertical: str) -> str:
+    """A escolha do domínio, com o disco deste projeto respondendo "existe?"."""
+    return escolher_capa_do_fire(
+        dos_prontos,
+        vertical,
+        lambda caminho: resolver_do_projeto(caminho, projeto_id).is_file(),
+    )
+
+
+async def capas_dos_prontos_por_corte(
+    db: AsyncSession, corte_ids: list[str]
+) -> dict[str, list[str]]:
+    """Por corte, as capas gravadas dos shorts PRONTOS, na ordem do numero (D-1170)."""
+    linhas = (
+        await db.execute(
+            select(Short.corte_id, MetadadoShort.capa_path)
+            .join(MetadadoShort, MetadadoShort.short_id == Short.id)
+            .where(
+                Short.corte_id.in_(corte_ids),
+                Short.status == StatusShort.RENDERIZADO,
+                MetadadoShort.capa_path != "",
+            )
+            .order_by(Short.corte_id, Short.numero)
+        )
+    ).all()
+    capas: dict[str, list[str]] = {}
+    for corte_id, caminho in linhas:
+        capas.setdefault(corte_id, []).append(caminho)
+    return capas
+
+
+async def capa_vertical_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[str, str]:
+    """Por corte, a capa 9:16 do proprio corte (D-522)."""
+    linhas = (
+        await db.execute(
+            select(MetadadoCorte.corte_id, MetadadoCorte.thumbnail_tiktok_path).where(
+                MetadadoCorte.corte_id.in_(corte_ids)
+            )
+        )
+    ).all()
+    return {corte_id: caminho or "" for corte_id, caminho in linhas}
 
 
 def contagem_vazia() -> dict[str, int]:

@@ -10,6 +10,8 @@ import { LinhaDaLista } from '@/components/ui/lista';
 import { Miniatura } from '@/components/ui/miniatura';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Selo } from '@/components/ui/selo';
+import { resolveThumbUrl } from '@/lib/api';
+import { urlDaMiniatura } from '@/lib/miniaturaDaCapa';
 import { formatarDuracao } from '@/lib/utils';
 import { Icon } from '@/upgrade/Icon';
 import { dicaDoWorkspace, itensDoMenuDoFire } from './acoesDoFire';
@@ -22,6 +24,14 @@ import { useMarcarFinalizado } from './useShortsDoCorte';
 
 /** As colunas da lista, na ordem da linha. Uma só definição: o cabeçalho e a linha alinham. */
 export const COLUNAS_DOS_FIRES = '20px 40px minmax(0,1fr) 124px 124px 112px 140px 32px';
+
+/** D-1170: a capa em 64 px. A caixa tem 40 px e a lista, dezenas de linhas: a arte
+ *  inteira (1080×1920) seria peso à toa. Sem capa, `undefined` = desenho vazio. */
+function capaDaLinha(fire: FireComBruto): string | undefined {
+  const arte = resolveThumbUrl(fire.projeto_id, fire.capa_path);
+  if (!arte) return undefined;
+  return urlDaMiniatura(arte) ?? arte;
+}
 
 export function LinhaDoFire({ fire, liveRodando }: { fire: FireComBruto; liveRodando: boolean }) {
   const navegar = useNavigate();
@@ -44,7 +54,7 @@ export function LinhaDoFire({ fire, liveRodando }: { fire: FireComBruto; liveRod
       <span aria-hidden className="grid place-items-center text-fire">
         {fire.is_fire ? <Icon name="flame" size={16} /> : null}
       </span>
-      <Miniatura proporcao="9/16" className="w-10" />
+      <Miniatura src={capaDaLinha(fire)} proporcao="9/16" className="w-10" />
       <div className="min-w-0">
         <Link
           to={`/shorts/${fire.corte_id}`}

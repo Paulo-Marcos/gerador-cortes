@@ -36,7 +36,6 @@ from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.domain.short.formato_video import foco_de_regiao
 from app.domain.short.moldura_short import Moldura
 from app.domain.short.shorts import ResultadoSugestoes, sem_repetir_existentes
-from app.domain.short.shorts_prontos import redes_do_corte
 from app.models import Corte, MetadadoShort, Projeto, Short, StatusShort
 from app.services import proposta_do_short, resumo_dos_fires
 from app.services.canal import editorial_scaffolds, editorial_skills
@@ -1199,18 +1198,7 @@ async def listar_fires_com_bruto() -> list[dict]:
             # trabalho que a propria tela pode oferecer.
             fires.append(_descrever_fire(corte, projeto, bruto))
 
-        if fires:
-            ids = [f["corte_id"] for f in fires]
-            contagens = await resumo_dos_fires.contar_shorts_por_corte(db, ids)
-            edicoes = await resumo_dos_fires.edicao_por_corte(db, ids)
-            publicados = await resumo_dos_fires.publicados_por_corte(db, ids)
-            for fire in fires:
-                fire["shorts"] = contagens.get(fire["corte_id"], resumo_dos_fires.contagem_vazia())
-                fire["tem_edicao"] = edicoes.get(fire["corte_id"], False)
-                # D-905: a rede acende quando TODOS os prontos do corte ja subiram.
-                fire["redes"] = redes_do_corte(
-                    fire["shorts"]["renderizado"], publicados.get(fire["corte_id"], {})
-                )
+        await resumo_dos_fires.completar(db, fires)
 
     return fires
 

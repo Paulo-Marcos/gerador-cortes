@@ -5295,6 +5295,10 @@
             "title": "Bruto Mb",
             "type": "number"
           },
+          "capa_path": {
+            "title": "Capa Path",
+            "type": "string"
+          },
           "corte_id": {
             "title": "Corte Id",
             "type": "string"
@@ -5386,7 +5390,8 @@
           "tem_edicao",
           "finalizado_em",
           "shorts",
-          "redes"
+          "redes",
+          "capa_path"
         ],
         "title": "FireDaFabrica",
         "type": "object"

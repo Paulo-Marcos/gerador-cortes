@@ -52,6 +52,8 @@ class FireDaFabrica(RespostaApi):
     # D-905: as tres redes do short, sempre, na ordem da tela; `completa` acende
     # o icone do cartao quando TODOS os prontos do corte ja subiram nela.
     redes: list[RedeDoCorte]
+    # D-1170: a capa 9:16, relativa à pasta do projeto; "" quando não há.
+    capa_path: str
 
 
 class FiresResponse(RespostaApi):
