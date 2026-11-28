@@ -2,14 +2,14 @@ import * as React from 'react';
 import type { TomDoSelo } from '@/components/ui/selo';
 import { cn } from '@/lib/utils';
 
-// D-1121 (E-069 H-11a) · Régua de dias: uma casa por dia, as lives de cada um (DIRECAO §7.1,
-// "Os últimos 8 dias"). Dia com live é uma casa de vidro com a capa e o título; dia sem live
-// é uma casa TRACEJADA (o vazio também é informação: "nesse dia não houve live").
+// D-1121 (E-069 H-11a) · Régua de datas: uma casa por data, com as lives dela (DIRECAO §7.1).
+// Casa com live é de vidro, com a capa e o título; casa sem live é TRACEJADA. Na Biblioteca
+// (D-1153) são "as últimas 8 lives", uma casa por live: duas lives do mesmo dia repetem a data.
 //
-// É só apresentação: quem escolhe os dias e agrupa as lives por data é a tela (a regra
-// "últimos 8 dias" vive onde a lista de lives já está carregada). `hoje` e o ponto de estado
-// chegam prontos. O ponto usa a MESMA cor do tom do `Selo` (§5): uma só tabela de estado.
-// Vidro chapado, sem `backdrop-filter` (§3.6): são oito casas em linha.
+// É só apresentação: quem escolhe as casas é a tela (a regra vive onde a lista de lives já
+// está carregada). `hoje` e o ponto de estado chegam prontos. O ponto usa a MESMA cor do tom
+// do `Selo` (§5): uma só tabela de estado. Vidro chapado, sem `backdrop-filter` (§3.6): são
+// oito casas em linha.
 
 export type LiveDoDia = {
   id: string;
@@ -64,7 +64,7 @@ export const ReguaDeDias = React.forwardRef<HTMLOListElement, ReguaDeDiasProps>(
     return (
       <ol
         ref={ref}
-        aria-label="Lives por dia"
+        aria-label="Lives por data"
         className={cn('grid list-none grid-cols-8 gap-2 p-0', className)}
         {...props}
       >
@@ -73,7 +73,7 @@ export const ReguaDeDias = React.forwardRef<HTMLOListElement, ReguaDeDiasProps>(
           const tem = d.lives.length > 0;
           return (
             <li
-              key={d.data}
+              key={`${d.data} ${d.lives[0]?.id ?? ''}`}
               data-dia={d.data}
               data-tem-live={tem ? 'sim' : 'nao'}
               aria-current={d.hoje ? 'date' : undefined}
@@ -102,25 +102,27 @@ export const ReguaDeDias = React.forwardRef<HTMLOListElement, ReguaDeDiasProps>(
                   key={l.id}
                   href={l.href}
                   data-sala=""
-                  className="flex min-w-0 items-center gap-2 rounded-etiqueta text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+                  className="flex min-w-0 flex-col gap-2 rounded-etiqueta text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
                 >
                   {l.capa && (
                     <img
                       src={l.capa}
                       alt=""
-                      className="h-[27px] w-12 flex-none rounded-etiqueta object-cover ring-1 ring-fio-2"
+                      className="aspect-video w-full rounded-etiqueta object-cover ring-1 ring-fio-2"
                     />
                   )}
-                  <span className="line-clamp-2 min-w-0 flex-1 text-pequeno">
-                    <span className="font-semibold">{l.titulo}</span>
+                  <span className="flex min-w-0 items-start gap-1.5">
+                    <span className="line-clamp-2 min-w-0 flex-1 text-pequeno">
+                      <span className="font-semibold">{l.titulo}</span>
+                    </span>
+                    <span
+                      data-tom={l.tom}
+                      role="img"
+                      aria-label={l.estado}
+                      title={l.estado}
+                      className={cn('mt-1.5 size-[7px] flex-none rounded-full bg-[var(--c)]', PONTO[l.tom])}
+                    />
                   </span>
-                  <span
-                    data-tom={l.tom}
-                    role="img"
-                    aria-label={l.estado}
-                    title={l.estado}
-                    className={cn('size-[7px] flex-none rounded-full bg-[var(--c)]', PONTO[l.tom])}
-                  />
                 </a>
               ))}
             </li>

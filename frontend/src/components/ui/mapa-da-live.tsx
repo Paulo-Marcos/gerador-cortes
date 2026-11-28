@@ -122,6 +122,17 @@ const TAMANHO = {
   mini: { pista: 'h-[30px]', corte: 'inset-y-[3px] min-w-4 [--piso:16px]', marca: 'inset-y-[5px]' },
 } as const;
 
+// No compacto (D-1153) o número só aparece se couber na FAIXA que o corte ocupa de verdade. A
+// pílula não serve de medida: o piso de 16 px a alarga por cima do vizinho e os números
+// encostavam. Como cortes não dividem o mesmo tempo, número dentro da própria faixa não bate
+// em outro. A conta é do CSS: a pista é a referência (`cqw`) e a faixa, a consultada.
+const FAIXA_DO_NUMERO =
+  'flex w-[var(--faixa)] flex-none justify-center [container-type:inline-size]';
+const NUMERO_SE_COUBER = {
+  umDigito: 'hidden [@container_(min-width:14px)]:inline',
+  doisDigitos: 'hidden [@container_(min-width:20px)]:inline',
+};
+
 /** Marca com rótulo só até aqui: depois dela o texto bateria no tempo final ("2:30" + "2:41:00"). */
 const LIMITE_DO_ROTULO_PCT = 90;
 
@@ -148,24 +159,39 @@ export interface MapaDaLiveProps extends Omit<
 
 type Tamanho = (typeof TAMANHO)[keyof typeof TAMANHO];
 
+/** O número da pílula. Tamanho num span e cor no de dentro: o `cn` leria `text-micro` como cor. */
+function NumeroDoCorte({ corte, medir }: { corte: CorteDoMapa; medir: boolean }) {
+  const seCouber = corte.numero < 10 ? NUMERO_SE_COUBER.umDigito : NUMERO_SE_COUBER.doisDigitos;
+  const numero = (
+    <span aria-hidden className={medir ? `text-micro ${seCouber}` : 'text-micro'}>
+      <span className={cn(NUMERO_DO_ESTADO[corte.estado], NUMERO_ABERTO)}>{corte.numero}</span>
+    </span>
+  );
+  return medir ? <span className={FAIXA_DO_NUMERO}>{numero}</span> : numero;
+}
+
 /** Um corte: o `<a>` com a posição por variável CSS e o número lido pelo estado. */
 function PilulaDoCorte({
   corte: c,
   pos,
   aberto,
   t,
+  medirNumero,
   onAbrir,
 }: {
   corte: CorteDoMapa;
   pos: PosicaoNoMapa | null;
   aberto: boolean;
   t: Tamanho;
+  /** Só o mapa compacto com duração conhecida: o número depende de caber. */
+  medirNumero: boolean;
   onAbrir?: (id: string) => void;
 }) {
   const geometria = pos
     ? ({
         '--inicio': `${pos.inicioPct}%`,
         '--largura': `${pos.larguraPct}%`,
+        ...(medirNumero && { '--faixa': `${pos.larguraPct}cqw` }),
       } as React.CSSProperties)
     : undefined;
   return (
@@ -192,10 +218,7 @@ function PilulaDoCorte({
         PILULA_ABERTA,
       )}
     >
-      {/* Tamanho num span e cor no de dentro: o `cn` não conhece `text-micro` e o trataria como cor. */}
-      <span aria-hidden className="text-micro">
-        <span className={cn(NUMERO_DO_ESTADO[c.estado], NUMERO_ABERTO)}>{c.numero}</span>
-      </span>
+      <NumeroDoCorte corte={c} medir={medirNumero && pos !== null} />
     </a>
   );
 }
@@ -255,6 +278,7 @@ export const MapaDaLive = React.forwardRef<HTMLElement, MapaDaLiveProps>(functio
   const t = TAMANHO[tamanho];
   const sabeDuracao = Number.isFinite(duracaoSeg) && duracaoSeg > 0;
   const marcas = marcasDoMapa(duracaoSeg);
+  const medirNumero = tamanho === 'mini' && sabeDuracao;
   const aberto = cortes.find((c) => c.id === abertoId);
   const pistaRef = React.useRef<HTMLDivElement>(null);
 
@@ -286,6 +310,7 @@ export const MapaDaLive = React.forwardRef<HTMLElement, MapaDaLiveProps>(functio
           'relative rounded-pilula border border-fio bg-poco shadow-[inset_0_2px_8px_rgb(0_0_0/.25)]',
           t.pista,
           !sabeDuracao && 'flex items-stretch gap-1 p-[3px]',
+          medirNumero && '[container-type:inline-size]',
         )}
       >
         {sabeDuracao &&
@@ -305,6 +330,7 @@ export const MapaDaLive = React.forwardRef<HTMLElement, MapaDaLiveProps>(functio
             pos={sabeDuracao ? posicaoNoMapa(c.inicioSeg, c.fimSeg, duracaoSeg) : null}
             aberto={c.id === abertoId}
             t={t}
+            medirNumero={medirNumero}
             onAbrir={onAbrir}
           />
         ))}

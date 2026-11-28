@@ -11,9 +11,9 @@ import type { Corte, Projeto } from '@/types/models';
 // ─────────────────────────────────────────────────────────────────
 // D-1148 (E-069 H-15; DIRECAO §7.1 e §11) · As regras da Biblioteca, sem React.
 //
-// Tudo sai da listagem de projetos que a tela já carrega (§11: "lives por dia"
+// Tudo sai da listagem de projetos que a tela já carrega (§11: "as últimas 8 lives"
 // e "contagens do estado da casa" não pedem endpoint novo). Aqui moram a
-// saudação, a frase do estado da casa, os oito dias da régua e as duas colunas.
+// saudação, a frase do estado da casa, as casas da régua e as duas colunas.
 // ─────────────────────────────────────────────────────────────────
 
 /** "Boa noite, Paulo." — só o primeiro nome, no feixe. Sem nome, "Boa noite." (§11). */
@@ -64,32 +64,44 @@ export function cabecalhoDaBiblioteca(agora: Date, nome: string, projetos: Proje
   };
 }
 
-/** "Os últimos 8 dias": de 7 dias atrás até hoje, cada dia com as lives dele. */
-export function diasDaRegua(projetos: Projeto[], hoje: Date, quantos = 8): DiaDaRegua[] {
-  const porDia = new Map<string, Projeto[]>();
-  for (const p of projetos) {
-    const dia = diaDaLive(p.data_live);
-    if (dia) porDia.set(dia, [...(porDia.get(dia) ?? []), p]);
-  }
-  return Array.from({ length: quantos }, (_, i) => {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - (quantos - 1 - i));
-    const data = diaLocal(d);
-    return {
-      data,
-      hoje: i === quantos - 1,
-      lives: (porDia.get(data) ?? []).map((p) => {
-        const estado = estadoDoProjeto(p).key;
-        return {
-          id: p.id,
-          titulo: p.titulo_live || 'Sem título',
-          href: `/projetos/${p.id}`,
-          capa: thumbnailUrl(p.youtube_url, 'mq') ?? undefined,
-          tom: TOM_DO_ESTADO[estado],
-          estado: ROTULO_DO_SELO[estado],
-        };
-      }),
-    };
-  });
+/** A casa de uma live na régua: a data dela, a capa, o título e o ponto de estado. */
+function casaDaLive(p: Projeto, hoje: string): DiaDaRegua {
+  const data = diaDaLive(p.data_live);
+  const estado = estadoDoProjeto(p).key;
+  return {
+    data,
+    hoje: data === hoje,
+    lives: [
+      {
+        id: p.id,
+        titulo: p.titulo_live || 'Sem título',
+        href: `/projetos/${p.id}`,
+        capa: thumbnailUrl(p.youtube_url, 'mq') ?? undefined,
+        tom: TOM_DO_ESTADO[estado],
+        estado: ROTULO_DO_SELO[estado],
+      },
+    ],
+  };
+}
+
+/**
+ * "As últimas 8 lives" (D-1153): uma casa por live, da mais antiga para a mais nova. Com menos
+ * lives, menos casas; live sem data legível fica fora, porque a casa é identificada pela data.
+ */
+export function diasDaRegua(projetos: Projeto[], hoje: Date, quantas = 8): DiaDaRegua[] {
+  const hojeLocal = diaLocal(hoje);
+  return projetos
+    .filter((p) => diaDaLive(p.data_live))
+    .sort(sortProjetosPorPublicacao)
+    .slice(0, quantas)
+    .reverse()
+    .map((p) => casaDaLive(p, hojeLocal));
+}
+
+/** O título da régua diz quantas lives ela mostra. */
+export function tituloDaRegua(quantas: number): string {
+  if (quantas === 0) return 'As últimas lives';
+  return quantas === 1 ? 'A última live' : `As últimas ${quantas} lives`;
 }
 
 /** "Esperando você": as que não estão todas no ar, menos a do destaque. */
