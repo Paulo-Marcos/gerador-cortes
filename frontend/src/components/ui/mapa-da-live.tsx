@@ -14,13 +14,14 @@ import { cn } from '@/lib/utils';
 //
 // `<nav>` com um `<a>` por corte. A posição vem de `posicaoNoMapa` e entra no CSS por
 // `--inicio` e `--largura` (geometria de execução; a catraca `estiloInline` só aceita `--x`).
-// ACESO × APAGADO (§3.3): proposto é vidro; pronto é pílula clara com halo; riscado é contorno
-// tracejado. O corte ABERTO (`aria-current`) é o único no feixe: "onde estou" (§3.1). O mapa
+// ACESO × APAGADO (§3.3): proposto e aprovado são vidro; pronto é pílula clara com halo; riscado
+// é contorno tracejado. Aprovado (D-1152) ainda está em produção: não acende, só muda a palavra.
+// O corte ABERTO (`aria-current`) é o único no feixe: "onde estou" (§3.1). O mapa
 // fala em LUZ, o selo fala em COR: por isso o estado do corte aberto aparece num `Selo`
 // ao lado e os cortes não ganham verde nem âmbar.
 // Sem `backdrop-filter` (§3.6): a pista é `poco` chapado.
 
-export type EstadoDoCorteNoMapa = 'proposto' | 'pronto' | 'riscado';
+export type EstadoDoCorteNoMapa = 'proposto' | 'aprovado' | 'pronto' | 'riscado';
 
 export type CorteDoMapa = {
   id: string;
@@ -36,13 +37,15 @@ export type CorteDoMapa = {
 
 const ROTULO_DO_ESTADO: Record<EstadoDoCorteNoMapa, string> = {
   proposto: 'Proposto',
+  aprovado: 'Aprovado',
   pronto: 'Pronto',
   riscado: 'Riscado',
 };
 
-// DIRECAO §5: proposto → neutro · pronto → convite · riscado → inerte.
+// DIRECAO §5: proposto e aprovado → neutro · pronto → convite · riscado → inerte.
 const TOM_DO_ESTADO: Record<EstadoDoCorteNoMapa, TomDoSelo> = {
   proposto: 'neutro',
+  aprovado: 'neutro',
   pronto: 'convite',
   riscado: 'inerte',
 };
@@ -84,8 +87,12 @@ export function aoClicarNoCorte(id: string, onAbrir?: (id: string) => void) {
   };
 }
 
+// Proposto e aprovado: a mesma luz apagada, que responde ao ponteiro.
+const PILULA_APAGADA = 'border-fio-2 bg-vidro-3 hover:bg-fg/[.26]';
+
 const ESTADO_DA_PILULA: Record<EstadoDoCorteNoMapa, string> = {
-  proposto: 'border-fio-2 bg-vidro-3',
+  proposto: PILULA_APAGADA,
+  aprovado: PILULA_APAGADA,
   pronto:
     'border-transparent bg-fg/[.88] shadow-[0_0_18px_-4px_color-mix(in_srgb,var(--cc-fg)_55%,transparent)] hover:bg-fg',
   riscado: 'border-dashed border-fio-2 bg-transparent shadow-none',
@@ -95,6 +102,7 @@ const ESTADO_DA_PILULA: Record<EstadoDoCorteNoMapa, string> = {
 // classe no link, e um número claro sobre a pílula clara some. O número lê o estado do `<a>` por `group`.
 const NUMERO_DO_ESTADO: Record<EstadoDoCorteNoMapa, string> = {
   proposto: 'text-fg',
+  aprovado: 'text-fg',
   pronto: 'text-app',
   riscado: 'text-fg-3',
 };
@@ -180,7 +188,6 @@ function PilulaDoCorte({
               t.corte,
             )
           : cn('relative', t.corte),
-        c.estado === 'proposto' && 'hover:bg-fg/[.26]',
         ESTADO_DA_PILULA[c.estado],
         PILULA_ABERTA,
       )}
