@@ -17,6 +17,7 @@ import { menuDoTrilho, type Grupo, type Migalha, type TelaId } from './upgradeRo
 // cabeçalho é a tela se apresentando: o sobretítulo em íris (o grupo do trilho,
 // ou a live), o `h1` em display (peso 300) com UMA palavra em 800 no feixe — um
 // dos lugares marcados do feixe (§3.1) —, a busca Ctrl K em pílula e as ações.
+// A tela pode escolher o sobretítulo e a palavra do feixe, ou nenhuma (D-1151).
 // ─────────────────────────────────────────────────────────────────
 
 export type ScreenAction = {
@@ -59,8 +60,18 @@ export function partesDoTitulo(titulo: string): [inicio: string, destaque: strin
   return corte < 0 ? ['', titulo.trim()] : [titulo.slice(0, corte + 1), titulo.slice(corte + 1).trim()];
 }
 
+/** O título em três trechos, com o do meio no feixe. Sem escolha da tela, é a última
+ *  palavra; `null` não acende nada (§11: a saudação sem nome). */
+function trechosDoTitulo(titulo: string, escolha: string | null | undefined): [string, string, string] {
+  if (escolha === undefined) return [...partesDoTitulo(titulo), ''];
+  const i = escolha ? titulo.lastIndexOf(escolha) : -1;
+  if (!escolha || i < 0) return [titulo, '', ''];
+  return [titulo.slice(0, i), escolha, titulo.slice(i + escolha.length)];
+}
+
 type ScreenHeaderProps = {
   titulo: string;
+  destaque?: string | null;
   sobretitulo?: string;
   sub?: string;
   acoes?: ScreenAction[];
@@ -104,15 +115,16 @@ export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
   );
 }
 
-export function ScreenHeader({ titulo, sobretitulo, sub, acoes = [], onAbrirBusca }: ScreenHeaderProps) {
-  const [inicio, destaque] = partesDoTitulo(titulo);
+export function ScreenHeader({ titulo, destaque, sobretitulo, sub, acoes = [], onAbrirBusca }: ScreenHeaderProps) {
+  const [inicio, aceso, fim] = trechosDoTitulo(titulo, destaque);
   return (
     <div className="flex flex-none flex-wrap items-end gap-x-4 gap-y-3 px-6 pb-4 pt-6">
       <div className="min-w-0 flex-1">
         {sobretitulo ? <p className="mb-1 truncate text-pequeno font-semibold text-iris">{sobretitulo}</p> : null}
         <h1 className="truncate text-display font-light">
           {inicio}
-          <span className="font-extrabold text-feixe">{destaque}</span>
+          {aceso ? <span className="font-extrabold text-feixe">{aceso}</span> : null}
+          {fim}
         </h1>
         {sub ? <p className="mt-1 truncate text-corpo text-fg-2">{sub}</p> : null}
       </div>

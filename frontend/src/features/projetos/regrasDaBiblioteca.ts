@@ -1,6 +1,6 @@
 import { SEM_BACKEND } from '@/lib/mensagemErro';
 import type { CorteDoMapa } from '@/components/ui/mapa-da-live';
-import { rotuloDoDia, type DiaDaRegua } from '@/components/ui/regua-de-dias';
+import type { DiaDaRegua } from '@/components/ui/regua-de-dias';
 import { sortProjetosPorPublicacao } from '@/features/projetos/bibliotecaFiltros';
 import { estadoDoProjeto, ROTULO_DO_SELO, TOM_DO_ESTADO } from '@/features/projetos/statusMaps';
 import { estaProntoPraYoutube } from '@/features/projetos/useProjetos';
@@ -16,10 +16,12 @@ import type { Corte, Projeto } from '@/types/models';
 // saudação, a frase do estado da casa, os oito dias da régua e as duas colunas.
 // ─────────────────────────────────────────────────────────────────
 
+const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0];
+
 /** "Boa noite, Paulo." — só o primeiro nome, no feixe. Sem nome, "Boa noite." (§11). */
 export function saudacao(hora: number, nome: string): string {
   const periodo = hora >= 5 && hora < 12 ? 'Bom dia' : hora >= 12 && hora < 18 ? 'Boa tarde' : 'Boa noite';
-  const primeiro = nome.trim().split(/\s+/)[0];
+  const primeiro = primeiroNome(nome);
   return primeiro ? `${periodo}, ${primeiro}.` : `${periodo}.`;
 }
 
@@ -55,12 +57,22 @@ export function diaDaLive(dataLive: string): string {
 const doisDigitos = (n: number) => String(n).padStart(2, '0');
 const diaLocal = (d: Date) => `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
 
-/** O cabeçalho da tela: "Boa noite, Paulo." e "sex, 20 de nov · 6 cortes esperam o seu ok.". */
+const DATA_DO_SOBRETITULO = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+
+/** "sex, 20 de nov": o pt-BR abrevia com ponto ("sex.", "nov."), que o desenho não tem. */
+export function dataDoSobretitulo(agora: Date): string {
+  const parte = Object.fromEntries(DATA_DO_SOBRETITULO.formatToParts(agora).map((p) => [p.type, p.value.replace('.', '')]));
+  return `${parte.weekday}, ${parte.day} de ${parte.month}`;
+}
+
+/** O cabeçalho da tela (§7.1): a data no sobretítulo, "Boa noite, Paulo." com o nome no
+ *  feixe (sem nome, nenhuma palavra: §11) e o estado da casa na segunda linha. */
 export function cabecalhoDaBiblioteca(agora: Date, nome: string, projetos: Projeto[] | undefined) {
-  const hoje = rotuloDoDia(diaLocal(agora)).completo;
   return {
     titulo: saudacao(agora.getHours(), nome),
-    sub: projetos ? `${hoje} · ${estadoDaCasa(projetos)}` : hoje,
+    destaque: primeiroNome(nome) || null,
+    sobretitulo: dataDoSobretitulo(agora),
+    sub: projetos ? estadoDaCasa(projetos) : undefined,
   };
 }
 

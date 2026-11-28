@@ -49,9 +49,16 @@ describe('estado da casa (a segunda linha da saudação)', () => {
     const agora = new Date(2026, 10, 20, 21, 30);
     expect(cabecalhoDaBiblioteca(agora, 'Paulo', [projeto({ total_cortes: 6 })])).toEqual({
       titulo: 'Boa noite, Paulo.',
-      sub: 'sex, 20 de nov · 6 cortes esperam o seu ok.',
+      destaque: 'Paulo',
+      sobretitulo: 'sex, 20 de nov',
+      sub: '6 cortes esperam o seu ok.',
     });
-    expect(cabecalhoDaBiblioteca(agora, '', undefined)).toEqual({ titulo: 'Boa noite.', sub: 'sex, 20 de nov' });
+    expect(cabecalhoDaBiblioteca(agora, '', undefined)).toEqual({
+      titulo: 'Boa noite.',
+      destaque: null,
+      sobretitulo: 'sex, 20 de nov',
+      sub: undefined,
+    });
   });
 });
 

@@ -103,8 +103,9 @@ export default function BibliotecaPage() {
     // "Nova live" é secundária (§7.1): a primária é o próximo passo do "Continue".
     ...(vazia ? [] : [{ icone: 'plus' as const, texto: 'Nova live', onClick: () => setFormAberto((a) => !a) }]),
   ];
-  useDefinirChrome({ titulo: cabecalho.titulo, sub: cabecalho.sub, acoes }, [
+  useDefinirChrome({ ...cabecalho, acoes }, [
     cabecalho.titulo,
+    cabecalho.sobretitulo,
     cabecalho.sub,
     acoes.length,
     vazia,
