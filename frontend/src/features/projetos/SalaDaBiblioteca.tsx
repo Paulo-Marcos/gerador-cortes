@@ -5,10 +5,11 @@ import { ReguaDeDias, type DiaDaRegua } from '@/components/ui/regua-de-dias';
 import { CartaoContinue } from '@/features/projetos/CartaoContinue';
 import { ProjetoCardAp } from '@/features/projetos/ProjetoCardAp';
 import { proximoPasso } from '@/features/projetos/proximoPasso';
+import { tituloDaRegua } from '@/features/projetos/regrasDaBiblioteca';
 import type { Projeto } from '@/types/models';
 
 // D-1148 (E-069 H-15; DIRECAO §7.1) · A Biblioteca com lives, de cima para baixo: o
-// "Continue" (a primária), "Os últimos 8 dias" e, lado a lado, "Esperando você"
+// "Continue" (a primária), "As últimas 8 lives" e, lado a lado, "Esperando você"
 // (cartões deitados) e "No ar há pouco" (em pé). "Ver as N lives" abre a lista inteira.
 // A saudação é o cabeçalho da casca (`ScreenHeader`), dono do único feixe do h1.
 
@@ -67,7 +68,7 @@ export function SalaDaBiblioteca({
         />
       )}
 
-      <Secao titulo="Os últimos 8 dias">
+      <Secao titulo={tituloDaRegua(dias.length)} vazio={dias.length === 0 ? 'Nenhuma live com data ainda.' : undefined}>
         <div className="overflow-x-auto pb-1">
           <ReguaDeDias dias={dias} onClick={navegarPeloLink(ir)} className="min-w-[760px]" />
         </div>

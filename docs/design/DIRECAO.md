@@ -340,7 +340,7 @@ Aurora por tela: §3.6 e o README `Aurora`.
 
 ### 7.1 Biblioteca — G01 (escuro), G13 (claro)
 
-De cima para baixo: (1) **saudação**: sobretítulo com a data, `h1` "Boa noite, **Paulo**." com o nome no feixe e a segunda linha em `cc-fg-3` dizendo o estado da casa ("Seis cortes esperam o seu ok."); busca e "Nova live" (secundária) à direita. (2) **"Continue de onde parou"**: cartão com fio de luz, a capa de 384 × 216 com a própria luz, o título, **um** selo, o mini-mapa com os cortes prontos acesos, a **única primária da tela**, "Abrir a live" (fantasma), o destino ("Vai ao ar em @…") e, à direita, um ladrilho com o anel "7/8 etapas em cada corte". (3) **"Os últimos 8 dias"**: a régua de dias, uma casa por dia, com a capa da live do dia, o dia queimado na capa e um ponto de estado; dia sem live é uma casa tracejada. (4) **"Esperando você"** (cartões deitados) e **"No ar há pouco"** (cartões em pé), lado a lado. "Ver as 219 lives" abre a lista completa, com os chips de filtro e a grade.
+De cima para baixo: (1) **saudação**: sobretítulo com a data, `h1` "Boa noite, **Paulo**." com o nome no feixe e a segunda linha em `cc-fg-3` dizendo o estado da casa ("Seis cortes esperam o seu ok."); busca e "Nova live" (secundária) à direita. (2) **"Continue de onde parou"**: cartão com fio de luz, a capa de 384 × 216 com a própria luz, o título, **um** selo, o mini-mapa com os cortes prontos acesos, a **única primária da tela**, "Abrir a live" (fantasma), o destino ("Vai ao ar em @…") e, à direita, um ladrilho com o anel "7/8 etapas em cada corte". (3) **"As últimas 8 lives"** (D-1153, 28/11): uma casa por live, nas 8 mais recentes, da mais antiga para a mais nova, cada uma com a data, a capa na largura da casa e, embaixo, o título e um ponto de estado; com menos de 8 lives, só as que houver, sem casa vazia. (4) **"Esperando você"** (cartões deitados) e **"No ar há pouco"** (cartões em pé), lado a lado. "Ver as 219 lives" abre a lista completa, com os chips de filtro e a grade.
 
 Regras: a primária do "Continue" é o próximo passo da live mais recente em que o operador mexeu (`features/projetos/proximoPasso.ts`, novo). "Esperando você" = não publicadas menos a do destaque. Um selo e uma ação de texto por cartão.
 
@@ -627,7 +627,7 @@ Uma demanda Guia por história, um worktree, um PR, squash com o ok do Paulo. O 
 | **Capa da live** (a imagem 16:9) | cartão, régua de dias, aurora | conferir: a Biblioteca de hoje mostra um quadro da live; confirmar qual URL de capa cada projeto expõe e se há uma para live sem cortes |
 | Canal de destino ("Vai ao ar em @…") | cartão "Continue" e barra de ação | existe na configuração do canal; conferir se está no payload que a casca lê |
 | "Continue de onde parou" | cartão de destaque | **parcial**: o histórico de lugares vive no navegador (`upgrade/historicoDaCasca.ts`) |
-| Lives por dia, últimos 8 dias | régua de dias | sai da listagem de projetos que a Biblioteca já carrega (data + estado) |
+| As últimas 8 lives | régua de dias | sai da listagem de projetos que a Biblioteca já carrega (data + estado) |
 | Contagens do estado da casa | frase da saudação | saem da mesma listagem |
 | Posição dos cortes na live | mapa da live | existe (`Corte.inicio_seg`, `fim_seg`, duração do projeto) |
 | Etapas por corte | medidor | existe (`StatusExportCorte` + `montarTira`) |
@@ -645,7 +645,7 @@ Não conferi rota por rota: a coluna "situação" diz o que vi no código de dom
 
 1. **A aprovação do dono** ("Sala escura" aprovada sem mudança; feixe "Fixo do CutCut") me chegou pelo coordenador da sessão, não diretamente. Este documento a toma como dada.
 2. **As capas são reais, mas o casamento capa ↔ título é ilustrativo** (só a do corte 6 bate com o assunto). O quadro do vídeo no editor e na pós é uma capa, não um frame. As capas 9:16 dos shorts também são reais e também não correspondem aos títulos.
-3. **A data das telas é 08/11/2026** (dia da live "Cansei do Youtube…"), para a régua de 8 dias ter as cinco lives reais.
+3. **A data das telas é 08/11/2026** (dia da live "Cansei do Youtube…"), para a régua das telas de referência ter as cinco lives reais.
 4. **"Boa noite, Paulo."** supõe o dado novo B-1. **Avatar com as iniciais "AI"** supõe a falta de B-2.
 5. **A luz do canal** (limão `#b9f24a` e amarelo `#ffe45c`) foi escolhida a olho nas capas; não há amostragem ainda (B-3).
 6. **Títulos completados:** "…a guerra é o pacote do fascismo", "…Pres. do Paraguai e da Câmara", "…André Lara Resende", "Engels não era arrogante: o que o socialismo científico quis dizer", "Estoicismo na derrota: controle só você". Os títulos das cenas na Pós e as etiquetas de tipo ("Card de informação", "Citação", "Definição") são leituras da captura.
