@@ -37,11 +37,11 @@ const corte = (id: string, estado: string, inicio: number, fim: number) =>
   ({ id, status: estado, inicio_seg: inicio, fim_seg: fim }) as unknown as Corte;
 
 describe('D-1149 · a regra do mapa', () => {
-  it('o mapa fala em luz: pronto e no ar acendem, riscado é contorno, o resto é proposto', () => {
+  it('o mapa fala em luz: pronto e no ar acendem, riscado é contorno, aprovado e proposto ficam apagados', () => {
     expect(estadoNoMapa('pronto')).toBe('pronto');
     expect(estadoNoMapa('publicado')).toBe('pronto');
     expect(estadoNoMapa('rejeitado')).toBe('riscado');
-    expect(estadoNoMapa('aprovado')).toBe('proposto');
+    expect(estadoNoMapa('aprovado')).toBe('aprovado');
     expect(estadoNoMapa('proposto')).toBe('proposto');
   });
 

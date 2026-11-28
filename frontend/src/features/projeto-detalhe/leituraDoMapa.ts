@@ -11,11 +11,14 @@ export type LinhaDoCorte = { status: StatusExportCorte; corte: Corte | undefined
 /** O `id` da linha na página: é para onde o `<a>` do mapa aponta e quem o clique no mapa foca. */
 export const idDaLinha = (corteId: string) => `corte-${corteId}`;
 
-/** O mapa fala em luz (§3.3): só três estados. Pronto e no ar acendem; riscado é contorno. */
+/**
+ * O mapa fala em luz (§3.3): pronto e no ar acendem, riscado é contorno, o resto fica
+ * apagado. Aprovado e proposto têm a mesma luz e palavras diferentes (D-1152).
+ */
 export function estadoNoMapa(estado: EstadoLinha): EstadoDoCorteNoMapa {
   if (estado === 'rejeitado') return 'riscado';
-  if (estado === 'pronto' || estado === 'publicado') return 'pronto';
-  return 'proposto';
+  if (estado === 'publicado') return 'pronto';
+  return estado;
 }
 
 /** Os cortes do mapa, na ordem da lista. Linha sem o corte carregado não tem onde nascer. */
