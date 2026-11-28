@@ -142,7 +142,7 @@ describe('D-1041 · o principal do corte aprovado', () => {
   it('o estado aprovado usa o próximo passo, com o peso forte de sempre', () => {
     const acao = vi.fn();
     const p = primarioDaLinha('aprovado', {
-      aprovar: vi.fn(),
+      editar: vi.fn(),
       voltar: vi.fn(),
       enviarYoutube: vi.fn(),
       abrirNoYoutube: vi.fn(),

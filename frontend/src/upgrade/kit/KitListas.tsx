@@ -84,7 +84,7 @@ function ListaDoKit() {
         {CORTES.map((c, i) => (
           <LinhaDaLista key={c.id} atual={i === 1} marcada={i === 2} riscada={i === 3}>
             <Miniatura src={CAPA} alt="" duracaoSeg={c.duracao} className="w-16" riscada={i === 3} />
-            <span className="truncate text-linha">{c.titulo}</span>
+            <span className={i === 3 ? 'truncate text-linha line-through' : 'truncate text-linha'}>{c.titulo}</span>
             <span className="num text-fg-2">{Math.floor(c.duracao / 60)}:{String(c.duracao % 60).padStart(2, '0')}</span>
             <Selo tom={c.tom}>{c.estado}</Selo>
           </LinhaDaLista>

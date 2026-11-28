@@ -14,7 +14,7 @@ const corte = (s: Corte['status']) => ({ status: s }) as Corte;
 
 function handlers() {
   return {
-    aprovar: vi.fn(),
+    editar: vi.fn(),
     voltar: vi.fn(),
     enviarYoutube: vi.fn(),
     proximo: { texto: 'Gerar capa em Metadados', icone: 'sparkle' as const, acao: vi.fn() },
@@ -42,11 +42,11 @@ describe('estadoDaLinha', () => {
 describe('primarioDaLinha', () => {
   it('cada estado pede uma coisa, com rótulo — e o clique faz essa coisa', () => {
     const casos = [
-      ['proposto', 'Aprovar', 'aprovar', false],
+      ['proposto', 'Editar', 'editar', false],
       ['aprovado', 'Gerar capa em Metadados', 'proximo', true],
       ['pronto', 'Enviar ao YouTube', 'enviarYoutube', true],
       ['publicado', 'No ar', 'abrirNoYoutube', false],
-      ['rejeitado', 'Voltar', 'voltar', false],
+      ['rejeitado', 'Trazer de volta', 'voltar', false],
     ] as const;
     for (const [estado, texto, acao, forte] of casos) {
       const h = handlers();
